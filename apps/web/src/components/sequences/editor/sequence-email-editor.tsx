@@ -16,6 +16,7 @@ import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { TemplateCommand } from "@/components/templates/template-command";
 import { toast } from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
 interface SequenceEmailEditorProps {
   open: boolean;
@@ -80,6 +81,10 @@ export function SequenceEmailEditor({
     });
   };
 
+  useEffect(() => {
+    console.log(content);
+  }, [content]);
+
   const handleSendTest = async () => {
     if (!sequenceId || !stepId) return;
 
@@ -105,6 +110,14 @@ export function SequenceEmailEditor({
     } finally {
       setIsSendingTest(false);
     }
+  };
+
+  // Function to process content and preserve both HTML formatting and line breaks
+  const processContent = (htmlContent: string) => {
+    if (!htmlContent) return "";
+
+    // Replace empty paragraphs with a non-breaking space to maintain their height
+    return htmlContent.replace(/<p><\/p>/g, "<p>&nbsp;</p>");
   };
 
   return (
@@ -183,8 +196,13 @@ export function SequenceEmailEditor({
                   <p>To: Example Contact &lt;example@google.com&gt;</p>
                   <p>Subject: {subject || "(No Subject)"}</p>
                 </div>
-                <div className="mt-4 prose prose-sm max-w-none">
-                  <div dangerouslySetInnerHTML={{ __html: content }} />
+                <div className="mt-4 prose prose-sm max-w-none [&>p]:mb-4 [&>p:last-child]:mb-0 [&_a]:text-primary hover:[&_a]:underline">
+                  <div
+                    className="break-words"
+                    dangerouslySetInnerHTML={{
+                      __html: processContent(content),
+                    }}
+                  />
                   {includeSignature && (
                     <div className="mt-4 text-sm text-muted-foreground">
                       <p>Best regards,</p>

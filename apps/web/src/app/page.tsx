@@ -19,7 +19,7 @@ import {
 import { startOfToday, startOfWeek, subDays } from "date-fns";
 
 // Demo mode for development and preview
-const DEMO_MODE = true;
+const DEMO_MODE = false;
 
 function getDateRangeFilter(range: DateRange) {
   const now = new Date();
