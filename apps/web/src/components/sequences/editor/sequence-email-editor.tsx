@@ -131,13 +131,13 @@ export function SequenceEmailEditor({
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 h-full flex flex-col"
+          className="flex flex-col flex-1 overflow-hidden"
         >
-          <div className="grid grid-cols-2 gap-6 flex-grow">
+          <div className="grid grid-cols-2 gap-6 min-h-0 flex-1">
             {/* Left column */}
-            <div className="h-full flex flex-col gap-4">
+            <div className="flex flex-col gap-4 min-h-0">
               {previousStepId && (
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                <div className="flex-shrink-0 flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                   <div className="space-y-0.5">
                     <Label>Reply to Previous Email</Label>
                     <div className="text-sm text-muted-foreground">
@@ -151,7 +151,7 @@ export function SequenceEmailEditor({
                 </div>
               )}
 
-              <div className="space-y-4 flex flex-col">
+              <div className="flex-shrink-0 space-y-4">
                 <Label htmlFor="subject">Subject</Label>
                 <Input
                   id="subject"
@@ -161,16 +161,17 @@ export function SequenceEmailEditor({
                 />
               </div>
 
-              <div className="flex-grow">
+              <div className="flex-1 min-h-0">
                 <RichTextEditor
                   initialContent={content}
                   onChange={setContent}
                   placeholder="Write your email content..."
-                  className="h-full"
+                  className="h-full flex flex-col"
+                  editorClassName="flex-1 overflow-y-auto"
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex-shrink-0 flex items-center space-x-2">
                 <Checkbox
                   id="signature"
                   checked={includeSignature}
@@ -183,39 +184,41 @@ export function SequenceEmailEditor({
             </div>
 
             {/* Right column - Preview */}
-            <div className="p-6 bg-muted/30">
-              <div className="space-y-2">
+            <div className="flex flex-col min-h-0">
+              <div className="flex-shrink-0 space-y-2 p-6 bg-muted/30">
                 <h3 className="text-sm font-medium">
                   Generate Preview for Contact (optional)
                 </h3>
                 <Input placeholder="Choose a contact" />
               </div>
 
-              <div className="mt-4 p-4 bg-white rounded-lg">
-                <div className="text-sm text-muted-foreground">
-                  <p>To: Example Contact &lt;example@google.com&gt;</p>
-                  <p>Subject: {subject || "(No Subject)"}</p>
-                </div>
-                <div className="mt-4 prose prose-sm max-w-none [&>p]:mb-4 [&>p:last-child]:mb-0 [&_a]:text-primary hover:[&_a]:underline">
-                  <div
-                    className="break-words"
-                    dangerouslySetInnerHTML={{
-                      __html: processContent(content),
-                    }}
-                  />
-                  {includeSignature && (
-                    <div className="mt-4 text-sm text-muted-foreground">
-                      <p>Best regards,</p>
-                      <p>Your Name</p>
-                      <p>Your Company</p>
-                    </div>
-                  )}
+              <div className="flex-1 min-h-0 overflow-y-auto p-6 bg-muted/30">
+                <div className="p-4 bg-white rounded-lg">
+                  <div className="text-sm text-muted-foreground">
+                    <p>To: Example Contact &lt;example@google.com&gt;</p>
+                    <p>Subject: {subject || "(No Subject)"}</p>
+                  </div>
+                  <div className="mt-4 prose prose-sm max-w-none [&>p]:mb-4 [&>p:last-child]:mb-0 [&_a]:text-primary hover:[&_a]:underline">
+                    <div
+                      className="break-words"
+                      dangerouslySetInnerHTML={{
+                        __html: processContent(content),
+                      }}
+                    />
+                    {includeSignature && (
+                      <div className="mt-4 text-sm text-muted-foreground">
+                        <p>Best regards,</p>
+                        <p>Your Name</p>
+                        <p>Your Company</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between items-center pt-4 border-t">
+          <div className="flex-shrink-0 flex justify-between items-center pt-4 mt-4 border-t">
             <div className="flex items-center gap-2">
               <TemplateCommand onSelect={handleTemplateSelect} />
               <Button

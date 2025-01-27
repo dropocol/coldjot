@@ -97,9 +97,9 @@ export function RichTextEditor({
   }
 
   return (
-    <div className={cn("border rounded-md", className)}>
+    <div className={cn("border rounded-md flex flex-col", className)}>
       {!readOnly && (
-        <div className="border-b p-2 flex gap-1 flex-wrap items-center">
+        <div className="flex-shrink-0 border-b p-2 flex gap-1 flex-wrap items-center">
           <Button
             variant="ghost"
             size="sm"
@@ -210,7 +210,9 @@ export function RichTextEditor({
           </div>
         </div>
       )}
-      <EditorContent editor={editor} />
+      <div className={cn("flex-1 min-h-0 relative", editorClassName)}>
+        <EditorContent editor={editor} className="h-full overflow-y-auto" />
+      </div>
       <LinkDialog
         open={showLinkDialog}
         onOpenChange={setShowLinkDialog}
