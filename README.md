@@ -12,6 +12,7 @@
     <br />
     <a href="#introduction"><strong>Introduction</strong></a> ·
     <a href="#features"><strong>Features</strong></a> ·
+    <a href="#screenshot"><strong>Screenshot</strong></a> ·
     <a href="#tech-stack"><strong>Tech Stack</strong></a> ·
     <a href="#self-hosting"><strong>Self-hosting</strong></a> ·
     <a href="#contributing"><strong>Contributing</strong></a>
@@ -57,6 +58,10 @@ ColdJot is a powerful email automation platform designed to help businesses mana
   - Privacy-focused design
   - Data protection measures
   - Role-based access control
+
+## Screenshot
+
+<img alt="ColdJot - Modern email automation platform for businesses" src="https://app.coldjot.com/images/screenshot/app.png">
 
 ## Tech Stack
 

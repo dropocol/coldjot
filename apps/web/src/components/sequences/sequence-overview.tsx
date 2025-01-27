@@ -274,6 +274,25 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
     bounceRate: stats?.bounceRate || 0,
   });
 
+  // const mapStatsToDisplay = (
+  //   stats: SequenceStatsType | null
+  // ): SequenceStatsDisplay => ({
+  //   totalEmails: 1214,
+  //   sentEmails: 1214,
+  //   openedEmails: 765,
+  //   uniqueOpens: 391,
+  //   clickedEmails: 1149,
+  //   repliedEmails: 178,
+  //   bouncedEmails: 0,
+  //   unsubscribed: 0,
+  //   interested: 0,
+  //   peopleContacted: 376,
+  //   openRate: 62,
+  //   clickRate: 94,
+  //   replyRate: 14,
+  //   bounceRate: 0,
+  // });
+
   return (
     <div className="space-y-8">
       <div>
