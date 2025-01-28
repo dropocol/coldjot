@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ColumnDef } from "@tanstack/react-table";
+
 import Link from "next/link";
 import {
   Tooltip,

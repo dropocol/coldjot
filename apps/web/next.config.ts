@@ -1,8 +1,12 @@
 /** @type {import('next').NextConfig} */
 
-const path = require("path");
-const { existsSync } = require("fs");
-const dotenv = require("dotenv");
+import path from "path";
+import { existsSync } from "fs";
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const envFile = process.env.APP_ENV ? `.env.${process.env.APP_ENV}` : ".env";
 const envPath = path.join(__dirname, "env", envFile);
@@ -22,10 +26,8 @@ if (existsSync(envPath)) {
   );
 }
 
-module.exports = {
-  // output: "export",
-  // output: "standalone",
-  // distDir: "build",
+const nextConfig = {
+  distDir: ".next",
   experimental: {
     serverActions: {
       allowedOrigins: ["[::1]:3000", "localhost:3000", "app.localhost:3000"],
@@ -51,3 +53,5 @@ module.exports = {
     ],
   },
 };
+
+export default nextConfig;
