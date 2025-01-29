@@ -387,7 +387,6 @@ model Mailbox {
     provider  String // 'gmail', 'outlook', etc.
     email     String
     name      String? // Display name
-    isDefault Boolean  @default(false)
     isActive  Boolean  @default(true)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -403,16 +402,11 @@ model Mailbox {
     providerAccountId String // Changed from String? to String to match Account model
 
     // Email account settings
-    aliases        EmailAlias[]
-    defaultAliasId String?
-    defaultAlias   EmailAlias?  @relation("DefaultAlias", fields: [defaultAliasId], references: [id])
-
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+    aliases         EmailAlias[]
+    user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
     SequenceMailbox SequenceMailbox[]
 
     @@unique([userId, email])
-    @@index([defaultAliasId])
 }
 
 model EmailAlias {
@@ -424,9 +418,8 @@ model EmailAlias {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    mailbox            Mailbox           @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
-    defaultForAccounts Mailbox[]         @relation("DefaultAlias")
-    SequenceMailbox    SequenceMailbox[]
+    mailbox         Mailbox           @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+    SequenceMailbox SequenceMailbox[]
 
     @@unique([mailboxId, alias])
 }

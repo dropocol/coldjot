@@ -35,17 +35,10 @@ export async function getSenderMailbox(
     return null;
   }
 
-  let defaultAlias: EmailAlias | undefined = undefined;
-  if (mailbox.defaultAliasId && mailbox.aliases?.length) {
-    defaultAlias = mailbox.aliases.find(
-      (alias: EmailAlias) => alias.id === mailbox.defaultAliasId
-    );
-  }
-
   return {
     id: mailbox.id,
-    name: defaultAlias?.name || mailbox.name || "",
-    email: defaultAlias?.alias || mailbox.email || "",
+    name: mailbox.name || "",
+    email: mailbox.email || "",
     accessToken: mailbox.access_token,
     refreshToken: mailbox.refresh_token,
     expiryDate: mailbox.expires_at || 0,

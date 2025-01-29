@@ -18,7 +18,9 @@ export default async function MailboxesSettingsPage() {
     include: {
       aliases: true,
     },
-    orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+    orderBy: {
+      createdAt: "desc",
+    },
   });
 
   return (

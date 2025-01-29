@@ -191,10 +191,6 @@ export async function GET(request: Request) {
             scope: tokens.scope || null,
             id_token: tokens.id_token || null,
             providerAccountId: userInfo.id || "",
-            // If this is the first account, make it default
-            isDefault: !(await prisma.mailbox.findFirst({
-              where: { userId, isDefault: true },
-            })),
           },
         });
         accountId = createdAccount.id;

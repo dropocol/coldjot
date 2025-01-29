@@ -4,13 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { MailboxList } from "./mailbox-list";
+import { MailboxList, type MailboxWithAliases } from "./mailbox-list";
 import { AddMailbox } from "./add-mailbox";
-import type { Mailbox, EmailAlias } from "@coldjot/database";
-
-interface MailboxWithAliases extends Mailbox {
-  aliases: EmailAlias[];
-}
+import type { Mailbox } from "@coldjot/database";
 
 interface MailboxesSectionProps {
   initialAccounts: MailboxWithAliases[];
