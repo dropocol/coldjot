@@ -8,7 +8,8 @@ export async function getSequenceMailboxId(
     where: { sequenceId: sequenceId },
   });
   if (!mailbox) {
-    throw new Error("Sequence mailbox not found");
+    // throw new Error("Sequence mailbox not found");
+    return null;
   }
   return mailbox.mailboxId;
 }

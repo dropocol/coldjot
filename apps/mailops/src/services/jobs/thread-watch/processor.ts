@@ -494,17 +494,32 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
 
       const mailboxId = await getSequenceMailboxId(thread.sequenceId);
 
+      // TODO : add proper error handling and status updates
       if (!mailboxId) {
         logger.error(
           `🧶 ❌ No mailbox found for sequence ${thread.sequenceId}`
         );
+        // Update thread metadata to prevent reprocessing
+        await this.updateThreadMetadata(thread, threadAge, false);
+        // Mark the thread as completed to prevent further processing
+        await prisma.emailThread.update({
+          where: { threadId: thread.threadId },
+          data: {
+            metadata: {
+              ...thread.metadata,
+              status: "COMPLETED",
+              reason: "NO_MAILBOX_FOUND",
+              completedAt: new Date().toISOString(),
+            },
+          },
+        });
         return;
       }
 
       const checkData: ThreadCheckData = {
         threadId: thread.threadId,
         userId: thread.sequence.userId,
-        mailboxId: mailboxId!,
+        mailboxId: mailboxId,
         sequenceId: thread.sequenceId,
         contactId: thread.contactId,
         messageId: thread.messageId || "",
@@ -523,7 +538,7 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
         threadAge,
       });
     } catch (error) {
-      logger.error(`🧶 ❌ Error checking thread ${thread.threadId}:`, error);
+      logger.error(error, `🧶 ❌ Error checking thread ${thread.threadId}:`);
       throw error;
     }
   }
