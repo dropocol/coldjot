@@ -48,7 +48,6 @@ export default async function SequenceSettingsPage({
         testMode: sequence.testMode,
         disableSending: sequence.disableSending ?? false,
         testEmails: sequence.testEmails ?? [],
-        mailboxId: sequence.mailboxId,
         sequenceMailbox: sequence.sequenceMailbox
           ? {
               id: sequence.sequenceMailbox.id,
