@@ -7,6 +7,28 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
+model User {
+    id              String            @id @default(cuid())
+    name            String?
+    email           String?           @unique
+    emailVerified   DateTime?
+    role            String            @default("user")
+    image           String?
+    createdAt       DateTime          @default(now())
+    updatedAt       DateTime          @default(now())
+    accounts        Account[]
+    sessions        Session[]
+    templates       Template[]
+    contacts        Contact[]
+    drafts          Draft[]
+    EmailList       EmailList[]
+    Sequence        Sequence[]
+    EmailThread     EmailThread[]
+    businessHours   BusinessHours[]
+    Mailbox         Mailbox[]
+    SequenceMailbox SequenceMailbox[]
+}
+
 model Account {
     id                String  @id @default(cuid())
     userId            String
@@ -33,27 +55,6 @@ model Session {
     userId       String
     expires      DateTime
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model User {
-    id            String          @id @default(cuid())
-    name          String?
-    email         String?         @unique
-    emailVerified DateTime?
-    role          String          @default("user")
-    image         String?
-    createdAt     DateTime        @default(now())
-    updatedAt     DateTime        @default(now())
-    accounts      Account[]
-    sessions      Session[]
-    templates     Template[]
-    contacts      Contact[]
-    drafts        Draft[]
-    EmailList     EmailList[]
-    Sequence      Sequence[]
-    EmailThread   EmailThread[]
-    businessHours BusinessHours[]
-    Mailbox       Mailbox[]
 }
 
 model Contact {
@@ -127,32 +128,30 @@ model EmailList {
 // -----------------------------------------
 
 model Sequence {
-    id             String            @id @default(cuid())
-    name           String
-    accessLevel    String            @default("team")
-    scheduleType   String            @default("business")
-    status         String            @default("draft")
-    testMode       Boolean           @default(false)
-    disableSending Boolean           @default(false)
-    testEmails     String[]          @default([])
-    userId         String
-    mailboxId      String?
-    createdAt      DateTime          @default(now())
-    updatedAt      DateTime          @updatedAt
-    steps          SequenceStep[]
-    user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-    mailbox        Mailbox?          @relation(fields: [mailboxId], references: [id])
-    EmailList      EmailList?        @relation(fields: [emailListId], references: [id])
-    emailListId    String?
-    stats          SequenceStats[]
-    contacts       SequenceContact[] @relation("SequenceToContact")
-    EmailEvent     EmailEvent[]
-    EmailThread    EmailThread[]
-    businessHours  BusinessHours?
-    SequenceHealth SequenceHealth?
+    id              String            @id @default(cuid())
+    name            String
+    accessLevel     String            @default("team")
+    scheduleType    String            @default("business")
+    status          String            @default("draft")
+    testMode        Boolean           @default(false)
+    disableSending  Boolean           @default(false)
+    testEmails      String[]          @default([])
+    userId          String
+    createdAt       DateTime          @default(now())
+    updatedAt       DateTime          @updatedAt
+    emailListId     String?
+    steps           SequenceStep[]
+    user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    sequenceMailbox SequenceMailbox?  @relation("SequenceToMailbox")
+    EmailList       EmailList?        @relation(fields: [emailListId], references: [id])
+    stats           SequenceStats[]
+    contacts        SequenceContact[] @relation("SequenceToContact")
+    EmailEvent      EmailEvent[]
+    EmailThread     EmailThread[]
+    businessHours   BusinessHours?
+    SequenceHealth  SequenceHealth?
 
     @@index([userId])
-    @@index([mailboxId])
 }
 
 model SequenceStep {
@@ -408,8 +407,9 @@ model Mailbox {
     defaultAliasId String?
     defaultAlias   EmailAlias?  @relation("DefaultAlias", fields: [defaultAliasId], references: [id])
 
-    user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-    Sequence Sequence[]
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    SequenceMailbox SequenceMailbox[]
 
     @@unique([userId, email])
     @@index([defaultAliasId])
@@ -424,8 +424,29 @@ model EmailAlias {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    mailbox            Mailbox   @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
-    defaultForAccounts Mailbox[] @relation("DefaultAlias")
+    mailbox            Mailbox           @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+    defaultForAccounts Mailbox[]         @relation("DefaultAlias")
+    SequenceMailbox    SequenceMailbox[]
 
     @@unique([mailboxId, alias])
+}
+
+model SequenceMailbox {
+    id         String   @id @default(cuid())
+    sequenceId String   @unique
+    mailboxId  String
+    aliasId    String?
+    userId     String
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+
+    sequence Sequence    @relation("SequenceToMailbox", fields: [sequenceId], references: [id], onDelete: Cascade)
+    mailbox  Mailbox     @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+    alias    EmailAlias? @relation(fields: [aliasId], references: [id])
+    user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([sequenceId])
+    @@index([mailboxId])
+    @@index([aliasId])
+    @@index([userId])
 }

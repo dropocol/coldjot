@@ -16,6 +16,12 @@ export default async function SequenceSettingsPage({
     },
     include: {
       businessHours: true,
+      sequenceMailbox: {
+        include: {
+          mailbox: true,
+          alias: true,
+        },
+      },
     },
   });
 
@@ -43,6 +49,13 @@ export default async function SequenceSettingsPage({
         disableSending: sequence.disableSending ?? false,
         testEmails: sequence.testEmails ?? [],
         mailboxId: sequence.mailboxId,
+        sequenceMailbox: sequence.sequenceMailbox
+          ? {
+              id: sequence.sequenceMailbox.id,
+              mailboxId: sequence.sequenceMailbox.mailboxId,
+              aliasId: sequence.sequenceMailbox.aliasId,
+            }
+          : null,
       }}
     />
   );

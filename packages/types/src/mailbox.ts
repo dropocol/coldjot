@@ -4,11 +4,11 @@ export interface Mailbox {
   userId?: string;
   email?: string;
   providerAccountId?: string;
-  accessToken: string;
-  refreshToken: string;
-  expiryDate?: number; // Optional since it's only in one interface
-  // aliases?: EmailAlias[];
-  // defaultAliasId?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  expiryDate?: number;
+  aliases?: EmailAlias[];
+  defaultAliasId?: string;
 }
 
 export interface EmailAlias {
@@ -16,6 +16,12 @@ export interface EmailAlias {
   alias: string;
   name?: string | null;
   isActive: boolean;
+}
+
+export interface SequenceMailbox {
+  id: string;
+  mailboxId: string;
+  aliasId: string | null;
 }
 
 export interface TokenRefreshError extends Error {

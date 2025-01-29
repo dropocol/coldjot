@@ -20,10 +20,8 @@ export class JobManager {
       throw new Error("Sequence queue not initialized");
     }
 
-    logger.info(`Adding sequence job ${job.id} to queue`);
-    return await queue.add(job.id, job.data, {
-      jobId: job.id,
-      priority: job.priority,
+    logger.info(`Adding sequence job to queue`);
+    return await queue.add(QUEUE_NAMES.SEQUENCE, job, {
       removeOnComplete: true,
       removeOnFail: {
         count: 3, // Keep last 3 failed jobs
@@ -60,6 +58,8 @@ export class JobManager {
 - Subject: ${job.subject}
 ---`);
     }
+
+    logger.info(job);
 
     return await queue.add(QUEUE_NAMES.EMAIL, job, {
       // delay,

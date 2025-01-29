@@ -23,7 +23,7 @@ import {
   isSenderSequenceOwner,
   shouldProcessMessage,
 } from "@/utils";
-import { getSequenceMailbox, getSequenceMailboxId } from "../sequence/helper";
+import { getSequenceMailboxId } from "@/lib/mailbox";
 
 // Environment-specific configuration
 type Environment = "DEVELOPMENT" | "PRODUCTION";

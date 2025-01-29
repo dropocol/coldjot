@@ -1,4 +1,4 @@
-import { prisma } from "@coldjot/database";
+import { prisma, SequenceMailbox } from "@coldjot/database";
 import {
   BusinessHours,
   Mailbox,
@@ -23,33 +23,6 @@ export function getDefaultBusinessHours(): BusinessHours {
     workHoursEnd: "17:00",
     holidays: [],
   };
-}
-
-/**
- * Get sender mailbox
- */
-export async function getSequenceMailbox(
-  sequenceId: string
-): Promise<Mailbox | null> {
-  const sequence = await prisma.sequence.findUnique({
-    where: { id: sequenceId },
-  });
-  if (!sequence) {
-    throw new Error("Sequence not found");
-  }
-  return getSenderMailbox(sequence.userId!, sequence.mailboxId!);
-}
-
-export async function getSequenceMailboxId(
-  sequenceId: string
-): Promise<string | null> {
-  const sequence = await prisma.sequence.findUnique({
-    where: { id: sequenceId },
-  });
-  if (!sequence) {
-    throw new Error("Sequence not found");
-  }
-  return sequence.mailboxId;
 }
 
 /**
@@ -174,6 +147,7 @@ export async function getSequenceWithDetails(sequenceId: string) {
   return prisma.sequence.findUnique({
     where: { id: sequenceId },
     include: {
+      sequenceMailbox: true,
       steps: {
         orderBy: { order: "asc" },
       },
@@ -274,7 +248,8 @@ interface ProcessContactOptions {
   sequence: {
     id: string;
     userId: string;
-    mailboxId: string;
+    // sequenceMailboxId: string;
+    sequenceMailbox: SequenceMailbox;
     steps: any[];
     businessHours?: any;
     status?: string;
@@ -368,7 +343,7 @@ export const processContactShared = async (
       contactId: contact.id,
       stepId: step.id,
       userId: sequence.userId,
-      mailboxId: sequence.mailboxId,
+      sequenceMailboxId: sequence.sequenceMailbox.id,
       // TODO : Remove this and properly handle test mode
       to: contact.email,
       subject: subject || "",
@@ -382,6 +357,7 @@ export const processContactShared = async (
     await jobManager.addEmailJob(emailJob);
 
     logger.info(`📧 Created email job for contact: ${contact.email}`);
+    logger.info(sequence);
 
     // 8. Update contact status and progress
     await updateSequenceContactStatus(

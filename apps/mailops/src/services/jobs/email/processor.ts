@@ -24,7 +24,7 @@ import { QUEUE_NAMES } from "@/config";
 import { getWorkerOptions } from "@/config";
 import { ScheduleGenerator, scheduleGenerator } from "@/lib/schedule";
 import { replacePlaceholders, validatePlaceholders } from "@/lib/placeholders";
-import { getSenderMailbox } from "@/lib/mailbox";
+import { getSequenceMailboxWithId } from "@/lib/mailbox";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
   private serviceManager = ServiceManager.getInstance();
@@ -85,10 +85,18 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         throw new Error(`Contact ${data.contactId} not found`);
       }
 
-      logger.info(`🔍 Fetching mailbox info ${data.userId}`);
-      const mailbox = await getSenderMailbox(data.userId, data.mailboxId);
+      logger.info(`🔍 Fetching mailbox info ${data.sequenceMailboxId}`);
+      // const mailbox = await getSenderMailbox(
+      //   data.userId,
+      //   data.sequenceMailboxId
+      // );
+
+      console.log("🔍 Fetching mailbox info with data", data);
+      const mailbox = await getSequenceMailboxWithId(data.sequenceMailboxId);
+
       if (!mailbox) {
-        throw new Error(`No valid mailbox found for user ${data.userId}`);
+        // throw new Error(`No valid mailbox found for user ${data.userId}`);
+        return { success: false, error: "No valid mailbox found" };
       }
 
       // Create tracking metadata

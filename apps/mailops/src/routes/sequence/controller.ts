@@ -90,19 +90,15 @@ export async function launchSequence(req: Request, res: Response) {
     const type = ProcessingJobEnum.SEQUENCE;
     // Create and schedule the job
     const processingJob: ProcessingJob = {
+      sequenceId: id,
       type: type,
-      id: `${type}-${id}-${Date.now()}`,
-      priority: 1,
-      data: {
-        sequenceId: id,
-        userId,
-        scheduleType: businessHours
-          ? BusinessScheduleEnum.BUSINESS
-          : BusinessScheduleEnum.CUSTOM,
-        businessHours,
-        testMode: sequence.testMode,
-        disableSending: sequence.disableSending,
-      },
+      userId,
+      scheduleType: businessHours
+        ? BusinessScheduleEnum.BUSINESS
+        : BusinessScheduleEnum.CUSTOM,
+      businessHours,
+      testMode: sequence.testMode,
+      disableSending: sequence.disableSending,
     };
 
     // Add the job using the job manager

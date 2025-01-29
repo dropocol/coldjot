@@ -4,16 +4,12 @@ import { BusinessScheduleEnum, EmailJobEnum, ProcessingJobEnum } from "./enums";
 // Job Types
 export interface ProcessingJob {
   type: ProcessingJobEnum.SEQUENCE;
-  id: string;
-  priority: number;
-  data: {
-    sequenceId: string;
-    userId: string;
-    scheduleType?: BusinessScheduleEnum;
-    businessHours?: BusinessHours;
-    testMode?: boolean;
-    disableSending?: boolean;
-  };
+  sequenceId: string;
+  userId: string;
+  scheduleType?: BusinessScheduleEnum;
+  businessHours?: BusinessHours;
+  testMode?: boolean;
+  disableSending?: boolean;
 }
 
 export interface EmailJob {
@@ -21,7 +17,7 @@ export interface EmailJob {
   contactId: string;
   stepId: string;
   userId: string;
-  mailboxId: string;
+  sequenceMailboxId: string;
   messageId?: string;
   scheduledTime?: string;
   to: string;

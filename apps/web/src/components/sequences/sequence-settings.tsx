@@ -14,16 +14,11 @@ import {
 } from "@/components/ui/card";
 import { BusinessHoursSettings } from "@/components/sequences/business-hours-settings";
 import { SequenceEmailSettings } from "@/components/sequences/sequence-email-settings";
+import type { MailboxWithRequired } from "@/components/sequences/sequence-email-settings";
 import { toast } from "react-hot-toast";
 import type { BusinessHours } from "@coldjot/types";
 import { SequenceDangerZone } from "@/components/sequences/sequence-danger-zone";
 import { Separator } from "@radix-ui/react-separator";
-
-interface Mailbox {
-  id: string;
-  email: string;
-  name?: string | null;
-}
 
 interface SequenceSettingsProps {
   sequence: {
@@ -36,6 +31,11 @@ interface SequenceSettingsProps {
     disableSending: boolean;
     testEmails: string[];
     mailboxId?: string | null;
+    sequenceMailbox: {
+      id: string;
+      mailboxId: string;
+      aliasId: string | null;
+    } | null;
   };
 }
 
@@ -43,7 +43,7 @@ export function SequenceSettings({ sequence }: SequenceSettingsProps) {
   const router = useRouter();
   const [name, setName] = useState(sequence.name);
   const [isSaving, setIsSaving] = useState(false);
-  const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
+  const [mailboxes, setMailboxes] = useState<MailboxWithRequired[]>([]);
   const [isLoadingMailboxes, setIsLoadingMailboxes] = useState(true);
 
   useEffect(() => {
@@ -52,7 +52,14 @@ export function SequenceSettings({ sequence }: SequenceSettingsProps) {
         const response = await fetch("/api/mailboxes");
         if (!response.ok) throw new Error("Failed to fetch mailboxes");
         const data = await response.json();
-        setMailboxes(data);
+        // Ensure required fields are present
+        const mailboxesWithRequired = data.map((m: any) => ({
+          id: m.id,
+          email: m.email,
+          name: m.name || null,
+          aliases: m.aliases,
+        }));
+        setMailboxes(mailboxesWithRequired);
       } catch (error) {
         console.error("Failed to fetch mailboxes:", error);
         toast.error("Failed to load mailboxes");
@@ -127,7 +134,7 @@ export function SequenceSettings({ sequence }: SequenceSettingsProps) {
           testMode: sequence.testMode ?? false,
           disableSending: sequence.disableSending ?? false,
           testEmails: sequence.testEmails ?? [],
-          mailboxId: sequence.mailboxId ?? null,
+          sequenceMailbox: sequence.sequenceMailbox,
         }}
         mailboxes={mailboxes}
       />

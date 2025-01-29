@@ -17,24 +17,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { EmailAlias } from "@coldjot/types";
 
-interface Mailbox {
+// Use a more specific type for our needs
+export interface MailboxWithRequired {
   id: string;
   email: string;
-  name?: string | null;
+  name: string | null;
+  aliases?: EmailAlias[];
+}
+
+interface SequenceMailbox {
+  id: string;
+  mailboxId: string;
+  aliasId: string | null;
 }
 
 interface SequenceEmailSettingsState {
   testMode: boolean;
   disableSending: boolean;
   testEmails: string[];
-  mailboxId: string | null;
+  sequenceMailbox: SequenceMailbox | null;
 }
 
 interface SequenceEmailSettingsProps {
   sequenceId: string;
-  initialSettings: SequenceEmailSettingsState;
-  mailboxes: Mailbox[];
+  initialSettings: {
+    testMode: boolean;
+    disableSending: boolean;
+    testEmails: string[];
+    sequenceMailbox: SequenceMailbox | null;
+  };
+  mailboxes: MailboxWithRequired[];
 }
 
 export function SequenceEmailSettings({
@@ -46,16 +60,19 @@ export function SequenceEmailSettings({
     testMode: initialSettings?.testMode ?? false,
     disableSending: initialSettings?.disableSending ?? false,
     testEmails: initialSettings?.testEmails ?? [],
-    mailboxId: initialSettings?.mailboxId ?? null,
+    sequenceMailbox: initialSettings?.sequenceMailbox ?? null,
   });
   const [newEmail, setNewEmail] = useState("");
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Find the selected mailbox
+  // Find the selected mailbox and alias
   const selectedMailbox = mailboxes.find(
-    (mailbox) => mailbox.id === settings.mailboxId
+    (mailbox) => mailbox.id === settings.sequenceMailbox?.mailboxId
+  );
+  const selectedAlias = selectedMailbox?.aliases?.find(
+    (alias) => alias.id === settings.sequenceMailbox?.aliasId
   );
 
   const handleMailboxChange = async (mailboxId: string) => {
@@ -68,6 +85,8 @@ export function SequenceEmailSettings({
         },
         body: JSON.stringify({
           mailboxId,
+          aliasId: null, // Reset alias when mailbox changes
+          clearDeprecatedMailboxId: true, // Signal to clear the deprecated mailboxId
         }),
       });
 
@@ -75,7 +94,12 @@ export function SequenceEmailSettings({
         throw new Error("Failed to update sequence mailbox");
       }
 
-      setSettings((prev) => ({ ...prev, mailboxId }));
+      const data = await response.json();
+
+      setSettings((prev) => ({
+        ...prev,
+        sequenceMailbox: data.sequenceMailbox,
+      }));
       router.refresh();
 
       toast({
@@ -86,6 +110,46 @@ export function SequenceEmailSettings({
       toast({
         title: "Error",
         description: "Failed to update mailbox",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAliasChange = async (value: string) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/sequences/${sequenceId}/settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          aliasId: value === "default" ? null : value,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update sequence alias");
+      }
+
+      const data = await response.json();
+
+      setSettings((prev) => ({
+        ...prev,
+        sequenceMailbox: data.sequenceMailbox,
+      }));
+      router.refresh();
+
+      toast({
+        title: "Success",
+        description: "Email alias updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update email alias",
         variant: "destructive",
       });
     } finally {
@@ -234,12 +298,12 @@ export function SequenceEmailSettings({
               </div>
             </div>
             <Select
-              value={settings.mailboxId || undefined}
+              value={settings.sequenceMailbox?.mailboxId || undefined}
               onValueChange={handleMailboxChange}
               disabled={isLoading || mailboxes.length === 0}
             >
               <SelectTrigger className="max-w-md">
-                <SelectValue>
+                <SelectValue placeholder="Select a mailbox">
                   {selectedMailbox
                     ? selectedMailbox.name
                       ? `${selectedMailbox.name} (${selectedMailbox.email})`
@@ -264,7 +328,46 @@ export function SequenceEmailSettings({
               </SelectContent>
             </Select>
           </div>
-          {!settings.mailboxId && (
+
+          {selectedMailbox &&
+            selectedMailbox.aliases &&
+            selectedMailbox.aliases.length > 0 && (
+              <div className="flex justify-between items-center mt-4">
+                <div>
+                  <Label>Email Alias</Label>
+                  <div className="text-sm text-muted-foreground mb-2">
+                    Select an alias to use for sending emails (optional)
+                  </div>
+                </div>
+                <Select
+                  value={settings.sequenceMailbox?.aliasId || "default"}
+                  onValueChange={handleAliasChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="max-w-md">
+                    <SelectValue placeholder="Select an alias">
+                      {selectedAlias
+                        ? selectedAlias.name
+                          ? `${selectedAlias.name} (${selectedAlias.alias})`
+                          : selectedAlias.alias
+                        : "Use default email"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Use default email</SelectItem>
+                    {selectedMailbox.aliases.map((alias) => (
+                      <SelectItem key={alias.id} value={alias.id}>
+                        {alias.name
+                          ? `${alias.name} (${alias.alias})`
+                          : alias.alias}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+          {!settings.sequenceMailbox?.mailboxId && (
             <Alert variant="destructive" className="mt-2">
               <AlertDescription>
                 {mailboxes.length === 0
