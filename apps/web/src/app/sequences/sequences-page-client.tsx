@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { LocalSearch } from "@/components/ui/local-search";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { SequenceList } from "@/components/sequences/sequence-list";
+import { SequenceTable } from "@/components/sequences/sequence-table";
 import { SequenceStatus } from "@coldjot/types";
 
 interface Sequence {
@@ -63,7 +63,7 @@ export function SequencesPageClient({
         </div>
         <Separator />
       </div>
-      <SequenceList
+      <SequenceTable
         initialSequences={initialSequences}
         showCreateModal={showCreateModal}
         onCloseCreateModal={() => setShowCreateModal(false)}

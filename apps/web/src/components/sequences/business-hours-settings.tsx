@@ -102,12 +102,11 @@ BusinessHoursSettingsProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           scheduleType,
-          ...(scheduleType === "business" && {
-            businessHours: {
-              ...settings,
-              holidays: settings.holidays || [],
-            },
-          }),
+          // Always send business hours regardless of schedule type
+          businessHours: {
+            ...settings,
+            holidays: settings.holidays || [],
+          },
         }),
       });
 
@@ -115,10 +114,6 @@ BusinessHoursSettingsProps) {
 
       const data = await response.json();
       setSettings(data.businessHours || DEFAULT_BUSINESS_HOURS);
-      //   onSettingsChange?.({
-      //     ...settings,
-      //     scheduleType,
-      //   });
       toast.success("Settings saved successfully");
     } catch (error) {
       console.error("Error updating business hours:", error);

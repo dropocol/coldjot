@@ -20,18 +20,30 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const json: UpdateSettingsBody = await request.json();
-
   try {
-    const updateData: any = {};
-    const mailboxData: any = {};
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
+    const { id } = await params;
+    const json: UpdateSettingsBody = await request.json();
+
+    // Validate the request
+    if (
+      json.scheduleType &&
+      !["business", "custom"].includes(json.scheduleType)
+    ) {
+      return NextResponse.json(
+        { error: "Invalid schedule type" },
+        { status: 400 }
+      );
+    }
+
+    // Start building the update data
+    const updateData: any = {};
+
+    // Handle basic fields
     if (json.name !== undefined) updateData.name = json.name;
     if (json.accessLevel !== undefined)
       updateData.accessLevel = json.accessLevel;
@@ -42,14 +54,55 @@ export async function PATCH(
       updateData.scheduleType = json.scheduleType;
     if (json.testEmails !== undefined) updateData.testEmails = json.testEmails;
 
+    // Get the current sequence with its business hours
+    const existingSequence = await prisma.sequence.findUnique({
+      where: { id },
+      include: {
+        businessHours: true,
+        sequenceMailbox: true,
+      },
+    });
+
+    if (!existingSequence) {
+      return NextResponse.json(
+        { error: "Sequence not found" },
+        { status: 404 }
+      );
+    }
+
+    // Handle business hours
+    if (json.businessHours) {
+      if (existingSequence.businessHours) {
+        // Update existing business hours
+        await prisma.businessHours.update({
+          where: { id: existingSequence.businessHours.id },
+          data: {
+            timezone: json.businessHours.timezone,
+            workDays: json.businessHours.workDays,
+            workHoursStart: json.businessHours.workHoursStart,
+            workHoursEnd: json.businessHours.workHoursEnd,
+            holidays: json.businessHours.holidays || [],
+          },
+        });
+      } else {
+        // Create new business hours
+        await prisma.businessHours.create({
+          data: {
+            userId: session.user.id,
+            sequenceId: id,
+            timezone: json.businessHours.timezone,
+            workDays: json.businessHours.workDays,
+            workHoursStart: json.businessHours.workHoursStart,
+            workHoursEnd: json.businessHours.workHoursEnd,
+            holidays: json.businessHours.holidays || [],
+          },
+        });
+      }
+    }
+
     // Handle mailbox and alias updates
     if (json.mailboxId !== undefined || json.aliasId !== undefined) {
-      const existingSequence = await prisma.sequence.findUnique({
-        where: { id: id },
-        include: { sequenceMailbox: true },
-      });
-
-      if (existingSequence?.sequenceMailbox) {
+      if (existingSequence.sequenceMailbox) {
         // Update existing SequenceMailbox
         await prisma.sequenceMailbox.update({
           where: { id: existingSequence.sequenceMailbox.id },
@@ -71,11 +124,9 @@ export async function PATCH(
       }
     }
 
-    // Update sequence
+    // Update sequence and return with all relations
     const sequence = await prisma.sequence.update({
-      where: {
-        id: id,
-      },
+      where: { id },
       data: updateData,
       include: {
         sequenceMailbox: true,
