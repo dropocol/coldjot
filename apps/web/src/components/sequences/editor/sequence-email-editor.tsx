@@ -11,11 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Wand2, Loader2, Send } from "lucide-react";
+import { Loader2, Send, Info } from "lucide-react";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { TemplateCommand } from "@/components/templates/template-command";
 import { toast } from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface SequenceEmailEditorProps {
@@ -27,6 +33,7 @@ interface SequenceEmailEditorProps {
     content?: string;
     includeSignature?: boolean;
     replyToThread?: boolean;
+    templateId?: string;
   };
   sequenceId?: string;
   stepId?: string;
@@ -52,6 +59,14 @@ export function SequenceEmailEditor({
   );
   const [isSending, setIsSending] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [currentTemplateId, setCurrentTemplateId] = useState<
+    string | undefined
+  >(initialData?.templateId);
+  const [isTemplateUnlinked, setIsTemplateUnlinked] = useState(
+    !initialData?.templateId
+  );
+
+  const isEditorDisabled = !isTemplateUnlinked && Boolean(currentTemplateId);
 
   // Update state when initialData changes
   useEffect(() => {
@@ -60,15 +75,20 @@ export function SequenceEmailEditor({
       setSubject(initialData.subject || "");
       setIncludeSignature(initialData.includeSignature ?? true);
       setReplyToThread(initialData.replyToThread ?? false);
+      setCurrentTemplateId(initialData.templateId);
+      setIsTemplateUnlinked(!initialData.templateId);
     }
   }, [initialData]);
 
   const handleTemplateSelect = (template: {
+    id: string;
     subject: string;
     content: string;
   }) => {
     setSubject(template.subject);
     setContent(template.content);
+    setCurrentTemplateId(template.id);
+    setIsTemplateUnlinked(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,12 +98,9 @@ export function SequenceEmailEditor({
       content,
       includeSignature,
       replyToThread,
+      templateId: isTemplateUnlinked ? undefined : currentTemplateId,
     });
   };
-
-  useEffect(() => {
-    console.log(content);
-  }, [content]);
 
   const handleSendTest = async () => {
     if (!sequenceId || !stepId) return;
@@ -115,15 +132,13 @@ export function SequenceEmailEditor({
   // Function to process content and preserve both HTML formatting and line breaks
   const processContent = (htmlContent: string) => {
     if (!htmlContent) return "";
-
-    // Replace empty paragraphs with a non-breaking space to maintain their height
     return htmlContent.replace(/<p><\/p>/g, "<p>&nbsp;</p>");
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-11/12 sm:w-[95%] max-w-[1400px] h-[95vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="w-11/12 sm:w-[100%] max-w-[100%] h-[100vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {initialData ? "Edit Email" : "Create Email"}
           </DialogTitle>
@@ -133,9 +148,9 @@ export function SequenceEmailEditor({
           onSubmit={handleSubmit}
           className="flex flex-col flex-1 overflow-hidden"
         >
-          <div className="grid grid-cols-2 gap-6 min-h-0 flex-1">
+          <div className="grid grid-cols-2 gap-6 flex-1 min-h-0">
             {/* Left column */}
-            <div className="flex flex-col gap-4 min-h-0">
+            <div className="flex flex-col gap-4 overflow-hidden">
               {previousStepId && (
                 <div className="flex-shrink-0 flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                   <div className="space-y-0.5">
@@ -153,21 +168,59 @@ export function SequenceEmailEditor({
 
               <div className="flex-shrink-0 space-y-4">
                 <Label htmlFor="subject">Subject</Label>
-                <Input
-                  id="subject"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Enter email subject"
-                />
+                <div className="px-px">
+                  <Input
+                    id="subject"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="Enter email subject"
+                    disabled={isEditorDisabled}
+                  />
+                </div>
               </div>
 
-              <div className="flex-1 min-h-0">
+              {currentTemplateId && (
+                <div className="flex-shrink-0 flex items-center gap-2">
+                  <Checkbox
+                    id="unlink-template"
+                    checked={isTemplateUnlinked}
+                    onCheckedChange={(checked: boolean) =>
+                      setIsTemplateUnlinked(checked)
+                    }
+                  />
+                  <Label htmlFor="unlink-template">Unlink from template</Label>
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger
+                        type="button"
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        <div className="p-0.5 hover:bg-muted rounded-sm cursor-help">
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-[260px]">
+                        <p className="text-sm">
+                          Unlinking allows you to edit the content freely.
+                          Changes won't affect the original template.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-hidden px-px">
                 <RichTextEditor
                   initialContent={content}
                   onChange={setContent}
                   placeholder="Write your email content..."
-                  className="h-full flex flex-col"
+                  className={cn(
+                    "h-full flex flex-col",
+                    isEditorDisabled && "opacity-70 pointer-events-none"
+                  )}
                   editorClassName="flex-1 overflow-y-auto"
+                  readOnly={isEditorDisabled}
                 />
               </div>
 
@@ -184,7 +237,7 @@ export function SequenceEmailEditor({
             </div>
 
             {/* Right column - Preview */}
-            <div className="flex flex-col min-h-0">
+            <div className="flex flex-col min-h-0 overflow-hidden">
               <div className="flex-shrink-0 space-y-2 p-6 bg-muted/30">
                 <h3 className="text-sm font-medium">
                   Generate Preview for Contact (optional)
@@ -192,7 +245,7 @@ export function SequenceEmailEditor({
                 <Input placeholder="Choose a contact" />
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto p-6 bg-muted/30">
+              <div className="flex-1 overflow-y-auto p-6 bg-muted/30">
                 <div className="p-4 bg-white rounded-lg">
                   <div className="text-sm text-muted-foreground">
                     <p>To: Example Contact &lt;example@google.com&gt;</p>
@@ -221,29 +274,32 @@ export function SequenceEmailEditor({
           <div className="flex-shrink-0 flex justify-between items-center pt-4 mt-4 border-t">
             <div className="flex items-center gap-2">
               <TemplateCommand onSelect={handleTemplateSelect} />
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-2"
-                onClick={() => {}}
-              >
-                <Wand2 className="h-4 w-4" />
-                AI assistant
-              </Button>
               {sequenceId && stepId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSendTest}
-                  disabled={isSendingTest}
-                >
-                  {isSendingTest ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Send className="h-4 w-4 mr-2" />
-                  )}
-                  Send Test Email
-                </Button>
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSendTest}
+                        disabled={isSendingTest}
+                      >
+                        {isSendingTest ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Send className="h-4 w-4 mr-2" />
+                        )}
+                        Send Test Email
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-[260px]">
+                      <p className="text-sm">
+                        Send a sample email to your registered email address to
+                        preview how it will look.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
             <div className="flex gap-3">

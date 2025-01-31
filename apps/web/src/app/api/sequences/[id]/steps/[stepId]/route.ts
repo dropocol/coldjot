@@ -42,8 +42,9 @@ export async function PUT(
     }
 
     const json = await req.json();
+
     delete json.sequenceId;
-    delete json.templateId;
+    // delete json.templateId;
     delete json.type;
 
     // Update the step
