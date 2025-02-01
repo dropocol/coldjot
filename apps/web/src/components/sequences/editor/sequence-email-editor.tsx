@@ -59,6 +59,7 @@ export function SequenceEmailEditor({
   );
   const [isSending, setIsSending] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [currentTemplateId, setCurrentTemplateId] = useState<
     string | undefined
   >(initialData?.templateId);
@@ -66,29 +67,146 @@ export function SequenceEmailEditor({
     !initialData?.templateId
   );
 
-  const isEditorDisabled = !isTemplateUnlinked && Boolean(currentTemplateId);
+  const isEditorDisabled = Boolean(currentTemplateId) && !isTemplateUnlinked;
+
+  // Fetch template content when templateId changes or on initial load
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchTemplate = async () => {
+      if (!currentTemplateId || isTemplateUnlinked) {
+        setIsLoadingTemplate(false);
+        return;
+      }
+
+      setIsLoadingTemplate(true);
+      try {
+        const response = await fetch(`/api/templates/${currentTemplateId}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const template = await response.json();
+
+        if (isMounted) {
+          setSubject(template.subject);
+          setContent(template.content);
+        }
+      } catch (error: any) {
+        if (error?.name === "AbortError") return;
+
+        console.error("Error fetching template:", error);
+        if (isMounted) {
+          toast.error(
+            "Failed to load template content. Unlinking from template."
+          );
+          setIsTemplateUnlinked(true);
+          setCurrentTemplateId(undefined);
+          if (initialData) {
+            setSubject(initialData.subject || "");
+            setContent(initialData.content || "");
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingTemplate(false);
+        }
+      }
+    };
+
+    fetchTemplate();
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [currentTemplateId, isTemplateUnlinked, initialData]);
 
   // Update state when initialData changes
   useEffect(() => {
     if (initialData) {
-      setContent(initialData.content || "");
-      setSubject(initialData.subject || "");
+      const hasTemplate = Boolean(initialData.templateId);
+      setCurrentTemplateId(initialData.templateId);
+      setIsTemplateUnlinked(!hasTemplate);
+
+      // Set content and subject based on template status
+      if (!hasTemplate) {
+        setIsLoadingTemplate(false);
+        setContent(initialData.content || "");
+        setSubject(initialData.subject || "");
+      }
+
       setIncludeSignature(initialData.includeSignature ?? true);
       setReplyToThread(initialData.replyToThread ?? false);
-      setCurrentTemplateId(initialData.templateId);
-      setIsTemplateUnlinked(!initialData.templateId);
     }
   }, [initialData]);
 
-  const handleTemplateSelect = (template: {
+  const handleTemplateSelect = async (template: {
     id: string;
     subject: string;
     content: string;
   }) => {
-    setSubject(template.subject);
-    setContent(template.content);
-    setCurrentTemplateId(template.id);
-    setIsTemplateUnlinked(false);
+    setIsLoadingTemplate(true);
+    try {
+      setCurrentTemplateId(template.id);
+      setIsTemplateUnlinked(false);
+      setSubject(template.subject);
+      setContent(template.content);
+    } catch (error) {
+      console.error("Error selecting template:", error);
+      toast.error("Failed to apply template");
+      setIsTemplateUnlinked(true);
+      setCurrentTemplateId(undefined);
+    } finally {
+      setIsLoadingTemplate(false);
+    }
+  };
+
+  const handleUnlinkTemplate = (checked: boolean) => {
+    setIsTemplateUnlinked(checked);
+    if (checked) {
+      // When unlinking, keep the current content and subject editable
+      // but clear the template connection
+      setCurrentTemplateId(undefined);
+    } else {
+      // When relinking, fetch the template content again
+      if (initialData?.templateId) {
+        setCurrentTemplateId(initialData.templateId);
+        fetchTemplateContent();
+      }
+    }
+  };
+
+  // Move fetchTemplateContent outside of useEffect so we can reuse it
+  const fetchTemplateContent = async () => {
+    if (!currentTemplateId || isTemplateUnlinked) {
+      setIsLoadingTemplate(false);
+      return;
+    }
+
+    setIsLoadingTemplate(true);
+    try {
+      const response = await fetch(`/api/templates/${currentTemplateId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const template = await response.json();
+      setSubject(template.subject);
+      setContent(template.content);
+    } catch (error) {
+      console.error("Error fetching template:", error);
+      toast.error("Failed to load template content. Unlinking from template.");
+      setIsTemplateUnlinked(true);
+      setCurrentTemplateId(undefined);
+      // Restore original content if available
+      if (initialData) {
+        setSubject(initialData.subject || "");
+        setContent(initialData.content || "");
+      }
+    } finally {
+      setIsLoadingTemplate(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,7 +292,7 @@ export function SequenceEmailEditor({
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="Enter email subject"
-                    disabled={isEditorDisabled}
+                    disabled={isEditorDisabled || isLoadingTemplate}
                   />
                 </div>
               </div>
@@ -184,11 +302,14 @@ export function SequenceEmailEditor({
                   <Checkbox
                     id="unlink-template"
                     checked={isTemplateUnlinked}
-                    onCheckedChange={(checked: boolean) =>
-                      setIsTemplateUnlinked(checked)
-                    }
+                    onCheckedChange={handleUnlinkTemplate}
+                    disabled={isLoadingTemplate}
                   />
-                  <Label htmlFor="unlink-template">Unlink from template</Label>
+                  <Label htmlFor="unlink-template">
+                    {isLoadingTemplate
+                      ? "Loading template..."
+                      : "Unlink from template"}
+                  </Label>
                   <TooltipProvider delayDuration={300}>
                     <Tooltip>
                       <TooltipTrigger
@@ -211,17 +332,31 @@ export function SequenceEmailEditor({
               )}
 
               <div className="flex-1 overflow-hidden px-px">
-                <RichTextEditor
-                  initialContent={content}
-                  onChange={setContent}
-                  placeholder="Write your email content..."
-                  className={cn(
-                    "h-full flex flex-col",
-                    isEditorDisabled && "opacity-70 pointer-events-none"
-                  )}
-                  editorClassName="flex-1 overflow-y-auto"
-                  readOnly={isEditorDisabled}
-                />
+                {isLoadingTemplate &&
+                currentTemplateId &&
+                !isTemplateUnlinked ? (
+                  <div className="h-full flex items-center justify-center bg-muted/10 rounded-md">
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Loading template content...
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <RichTextEditor
+                    key={`editor-${isEditorDisabled}`}
+                    initialContent={content}
+                    onChange={setContent}
+                    placeholder="Write your email content..."
+                    className={cn(
+                      "h-full flex flex-col",
+                      isEditorDisabled && "opacity-70"
+                    )}
+                    editorClassName="flex-1 overflow-y-auto"
+                    readOnly={isEditorDisabled}
+                  />
+                )}
               </div>
 
               <div className="flex-shrink-0 flex items-center space-x-2">
