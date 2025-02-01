@@ -1,7 +1,11 @@
 import { prisma } from "@coldjot/database";
 import { notFound } from "next/navigation";
 import { SequenceSettings } from "@/components/sequences/sequence-settings";
-import type { BusinessHours } from "@coldjot/types";
+import type {
+  BusinessHours,
+  BusinessScheduleEnum,
+  BusinessScheduleType,
+} from "@coldjot/types";
 
 export default async function SequenceSettingsPage({
   params,
@@ -35,7 +39,7 @@ export default async function SequenceSettingsPage({
         id: sequence.id,
         name: sequence.name,
         accessLevel: sequence.accessLevel as "team" | "private",
-        scheduleType: sequence.scheduleType as "business" | "custom",
+        scheduleType: sequence.scheduleType as BusinessScheduleType,
         businessHours: sequence.businessHours
           ? ({
               timezone: sequence.businessHours.timezone,

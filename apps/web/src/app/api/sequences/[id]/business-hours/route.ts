@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@coldjot/database";
 import { auth } from "@/auth";
-import type { BusinessHours } from "@coldjot/types";
+import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
 
 interface UpdateBusinessHoursBody extends Omit<BusinessHours, "holidays"> {
-  scheduleType: "business" | "custom";
+  scheduleType: BusinessScheduleType;
   holidays: string[];
 }
 
