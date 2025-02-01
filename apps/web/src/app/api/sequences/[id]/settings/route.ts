@@ -1,14 +1,15 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
-import type { BusinessHours } from "@coldjot/types";
+import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
+import { BusinessScheduleEnum } from "@coldjot/types";
 
 interface UpdateSettingsBody {
   name?: string;
   accessLevel?: "team" | "private";
   testMode?: boolean;
   disableSending?: boolean;
-  scheduleType?: "business" | "custom";
+  scheduleType?: BusinessScheduleType;
   businessHours?: BusinessHours;
   testEmails?: string[];
   mailboxId?: string;
@@ -28,11 +29,14 @@ export async function PATCH(
 
     const { id } = await params;
     const json: UpdateSettingsBody = await request.json();
+    console.log("json.businessHours", json);
 
     // Validate the request
     if (
       json.scheduleType &&
-      !["business", "custom"].includes(json.scheduleType)
+      ![BusinessScheduleEnum.BUSINESS, BusinessScheduleEnum.CUSTOM].includes(
+        json.scheduleType
+      )
     ) {
       return NextResponse.json(
         { error: "Invalid schedule type" },
@@ -82,6 +86,7 @@ export async function PATCH(
             workHoursStart: json.businessHours.workHoursStart,
             workHoursEnd: json.businessHours.workHoursEnd,
             holidays: json.businessHours.holidays || [],
+            type: json.businessHours.type,
           },
         });
       } else {
@@ -95,6 +100,7 @@ export async function PATCH(
             workHoursStart: json.businessHours.workHoursStart,
             workHoursEnd: json.businessHours.workHoursEnd,
             holidays: json.businessHours.holidays || [],
+            type: json.businessHours.type,
           },
         });
       }

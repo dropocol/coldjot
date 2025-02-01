@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Clock, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "react-hot-toast";
-import type { BusinessHours } from "@coldjot/types";
+import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
 import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
 import {
@@ -26,14 +26,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { BusinessScheduleEnum } from "@coldjot/types";
 
 interface BusinessHoursSettingsProps {
   sequenceId: string;
   initialSettings?: BusinessHours;
-  scheduleType: "business" | "custom";
-  //   onSettingsChange?: (
-  //     settings: BusinessHours & { scheduleType: "business" | "custom" }
-  //   ) => void;
+  scheduleType: BusinessScheduleEnum;
 }
 
 const DAYS_OF_WEEK = [
@@ -52,6 +50,7 @@ const DEFAULT_BUSINESS_HOURS: BusinessHours = {
   workHoursStart: "09:00",
   workHoursEnd: "17:00",
   holidays: [],
+  type: BusinessScheduleEnum.BUSINESS,
 };
 
 export function BusinessHoursSettings({
@@ -63,9 +62,9 @@ BusinessHoursSettingsProps) {
   const [settings, setSettings] = useState<BusinessHours>(
     initialSettings || DEFAULT_BUSINESS_HOURS
   );
-  const [scheduleType, setScheduleType] = useState<"business" | "custom">(
-    initialScheduleType
-  );
+  const [scheduleType, setScheduleType] =
+    useState<BusinessScheduleType>(initialScheduleType);
+
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -89,9 +88,13 @@ BusinessHoursSettingsProps) {
     setOpen(false);
   };
 
-  const handleScheduleTypeChange = (value: "business" | "custom") => {
+  const handleScheduleTypeChange = (value: BusinessScheduleType) => {
+    console.log("handleScheduleTypeChange", value);
     setScheduleType(value);
-    setSettings(initialSettings || DEFAULT_BUSINESS_HOURS);
+    setSettings({
+      ...(initialSettings || DEFAULT_BUSINESS_HOURS),
+      type: value,
+    });
   };
 
   const handleSaveSettings = async () => {
@@ -106,6 +109,7 @@ BusinessHoursSettingsProps) {
           businessHours: {
             ...settings,
             holidays: settings.holidays || [],
+            type: scheduleType,
           },
         }),
       });
@@ -246,16 +250,19 @@ BusinessHoursSettingsProps) {
                   <TimePicker
                     value={settings.workHoursStart}
                     onChange={(value) => handleTimeChange("start", value)}
-                    disabled={isLoading || scheduleType === "business"}
+                    disabled={
+                      isLoading ||
+                      scheduleType === BusinessScheduleEnum.BUSINESS
+                    }
                   />
                 </div>
-                {scheduleType === "business" && (
+                {scheduleType === BusinessScheduleEnum.BUSINESS && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     Fixed to business hours
                   </p>
                 )}
 
-                {scheduleType === "custom" && (
+                {scheduleType === BusinessScheduleEnum.CUSTOM && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     Custom start time
                   </p>
@@ -267,17 +274,20 @@ BusinessHoursSettingsProps) {
                   <TimePicker
                     value={settings.workHoursEnd}
                     onChange={(value) => handleTimeChange("end", value)}
-                    disabled={isLoading || scheduleType === "business"}
+                    disabled={
+                      isLoading ||
+                      scheduleType === BusinessScheduleEnum.BUSINESS
+                    }
                   />
                 </div>
 
-                {scheduleType === "business" && (
+                {scheduleType === BusinessScheduleEnum.BUSINESS && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     Fixed to business hours
                   </p>
                 )}
 
-                {scheduleType === "custom" && (
+                {scheduleType === BusinessScheduleEnum.CUSTOM && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     Custom end time
                   </p>

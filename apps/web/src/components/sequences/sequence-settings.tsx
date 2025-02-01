@@ -16,7 +16,11 @@ import { BusinessHoursSettings } from "@/components/sequences/business-hours-set
 import { SequenceEmailSettings } from "@/components/sequences/sequence-email-settings";
 import type { MailboxWithRequired } from "@/components/sequences/sequence-email-settings";
 import { toast } from "react-hot-toast";
-import type { BusinessHours } from "@coldjot/types";
+import type {
+  BusinessHours,
+  BusinessScheduleEnum,
+  BusinessScheduleType,
+} from "@coldjot/types";
 import { SequenceDangerZone } from "@/components/sequences/sequence-danger-zone";
 import { Separator } from "@radix-ui/react-separator";
 
@@ -25,7 +29,7 @@ interface SequenceSettingsProps {
     id: string;
     name: string;
     accessLevel: "team" | "private";
-    scheduleType: "business" | "custom";
+    scheduleType: BusinessScheduleType;
     businessHours?: BusinessHours;
     testMode: boolean;
     disableSending: boolean;

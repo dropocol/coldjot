@@ -376,6 +376,7 @@ model BusinessHours {
     holidays       DateTime[]
     createdAt      DateTime   @default(now())
     updatedAt      DateTime   @updatedAt
+    type           String     @default("business")
 
     @@index([userId])
     @@index([sequenceId])

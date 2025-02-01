@@ -74,6 +74,18 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       logger.info(`🔍 Fetching sequence step ${data.stepId}`);
       const step = await this.getAndValidateSequenceStep(data.stepId);
 
+      // get template info
+      const template = await prisma.template.findUnique({
+        where: { id: step.templateId || undefined },
+      });
+
+      if (!template) {
+        throw new Error(`Template ${step.templateId} not found`);
+      } else {
+        step.subject = template.subject;
+        step.content = template.content;
+      }
+
       // Get contact info
       // TODO : Check if the contact is available
       logger.info(`🔍 Fetching contact info ${data.contactId}`);
