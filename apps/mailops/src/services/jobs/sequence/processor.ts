@@ -130,6 +130,12 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
           replyToThread: step.replyToThread ?? false,
           templateId: step.templateId,
         })),
+        businessHours: dbSequence.businessHours
+          ? {
+              ...dbSequence.businessHours,
+              type: dbSequence.businessHours.type as BusinessScheduleEnum,
+            }
+          : null,
       };
 
       logger.info(`📋 Sequence details for ${sequence.name}:`, {

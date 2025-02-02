@@ -507,11 +507,11 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       // Add a check in EmailThread model to see if the threadId is fake
       // if it is, do not create the job
 
-      const thread = await prisma.emailThread.findUnique({
-        where: {
-          threadId: emailJob.threadId,
-        },
-      });
+      // const thread = await prisma.emailThread.findUnique({
+      //   where: {
+      //     threadId: emailJob.threadId,
+      //   },
+      // });
 
       // if (thread?.isFake) {
       //   await this.jobManager.addEmailJob(emailJob);
