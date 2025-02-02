@@ -11,6 +11,10 @@ import {
 import { RATE_LIMIT_CONFIG } from "@/config/rate-limit/constants";
 import { isDevelopment } from "@/config";
 
+// -------------------------------------------
+// -------------------------------------------
+// -------------------------------------------
+
 // Logging utilities
 export const saveToLogFile = (message: string) => {
   if (isDevelopment) {
@@ -51,6 +55,10 @@ export const logErrorAndSave = (message: string) => {
   logger.error(message);
   saveToLogFile(message);
 };
+
+// -------------------------------------------
+// -------------------------------------------
+// -------------------------------------------
 
 // Business hours utilities
 export const isValidBusinessTime = (
@@ -109,6 +117,10 @@ export const isValidBusinessTime = (
   return !isHoliday && isWorkDay && isWithinHours;
 };
 
+// -------------------------------------------
+// -------------------------------------------
+// -------------------------------------------
+
 export const nextBusinessStart = (
   date: DateTime,
   businessHours: BusinessHours
@@ -147,91 +159,224 @@ export const nextBusinessStart = (
   return candidate;
 };
 
-// Delay calculation utilities
+// -------------------------------------------
+// -------------------------------------------
+// -------------------------------------------
+
+// Unified distribution logic
+export const calculateDistribution = (
+  businessHours?: BusinessHours,
+  delayUnit?: string,
+  isBusinessHoursAdjustment: boolean = false,
+  isImmediate: boolean = false
+): { minutes: number; seconds: number; milliseconds: number } => {
+  logDebugAndSave(`
+    🎯 Starting Distribution Calculation:
+    - Is Business Hours Adjustment: ${isBusinessHoursAdjustment}
+    - Has Business Hours: ${!!businessHours}
+    - Delay Unit: ${delayUnit || "N/A"}
+    - Is Immediate: ${isImmediate}
+  `);
+
+  // For immediate timing, add a small base distribution
+  if (isImmediate) {
+    const minutes = Math.floor(Math.random() * 31); // 0-30 minutes
+    const seconds = Math.floor(Math.random() * 60);
+    const milliseconds = Math.floor(Math.random() * 1000);
+
+    logDebugAndSave(`
+      ⚡ Immediate Timing Distribution:
+      - Base Minutes: ${minutes}
+      - Seconds: ${seconds}
+      - Milliseconds: ${milliseconds}
+    `);
+
+    return { minutes, seconds, milliseconds };
+  }
+
+  // For business hours adjustment
+  if (isBusinessHoursAdjustment && businessHours) {
+    const [startHour, startMinute] = businessHours.workHoursStart
+      .split(":")
+      .map(Number);
+    const [endHour, endMinute] = businessHours.workHoursEnd
+      .split(":")
+      .map(Number);
+
+    const businessDayMinutes =
+      endHour * 60 + endMinute - (startHour * 60 + startMinute);
+    const bufferMinutes = 60; // 1-hour buffer
+    const safeStartMinutes = bufferMinutes;
+    const safeEndMinutes = businessDayMinutes - bufferMinutes;
+
+    const distributionMinutes =
+      Math.floor(Math.random() * (safeEndMinutes - safeStartMinutes)) +
+      safeStartMinutes;
+    const seconds = Math.floor(Math.random() * 60);
+    const milliseconds = Math.floor(Math.random() * 1000);
+
+    logDebugAndSave(`
+      🎲 Business Hours Distribution Calculation:
+      - Business Day Start: ${startHour}:${startMinute}
+      - Business Day End: ${endHour}:${endMinute}
+      - Total Business Minutes: ${businessDayMinutes}
+      - Buffer Minutes: ${bufferMinutes}
+      - Safe Window: ${safeStartMinutes}-${safeEndMinutes} minutes
+      - Calculated Distribution:
+        * Minutes: ${distributionMinutes}
+        * Seconds: ${seconds}
+        * Milliseconds: ${milliseconds}
+    `);
+
+    return { minutes: distributionMinutes, seconds, milliseconds };
+  }
+
+  // For delay-based distribution
+  if (delayUnit) {
+    let minutes = 0;
+    const seconds = Math.floor(Math.random() * 60);
+    const milliseconds = Math.floor(Math.random() * 1000);
+
+    if (delayUnit.toLowerCase() === "days") {
+      const additionalHours = Math.floor(Math.random() * 2) + 1; // 1-2 hours
+      const additionalMinutes = Math.floor(Math.random() * 60); // 0-59 minutes
+      minutes = additionalHours * 60 + additionalMinutes;
+
+      logDebugAndSave(`
+        ⏳ Day-Based Delay Distribution:
+        - Additional Hours: ${additionalHours}
+        - Additional Minutes: ${additionalMinutes}
+        - Total Minutes: ${minutes}
+        - Seconds: ${seconds}
+        - Milliseconds: ${milliseconds}
+      `);
+    } else if (delayUnit.toLowerCase() === "hours") {
+      minutes = Math.floor(Math.random() * 26) + 5; // 5-30 minutes
+
+      logDebugAndSave(`
+        ⏳ Hour-Based Delay Distribution:
+        - Additional Minutes: ${minutes}
+        - Seconds: ${seconds}
+        - Milliseconds: ${milliseconds}
+      `);
+    }
+
+    return { minutes, seconds, milliseconds };
+  }
+
+  // Default minimal distribution
+  const defaultDistribution = {
+    minutes: Math.floor(Math.random() * 31), // Changed to add 0-30 minutes by default
+    seconds: Math.floor(Math.random() * 60),
+    milliseconds: Math.floor(Math.random() * 1000),
+  };
+
+  logDebugAndSave(`
+    ⚡ Default Distribution:
+    - Minutes: ${defaultDistribution.minutes}
+    - Seconds: ${defaultDistribution.seconds}
+    - Milliseconds: ${defaultDistribution.milliseconds}
+  `);
+
+  return defaultDistribution;
+};
+
+// -------------------------------------------
+// -------------------------------------------
+// -------------------------------------------
+
+// Helper for natural distribution
+const addNaturalDistribution = (delayUnit: string): number => {
+  logDebugAndSave(`
+    🔄 Starting Natural Distribution:
+    - Delay Unit: ${delayUnit}
+  `);
+
+  const distribution = calculateDistribution(undefined, delayUnit, false);
+
+  logDebugAndSave(`
+    ✅ Natural Distribution Result:
+    - Added Minutes: ${distribution.minutes}
+  `);
+
+  return distribution.minutes;
+};
+
+// -------------------------------------------
+// -------------------------------------------
+// -------------------------------------------
+
 export const calculateBaseDelay = (
   step: SequenceStep,
   isDemoMode: boolean
 ): number => {
-  logAndSave("⌛ Starting base delay calculation");
+  logDebugAndSave(`
+    ⌛ Starting Base Delay Calculation:
+    - Step Type: ${step.stepType}
+    - Timing: ${step.timing}
+    - Delay Amount: ${step.delayAmount || "N/A"}
+    - Delay Unit: ${step.delayUnit || "N/A"}
+    - Demo Mode: ${isDemoMode}
+  `);
 
   let delay: number;
 
-  logger.info(step, "🕒 Step");
-  switch (step.stepType.toUpperCase()) {
-    case StepTypeEnum.WAIT:
-      if (!step.delayAmount || !step.delayUnit) {
-        delay = RATE_LIMIT_CONFIG.SCHEDULING.DEFAULT_DELAY;
-        logDebugAndSave("Using default delay for WAIT step");
-      } else {
-        delay = convertToMinutes(step.delayAmount, step.delayUnit);
-        if (step.delayUnit.toLowerCase() === "days") {
-          const additionalHours = Math.floor(Math.random() * 4) + 1;
-          const additionalMinutes = Math.floor(Math.random() * 60);
-          delay += additionalHours * 60 + additionalMinutes;
-          logDebugAndSave(
-            `⏳ Added natural distribution of ${additionalHours}h ${additionalMinutes}m to day-based delay`
-          );
-        } else if (step.delayUnit.toLowerCase() === "hours") {
-          const additionalMinutes = Math.floor(Math.random() * 26) + 5;
-          delay += additionalMinutes;
-          logDebugAndSave(
-            `⏳ Added natural distribution of ${additionalMinutes}m to hour-based delay`
-          );
-        }
-        logDebugAndSave("⏳ Calculated WAIT delay");
-      }
-      break;
+  if (step.timing === TimingType.IMMEDIATE) {
+    logDebugAndSave("⚡ Immediate timing - no delay needed");
+    return 0;
+  }
 
-    case StepTypeEnum.MANUAL_EMAIL:
-    case StepTypeEnum.AUTOMATED_EMAIL:
-      if (step.timing === TimingType.IMMEDIATE) {
-        delay = 0;
-        logDebugAndSave(
-          "⚡ Immediate email - will be adjusted to next business hours if needed"
-        );
-      } else if (step.timing === TimingType.DELAY && step.delayAmount) {
-        delay = convertToMinutes(step.delayAmount, step.delayUnit!);
-        if (step.delayUnit?.toLowerCase() === "days") {
-          const additionalHours = Math.floor(Math.random() * 3) + 1;
-          const additionalMinutes = Math.floor(Math.random() * 60);
-          delay += additionalHours * 60 + additionalMinutes;
-          logDebugAndSave(
-            `⏳ Added natural distribution of ${additionalHours}h ${additionalMinutes}m to day-based delay`
-          );
-        } else if (step.delayUnit?.toLowerCase() === "hours") {
-          const additionalMinutes = Math.floor(Math.random() * 26) + 5;
-          delay += additionalMinutes;
-          logDebugAndSave(
-            `⏳ Added natural distribution of ${additionalMinutes}m to hour-based delay`
-          );
-        }
-        logDebugAndSave("⏰ Using specified delay with natural distribution");
-      } else {
-        delay = RATE_LIMIT_CONFIG.SCHEDULING.DEFAULT_DELAY;
-        logDebugAndSave("⚠️ No timing specified, using default delay");
-      }
-      break;
+  if (
+    step.delayAmount &&
+    step.delayUnit &&
+    (step.timing === TimingType.DELAY || step.stepType === StepTypeEnum.WAIT)
+  ) {
+    delay = convertToMinutes(step.delayAmount, step.delayUnit);
+    logDebugAndSave(`📊 Base delay before distribution: ${delay} minutes`);
 
-    default:
-      delay = RATE_LIMIT_CONFIG.SCHEDULING.DEFAULT_DELAY;
-      logDebugAndSave("⚠️ Unknown step type, using default delay");
+    const naturalDistribution = addNaturalDistribution(step.delayUnit);
+    delay += naturalDistribution;
+
+    const actionType = step.stepType === StepTypeEnum.WAIT ? "WAIT" : "EMAIL";
+    logDebugAndSave(`
+      ⏳ Delay Calculation Complete:
+      - Action Type: ${actionType}
+      - Base Delay: ${delay - naturalDistribution} minutes
+      - Added Distribution: ${naturalDistribution} minutes
+      - Final Delay: ${delay} minutes
+    `);
+  } else {
+    delay = RATE_LIMIT_CONFIG.SCHEDULING.DEFAULT_DELAY;
+    logDebugAndSave(`⚠️ Using default delay: ${delay} minutes`);
   }
 
   if (delay > RATE_LIMIT_CONFIG.SCHEDULING.DEFAULT_DELAY) {
+    const originalDelay = delay;
     delay = Math.max(delay, RATE_LIMIT_CONFIG.SCHEDULING.MIN_DELAY);
-    logAndSave("📊 Applied minimum delay threshold");
-  } else {
-    logAndSave("📊 Using exact delay");
+    logDebugAndSave(`
+      📊 Applied Minimum Delay Threshold:
+      - Original: ${originalDelay} minutes
+      - After Threshold: ${delay} minutes
+    `);
   }
 
   if (isDemoMode) {
+    const originalDelay = delay;
     delay = Math.min(delay, 480);
-    logAndSave("🎮 Demo mode delay adjustment");
+    logDebugAndSave(`
+      🎮 Demo Mode Adjustment:
+      - Original: ${originalDelay} minutes
+      - After Cap: ${delay} minutes
+    `);
   }
 
-  logAndSave(`✅ Final base delay calculated: ${delay} minutes`);
+  logDebugAndSave(`✅ Final base delay: ${delay} minutes`);
   return delay;
 };
+
+// -------------------------------------------
+// -------------------------------------------
+// -------------------------------------------
 
 // Time conversion utility
 export const convertToMinutes = (amount: number, unit: string): number => {
