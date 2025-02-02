@@ -28,6 +28,7 @@ const DEFAULT_BUSINESS_HOURS: BusinessHours = {
   type: BusinessScheduleEnum.BUSINESS,
 };
 
+// TODO : move to helper file
 // Helper function to get business hours
 async function getSequenceBusinessHours(
   sequenceId: string,

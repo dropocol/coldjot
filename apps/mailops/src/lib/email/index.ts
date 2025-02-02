@@ -327,9 +327,13 @@ export class EmailService {
     options: SendEmailOptions,
     trackedResponse: gmail_v1.Schema$Message
   ): Promise<void> {
-    logger.info("📝 Creating email event");
-
-    logger.info({ options });
+    logger.info(
+      {
+        contactId: options.contactId,
+        sequenceId: options.sequenceId,
+      },
+      "📝 Creating email event"
+    );
 
     // Update sequence stats for the sent event
     if (options.sequenceId && options.contactId) {

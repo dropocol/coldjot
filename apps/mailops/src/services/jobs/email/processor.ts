@@ -10,6 +10,7 @@ import {
   type SequenceStep,
   StepTypeEnum,
   type EmailJob,
+  BusinessScheduleEnum,
 } from "@coldjot/types";
 import { rateLimitService } from "@/services/core/rate-limit/service";
 import { createEmailTracking } from "@/lib/tracking";
@@ -76,12 +77,10 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
       // get template info
       const template = await prisma.template.findUnique({
-        where: { id: step.templateId || undefined },
+        where: { id: step.templateId || "" },
       });
 
-      if (!template) {
-        throw new Error(`Template ${step.templateId} not found`);
-      } else {
+      if (template) {
         step.subject = template.subject;
         step.content = template.content;
       }
@@ -336,6 +335,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
       const steps = await prisma.sequenceStep.findMany({
         where: { sequenceId: data.sequenceId },
+        orderBy: { order: "asc" },
       });
 
       logger.info(steps, "🚀 ~ EmailProcessor ~ steps:");
@@ -344,11 +344,22 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
       logger.info(nextStep, "🚀 ~ EmailProcessor ~ nextStep:");
 
+      // TODO : improve the enum type issue as businessHours.type is not typed
       // calculate the nextRunTime
       const nextRunTime = await this.scheduleGenerator.calculateNextRun(
         new Date(),
         nextStep as SequenceStep,
-        sequence.businessHours || getDefaultBusinessHours()
+        // sequence.businessHours || getDefaultBusinessHours()
+        sequence.businessHours
+          ? {
+              timezone: sequence.businessHours.timezone,
+              workDays: sequence.businessHours.workDays,
+              workHoursStart: sequence.businessHours.workHoursStart,
+              workHoursEnd: sequence.businessHours.workHoursEnd,
+              holidays: sequence.businessHours.holidays,
+              type: sequence.businessHours.type as BusinessScheduleEnum,
+            }
+          : getDefaultBusinessHours()
       );
 
       logger.info(nextRunTime, "🚀 ~ EmailProcessor ~ nextRunTime:");

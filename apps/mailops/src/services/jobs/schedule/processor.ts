@@ -19,6 +19,7 @@ import {
   EmailJobEnum,
   SequenceContactStatusEnum,
   SequenceStatus,
+  BusinessScheduleEnum,
 } from "@coldjot/types";
 import { EMAIL_SCHEDULER_CONFIG } from "@/config";
 import { QUEUE_NAMES } from "@/config";
@@ -30,7 +31,7 @@ type SequenceWithRelations = {
   id: string;
   userId: string;
   steps: SequenceStep[];
-  businessHours: BusinessHours | null;
+  businessHours?: BusinessHours;
   testMode: boolean;
   disableSending: boolean;
   sequenceMailboxId: string;
@@ -238,6 +239,12 @@ export class ScheduleProcessor extends BaseProcessor<any> {
             sequence: {
               ...email.sequence,
               sequenceMailboxId: email.sequence.sequenceMailbox!.id,
+              businessHours: email.sequence.businessHours
+                ? {
+                    ...email.sequence.businessHours,
+                    type: BusinessScheduleEnum.BUSINESS,
+                  }
+                : undefined,
               steps: email.sequence.steps.map((step) => ({
                 ...step,
                 status: StepStatus.ACTIVE,
@@ -398,7 +405,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       const nextSendTime = await scheduleGenerator.calculateNextRun(
         new Date(),
         currentStep,
-        sequence.businessHours || undefined
+        sequence.businessHours
       );
 
       if (!nextSendTime) {
@@ -409,6 +416,10 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         });
         throw new Error("Could not calculate next send time");
       }
+
+      logger.info(sequence.businessHours, "🕒 Business hours");
+      logger.info(currentStep, "🕒 Current step");
+      logger.info(nextSendTime, "🕒 Next send time");
 
       logger.debug("⏰ Next send time calculated", {
         nextSendTime: nextSendTime.toISOString(),

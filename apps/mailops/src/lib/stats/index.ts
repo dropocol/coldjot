@@ -116,7 +116,7 @@ export const updateSequenceStats = async (
         updates.totalEmails = { increment: 1 };
         updates.sentEmails = { increment: 1 };
 
-        logger.info(updates, "Updated sequence stats for sent event");
+        // logger.info(updates, "Updated sequence stats for sent event");
 
         // Recalculate rates with new sent count
         const newRates = calculateRates({

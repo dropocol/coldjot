@@ -77,34 +77,32 @@ export class ScheduleGenerator implements ScheduleGenerator {
       const effectiveCurrentTime = currentTime;
 
       this.logAndSave(
-        `
----
-🔄 Starting Next Run Calculation
-- Current Time UTC: ${effectiveCurrentTime.toISOString()}
-- Current Time ${businessHours?.timezone || "Local"}: ${DateTime.fromJSDate(
-          effectiveCurrentTime
-        )
-          .setZone(businessHours?.timezone || "local")
-          .toISO()}
-- Step Type: ${step.stepType}
-- Timing: ${step.timing}
-- Delay Amount: ${step.delayAmount || "N/A"}
-- Delay Unit: ${step.delayUnit || "N/A"}
-- Demo Mode: ${isDemoMode}
-- Has Business Hours: ${!!businessHours}
-- Business Hours Timezone: ${businessHours?.timezone}
-- Development Mode: ${isDevelopment}
----`
+        `---
+          🔄 Starting Next Run Calculation
+          - Current Time UTC: ${effectiveCurrentTime.toISOString()}
+          - Current Time ${businessHours?.timezone || "Local"}: ${DateTime.fromJSDate(
+            effectiveCurrentTime
+          )
+            .setZone(businessHours?.timezone || "local")
+            .toISO()}
+          - Step Type: ${step.stepType}
+          - Timing: ${step.timing}
+          - Delay Amount: ${step.delayAmount || "N/A"}
+          - Delay Unit: ${step.delayUnit || "N/A"}
+          - Demo Mode: ${isDemoMode}
+          - Has Business Hours: ${!!businessHours}
+          - Business Hours Timezone: ${businessHours?.timezone}
+          - Development Mode: ${isDevelopment}
+          ---`
       );
 
       const baseDelayMinutes = this.calculateBaseDelay(step, isDemoMode);
       this.logAndSave(
-        `
----
-📊 Base Delay Calculation
-- Base Delay (minutes): ${baseDelayMinutes}
-- Base Delay (hours): ${(baseDelayMinutes / 60).toFixed(2)}
----`
+        `---
+        📊 Base Delay Calculation
+        - Base Delay (minutes): ${baseDelayMinutes}
+        - Base Delay (hours): ${(baseDelayMinutes / 60).toFixed(2)}
+        ---`
       );
 
       // Start with UTC
@@ -112,25 +110,23 @@ export class ScheduleGenerator implements ScheduleGenerator {
       let targetTime = utcNow.plus({ minutes: baseDelayMinutes });
 
       this.logAndSave(
-        `
----
-🎯 Initial Target Time
-- UTC Now: ${utcNow.toISO()}
-- Target Time UTC: ${targetTime.toISO()}
-- Target Time ${businessHours?.timezone || "Local"}: ${targetTime.setZone(businessHours?.timezone || "local").toISO()}
-- Added Minutes: ${baseDelayMinutes}
-- Time Difference: ${targetTime.diff(utcNow).toHuman()}
----`
+        `---
+        🎯 Initial Target Time
+        - UTC Now: ${utcNow.toISO()}
+        - Target Time UTC: ${targetTime.toISO()}
+        - Target Time ${businessHours?.timezone || "Local"}: ${targetTime.setZone(businessHours?.timezone || "local").toISO()}
+        - Added Minutes: ${baseDelayMinutes}
+        - Time Difference: ${targetTime.diff(utcNow).toHuman()}
+        ---`
       );
 
       if (!businessHours) {
         this.logAndSave(
-          `
----
-⏭️ No Business Hours Defined
-- Returning UTC Target Time: ${targetTime.toISO()}
-- No Business Hours Adjustments Needed
----`
+          `---
+          ⏭️ No Business Hours Defined
+          - Returning UTC Target Time: ${targetTime.toISO()}
+          - No Business Hours Adjustments Needed
+          ---`
         );
         return targetTime.toJSDate();
       }
@@ -139,14 +135,13 @@ export class ScheduleGenerator implements ScheduleGenerator {
       let localTarget = targetTime.setZone(businessHours.timezone);
 
       this.logAndSave(
-        `
----
-🌐 Converting to Business Hours Timezone
-- From UTC: ${targetTime.toISO()}
-- To ${businessHours.timezone}: ${localTarget.toISO()}
-- Business Hours: ${businessHours.workHoursStart} - ${businessHours.workHoursEnd}
-- Work Days: ${businessHours.workDays.join(", ")}
----`
+        `---
+        🌐 Converting to Business Hours Timezone
+        - From UTC: ${targetTime.toISO()}
+        - To ${businessHours.timezone}: ${localTarget.toISO()}
+        - Business Hours: ${businessHours.workHoursStart} - ${businessHours.workHoursEnd}
+        - Work Days: ${businessHours.workDays.join(", ")}
+        ---`
       );
 
       // Check if the target time needs business hours adjustment
@@ -154,22 +149,20 @@ export class ScheduleGenerator implements ScheduleGenerator {
         const originalTarget = localTarget;
         localTarget = this.adjustToBusinessHours(localTarget, businessHours);
         this.logAndSave(
-          `
----
-⚡ Business Hours Adjustment Required
-- Original Local Time: ${originalTarget.toISO()}
-- Adjusted Local Time: ${localTarget.toISO()}
-- Adjustment: ${localTarget.diff(originalTarget).toHuman()}
----`
+          `---
+          ⚡ Business Hours Adjustment Required
+          - Original Local Time: ${originalTarget.toISO()}
+          - Adjusted Local Time: ${localTarget.toISO()}
+          - Adjustment: ${localTarget.diff(originalTarget).toHuman()}
+          ---`
         );
       } else {
         this.logAndSave(
-          `
----
-✅ Target Time Already Within Business Hours
-- Local Time: ${localTarget.toISO()}
-- No Adjustment Needed
----`
+          `---
+          ✅ Target Time Already Within Business Hours
+          - Local Time: ${localTarget.toISO()}
+          - No Adjustment Needed
+          ---`
         );
       }
 
@@ -186,13 +179,12 @@ export class ScheduleGenerator implements ScheduleGenerator {
         }
 
         this.logAndSave(
-          `
----
-⚖️ Rate Limit Adjustment (Attempt ${attempts + 1})
-- Minute Available: ${minuteAvailable}
-- Hour Available: ${hourAvailable}
-- Current Local Time: ${localTarget.toISO()}
----`
+          `---
+          ⚖️ Rate Limit Adjustment (Attempt ${attempts + 1})
+          - Minute Available: ${minuteAvailable}
+          - Hour Available: ${hourAvailable}
+          - Current Local Time: ${localTarget.toISO()}
+          ---`
         );
 
         // Adjust time based on availability
@@ -202,12 +194,11 @@ export class ScheduleGenerator implements ScheduleGenerator {
           );
           localTarget = localTarget.plus({ minutes: distributionMinutes });
           this.logAndSave(
-            `
----
-⏱️ Minute Rate Limit Adjustment
-- Added Minutes: ${distributionMinutes}
-- New Local Target: ${localTarget.toISO()}
----`
+            `---
+            ⏱️ Minute Rate Limit Adjustment
+            - Added Minutes: ${distributionMinutes}
+            - New Local Target: ${localTarget.toISO()}
+            ---`
           );
         }
 
@@ -216,13 +207,12 @@ export class ScheduleGenerator implements ScheduleGenerator {
           const distributionMinutes = Math.floor(Math.random() * 60);
           localTarget = localTarget.set({ minute: distributionMinutes });
           this.logAndSave(
-            `
----
-⏰ Hour Rate Limit Adjustment
-- Added Hours: 1
-- Random Minutes: ${distributionMinutes}
-- New Local Target: ${localTarget.toISO()}
----`
+            `---
+            ⏰ Hour Rate Limit Adjustment
+            - Added Hours: 1
+            - Random Minutes: ${distributionMinutes}
+            - New Local Target: ${localTarget.toISO()}
+            ---`
           );
         }
 
@@ -231,14 +221,13 @@ export class ScheduleGenerator implements ScheduleGenerator {
           const oldTarget = localTarget;
           localTarget = this.nextBusinessStart(localTarget, businessHours);
           this.logAndSave(
-            `
----
-📅 Business Hours Adjustment After Rate Limit
-- Outside Business Hours Detected
-- Old Local Target: ${oldTarget.toISO()}
-- New Local Target: ${localTarget.toISO()}
-- Adjustment: ${localTarget.diff(oldTarget).toHuman()}
----`
+            `---
+            📅 Business Hours Adjustment After Rate Limit
+            - Outside Business Hours Detected
+            - Old Local Target: ${oldTarget.toISO()}
+            - New Local Target: ${localTarget.toISO()}
+            - Adjustment: ${localTarget.diff(oldTarget).toHuman()}
+            ---`
           );
         }
 
@@ -249,31 +238,29 @@ export class ScheduleGenerator implements ScheduleGenerator {
       const finalUtc = localTarget.toUTC();
 
       this.logAndSave(
-        `
----
-✅ Final Calculation Complete
-- Original Time UTC: ${effectiveCurrentTime.toISOString()}
-- Original Time ${businessHours.timezone}: ${DateTime.fromJSDate(effectiveCurrentTime).setZone(businessHours.timezone).toISO()}
-- Final Time UTC: ${finalUtc.toISO()}
-- Final Time ${businessHours.timezone}: ${localTarget.toISO()}
-- Total Delay: ${finalUtc.diff(utcNow, ["hours", "minutes"]).toHuman()}
-- Business Hours:
-  • Start: ${businessHours.workHoursStart}
-  • End: ${businessHours.workHoursEnd}
-  • Timezone: ${businessHours.timezone}
-- Rate Limit Attempts: ${attempts}
----`
+        `---
+        ✅ Final Calculation Complete
+        - Original Time UTC: ${effectiveCurrentTime.toISOString()}
+        - Original Time ${businessHours.timezone}: ${DateTime.fromJSDate(effectiveCurrentTime).setZone(businessHours.timezone).toISO()}
+        - Final Time UTC: ${finalUtc.toISO()}
+        - Final Time ${businessHours.timezone}: ${localTarget.toISO()}
+        - Total Delay: ${finalUtc.diff(utcNow, ["hours", "minutes"]).toHuman()}
+        - Business Hours:
+          • Start: ${businessHours.workHoursStart}
+          • End: ${businessHours.workHoursEnd}
+          • Timezone: ${businessHours.timezone}
+        - Rate Limit Attempts: ${attempts}
+        ---`
       );
 
       return finalUtc.toJSDate();
     } catch (error) {
       this.logErrorAndSave(
-        `
----
-❌ Error Calculating Next Run
-- Error: ${error instanceof Error ? error.message : "Unknown error"}
-- Fallback: Adding 1 hour to current time
----`
+        `---
+        ❌ Error Calculating Next Run
+        - Error: ${error instanceof Error ? error.message : "Unknown error"}
+        - Fallback: Adding 1 hour to current time
+        ---`
       );
       return DateTime.fromJSDate(currentTime, { zone: "utc" })
         .plus({ hours: 1 })
@@ -286,6 +273,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
 
     let delay: number;
 
+    logger.info(step, "🕒 Step");
     switch (step.stepType.toUpperCase()) {
       case StepTypeEnum.WAIT:
         if (!step.delayAmount || !step.delayUnit) {

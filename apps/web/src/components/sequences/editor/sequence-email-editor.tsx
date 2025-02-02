@@ -216,7 +216,7 @@ export function SequenceEmailEditor({
       content,
       includeSignature,
       replyToThread,
-      templateId: isTemplateUnlinked ? undefined : currentTemplateId,
+      templateId: isTemplateUnlinked ? null : currentTemplateId,
     });
   };
 

@@ -1,6 +1,7 @@
 import { prisma, SequenceMailbox } from "@coldjot/database";
 import {
   BusinessHours,
+  BusinessScheduleEnum,
   Mailbox,
   SequenceContactStatusEnum,
   SequenceContactStatusType,
@@ -22,6 +23,7 @@ export function getDefaultBusinessHours(): BusinessHours {
     workHoursStart: "09:00",
     workHoursEnd: "17:00",
     holidays: [],
+    type: BusinessScheduleEnum.BUSINESS,
   };
 }
 
