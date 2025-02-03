@@ -178,7 +178,7 @@ export default function ContactList({
   };
 
   return (
-    <div className="space-y-4">
+    <div>
       {showLoading ? (
         <div className="flex items-center justify-center py-8">
           <div className="space-y-4 text-center">
@@ -218,7 +218,7 @@ export default function ContactList({
             </div>
           </div>
 
-          <div className="rounded-md border">
+          <div className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>

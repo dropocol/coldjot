@@ -103,7 +103,7 @@ export default function TemplateList({
         </div>
       ) : (
         <>
-          <div className="rounded-md border">
+          <div className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>

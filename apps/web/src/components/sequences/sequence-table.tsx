@@ -149,7 +149,7 @@ export function SequenceTable({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
+      <div className="p-0">
         <Table>
           <TableHeader>
             <TableRow>

@@ -188,7 +188,7 @@ const EmailListsView = ({
           </Button>
         </div>
       ) : (
-        <div className="rounded-md border">
+        <div className="p-0">
           <Table>
             <TableHeader>
               <TableRow>

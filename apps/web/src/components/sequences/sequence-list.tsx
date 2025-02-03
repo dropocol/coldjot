@@ -103,7 +103,7 @@ function SequenceListItem({ sequence }: { sequence: Sequence }) {
   };
 
   return (
-    <div className="p-4 border rounded-lg">
+    <div className="p-0">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h3 className="font-medium">{sequence.name}</h3>

@@ -12,6 +12,9 @@ export default async function SequencesPage() {
     where: {
       userId: session.user.id,
     },
+    orderBy: {
+      createdAt: "desc",
+    },
     include: {
       steps: {
         orderBy: {
