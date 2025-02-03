@@ -26,6 +26,9 @@ import {
   PlayCircle,
   Building2,
   ExternalLink,
+  MoreVertical,
+  Send,
+  Trash,
 } from "lucide-react";
 import { ListSelector } from "@/components/lists/list-selector";
 import { formatDistanceToNow, format } from "date-fns";
@@ -39,6 +42,12 @@ import {
 import type { Contact, SequenceContact, StepStatus } from "@coldjot/types";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import type { SequenceContactStatusType } from "@coldjot/types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Add extended SequenceContact type with all required properties
 interface ExtendedSequenceContact {
@@ -113,6 +122,27 @@ export function SequenceContacts({
       toast.success("Contact removed from sequence");
     } catch (error) {
       toast.error("Failed to remove contact");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendNow = async (contactId: string) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        `/api/sequences/${sequenceId}/contacts/${contactId}/send-now`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to send now");
+
+      await refreshContacts();
+      toast.success("Contact scheduled for immediate sending");
+    } catch (error) {
+      toast.error("Failed to schedule immediate sending");
     } finally {
       setIsLoading(false);
     }
@@ -352,20 +382,37 @@ export function SequenceContacts({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() =>
-                        handleRemoveContact(sequenceContact.contactId)
-                      }
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <X className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MoreVertical className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleSendNow(sequenceContact.id)}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Now
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleRemoveContact(sequenceContact.contactId)
+                          }
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))
