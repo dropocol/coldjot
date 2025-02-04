@@ -21,6 +21,8 @@ import { EmailProcessor } from "./jobs/email/processor";
 import { ContactProcessor } from "./jobs/contact/processor";
 import { ScheduleProcessor } from "./jobs/schedule/processor";
 import { ThreadProcessor } from "./jobs/thread-watch/processor";
+import { WatchCleanupService } from "./watch/cleanup";
+import { PubSubService } from "./pubsub/client";
 
 type ProcessorType = BaseProcessor<any>;
 
@@ -32,12 +34,16 @@ export class ServiceManager {
   private jobManager: JobManager;
   private queues: Map<string, Queue>;
   private processors: Map<string, ProcessorType>;
+  private watchCleanupService: WatchCleanupService;
+  private pubSubService: PubSubService;
 
   private constructor() {
     this.redisConnection = RedisConnection.getInstance();
     this.queues = new Map();
     this.processors = new Map();
     this.jobManager = createJobManager(this);
+    this.watchCleanupService = new WatchCleanupService();
+    this.pubSubService = PubSubService.getInstance();
   }
 
   public static getInstance(): ServiceManager {
@@ -60,6 +66,9 @@ export class ServiceManager {
       // Initialize processors
       await this.initializeProcessors();
 
+      // Start watch cleanup service
+      await this.watchCleanupService.start();
+
       logger.info("✨ Service Manager initialized successfully");
     } catch (error) {
       logger.error("❌ Error initializing Service Manager:", error);
@@ -78,6 +87,11 @@ export class ServiceManager {
       // Initialize rate limit service
       this.rateLimitService = RateLimitService.getInstance();
       logger.info("⚡ Rate limit service initialized");
+
+      // Initialize PubSub service
+      await this.pubSubService.initialize();
+      await this.pubSubService.startListening();
+      logger.info("📨 PubSub service initialized and listening");
     } catch (error) {
       logger.error("❌ Error initializing core services:", error);
       throw error;
@@ -177,6 +191,10 @@ export class ServiceManager {
     try {
       logger.info("🛑 Shutting down Service Manager...");
 
+      // Stop PubSub service
+      await this.pubSubService.stopListening();
+      logger.info("📨 PubSub service stopped");
+
       // Stop memory monitor
       if (this.memoryMonitor) {
         await this.memoryMonitor.stopMonitoring();
@@ -198,6 +216,10 @@ export class ServiceManager {
       // Close Redis connection
       await this.redisConnection.close();
       logger.info("🔌 Redis connection closed");
+
+      // Stop watch cleanup service
+      await this.watchCleanupService.stop();
+      logger.info("📊 Watch cleanup service stopped");
 
       logger.info("✨ Service Manager shutdown complete");
     } catch (error) {

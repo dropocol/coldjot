@@ -444,3 +444,34 @@ model SequenceMailbox {
     @@index([aliasId])
     @@index([userId])
 }
+
+model EmailWatch {
+    id         String   @id
+    userId     String   @map("user_id")
+    email      String   @unique
+    historyId  String   @map("history_id")
+    expiration DateTime
+    createdAt  DateTime @default(now()) @map("created_at")
+    updatedAt  DateTime @default(now()) @map("updated_at")
+
+    notifications NotificationHistory[]
+
+    @@index([userId])
+    @@map("email_watch")
+}
+
+model NotificationHistory {
+    id               String   @id
+    emailWatchId     String   @map("email_watch_id")
+    historyId        String   @map("history_id")
+    notificationType String   @map("notification_type")
+    processed        Boolean  @default(false)
+    data             Json?
+    createdAt        DateTime @default(now()) @map("created_at")
+
+    emailWatch EmailWatch @relation(fields: [emailWatchId], references: [id], onDelete: Cascade)
+
+    @@index([emailWatchId])
+    @@index([processed])
+    @@map("notification_history")
+}

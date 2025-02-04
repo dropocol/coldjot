@@ -201,6 +201,30 @@ export async function GET(request: Request) {
       const gmail = google.gmail({ version: "v1", auth: oauth2Client });
       await fetchAndSaveAliases(gmail, accountId);
 
+      // Send a request to mailops to setup watch
+      console.log(
+        "Sending request to mailops to setup watch",
+        `${process.env.NEXT_PUBLIC_MAILOPS_API_URL}/mailbox/watch`,
+        userId,
+        userInfo.email
+      );
+      const watchResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_MAILOPS_API_URL}/mailbox/watch`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId, email: userInfo.email }),
+        }
+      );
+
+      if (!watchResponse.ok) {
+        const error = await watchResponse.json();
+        console.error("[GMAIL_CALLBACK] Failed to setup watch:", error);
+        // Continue with the flow even if watch setup fails
+      }
+
       // Redirect back to settings page
       return Response.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/settings?success=gmail_connected`

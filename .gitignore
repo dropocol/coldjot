@@ -71,3 +71,5 @@ links/*
 scripts/reset.py
 
 prompts/
+
+secrets/*

@@ -4,6 +4,8 @@ import { logger } from "@/lib/log";
 import pinoHttp from "pino-http";
 import routes from "./routes";
 import { createServiceManager } from "@/services/service-manager";
+import pubsubRouter from "./routes/pubsub";
+import mailboxRouter from "./routes/mailbox";
 
 const app = express();
 const port = 3001;
@@ -40,6 +42,30 @@ app.use(httpLogger);
 
 // Mount all routes
 app.use("/api", routes);
+app.use("/pubsub", pubsubRouter); // Keep the /pubsub route for Gmail notifications
+app.use("/api/pubsub", pubsubRouter); // Also mount under /api for consistency
+app.use("/api/mailbox", mailboxRouter);
+
+// Add specific error handling for PubSub routes
+app.use(
+  "/pubsub",
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    logger.error(
+      {
+        error: err,
+        body: req.body,
+        headers: req.headers,
+      },
+      "PubSub notification error"
+    );
+    res.status(200).json({ message: "Notification received" }); // Always return 200 to acknowledge
+  }
+);
 
 app.use("/check", (req, res) => {
   res.status(200).json({ message: "OK" });
