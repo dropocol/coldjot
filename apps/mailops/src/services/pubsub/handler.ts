@@ -10,10 +10,12 @@ import {
 } from "../../types/pubsub";
 import { logger } from "@/lib/log";
 import { backOff } from "exponential-backoff";
-import { SequenceContactStatusEnum } from "@coldjot/types";
+import { SequenceContactStatusEnum, EmailEventEnum } from "@coldjot/types";
 import { refreshTokenIfNeeded } from "@/lib/google/gmail/helper";
 import { Prisma, EmailWatch, Mailbox, EmailAlias } from "@prisma/client";
 import { fileLogger } from "@/lib/log/file-logger";
+import { isBounceMessage } from "@/utils/email";
+import { updateSequenceStats } from "@/lib/stats";
 
 interface GmailHistoryResponse {
   history: GmailHistoryRecord[];
@@ -27,6 +29,7 @@ interface MessageDetails {
   from: string;
   labelIds: string[];
   isReply: boolean;
+  headers: Array<{ name: string; value: string }>;
 }
 
 interface WatchWithMailbox extends EmailWatch {
@@ -35,37 +38,118 @@ interface WatchWithMailbox extends EmailWatch {
   };
 }
 
+function sanitizeData(data: any): any {
+  if (!data) return data;
+
+  const sensitiveFields = [
+    "access_token",
+    "refresh_token",
+    "id_token",
+    "accessToken",
+    "refreshToken",
+    "Authorization",
+    "private_key",
+    "client_secret",
+    "api_key",
+  ];
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeData(item));
+  }
+
+  if (typeof data === "object") {
+    const sanitized = { ...data };
+    for (const key in sanitized) {
+      if (sensitiveFields.includes(key)) {
+        sanitized[key] = "[REDACTED]";
+      } else if (typeof sanitized[key] === "object") {
+        sanitized[key] = sanitizeData(sanitized[key]);
+      }
+    }
+    return sanitized;
+  }
+
+  return data;
+}
+
 export class PubSubHandler {
   async handleNotification(message: PubSubMessage): Promise<void> {
     try {
+      fileLogger.log(
+        "info",
+        "Received PubSub notification",
+        sanitizeData({
+          messageId: message.messageId,
+          publishTime: message.publishTime,
+          attributes: message.attributes,
+        })
+      );
+
       const notification = this.decodeNotification(message);
+      fileLogger.log(
+        "debug",
+        "Decoded notification data",
+        sanitizeData({ notification })
+      );
+
       const watch = await this.getWatchRecord(notification.emailAddress);
 
       if (!watch) {
-        logger.warn(
-          { emailAddress: notification.emailAddress },
-          "No watch found for email address"
+        fileLogger.log(
+          "warn",
+          "No watch found for email address",
+          sanitizeData({
+            emailAddress: notification.emailAddress,
+          })
         );
         return;
       }
 
-      logger.info({ watch, notification }, "Processing notification for watch");
+      fileLogger.log(
+        "info",
+        "Processing notification for watch",
+        sanitizeData({
+          watch,
+          notification,
+        })
+      );
 
       const notificationRecord = await this.createNotificationRecord(
         watch,
         notification
       );
+      fileLogger.log(
+        "debug",
+        "Created notification record",
+        sanitizeData({
+          notificationId: notificationRecord.id,
+        })
+      );
+
       await this.processNotificationWithRetry(watch, notification);
       await this.markNotificationAsProcessed(notificationRecord.id);
 
-      logger.info(
-        { messageId: message.messageId },
-        "Successfully processed notification"
+      fileLogger.log(
+        "info",
+        "Successfully processed notification",
+        sanitizeData({
+          messageId: message.messageId,
+          notificationId: notificationRecord.id,
+        })
       );
     } catch (error) {
-      logger.error(
-        { error, messageId: message.messageId },
-        "Failed to process notification"
+      fileLogger.log(
+        "error",
+        "Failed to process notification",
+        sanitizeData({
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          messageId: message.messageId,
+        })
       );
       throw error;
     }
@@ -74,13 +158,31 @@ export class PubSubHandler {
   private decodeNotification(message: PubSubMessage) {
     try {
       const decodedData = Buffer.from(message.data, "base64").toString();
-      logger.info({ decodedData }, "Decoded notification data");
-      return JSON.parse(decodedData) as {
-        emailAddress: string;
-        historyId: string;
+      fileLogger.log("debug", "Decoding notification data", {
+        messageId: message.messageId,
+        decodedData,
+      });
+
+      const parsedData = JSON.parse(decodedData);
+      fileLogger.log("debug", "Parsed notification data", { parsedData });
+
+      if (!parsedData.emailAddress || !parsedData.historyId) {
+        fileLogger.log("warn", "Missing required fields in notification data", {
+          parsedData,
+        });
+        throw new Error("Invalid notification format: missing required fields");
+      }
+
+      return {
+        emailAddress: parsedData.emailAddress,
+        historyId: parsedData.historyId,
       };
     } catch (error) {
-      logger.error({ error }, "Failed to decode notification data");
+      fileLogger.log("error", "Failed to decode notification data", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        messageData: message.data,
+      });
       throw new Error("Invalid notification format");
     }
   }
@@ -88,13 +190,17 @@ export class PubSubHandler {
   private async getWatchRecord(
     email: string
   ): Promise<WatchWithMailbox | null> {
+    fileLogger.log("debug", "Getting watch record", { email });
+
     const watch = await prisma.emailWatch.findFirst({
       where: { email },
     });
 
-    if (!watch) return null;
+    if (!watch) {
+      fileLogger.log("debug", "No watch record found", { email });
+      return null;
+    }
 
-    // Get the mailbox separately since there's no direct relation
     const mailbox = await prisma.mailbox.findFirst({
       where: { email },
       include: {
@@ -102,7 +208,23 @@ export class PubSubHandler {
       },
     });
 
-    if (!mailbox) return null;
+    if (!mailbox) {
+      fileLogger.log("warn", "No mailbox found for watch", {
+        email,
+        watchId: watch.id,
+      });
+      return null;
+    }
+
+    fileLogger.log(
+      "debug",
+      "Found watch record with mailbox",
+      sanitizeData({
+        watchId: watch.id,
+        mailboxId: mailbox.id,
+        hasAliases: mailbox.aliases.length > 0,
+      })
+    );
 
     return {
       ...watch,
@@ -111,22 +233,62 @@ export class PubSubHandler {
   }
 
   private async createNotificationRecord(watch: any, notification: any) {
-    return prisma.notificationHistory.create({
-      data: {
-        id: nanoid(),
-        emailWatchId: watch.id,
-        historyId: notification.historyId.toString(),
-        notificationType: NotificationType.MESSAGE_ADDED,
-        processed: false,
+    try {
+      fileLogger.log("debug", "Creating notification record", {
+        watchId: watch.id,
+        historyId: notification.historyId,
+      });
+
+      if (!watch?.id || !notification?.historyId) {
+        fileLogger.log(
+          "error",
+          "Missing required fields for notification record",
+          {
+            watch,
+            notification,
+          }
+        );
+        throw new Error("Missing required fields for notification record");
+      }
+
+      const record = await prisma.notificationHistory.create({
         data: {
-          emailAddress: notification.emailAddress,
-          historyId: notification.historyId,
+          id: nanoid(),
+          emailWatchId: watch.id,
+          historyId: notification.historyId.toString(),
+          notificationType: NotificationType.MESSAGE_ADDED,
+          processed: false,
+          data: {
+            emailAddress: notification.emailAddress,
+            historyId: notification.historyId,
+          },
         },
-      },
-    });
+      });
+
+      fileLogger.log("info", "Created notification record", {
+        recordId: record.id,
+        watchId: watch.id,
+        historyId: notification.historyId,
+      });
+
+      return record;
+    } catch (error) {
+      fileLogger.log("error", "Failed to create notification record", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        watch,
+        notification,
+      });
+      throw error;
+    }
   }
 
   private async processNotificationWithRetry(watch: any, notification: any) {
+    fileLogger.log("debug", "Starting notification processing with retry", {
+      watchId: watch.id,
+      historyId: notification.historyId,
+    });
+
     const backoffOptions = {
       numOfAttempts: PUBSUB_CONFIG.MAX_RETRIES,
       startingDelay: PUBSUB_CONFIG.BACKOFF_SECONDS * 1000,
@@ -134,17 +296,55 @@ export class PubSubHandler {
       jitter: "full" as const,
     };
 
-    return backOff(
-      () => this.processHistoryChanges(watch, notification.historyId),
-      backoffOptions
-    );
+    try {
+      const result = await backOff(
+        () => this.processHistoryChanges(watch, notification.historyId),
+        backoffOptions
+      );
+
+      fileLogger.log("info", "Successfully processed notification with retry", {
+        watchId: watch.id,
+        historyId: notification.historyId,
+      });
+
+      return result;
+    } catch (error) {
+      fileLogger.log("error", "Failed to process notification after retries", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        watchId: watch.id,
+        historyId: notification.historyId,
+        maxRetries: PUBSUB_CONFIG.MAX_RETRIES,
+      });
+      throw error;
+    }
   }
 
   private async markNotificationAsProcessed(notificationId: string) {
-    return prisma.notificationHistory.update({
-      where: { id: notificationId },
-      data: { processed: true },
-    });
+    try {
+      fileLogger.log("debug", "Marking notification as processed", {
+        notificationId,
+      });
+
+      const result = await prisma.notificationHistory.update({
+        where: { id: notificationId },
+        data: { processed: true },
+      });
+
+      fileLogger.log("info", "Marked notification as processed", {
+        notificationId,
+        success: true,
+      });
+
+      return result;
+    } catch (error) {
+      fileLogger.log("error", "Failed to mark notification as processed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        notificationId,
+      });
+      throw error;
+    }
   }
 
   private async processHistoryChanges(
@@ -152,129 +352,182 @@ export class PubSubHandler {
     historyId: string
   ): Promise<void> {
     try {
-      const mailbox = await this.getMailbox(watch.email);
-      const accessToken = await this.getValidAccessToken(mailbox);
-
-      // Compare historyIds
-      const currentWatchHistoryId = BigInt(watch.historyId);
-      const notificationHistoryId = BigInt(historyId);
-
-      // Log detailed history comparison
-      fileLogger.log("debug", "Comparing history IDs", {
-        currentWatchHistoryId: currentWatchHistoryId.toString(),
-        notificationHistoryId: notificationHistoryId.toString(),
-        watchEmail: watch.email,
-        watchId: watch.id,
-      });
-
-      if (notificationHistoryId < currentWatchHistoryId) {
-        const logData = {
-          watchHistoryId: watch.historyId,
-          notificationHistoryId: historyId,
+      fileLogger.log(
+        "info",
+        "Starting history changes processing",
+        sanitizeData({
           watchEmail: watch.email,
           watchId: watch.id,
-        };
-        logger.warn(logData, "Received old history ID, skipping");
-        fileLogger.log("warn", "Received old history ID, skipping", logData);
+          historyId,
+          currentHistoryId: watch.historyId,
+        })
+      );
+
+      const accessToken = await this.getValidAccessToken(watch.mailbox);
+      if (!accessToken) {
+        fileLogger.log(
+          "error",
+          "Failed to get valid access token",
+          sanitizeData({
+            watchId: watch.id,
+            mailboxId: watch.mailbox.id,
+          })
+        );
         return;
       }
 
-      const historyResponse = await this.fetchGmailHistory(
-        historyId,
+      const currentHistoryId = BigInt(watch.historyId);
+      const notificationHistoryId = BigInt(historyId);
+      const historyGap = Number(notificationHistoryId - currentHistoryId);
+
+      fileLogger.log("debug", "History gap analysis", {
+        watchId: watch.id,
+        currentHistoryId: currentHistoryId.toString(),
+        notificationHistoryId: notificationHistoryId.toString(),
+        historyGap,
+      });
+
+      // Use the lower history ID as the start point for negative gaps
+      const startHistoryId =
+        historyGap < 0
+          ? notificationHistoryId.toString()
+          : currentHistoryId.toString();
+
+      if (Math.abs(historyGap) > 10000) {
+        fileLogger.log("warn", "Large history gap detected", {
+          watchId: watch.id,
+          historyGap,
+          currentHistoryId: currentHistoryId.toString(),
+          notificationHistoryId: notificationHistoryId.toString(),
+        });
+
+        await this.handleLargeHistoryGap(watch, historyId);
+        return;
+      }
+
+      const response = await this.fetchGmailHistory(
+        startHistoryId,
         accessToken
       );
 
-      // Log history response details
-      fileLogger.log("debug", "Received Gmail history response", {
-        historyId,
-        newHistoryId: historyResponse.historyId,
-        hasHistory: historyResponse.history?.length > 0,
-        historyCount: historyResponse.history?.length || 0,
-        nextPageToken: historyResponse.nextPageToken,
-        watchEmail: watch.email,
-        watchId: watch.id,
-      });
-
-      if (!historyResponse.history || historyResponse.history.length === 0) {
-        const logData = {
-          watchHistoryId: watch.historyId,
-          notificationHistoryId: historyId,
-          responseHistoryId: historyResponse.historyId,
-          watchEmail: watch.email,
+      if (!response) {
+        fileLogger.log("warn", "No history response received", {
           watchId: watch.id,
-        };
-        logger.warn(logData, "No history found for the given historyId");
-        fileLogger.log(
-          "warn",
-          "No history found for the given historyId",
-          logData
-        );
-
-        // Update watch record with latest historyId to prevent future gaps
-        await prisma.emailWatch.update({
-          where: { id: watch.id },
-          data: {
-            historyId: historyResponse.historyId,
-            updatedAt: new Date(),
-          },
+          historyId: startHistoryId,
         });
 
-        fileLogger.log("info", "Updated watch record with latest historyId", {
-          watchId: watch.id,
-          oldHistoryId: watch.historyId,
-          newHistoryId: historyResponse.historyId,
-        });
-
+        await this.handleLargeHistoryGap(watch, historyId);
         return;
       }
 
-      const changes = await this.processHistoryRecords(historyResponse, watch);
+      fileLogger.log("debug", "Processing Gmail history response", {
+        watchId: watch.id,
+        historyRecords: response.history?.length || 0,
+        hasNextPage: !!response.nextPageToken,
+        responseHistoryId: response.historyId,
+      });
 
-      if (changes.length > 0) {
-        const logData = {
-          changes,
-          historyId,
-          newHistoryId: historyResponse.historyId,
-          changesCount: changes.length,
-          watchEmail: watch.email,
-          watchId: watch.id,
-        };
-        logger.info(logData, "Processed history changes");
-        fileLogger.log("info", "Processed history changes", logData);
+      if (response.history && response.history.length > 0) {
+        const changes = await this.processHistoryRecords(response, watch);
 
-        await this.updateSequenceStatuses(changes);
-      } else {
-        const logData = {
-          historyId,
-          newHistoryId: historyResponse.historyId,
-          watchEmail: watch.email,
+        fileLogger.log("info", "Processed history records", {
           watchId: watch.id,
-        };
-        logger.info(logData, "No relevant changes found in history");
-        fileLogger.log("info", "No relevant changes found in history", logData);
+          totalChanges: changes.length,
+          changeTypes: changes.map((c) => c.type),
+        });
+
+        if (changes.length > 0) {
+          await this.updateSequenceStatuses(changes);
+          fileLogger.log("info", "Updated sequence statuses", {
+            watchId: watch.id,
+            changesApplied: changes.length,
+          });
+        }
       }
 
-      // Update watch record with latest historyId
       await prisma.emailWatch.update({
         where: { id: watch.id },
         data: {
-          historyId: historyResponse.historyId,
+          historyId: response.historyId,
           updatedAt: new Date(),
         },
       });
 
-      fileLogger.log("info", "Updated watch record with latest historyId", {
+      fileLogger.log("info", "Updated watch history ID", {
         watchId: watch.id,
         oldHistoryId: watch.historyId,
-        newHistoryId: historyResponse.historyId,
+        newHistoryId: response.historyId,
       });
     } catch (error) {
-      const logData = { error, email: watch.email, historyId };
-      logger.error(logData, "Failed to process history changes");
-      fileLogger.log("error", "Failed to process history changes", {
-        ...logData,
-        errorStack: error instanceof Error ? error.stack : undefined,
-        errorMessage: error instanceof Error ? error.message : String(error),
+      fileLogger.log(
+        "error",
+        "Failed to process history changes",
+        sanitizeData({
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          watchId: watch.id,
+          historyId,
+        })
+      );
+      throw error;
+    }
+  }
+
+  private async handleLargeHistoryGap(
+    watch: WatchWithMailbox,
+    latestHistoryId: string
+  ): Promise<void> {
+    try {
+      fileLogger.log("info", "Handling large history gap", {
+        watchId: watch.id,
+        oldHistoryId: watch.historyId,
+        newHistoryId: latestHistoryId,
+        email: watch.email,
+      });
+
+      await prisma.emailWatch.update({
+        where: { id: watch.id },
+        data: {
+          historyId: latestHistoryId,
+          updatedAt: new Date(),
+        },
+      });
+
+      fileLogger.log("info", "Updated watch history ID for large gap", {
+        watchId: watch.id,
+        oldHistoryId: watch.historyId,
+        newHistoryId: latestHistoryId,
+      });
+
+      const gapSize = Number(BigInt(latestHistoryId) - BigInt(watch.historyId));
+
+      await prisma.notificationHistory.create({
+        data: {
+          id: nanoid(),
+          emailWatchId: watch.id,
+          historyId: latestHistoryId,
+          notificationType: "HISTORY_GAP",
+          processed: false,
+          data: {
+            oldHistoryId: watch.historyId,
+            newHistoryId: latestHistoryId,
+            gapSize,
+          },
+        },
+      });
+
+      fileLogger.log("info", "Created history gap notification", {
+        watchId: watch.id,
+        email: watch.email,
+        historyId: latestHistoryId,
+        gapSize,
+      });
+    } catch (error) {
+      fileLogger.log("error", "Failed to handle large history gap", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        watchId: watch.id,
+        historyId: latestHistoryId,
       });
       throw error;
     }
@@ -305,55 +558,83 @@ export class PubSubHandler {
     });
   }
 
-  private async fetchGmailHistory(historyId: string, accessToken: string) {
-    logger.info({ historyId }, "Fetching Gmail history");
+  private async fetchGmailHistory(
+    historyId: string,
+    accessToken: string
+  ): Promise<GmailHistoryResponse> {
+    try {
+      // Request all history changes by not specifying any label filters
+      // and adding historyTypes to include all types of changes
+      const url = `https://gmail.googleapis.com/gmail/v1/users/me/history?startHistoryId=${historyId}&maxResults=100&historyTypes=messageAdded&historyTypes=labelAdded&historyTypes=labelRemoved`;
 
-    const url = new URL(
-      "https://gmail.googleapis.com/gmail/v1/users/me/history"
-    );
-    url.searchParams.append("startHistoryId", historyId);
-    // Add labelId filter to only get INBOX changes
-    url.searchParams.append("labelId", "INBOX");
-    // Add maxResults to get more history items
-    url.searchParams.append("maxResults", "100");
+      fileLogger.log(
+        "debug",
+        "Fetching Gmail history for all changes",
+        sanitizeData({
+          historyId,
+          url: url.replace(/access_token=[^&]+/, "access_token=[REDACTED]"),
+        })
+      );
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errorData = (await response.json()) as {
+          error?: { message?: string };
+        };
 
-      // Check for specific error cases
-      if (response.status === 404) {
-        logger.warn({ historyId }, "History ID not found - might be too old");
-        // You might want to handle this by re-syncing the watch
-        throw new Error("History ID not found - too old");
+        fileLogger.log("error", "Gmail API error response", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+          historyId,
+        });
+
+        if (response.status === 404) {
+          throw new Error("History ID not found - data may be too old");
+        }
+
+        throw new Error(
+          `Failed to fetch Gmail history: ${errorData.error?.message || response.statusText}`
+        );
       }
 
-      throw new Error(
-        `Failed to fetch history: ${response.statusText}. Details: ${JSON.stringify(
-          errorData
-        )}`
-      );
-    }
+      const data = (await response.json()) as GmailHistoryResponse;
 
-    const data = (await response.json()) as GmailHistoryResponse;
+      if (!data || typeof data.historyId !== "string") {
+        fileLogger.log("error", "Invalid Gmail history response format", {
+          data,
+          historyId,
+        });
+        throw new Error("Invalid Gmail history response format");
+      }
 
-    logger.info(
-      {
+      fileLogger.log("debug", "Gmail history response received", {
         historyId,
-        newHistoryId: data.historyId,
-        hasHistory: data.history?.length > 0,
+        responseHistoryId: data.historyId,
+        hasHistory: !!data.history,
         historyCount: data.history?.length || 0,
         nextPageToken: data.nextPageToken,
-      },
-      "Gmail history response details"
-    );
+      });
 
-    return data;
+      return data;
+    } catch (error) {
+      fileLogger.log(
+        "error",
+        "Failed to fetch Gmail history",
+        sanitizeData({
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          historyId,
+        })
+      );
+      throw error;
+    }
   }
 
   private async fetchMessageDetails(
@@ -361,105 +642,215 @@ export class PubSubHandler {
     accessToken: string
   ): Promise<MessageDetails | null> {
     try {
-      const response = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+      fileLogger.log(
+        "debug",
+        "Fetching message details",
+        sanitizeData({
+          messageId,
+        })
+      );
+
+      // Add retry logic for transient failures
+      const maxRetries = 3;
+      const retryDelay = 1000; // 1 second
+      let lastError: Error | null = null;
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const response = await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          if (response.status === 404) {
+            fileLogger.log(
+              "warn",
+              "Message not found - may have been deleted or moved",
+              sanitizeData({
+                messageId,
+                attempt,
+              })
+            );
+            return null;
+          }
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            fileLogger.log(
+              "error",
+              "Failed to fetch message details from Gmail API",
+              sanitizeData({
+                messageId,
+                statusCode: response.status,
+                statusText: response.statusText,
+                errorData,
+                attempt,
+              })
+            );
+
+            // If it's a rate limit or server error, retry
+            if (response.status === 429 || response.status >= 500) {
+              lastError = new Error(
+                `Failed to fetch message details: ${response.statusText}`
+              );
+              if (attempt < maxRetries) {
+                await new Promise((resolve) =>
+                  setTimeout(resolve, retryDelay * attempt)
+                );
+                continue;
+              }
+            }
+
+            throw new Error(
+              `Failed to fetch message details: ${response.statusText}`
+            );
+          }
+
+          const data = (await response.json()) as GmailMessageMetadata;
+
+          // Check if message is in Trash or Spam
+          if (
+            data.labelIds?.includes("TRASH") ||
+            data.labelIds?.includes("SPAM")
+          ) {
+            fileLogger.log(
+              "warn",
+              "Message is in Trash or Spam - skipping processing",
+              sanitizeData({
+                messageId,
+                labelIds: data.labelIds,
+              })
+            );
+            return null;
+          }
+
+          const hasContent = this.messageHasContent(data);
+          if (!hasContent) {
+            fileLogger.log(
+              "warn",
+              "Message has no content",
+              sanitizeData({
+                messageId,
+                labelIds: data.labelIds,
+                threadId: data.threadId,
+              })
+            );
+            return null;
+          }
+
+          const fromHeader = data.payload.headers.find(
+            (h) => h.name === "From"
+          );
+          const inReplyToHeader = data.payload.headers.find(
+            (h) => h.name === "In-Reply-To"
+          );
+          const references = data.payload.headers.find(
+            (h) => h.name === "References"
+          );
+          const subject = data.payload.headers.find(
+            (h) => h.name === "Subject"
+          );
+
+          const from = fromHeader ? fromHeader.value : "";
+          const isReply = !!(
+            inReplyToHeader ||
+            references ||
+            (subject?.value || "").toLowerCase().startsWith("re:")
+          );
+
+          fileLogger.log(
+            "debug",
+            "Analyzed message headers",
+            sanitizeData({
+              messageId,
+              hasInReplyTo: !!inReplyToHeader,
+              hasReferences: !!references,
+              subject: subject?.value,
+              isReplyBySubject: (subject?.value || "")
+                .toLowerCase()
+                .startsWith("re:"),
+              isReply,
+              from,
+            })
+          );
+
+          const messageDetails = {
+            id: data.id,
+            threadId: data.threadId,
+            from,
+            labelIds: data.labelIds || [],
+            isReply,
+            headers: data.payload.headers.map((h) => ({
+              name: h.name,
+              value: h.value,
+            })),
+          };
+
+          fileLogger.log(
+            "debug",
+            "Successfully fetched message details",
+            sanitizeData({
+              messageId,
+              threadId: messageDetails.threadId,
+              from: messageDetails.from,
+              labelIds: messageDetails.labelIds,
+              isReply: messageDetails.isReply,
+            })
+          );
+
+          return messageDetails;
+        } catch (retryError) {
+          lastError = retryError as Error;
+          if (attempt < maxRetries) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, retryDelay * attempt)
+            );
+            continue;
+          }
         }
-      );
-
-      if (!response.ok) {
-        const errorMessage = `Failed to fetch message details: ${response.statusText}`;
-        fileLogger.log("error", errorMessage, {
-          messageId,
-          statusCode: response.status,
-          statusText: response.statusText,
-        });
-        throw new Error(errorMessage);
       }
 
-      const data = (await response.json()) as GmailMessageMetadata;
-
-      // Check if message has content
-      const hasContent = this.messageHasContent(data);
-      if (!hasContent) {
-        fileLogger.log("warn", "Message has no content, skipping", {
-          messageId,
-          labelIds: data.labelIds,
-          threadId: data.threadId,
-        });
-        return null;
-      }
-
-      const fromHeader = data.payload.headers.find((h) => h.name === "From");
-      const inReplyToHeader = data.payload.headers.find(
-        (h) => h.name === "In-Reply-To"
+      throw (
+        lastError || new Error("Failed to fetch message details after retries")
       );
-      const references = data.payload.headers.find(
-        (h) => h.name === "References"
-      );
-      const subject = data.payload.headers.find((h) => h.name === "Subject");
-
-      const from = fromHeader ? fromHeader.value : "";
-      const isReply = !!(
-        inReplyToHeader ||
-        references ||
-        (subject?.value || "").toLowerCase().startsWith("re:")
-      );
-
-      // Log detailed header information
-      fileLogger.log("debug", "Message headers analysis", {
-        messageId,
-        hasInReplyTo: !!inReplyToHeader,
-        hasReferences: !!references,
-        subject: subject?.value,
-        isReplyBySubject: (subject?.value || "")
-          .toLowerCase()
-          .startsWith("re:"),
-        isReply,
-        from,
-        inReplyToHeader,
-        references: references?.value,
-      });
-
-      const messageDetails = {
-        id: data.id,
-        threadId: data.threadId,
-        from,
-        labelIds: data.labelIds || [],
-        isReply,
-      };
-
-      return messageDetails;
     } catch (error) {
-      const logData = {
-        error,
-        messageId,
-        errorStack: error instanceof Error ? error.stack : undefined,
-        errorMessage: error instanceof Error ? error.message : String(error),
-      };
-      logger.error(logData, "Failed to fetch message details");
-      fileLogger.log("error", "Failed to fetch message details", logData);
+      fileLogger.log(
+        "error",
+        "Failed to fetch message details",
+        sanitizeData({
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          messageId,
+        })
+      );
       return null;
     }
   }
 
   private messageHasContent(message: GmailMessageMetadata): boolean {
-    // Check main body
-    if (message.payload.body && message.payload.body.size > 0) {
-      return true;
-    }
+    const hasMainBody = !!(
+      message.payload.body && message.payload.body.size > 0
+    );
+    const hasPartContent = !!message.payload.parts?.some(
+      (part) => part.body && part.body.size > 0
+    );
 
-    // Check parts (multipart messages)
-    if (
-      message.payload.parts?.some((part) => part.body && part.body.size > 0)
-    ) {
-      return true;
-    }
+    fileLogger.log(
+      "debug",
+      "Checking message content",
+      sanitizeData({
+        messageId: message.id,
+        hasMainBody,
+        hasPartContent,
+        partsCount: message.payload.parts?.length || 0,
+      })
+    );
 
-    return false;
+    return hasMainBody || hasPartContent;
   }
 
   private isExternalReply(from: string, watch: WatchWithMailbox): boolean {
@@ -468,24 +859,22 @@ export class PubSubHandler {
       ...watch.mailbox.aliases.map((alias) => alias.alias.toLowerCase()),
     ];
 
-    // Extract email from different formats:
-    // 1. "John Doe <john@example.com>"
-    // 2. john@example.com
     const senderEmail =
       (from.match(/<(.+?)>/) || from.match(/([^<\s]+@[^>\s]+)/) || [])[1] ||
       from;
-
-    // Normalize to lowercase for comparison
     const normalizedSender = senderEmail.toLowerCase().trim();
 
-    // Log the email comparison details
-    fileLogger.log("debug", "Checking if email is external", {
-      userEmails,
-      senderEmail: normalizedSender,
-      isExternal: !userEmails.includes(normalizedSender),
-      fromHeader: from,
-      extractedEmail: senderEmail,
-    });
+    fileLogger.log(
+      "debug",
+      "Checking if email is external",
+      sanitizeData({
+        userEmails,
+        senderEmail: normalizedSender,
+        isExternal: !userEmails.includes(normalizedSender),
+        fromHeader: from,
+        extractedEmail: senderEmail,
+      })
+    );
 
     return !userEmails.includes(normalizedSender);
   }
@@ -497,157 +886,120 @@ export class PubSubHandler {
     const changes: HistoryChange[] = [];
     const accessToken = await this.getValidAccessToken(watch.mailbox);
 
-    // Log raw history records for debugging
-    fileLogger.log("debug", "Raw history records", {
-      records: response.history?.map((record) => ({
-        id: record.id,
-        messagesAdded: record.messagesAdded?.length || 0,
-        labelsAdded: record.labelsAdded?.length || 0,
-        messages: record.messages?.length || 0,
-        // Add any other fields present in the records
-        hasMessages: !!record.messages,
-        hasMessagesAdded: !!record.messagesAdded,
-        hasLabelsAdded: !!record.labelsAdded,
-        raw: record, // Log the entire record for inspection
-      })),
-      watchEmail: watch.email,
+    fileLogger.log("debug", "Starting to process history records", {
       watchId: watch.id,
-    });
-
-    // Log the total messages being processed
-    fileLogger.log("debug", "Processing history records", {
-      totalRecords: response.history?.length || 0,
-      messagesAdded: response.history?.reduce(
-        (count, record) => count + (record.messagesAdded?.length || 0),
-        0
-      ),
-      labelsAdded: response.history?.reduce(
-        (count, record) => count + (record.labelsAdded?.length || 0),
-        0
-      ),
-      messages: response.history?.reduce(
-        (count, record) => count + (record.messages?.length || 0),
-        0
-      ),
-      watchEmail: watch.email,
-      watchId: watch.id,
+      recordCount: response.history?.length || 0,
+      hasHistory: !!response.history,
     });
 
     for (const record of response.history || []) {
-      // First check messages array which might contain modified messages
+      fileLogger.log("debug", "Processing history record", {
+        recordId: record.id,
+        messagesCount: record.messages?.length || 0,
+        messagesAddedCount: record.messagesAdded?.length || 0,
+        labelsAddedCount: record.labelsAdded?.length || 0,
+      });
+
       if (record.messages) {
         for (const message of record.messages) {
+          fileLogger.log("debug", "Processing message from record.messages", {
+            messageId: message.id,
+            threadId: message.threadId,
+            labelIds: message.labelIds,
+          });
+
           const messageDetails = await this.fetchMessageDetails(
             message.id,
             accessToken
           );
 
-          // Log raw message details for debugging
-          fileLogger.log("debug", "Raw message from messages array", {
-            messageId: message.id,
-            messageDetails,
-            threadId: message.threadId,
-            labelIds: message.labelIds,
-            watchEmail: watch.email,
-            watchId: watch.id,
+          if (!messageDetails) {
+            fileLogger.log("warn", "Skipping message - no details available", {
+              messageId: message.id,
+            });
+            continue;
+          }
+
+          // Log all relevant headers for bounce detection
+          const relevantHeaders = messageDetails.headers.filter((h) =>
+            ["from", "subject", "content-type", "x-failed-recipients"].includes(
+              h.name.toLowerCase()
+            )
+          );
+
+          fileLogger.log(
+            "debug",
+            "Analyzing message headers for bounce detection",
+            {
+              messageId: messageDetails.id,
+              headers: relevantHeaders,
+              from: messageDetails.headers.find(
+                (h) => h.name.toLowerCase() === "from"
+              )?.value,
+              subject: messageDetails.headers.find(
+                (h) => h.name.toLowerCase() === "subject"
+              )?.value,
+              contentType: messageDetails.headers.find(
+                (h) => h.name.toLowerCase() === "content-type"
+              )?.value,
+            }
+          );
+
+          const isBounce = isBounceMessage(messageDetails.headers);
+
+          fileLogger.log("debug", "Bounce check result", {
+            messageId: messageDetails.id,
+            isBounce,
+            from: messageDetails.headers.find(
+              (h) => h.name.toLowerCase() === "from"
+            )?.value,
+            subject: messageDetails.headers.find(
+              (h) => h.name.toLowerCase() === "subject"
+            )?.value,
+            hasFailedRecipients: messageDetails.headers.some(
+              (h) => h.name.toLowerCase() === "x-failed-recipients"
+            ),
+            contentType: messageDetails.headers.find(
+              (h) => h.name.toLowerCase() === "content-type"
+            )?.value,
+            matchedHeaders: relevantHeaders,
+            allHeaders: messageDetails.headers.map(
+              (h) => `${h.name}: ${h.value}`
+            ),
           });
 
-          if (messageDetails) {
-            const isExternal = this.isExternalReply(messageDetails.from, watch);
-
-            // Log detailed processing info
-            fileLogger.log("debug", "Processing message from messages array", {
+          if (isBounce) {
+            fileLogger.log("info", "Bounce detected", {
               messageId: messageDetails.id,
               threadId: messageDetails.threadId,
               from: messageDetails.from,
-              isReply: messageDetails.isReply,
-              isExternal,
-              labelIds: messageDetails.labelIds,
-              watchEmail: watch.email,
-              watchAliases: watch.mailbox.aliases.map((a) => a.alias),
-              skipped: !messageDetails.isReply || !isExternal,
-              skipReason: !messageDetails.isReply
-                ? "not a reply"
-                : !isExternal
-                  ? "not from external sender"
-                  : null,
+              subject: messageDetails.headers.find(
+                (h) => h.name.toLowerCase() === "subject"
+              )?.value,
+              headers: relevantHeaders,
+              allHeaders: messageDetails.headers.map(
+                (h) => `${h.name}: ${h.value}`
+              ),
             });
 
-            if (messageDetails.isReply && isExternal) {
-              changes.push({
-                id: nanoid(),
-                threadId: messageDetails.threadId,
-                type: NotificationType.REPLY,
-                messageId: messageDetails.id,
-                labelIds: messageDetails.labelIds,
-                from: messageDetails.from,
-              });
-            }
-          }
-        }
-      }
-
-      // Then check messagesAdded array (existing code)
-      if (record.messagesAdded) {
-        for (const messageAdded of record.messagesAdded) {
-          const messageDetails = await this.fetchMessageDetails(
-            messageAdded.message.id,
-            accessToken
-          );
-
-          // Log raw message details for debugging
-          fileLogger.log("debug", "Raw message details", {
-            messageId: messageAdded.message.id,
-            messageDetails,
-            watchEmail: watch.email,
-            watchId: watch.id,
-          });
-
-          // Skip if message has no content or failed to fetch
-          if (!messageDetails) {
-            fileLogger.log(
-              "debug",
-              "Skipping message - no content or failed to fetch",
-              {
-                messageId: messageAdded.message.id,
-                watchEmail: watch.email,
-                watchId: watch.id,
-              }
-            );
+            changes.push({
+              id: nanoid(),
+              threadId: messageDetails.threadId,
+              type: NotificationType.BOUNCE,
+              messageId: messageDetails.id,
+              labelIds: messageDetails.labelIds,
+              from: messageDetails.from,
+            });
             continue;
           }
 
           const isExternal = this.isExternalReply(messageDetails.from, watch);
-
-          // Log detailed processing info
-          fileLogger.log("debug", "Message processing details", {
-            messageId: messageDetails.id,
-            threadId: messageDetails.threadId,
-            from: messageDetails.from,
-            isReply: messageDetails.isReply,
-            isExternal,
-            labelIds: messageDetails.labelIds,
-            watchEmail: watch.email,
-            watchAliases: watch.mailbox.aliases.map((a) => a.alias),
-            skipped: !messageDetails.isReply || !isExternal,
-            skipReason: !messageDetails.isReply
-              ? "not a reply"
-              : !isExternal
-                ? "not from external sender"
-                : null,
-          });
-
-          // Only process if it's a reply from someone else
           if (messageDetails.isReply && isExternal) {
-            logger.info(
-              {
-                messageId: messageDetails.id,
-                threadId: messageDetails.threadId,
-                from: messageDetails.from,
-                isReply: messageDetails.isReply,
-              },
-              "Found external reply"
-            );
+            fileLogger.log("info", "External reply detected", {
+              messageId: messageDetails.id,
+              threadId: messageDetails.threadId,
+              from: messageDetails.from,
+            });
 
             changes.push({
               id: nanoid(),
@@ -661,50 +1013,300 @@ export class PubSubHandler {
         }
       }
 
-      // Then check labelsAdded array (existing code)
-      if (record.labelsAdded) {
-        for (const label of record.labelsAdded) {
+      // Process added messages with similar enhanced logging
+      if (record.messagesAdded) {
+        for (const messageAdded of record.messagesAdded) {
+          fileLogger.log("debug", "Processing message from messagesAdded", {
+            messageId: messageAdded.message.id,
+            threadId: messageAdded.message.threadId,
+            labelIds: messageAdded.message.labelIds,
+          });
+
           const messageDetails = await this.fetchMessageDetails(
-            label.message.id,
+            messageAdded.message.id,
             accessToken
           );
 
-          // Skip if message has no content or failed to fetch
-          if (!messageDetails) continue;
+          if (!messageDetails) {
+            fileLogger.log(
+              "warn",
+              "Skipping added message - no details available",
+              {
+                messageId: messageAdded.message.id,
+              }
+            );
+            continue;
+          }
 
-          changes.push({
-            id: nanoid(),
-            threadId: messageDetails.threadId,
-            type: NotificationType.LABEL_ADDED,
+          // Log all relevant headers for bounce detection
+          const relevantHeaders = messageDetails.headers.filter((h) =>
+            ["from", "subject", "content-type", "x-failed-recipients"].includes(
+              h.name.toLowerCase()
+            )
+          );
+
+          fileLogger.log(
+            "debug",
+            "Analyzing added message headers for bounce detection",
+            {
+              messageId: messageDetails.id,
+              headers: relevantHeaders,
+            }
+          );
+
+          const isBounce = isBounceMessage(messageDetails.headers);
+
+          fileLogger.log("debug", "Bounce check result for added message", {
             messageId: messageDetails.id,
-            labelIds: label.labelIds,
-            from: messageDetails.from,
+            isBounce,
+            from: messageDetails.headers.find(
+              (h) => h.name.toLowerCase() === "from"
+            )?.value,
+            subject: messageDetails.headers.find(
+              (h) => h.name.toLowerCase() === "subject"
+            )?.value,
+            hasFailedRecipients: messageDetails.headers.some(
+              (h) => h.name.toLowerCase() === "x-failed-recipients"
+            ),
+            contentType: messageDetails.headers.find(
+              (h) => h.name.toLowerCase() === "content-type"
+            )?.value,
           });
+
+          if (isBounce) {
+            fileLogger.log("info", "Bounce detected in added message", {
+              messageId: messageDetails.id,
+              threadId: messageDetails.threadId,
+              from: messageDetails.from,
+              headers: relevantHeaders,
+            });
+
+            changes.push({
+              id: nanoid(),
+              threadId: messageDetails.threadId,
+              type: NotificationType.BOUNCE,
+              messageId: messageDetails.id,
+              labelIds: messageDetails.labelIds,
+              from: messageDetails.from,
+            });
+            continue;
+          }
+
+          const isExternal = this.isExternalReply(messageDetails.from, watch);
+          if (messageDetails.isReply && isExternal) {
+            fileLogger.log("info", "External reply detected in added message", {
+              messageId: messageDetails.id,
+              threadId: messageDetails.threadId,
+              from: messageDetails.from,
+            });
+
+            changes.push({
+              id: nanoid(),
+              threadId: messageDetails.threadId,
+              type: NotificationType.REPLY,
+              messageId: messageDetails.id,
+              labelIds: messageDetails.labelIds,
+              from: messageDetails.from,
+            });
+          }
         }
       }
     }
 
+    fileLogger.log("info", "Completed processing history records", {
+      watchId: watch.id,
+      totalChanges: changes.length,
+      changeTypes: changes.map((c) => c.type),
+    });
+
     return changes;
+  }
+
+  private async processBounce(change: HistoryChange): Promise<void> {
+    try {
+      fileLogger.log(
+        "debug",
+        "Starting bounce processing",
+        sanitizeData({
+          changeId: change.id,
+          threadId: change.threadId,
+          messageId: change.messageId,
+        })
+      );
+
+      const emailThread = await prisma.emailThread.findUnique({
+        where: { threadId: change.threadId },
+        include: {
+          sequence: true,
+        },
+      });
+
+      if (!emailThread) {
+        fileLogger.log(
+          "warn",
+          "No email thread found for bounce",
+          sanitizeData({
+            threadId: change.threadId,
+            messageId: change.messageId,
+          })
+        );
+        return;
+      }
+
+      fileLogger.log(
+        "debug",
+        "Found email thread for bounce",
+        sanitizeData({
+          threadId: change.threadId,
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+        })
+      );
+
+      const existingBounce = await prisma.emailEvent.findFirst({
+        where: {
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+          type: EmailEventEnum.BOUNCED,
+        },
+      });
+
+      if (existingBounce) {
+        fileLogger.log(
+          "debug",
+          "Bounce already recorded",
+          sanitizeData({
+            threadId: change.threadId,
+            sequenceId: emailThread.sequenceId,
+            contactId: emailThread.contactId,
+            existingBounceId: existingBounce.id,
+          })
+        );
+        return;
+      }
+
+      const sentEvent = await prisma.emailEvent.findFirst({
+        where: {
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+          type: EmailEventEnum.SENT,
+        },
+      });
+
+      if (!sentEvent) {
+        fileLogger.log("warn", "No sent event found for bounce", {
+          threadId: change.threadId,
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+        });
+        return;
+      }
+
+      fileLogger.log("debug", "Found sent event for bounce", {
+        sentEventId: sentEvent.id,
+        trackingId: sentEvent.trackingId,
+      });
+
+      const bounceEvent = await prisma.emailEvent.create({
+        data: {
+          type: EmailEventEnum.BOUNCED,
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+          trackingId: sentEvent.trackingId,
+          metadata: {
+            messageId: change.messageId,
+            threadId: change.threadId,
+            bounceReason: "Email delivery failed",
+          },
+        },
+      });
+
+      fileLogger.log("info", "Created bounce event", {
+        bounceEventId: bounceEvent.id,
+        sequenceId: emailThread.sequenceId,
+        contactId: emailThread.contactId,
+      });
+
+      const updateResult = await prisma.sequenceContact.updateMany({
+        where: {
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+          status: {
+            notIn: [
+              SequenceContactStatusEnum.COMPLETED,
+              SequenceContactStatusEnum.BOUNCED,
+              SequenceContactStatusEnum.OPTED_OUT,
+            ],
+          },
+        },
+        data: {
+          status: SequenceContactStatusEnum.BOUNCED,
+          completed: true,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      fileLogger.log("info", "Updated sequence contact status", {
+        threadId: change.threadId,
+        sequenceId: emailThread.sequenceId,
+        contactId: emailThread.contactId,
+        updatedCount: updateResult.count,
+      });
+
+      await updateSequenceStats(
+        emailThread.sequenceId,
+        EmailEventEnum.BOUNCED,
+        emailThread.contactId
+      );
+
+      fileLogger.log("info", "Successfully processed bounce", {
+        threadId: change.threadId,
+        sequenceId: emailThread.sequenceId,
+        contactId: emailThread.contactId,
+        bounceEventId: bounceEvent.id,
+        statusUpdated: updateResult.count > 0,
+      });
+    } catch (error) {
+      fileLogger.log(
+        "error",
+        "Failed to process bounce",
+        sanitizeData({
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          threadId: change.threadId,
+          changeId: change.id,
+        })
+      );
+      throw error;
+    }
   }
 
   private async updateSequenceStatuses(
     changes: HistoryChange[]
   ): Promise<void> {
     try {
+      fileLogger.log(
+        "debug",
+        "Starting sequence status updates",
+        sanitizeData({
+          totalChanges: changes.length,
+          changeTypes: changes.map((c) => c.type),
+        })
+      );
+
       for (const change of changes) {
-        // Log the change being processed
         fileLogger.log(
           "debug",
-          "Processing change for sequence status update",
-          {
+          "Processing change for status update",
+          sanitizeData({
             changeId: change.id,
             threadId: change.threadId,
             type: change.type,
             messageId: change.messageId,
-          }
+          })
         );
 
-        // Find the sequence contact for this thread
         const sequenceContact = await this.findSequenceContact(change.threadId);
 
         if (!sequenceContact) {
@@ -715,7 +1317,6 @@ export class PubSubHandler {
           continue;
         }
 
-        // Log the found sequence contact
         fileLogger.log("debug", "Found sequence contact", {
           sequenceContactId: sequenceContact.id,
           contactId: sequenceContact.contactId,
@@ -723,7 +1324,6 @@ export class PubSubHandler {
           currentStatus: sequenceContact.status,
         });
 
-        // Determine the new status
         const newStatus = this.determineNewStatus(change);
 
         if (!newStatus) {
@@ -734,7 +1334,6 @@ export class PubSubHandler {
           continue;
         }
 
-        // Log the status update attempt
         fileLogger.log("info", "Updating sequence contact status", {
           sequenceContactId: sequenceContact.id,
           oldStatus: sequenceContact.status,
@@ -742,7 +1341,6 @@ export class PubSubHandler {
           threadId: change.threadId,
         });
 
-        // Update the status
         await prisma.sequenceContact.update({
           where: { id: sequenceContact.id },
           data: {
@@ -753,25 +1351,35 @@ export class PubSubHandler {
           },
         });
 
-        // Log successful update
         fileLogger.log("info", "Successfully updated sequence contact status", {
           sequenceContactId: sequenceContact.id,
           newStatus,
           threadId: change.threadId,
         });
       }
-    } catch (error) {
-      fileLogger.log("error", "Failed to update sequence statuses", {
-        error: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
+
+      fileLogger.log("info", "Completed all sequence status updates", {
+        totalChanges: changes.length,
       });
+    } catch (error) {
+      fileLogger.log(
+        "error",
+        "Failed to update sequence statuses",
+        sanitizeData({
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+        })
+      );
       throw error;
     }
   }
 
   private async findSequenceContact(threadId: string) {
     try {
-      // First find the email thread
+      fileLogger.log("debug", "Finding sequence contact for thread", {
+        threadId,
+      });
+
       const emailThread = await prisma.emailThread.findUnique({
         where: { threadId },
         include: {
@@ -784,7 +1392,12 @@ export class PubSubHandler {
         return null;
       }
 
-      // Then find the sequence contact
+      fileLogger.log("debug", "Found email thread", {
+        threadId,
+        sequenceId: emailThread.sequenceId,
+        contactId: emailThread.contactId,
+      });
+
       const sequenceContact = await prisma.sequenceContact.findUnique({
         where: {
           sequenceId_contactId: {
@@ -794,11 +1407,26 @@ export class PubSubHandler {
         },
       });
 
+      if (sequenceContact) {
+        fileLogger.log("debug", "Found sequence contact", {
+          threadId,
+          sequenceContactId: sequenceContact.id,
+          status: sequenceContact.status,
+        });
+      } else {
+        fileLogger.log("debug", "No sequence contact found", {
+          threadId,
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+        });
+      }
+
       return sequenceContact;
     } catch (error) {
       fileLogger.log("error", "Error finding sequence contact", {
         threadId,
         error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
       });
       return null;
     }
@@ -806,19 +1434,31 @@ export class PubSubHandler {
 
   private determineNewStatus(
     change: HistoryChange
-  ): SequenceContactStatusEnum | undefined {
+  ): SequenceContactStatusEnum | null {
     fileLogger.log("debug", "Determining new status", {
       changeType: change.type,
       messageId: change.messageId,
     });
 
+    let newStatus: SequenceContactStatusEnum | null = null;
+
     switch (change.type) {
       case NotificationType.REPLY:
-        return SequenceContactStatusEnum.REPLIED;
+        newStatus = SequenceContactStatusEnum.REPLIED;
+        break;
       case NotificationType.BOUNCE:
-        return SequenceContactStatusEnum.BOUNCED;
+        newStatus = SequenceContactStatusEnum.BOUNCED;
+        break;
       default:
-        return undefined;
+        newStatus = null;
     }
+
+    fileLogger.log("debug", "Determined new status", {
+      changeType: change.type,
+      messageId: change.messageId,
+      newStatus,
+    });
+
+    return newStatus;
   }
 }

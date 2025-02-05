@@ -62,6 +62,7 @@ export const isSenderSequenceOwner = (
 export const isBounceMessage = (headers: MessagePartHeader[]) => {
   const bounceIndicators = [
     "mailer-daemon",
+    "mail delivery subsystem",
     "mail delivery failed",
     "delivery status notification",
     "undeliverable",
@@ -70,16 +71,28 @@ export const isBounceMessage = (headers: MessagePartHeader[]) => {
     "non-delivery report",
     "returned mail",
     "delivery problem",
+    "failure notice",
+    "delivery notification",
+  ];
+
+  const bounceSenders = [
+    "mailer-daemon@googlemail.com",
+    "postmaster@",
+    "mailerdaemon@",
+    "mailer-daemon@",
   ];
 
   return (
-    // Check From header for mailer-daemon
+    // Check From header for mailer-daemon and known bounce senders
     headers.some(
       (h) =>
         h.name?.toLowerCase() === "from" &&
-        bounceIndicators.some((indicator) =>
+        (bounceIndicators.some((indicator) =>
           h.value?.toLowerCase().includes(indicator)
-        )
+        ) ||
+          bounceSenders.some((sender) =>
+            h.value?.toLowerCase().includes(sender)
+          ))
     ) ||
     // Check for failed recipients
     headers.some(
@@ -90,7 +103,8 @@ export const isBounceMessage = (headers: MessagePartHeader[]) => {
       (h) =>
         h.name?.toLowerCase() === "content-type" &&
         (h.value?.toLowerCase().includes("report-type=delivery-status") ||
-          h.value?.toLowerCase().includes("delivery-status"))
+          h.value?.toLowerCase().includes("delivery-status") ||
+          h.value?.toLowerCase().includes("multipart/report"))
     ) ||
     // Check Subject for bounce indicators
     headers.some(

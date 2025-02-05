@@ -11,6 +11,7 @@ import {
 import { WatchResponse, WatchError, WatchErrorCode } from "../../types/watch";
 import { backOff, type BackoffOptions } from "exponential-backoff";
 import { PubSub } from "@google-cloud/pubsub";
+import { refreshTokenIfNeeded } from "@/lib/google/gmail/helper";
 
 interface GmailErrorResponse {
   error: {
@@ -119,9 +120,8 @@ export class WatchService {
       const watchRequest = {
         userId: "me",
         requestBody: {
-          labelIds: ["INBOX"],
+          // Don't specify labelIds to watch all labels
           topicName: `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/${process.env.PUBSUB_TOPIC_NAME}`,
-          labelFilterAction: "include",
         },
       };
 
@@ -307,52 +307,25 @@ export class WatchService {
         return null;
       }
 
-      // Check if token needs refresh
-      const now = Math.floor(Date.now() / 1000);
-      if (!mailbox.expires_at || mailbox.expires_at <= now) {
-        // Token expired, need to refresh
-        if (!mailbox.refresh_token) {
-          logger.error({ email }, "No refresh token found for mailbox");
-          return null;
-        }
-
-        // Refresh the token
-        const response = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID || "",
-            client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
-            refresh_token: mailbox.refresh_token,
-            grant_type: "refresh_token",
-          }),
-        });
-
-        if (!response.ok) {
-          logger.error(
-            { email, status: response.status },
-            "Failed to refresh token"
-          );
-          return null;
-        }
-
-        const data = (await response.json()) as GoogleTokenResponse;
-
-        // Update the mailbox with new tokens
-        await prisma.mailbox.update({
-          where: { id: mailbox.id },
-          data: {
-            access_token: data.access_token,
-            expires_at: Math.floor(Date.now() / 1000 + data.expires_in),
-          },
-        });
-
-        return data.access_token;
+      if (
+        !mailbox.access_token ||
+        !mailbox.refresh_token ||
+        !mailbox.expires_at
+      ) {
+        logger.error({ email }, "Missing required tokens or expiry");
+        return null;
       }
 
-      return mailbox.access_token || null;
+      // Use refreshTokenIfNeeded helper
+      const accessToken = await refreshTokenIfNeeded({
+        userId: mailbox.userId,
+        mailboxId: mailbox.id,
+        accessToken: mailbox.access_token,
+        refreshToken: mailbox.refresh_token,
+        expiryDate: mailbox.expires_at,
+      });
+
+      return accessToken;
     } catch (error) {
       logger.error({ error, email }, "Failed to get access token");
       return null;
