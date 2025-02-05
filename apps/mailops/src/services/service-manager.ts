@@ -20,7 +20,7 @@ import { SequenceProcessor } from "./jobs/sequence/processor";
 import { EmailProcessor } from "./jobs/email/processor";
 import { ContactProcessor } from "./jobs/contact/processor";
 import { ScheduleProcessor } from "./jobs/schedule/processor";
-import { ThreadProcessor } from "./jobs/thread-watch/processor";
+// import { ThreadProcessor } from "./jobs/thread-watch/processor";
 import { WatchCleanupService } from "./watch/cleanup";
 import { PubSubService } from "./pubsub/client";
 
@@ -143,8 +143,8 @@ export class ServiceManager {
       const processorMap: Record<string, (queue: Queue) => ProcessorType> = {
         [QUEUE_NAMES.SEQUENCE]: (queue: Queue) => new SequenceProcessor(queue),
         [QUEUE_NAMES.EMAIL]: (queue: Queue) => new EmailProcessor(queue),
-        [QUEUE_NAMES.THREAD_WATCHER]: (queue: Queue) =>
-          new ThreadProcessor(queue),
+        // [QUEUE_NAMES.THREAD_WATCHER]: (queue: Queue) =>
+        //   new ThreadProcessor(queue),
         [QUEUE_NAMES.CONTACT]: (queue: Queue) => new ContactProcessor(queue),
         [QUEUE_NAMES.EMAIL_SCHEDULE]: (queue: Queue) =>
           new ScheduleProcessor(queue),

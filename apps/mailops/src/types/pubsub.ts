@@ -28,8 +28,9 @@ export interface HistoryChange {
   id: string;
   threadId: string;
   type: NotificationType;
+  messageId: string;
   labelIds?: string[];
-  messageId?: string;
+  from?: string; // Added for tracking message sender
 }
 
 export interface NotificationRecord {
@@ -40,4 +41,50 @@ export interface NotificationRecord {
   processed: boolean;
   createdAt: Date;
   data?: Record<string, any>;
+}
+
+export interface GmailHistoryRecord {
+  id: string;
+  messages?: Array<{
+    id: string;
+    threadId: string;
+    labelIds: string[];
+  }>;
+  messagesAdded?: Array<{
+    message: {
+      id: string;
+      threadId: string;
+      labelIds: string[];
+    };
+  }>;
+  labelsAdded?: Array<{
+    message: {
+      id: string;
+      threadId: string;
+    };
+    labelIds: string[];
+  }>;
+}
+
+export interface GmailMessageMetadata {
+  id: string;
+  threadId: string;
+  labelIds: string[];
+  sizeEstimate: number;
+  payload: {
+    headers: Array<{
+      name: string;
+      value: string;
+    }>;
+    body?: {
+      size: number;
+      data?: string;
+    };
+    parts?: Array<{
+      body: {
+        size: number;
+        data?: string;
+      };
+    }>;
+  };
 }
