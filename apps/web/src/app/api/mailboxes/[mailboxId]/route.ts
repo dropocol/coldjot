@@ -90,6 +90,48 @@ export async function DELETE(req: Request, { params }: RouteParams) {
 
     const { mailboxId } = await params;
 
+    // Get the mailbox first to get its email
+    const mailbox = await prisma.mailbox.findUnique({
+      where: {
+        id: mailboxId,
+        userId: session.user.id,
+      },
+    });
+
+    if (!mailbox) {
+      return new NextResponse("Not Found", { status: 404 });
+    }
+
+    // First, stop the Gmail watch
+    try {
+      const stopWatchResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_MAILOPS_API_URL}/mailbox/watch/${encodeURIComponent(mailbox.email)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!stopWatchResponse.ok) {
+        console.error(
+          "[EMAIL_ACCOUNT_DELETE] Failed to stop watch:",
+          await stopWatchResponse.text()
+        );
+        // Continue with deletion even if watch stop fails
+      } else {
+        console.log(
+          "[EMAIL_ACCOUNT_DELETE] Successfully stopped watch for:",
+          mailbox.email
+        );
+      }
+
+      // Wait a moment to ensure watch is stopped
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (watchError) {
+      console.error("[EMAIL_ACCOUNT_DELETE] Error stopping watch:", watchError);
+      // Continue with deletion even if watch stop fails
+    }
+
+    // Then delete the mailbox
     await prisma.mailbox.delete({
       where: {
         id: mailboxId,

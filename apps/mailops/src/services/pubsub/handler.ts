@@ -16,6 +16,7 @@ import { Prisma, EmailWatch, Mailbox, EmailAlias } from "@prisma/client";
 import { fileLogger } from "@/lib/log/file-logger";
 import { isBounceMessage } from "@/utils/email";
 import { updateSequenceStats } from "@/lib/stats";
+import { GMAIL_API } from "@/config/gmail/constants";
 
 interface GmailHistoryResponse {
   history: GmailHistoryRecord[];
@@ -27,6 +28,7 @@ interface MessageDetails {
   id: string;
   threadId: string;
   from: string;
+  subject: string;
   labelIds: string[];
   isReply: boolean;
   headers: Array<{ name: string; value: string }>;
@@ -563,76 +565,23 @@ export class PubSubHandler {
     accessToken: string
   ): Promise<GmailHistoryResponse> {
     try {
-      // Request all history changes by not specifying any label filters
-      // and adding historyTypes to include all types of changes
-      const url = `https://gmail.googleapis.com/gmail/v1/users/me/history?startHistoryId=${historyId}&maxResults=100&historyTypes=messageAdded&historyTypes=labelAdded&historyTypes=labelRemoved`;
-
-      fileLogger.log(
-        "debug",
-        "Fetching Gmail history for all changes",
-        sanitizeData({
-          historyId,
-          url: url.replace(/access_token=[^&]+/, "access_token=[REDACTED]"),
-        })
-      );
+      // Remove label filtering to get ALL changes
+      const url = `${GMAIL_API.HISTORY}?startHistoryId=${historyId}&historyTypes=messageAdded&historyTypes=labelAdded&historyTypes=labelRemoved`;
 
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as {
-          error?: { message?: string };
-        };
-
-        fileLogger.log("error", "Gmail API error response", {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-          historyId,
-        });
-
-        if (response.status === 404) {
-          throw new Error("History ID not found - data may be too old");
-        }
-
-        throw new Error(
-          `Failed to fetch Gmail history: ${errorData.error?.message || response.statusText}`
-        );
+        throw new Error(`Failed to fetch history: ${response.statusText}`);
       }
 
-      const data = (await response.json()) as GmailHistoryResponse;
-
-      if (!data || typeof data.historyId !== "string") {
-        fileLogger.log("error", "Invalid Gmail history response format", {
-          data,
-          historyId,
-        });
-        throw new Error("Invalid Gmail history response format");
-      }
-
-      fileLogger.log("debug", "Gmail history response received", {
-        historyId,
-        responseHistoryId: data.historyId,
-        hasHistory: !!data.history,
-        historyCount: data.history?.length || 0,
-        nextPageToken: data.nextPageToken,
-      });
-
-      return data;
+      const data = await response.json();
+      return data as GmailHistoryResponse;
     } catch (error) {
-      fileLogger.log(
-        "error",
-        "Failed to fetch Gmail history",
-        sanitizeData({
-          error: error instanceof Error ? error.message : "Unknown error",
-          stack: error instanceof Error ? error.stack : undefined,
-          historyId,
-        })
-      );
+      logger.error({ error }, "Failed to fetch Gmail history");
       throw error;
     }
   }
@@ -642,191 +591,42 @@ export class PubSubHandler {
     accessToken: string
   ): Promise<MessageDetails | null> {
     try {
-      fileLogger.log(
-        "debug",
-        "Fetching message details",
-        sanitizeData({
-          messageId,
-        })
+      const response = await fetch(
+        `${GMAIL_API.MESSAGES}/${messageId}?format=metadata&metadataHeaders=from&metadataHeaders=subject&metadataHeaders=delivered-to&metadataHeaders=content-type&metadataHeaders=x-failed-recipients&metadataHeaders=in-reply-to&metadataHeaders=references`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
       );
 
-      // Add retry logic for transient failures
-      const maxRetries = 3;
-      const retryDelay = 1000; // 1 second
-      let lastError: Error | null = null;
-
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const response = await fetch(
-            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
-
-          if (response.status === 404) {
-            fileLogger.log(
-              "warn",
-              "Message not found - may have been deleted or moved",
-              sanitizeData({
-                messageId,
-                attempt,
-              })
-            );
-            return null;
-          }
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            fileLogger.log(
-              "error",
-              "Failed to fetch message details from Gmail API",
-              sanitizeData({
-                messageId,
-                statusCode: response.status,
-                statusText: response.statusText,
-                errorData,
-                attempt,
-              })
-            );
-
-            // If it's a rate limit or server error, retry
-            if (response.status === 429 || response.status >= 500) {
-              lastError = new Error(
-                `Failed to fetch message details: ${response.statusText}`
-              );
-              if (attempt < maxRetries) {
-                await new Promise((resolve) =>
-                  setTimeout(resolve, retryDelay * attempt)
-                );
-                continue;
-              }
-            }
-
-            throw new Error(
-              `Failed to fetch message details: ${response.statusText}`
-            );
-          }
-
-          const data = (await response.json()) as GmailMessageMetadata;
-
-          // Check if message is in Trash or Spam
-          if (
-            data.labelIds?.includes("TRASH") ||
-            data.labelIds?.includes("SPAM")
-          ) {
-            fileLogger.log(
-              "warn",
-              "Message is in Trash or Spam - skipping processing",
-              sanitizeData({
-                messageId,
-                labelIds: data.labelIds,
-              })
-            );
-            return null;
-          }
-
-          const hasContent = this.messageHasContent(data);
-          if (!hasContent) {
-            fileLogger.log(
-              "warn",
-              "Message has no content",
-              sanitizeData({
-                messageId,
-                labelIds: data.labelIds,
-                threadId: data.threadId,
-              })
-            );
-            return null;
-          }
-
-          const fromHeader = data.payload.headers.find(
-            (h) => h.name === "From"
-          );
-          const inReplyToHeader = data.payload.headers.find(
-            (h) => h.name === "In-Reply-To"
-          );
-          const references = data.payload.headers.find(
-            (h) => h.name === "References"
-          );
-          const subject = data.payload.headers.find(
-            (h) => h.name === "Subject"
-          );
-
-          const from = fromHeader ? fromHeader.value : "";
-          const isReply = !!(
-            inReplyToHeader ||
-            references ||
-            (subject?.value || "").toLowerCase().startsWith("re:")
-          );
-
-          fileLogger.log(
-            "debug",
-            "Analyzed message headers",
-            sanitizeData({
-              messageId,
-              hasInReplyTo: !!inReplyToHeader,
-              hasReferences: !!references,
-              subject: subject?.value,
-              isReplyBySubject: (subject?.value || "")
-                .toLowerCase()
-                .startsWith("re:"),
-              isReply,
-              from,
-            })
-          );
-
-          const messageDetails = {
-            id: data.id,
-            threadId: data.threadId,
-            from,
-            labelIds: data.labelIds || [],
-            isReply,
-            headers: data.payload.headers.map((h) => ({
-              name: h.name,
-              value: h.value,
-            })),
-          };
-
-          fileLogger.log(
-            "debug",
-            "Successfully fetched message details",
-            sanitizeData({
-              messageId,
-              threadId: messageDetails.threadId,
-              from: messageDetails.from,
-              labelIds: messageDetails.labelIds,
-              isReply: messageDetails.isReply,
-            })
-          );
-
-          return messageDetails;
-        } catch (retryError) {
-          lastError = retryError as Error;
-          if (attempt < maxRetries) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, retryDelay * attempt)
-            );
-            continue;
-          }
-        }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch message: ${response.statusText}`);
       }
 
-      throw (
-        lastError || new Error("Failed to fetch message details after retries")
-      );
+      const data = (await response.json()) as any;
+      const headers = data.payload?.headers || [];
+
+      // Log all headers for debugging bounce detection
+      fileLogger.log("info", "Message headers for bounce detection", {
+        messageId,
+        headers: headers.map((h: any) => ({ name: h.name, value: h.value })),
+      });
+
+      return {
+        id: data.id,
+        threadId: data.threadId,
+        from: headers.find((h: any) => h.name === "From")?.value || "",
+        subject: headers.find((h: any) => h.name === "Subject")?.value || "",
+        labelIds: data.labelIds || [],
+        isReply: this.isReplyMessage(headers),
+        headers: headers.map((h: any) => ({
+          name: h.name,
+          value: h.value,
+        })),
+      };
     } catch (error) {
-      fileLogger.log(
-        "error",
-        "Failed to fetch message details",
-        sanitizeData({
-          error: error instanceof Error ? error.message : "Unknown error",
-          stack: error instanceof Error ? error.stack : undefined,
-          messageId,
-        })
-      );
+      logger.error({ error, messageId }, "Failed to fetch message details");
       return null;
     }
   }
@@ -886,240 +686,129 @@ export class PubSubHandler {
     const changes: HistoryChange[] = [];
     const accessToken = await this.getValidAccessToken(watch.mailbox);
 
-    fileLogger.log("debug", "Starting to process history records", {
-      watchId: watch.id,
-      recordCount: response.history?.length || 0,
-      hasHistory: !!response.history,
-    });
+    if (!accessToken) {
+      throw new Error("No valid access token available");
+    }
 
-    for (const record of response.history || []) {
-      fileLogger.log("debug", "Processing history record", {
-        recordId: record.id,
-        messagesCount: record.messages?.length || 0,
-        messagesAddedCount: record.messagesAdded?.length || 0,
-        labelsAddedCount: record.labelsAdded?.length || 0,
-      });
-
-      if (record.messages) {
-        for (const message of record.messages) {
-          fileLogger.log("debug", "Processing message from record.messages", {
-            messageId: message.id,
-            threadId: message.threadId,
-            labelIds: message.labelIds,
-          });
-
-          const messageDetails = await this.fetchMessageDetails(
+    for (const history of response.history || []) {
+      // Process added messages
+      if (history.messagesAdded) {
+        for (const { message } of history.messagesAdded) {
+          const details = await this.fetchMessageDetails(
             message.id,
             accessToken
           );
 
-          if (!messageDetails) {
-            fileLogger.log("warn", "Skipping message - no details available", {
-              messageId: message.id,
-            });
-            continue;
-          }
+          if (!details) continue;
 
-          // Log all relevant headers for bounce detection
-          const relevantHeaders = messageDetails.headers.filter((h) =>
-            ["from", "subject", "content-type", "x-failed-recipients"].includes(
-              h.name.toLowerCase()
-            )
-          );
-
-          fileLogger.log(
-            "debug",
-            "Analyzing message headers for bounce detection",
-            {
-              messageId: messageDetails.id,
-              headers: relevantHeaders,
-              from: messageDetails.headers.find(
-                (h) => h.name.toLowerCase() === "from"
-              )?.value,
-              subject: messageDetails.headers.find(
-                (h) => h.name.toLowerCase() === "subject"
-              )?.value,
-              contentType: messageDetails.headers.find(
-                (h) => h.name.toLowerCase() === "content-type"
-              )?.value,
-            }
-          );
-
-          const isBounce = isBounceMessage(messageDetails.headers);
-
-          fileLogger.log("debug", "Bounce check result", {
-            messageId: messageDetails.id,
-            isBounce,
-            from: messageDetails.headers.find(
-              (h) => h.name.toLowerCase() === "from"
-            )?.value,
-            subject: messageDetails.headers.find(
-              (h) => h.name.toLowerCase() === "subject"
-            )?.value,
-            hasFailedRecipients: messageDetails.headers.some(
-              (h) => h.name.toLowerCase() === "x-failed-recipients"
-            ),
-            contentType: messageDetails.headers.find(
-              (h) => h.name.toLowerCase() === "content-type"
-            )?.value,
-            matchedHeaders: relevantHeaders,
-            allHeaders: messageDetails.headers.map(
-              (h) => `${h.name}: ${h.value}`
-            ),
+          // Log message details for debugging
+          fileLogger.log("info", "Processing message", {
+            messageId: message.id,
+            from: details.from,
+            subject: details.subject,
+            labelIds: details.labelIds,
+            isReply: details.isReply,
           });
 
+          // Check for bounce indicators
+          const isBounce = this.isBounceMessage(details);
           if (isBounce) {
             fileLogger.log("info", "Bounce detected", {
-              messageId: messageDetails.id,
-              threadId: messageDetails.threadId,
-              from: messageDetails.from,
-              subject: messageDetails.headers.find(
-                (h) => h.name.toLowerCase() === "subject"
-              )?.value,
-              headers: relevantHeaders,
-              allHeaders: messageDetails.headers.map(
-                (h) => `${h.name}: ${h.value}`
-              ),
+              messageId: message.id,
+              from: details.from,
+              subject: details.subject,
             });
 
             changes.push({
-              id: nanoid(),
-              threadId: messageDetails.threadId,
+              id: message.id,
+              threadId: message.threadId,
               type: NotificationType.BOUNCE,
-              messageId: messageDetails.id,
-              labelIds: messageDetails.labelIds,
-              from: messageDetails.from,
+              messageId: message.id,
+              from: details.from,
             });
             continue;
           }
 
-          const isExternal = this.isExternalReply(messageDetails.from, watch);
-          if (messageDetails.isReply && isExternal) {
-            fileLogger.log("info", "External reply detected", {
-              messageId: messageDetails.id,
-              threadId: messageDetails.threadId,
-              from: messageDetails.from,
+          // Check for replies
+          if (details.isReply && this.isExternalReply(details.from, watch)) {
+            fileLogger.log("info", "Reply detected", {
+              messageId: message.id,
+              from: details.from,
+              subject: details.subject,
             });
 
             changes.push({
-              id: nanoid(),
-              threadId: messageDetails.threadId,
+              id: message.id,
+              threadId: message.threadId,
               type: NotificationType.REPLY,
-              messageId: messageDetails.id,
-              labelIds: messageDetails.labelIds,
-              from: messageDetails.from,
-            });
-          }
-        }
-      }
-
-      // Process added messages with similar enhanced logging
-      if (record.messagesAdded) {
-        for (const messageAdded of record.messagesAdded) {
-          fileLogger.log("debug", "Processing message from messagesAdded", {
-            messageId: messageAdded.message.id,
-            threadId: messageAdded.message.threadId,
-            labelIds: messageAdded.message.labelIds,
-          });
-
-          const messageDetails = await this.fetchMessageDetails(
-            messageAdded.message.id,
-            accessToken
-          );
-
-          if (!messageDetails) {
-            fileLogger.log(
-              "warn",
-              "Skipping added message - no details available",
-              {
-                messageId: messageAdded.message.id,
-              }
-            );
-            continue;
-          }
-
-          // Log all relevant headers for bounce detection
-          const relevantHeaders = messageDetails.headers.filter((h) =>
-            ["from", "subject", "content-type", "x-failed-recipients"].includes(
-              h.name.toLowerCase()
-            )
-          );
-
-          fileLogger.log(
-            "debug",
-            "Analyzing added message headers for bounce detection",
-            {
-              messageId: messageDetails.id,
-              headers: relevantHeaders,
-            }
-          );
-
-          const isBounce = isBounceMessage(messageDetails.headers);
-
-          fileLogger.log("debug", "Bounce check result for added message", {
-            messageId: messageDetails.id,
-            isBounce,
-            from: messageDetails.headers.find(
-              (h) => h.name.toLowerCase() === "from"
-            )?.value,
-            subject: messageDetails.headers.find(
-              (h) => h.name.toLowerCase() === "subject"
-            )?.value,
-            hasFailedRecipients: messageDetails.headers.some(
-              (h) => h.name.toLowerCase() === "x-failed-recipients"
-            ),
-            contentType: messageDetails.headers.find(
-              (h) => h.name.toLowerCase() === "content-type"
-            )?.value,
-          });
-
-          if (isBounce) {
-            fileLogger.log("info", "Bounce detected in added message", {
-              messageId: messageDetails.id,
-              threadId: messageDetails.threadId,
-              from: messageDetails.from,
-              headers: relevantHeaders,
-            });
-
-            changes.push({
-              id: nanoid(),
-              threadId: messageDetails.threadId,
-              type: NotificationType.BOUNCE,
-              messageId: messageDetails.id,
-              labelIds: messageDetails.labelIds,
-              from: messageDetails.from,
-            });
-            continue;
-          }
-
-          const isExternal = this.isExternalReply(messageDetails.from, watch);
-          if (messageDetails.isReply && isExternal) {
-            fileLogger.log("info", "External reply detected in added message", {
-              messageId: messageDetails.id,
-              threadId: messageDetails.threadId,
-              from: messageDetails.from,
-            });
-
-            changes.push({
-              id: nanoid(),
-              threadId: messageDetails.threadId,
-              type: NotificationType.REPLY,
-              messageId: messageDetails.id,
-              labelIds: messageDetails.labelIds,
-              from: messageDetails.from,
+              messageId: message.id,
+              from: details.from,
             });
           }
         }
       }
     }
 
-    fileLogger.log("info", "Completed processing history records", {
-      watchId: watch.id,
-      totalChanges: changes.length,
-      changeTypes: changes.map((c) => c.type),
+    return changes;
+  }
+
+  private isBounceMessage(details: MessageDetails): boolean {
+    const { from, subject, headers } = details;
+    const fromLower = from.toLowerCase();
+    const subjectLower = subject.toLowerCase();
+
+    // Common bounce sender patterns
+    const bounceSenders = [
+      "mailer-daemon",
+      "postmaster",
+      "mail delivery subsystem",
+      "mail delivery system",
+    ];
+
+    // Common bounce subject patterns
+    const bounceSubjects = [
+      "delivery status notification",
+      "failure notice",
+      "returned mail",
+      "undeliverable",
+      "delivery failed",
+      "mail delivery failed",
+      "failure delivery",
+    ];
+
+    // Check for failed recipients header
+    const hasFailedRecipients = headers.some(
+      (h) => h.name.toLowerCase() === "x-failed-recipients" && h.value
+    );
+
+    // Check for delivery status report content type
+    const isDeliveryStatusReport = headers.some(
+      (h) =>
+        h.name.toLowerCase() === "content-type" &&
+        (h.value.toLowerCase().includes("delivery-status") ||
+          h.value.toLowerCase().includes("multipart/report"))
+    );
+
+    // Log bounce detection criteria
+    fileLogger.log("info", "Bounce detection check", {
+      from,
+      subject,
+      hasFailedRecipients,
+      isDeliveryStatusReport,
+      matchesBounceFrom: bounceSenders.some((sender) =>
+        fromLower.includes(sender)
+      ),
+      matchesBounceSubject: bounceSubjects.some((pattern) =>
+        subjectLower.includes(pattern)
+      ),
     });
 
-    return changes;
+    return (
+      hasFailedRecipients ||
+      isDeliveryStatusReport ||
+      bounceSenders.some((sender) => fromLower.includes(sender)) ||
+      bounceSubjects.some((pattern) => subjectLower.includes(pattern))
+    );
   }
 
   private async processBounce(change: HistoryChange): Promise<void> {
@@ -1460,5 +1149,16 @@ export class PubSubHandler {
     });
 
     return newStatus;
+  }
+
+  private isReplyMessage(
+    headers: Array<{ name: string; value: string }>
+  ): boolean {
+    return headers.some(
+      (h) =>
+        (h.name === "In-Reply-To" && h.value) ||
+        (h.name === "References" && h.value) ||
+        (h.name === "Subject" && h.value.toLowerCase().startsWith("re:"))
+    );
   }
 }

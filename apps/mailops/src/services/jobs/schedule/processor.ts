@@ -257,14 +257,17 @@ export class ScheduleProcessor extends BaseProcessor<any> {
 
           await this.processEmail(emailWithStatus);
         } catch (error) {
-          logger.error("❌ Error processing email", {
-            id: email.id,
-            sequenceId: email.sequenceId,
-            contactId: email.contactId,
-            email: email.contact.email,
-            error: error instanceof Error ? error.message : "Unknown error",
-            stack: error instanceof Error ? error.stack : undefined,
-          });
+          logger.error(
+            {
+              id: email.id,
+              sequenceId: email.sequenceId,
+              contactId: email.contactId,
+              email: email.contact.email,
+              error: error instanceof Error ? error.message : "Unknown error",
+              stack: error instanceof Error ? error.stack : undefined,
+            },
+            "❌ Error processing email"
+          );
           // Continue with next email even if one fails
           continue;
         }
