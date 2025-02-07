@@ -7,6 +7,8 @@ import {
   HistoryChange,
   GmailHistoryRecord,
   GmailMessageMetadata,
+  DecodedNotification,
+  MessageDetails,
 } from "../../types/pubsub";
 import { logger } from "@/lib/log";
 import { backOff } from "exponential-backoff";
@@ -24,79 +26,21 @@ interface GmailHistoryResponse {
   historyId: string;
 }
 
-interface MessageDetails {
-  id: string;
-  threadId: string;
-  from: string;
-  subject: string;
-  labelIds: string[];
-  isReply: boolean;
-  headers: Array<{ name: string; value: string }>;
-}
-
 interface WatchWithMailbox extends EmailWatch {
   mailbox: Mailbox & {
     aliases: EmailAlias[];
   };
 }
 
-function sanitizeData(data: any): any {
-  if (!data) return data;
-
-  const sensitiveFields = [
-    "access_token",
-    "refresh_token",
-    "id_token",
-    "accessToken",
-    "refreshToken",
-    "Authorization",
-    "private_key",
-    "client_secret",
-    "api_key",
-  ];
-
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.map((item) => sanitizeData(item));
-  }
-
-  if (typeof data === "object") {
-    const sanitized = { ...data };
-    for (const key in sanitized) {
-      if (sensitiveFields.includes(key)) {
-        sanitized[key] = "[REDACTED]";
-      } else if (typeof sanitized[key] === "object") {
-        sanitized[key] = sanitizeData(sanitized[key]);
-      }
-    }
-    return sanitized;
-  }
-
-  return data;
-}
-
 export class PubSubHandler {
+  private readonly maxRetries = PUBSUB_CONFIG.MAX_RETRIES;
+  private readonly backoffSeconds = PUBSUB_CONFIG.BACKOFF_SECONDS;
+
   async handleNotification(message: PubSubMessage): Promise<void> {
     try {
-      fileLogger.log(
-        "info",
-        "Received PubSub notification",
-        sanitizeData({
-          messageId: message.messageId,
-          publishTime: message.publishTime,
-          attributes: message.attributes,
-        })
-      );
+      this.logNotificationReceived(message);
 
       const notification = this.decodeNotification(message);
-      fileLogger.log(
-        "debug",
-        "Decoded notification data",
-        sanitizeData({ notification })
-      );
 
       const watch = await this.getWatchRecord(notification.emailAddress);
 
@@ -104,32 +48,14 @@ export class PubSubHandler {
         fileLogger.log(
           "warn",
           "No watch found for email address",
-          sanitizeData({
-            emailAddress: notification.emailAddress,
-          })
+          this.sanitizeData({ emailAddress: notification.emailAddress })
         );
         return;
       }
 
-      fileLogger.log(
-        "info",
-        "Processing notification for watch",
-        sanitizeData({
-          watch,
-          notification,
-        })
-      );
-
       const notificationRecord = await this.createNotificationRecord(
         watch,
         notification
-      );
-      fileLogger.log(
-        "debug",
-        "Created notification record",
-        sanitizeData({
-          notificationId: notificationRecord.id,
-        })
       );
 
       await this.processNotificationWithRetry(watch, notification);
@@ -138,55 +64,112 @@ export class PubSubHandler {
       fileLogger.log(
         "info",
         "Successfully processed notification",
-        sanitizeData({
+        this.sanitizeData({
           messageId: message.messageId,
           notificationId: notificationRecord.id,
         })
       );
     } catch (error) {
-      fileLogger.log(
-        "error",
-        "Failed to process notification",
-        sanitizeData({
-          error: error instanceof Error ? error.message : "Unknown error",
-          stack: error instanceof Error ? error.stack : undefined,
-          messageId: message.messageId,
-        })
-      );
+      this.handleError("Failed to process notification", error, {
+        messageId: message.messageId,
+      });
       throw error;
     }
   }
 
-  private decodeNotification(message: PubSubMessage) {
-    try {
-      const decodedData = Buffer.from(message.data, "base64").toString();
-      fileLogger.log("debug", "Decoding notification data", {
+  private logNotificationReceived(message: PubSubMessage): void {
+    fileLogger.log(
+      "info",
+      "Received PubSub notification",
+      this.sanitizeData({
         messageId: message.messageId,
-        decodedData,
-      });
+        publishTime: message.publishTime,
+        attributes: message.attributes,
+      })
+    );
+  }
+
+  private sanitizeData(data: any): any {
+    if (!data) return data;
+
+    const sensitiveFields = [
+      "access_token",
+      "refresh_token",
+      "id_token",
+      "accessToken",
+      "refreshToken",
+      "Authorization",
+      "private_key",
+      "client_secret",
+      "api_key",
+    ];
+
+    if (typeof data === "string") return data;
+    if (Array.isArray(data)) return data.map((item) => this.sanitizeData(item));
+    if (typeof data !== "object") return data;
+
+    const sanitized = { ...data };
+    for (const key in sanitized) {
+      if (sensitiveFields.includes(key)) {
+        sanitized[key] = "[REDACTED]";
+      } else if (typeof sanitized[key] === "object") {
+        sanitized[key] = this.sanitizeData(sanitized[key]);
+      }
+    }
+    return sanitized;
+  }
+
+  private handleError(
+    message: string,
+    error: unknown,
+    context: any = {}
+  ): void {
+    fileLogger.log(
+      "error",
+      message,
+      this.sanitizeData({
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        ...context,
+      })
+    );
+  }
+
+  private decodeNotification(message: PubSubMessage): DecodedNotification {
+    try {
+      logger.info(message, "Decoded notification");
+
+      const decodedData = Buffer.from(message.data, "base64").toString();
+
+      logger.info(decodedData, "Decoded data");
 
       const parsedData = JSON.parse(decodedData);
-      fileLogger.log("debug", "Parsed notification data", { parsedData });
 
-      if (!parsedData.emailAddress || !parsedData.historyId) {
-        fileLogger.log("warn", "Missing required fields in notification data", {
-          parsedData,
-        });
+      logger.info(parsedData, "Parsed data");
+      logger.info(
+        `Parsed historyId: ${parsedData.historyId} && type: ${typeof parsedData.historyId}`
+      );
+
+      if (!this.isValidNotification(parsedData)) {
         throw new Error("Invalid notification format: missing required fields");
       }
 
-      return {
-        emailAddress: parsedData.emailAddress,
-        historyId: parsedData.historyId,
-      };
+      return parsedData;
     } catch (error) {
-      fileLogger.log("error", "Failed to decode notification data", {
-        error: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
+      this.handleError("Failed to decode notification data", error, {
         messageData: message.data,
       });
       throw new Error("Invalid notification format");
     }
+  }
+
+  private isValidNotification(data: any): data is DecodedNotification {
+    return (
+      typeof data === "object" &&
+      data !== null &&
+      typeof data.emailAddress === "string" &&
+      (typeof data.historyId === "number" || typeof data.historyId === "string")
+    );
   }
 
   private async getWatchRecord(
@@ -221,7 +204,7 @@ export class PubSubHandler {
     fileLogger.log(
       "debug",
       "Found watch record with mailbox",
-      sanitizeData({
+      this.sanitizeData({
         watchId: watch.id,
         mailboxId: mailbox.id,
         hasAliases: mailbox.aliases.length > 0,
@@ -292,9 +275,9 @@ export class PubSubHandler {
     });
 
     const backoffOptions = {
-      numOfAttempts: PUBSUB_CONFIG.MAX_RETRIES,
-      startingDelay: PUBSUB_CONFIG.BACKOFF_SECONDS * 1000,
-      maxDelay: PUBSUB_CONFIG.BACKOFF_SECONDS * 5000,
+      numOfAttempts: this.maxRetries,
+      startingDelay: this.backoffSeconds * 1000,
+      maxDelay: this.backoffSeconds * 5000,
       jitter: "full" as const,
     };
 
@@ -316,7 +299,7 @@ export class PubSubHandler {
         stack: error instanceof Error ? error.stack : undefined,
         watchId: watch.id,
         historyId: notification.historyId,
-        maxRetries: PUBSUB_CONFIG.MAX_RETRIES,
+        maxRetries: this.maxRetries,
       });
       throw error;
     }
@@ -357,7 +340,7 @@ export class PubSubHandler {
       fileLogger.log(
         "info",
         "Starting history changes processing",
-        sanitizeData({
+        this.sanitizeData({
           watchEmail: watch.email,
           watchId: watch.id,
           historyId,
@@ -370,7 +353,7 @@ export class PubSubHandler {
         fileLogger.log(
           "error",
           "Failed to get valid access token",
-          sanitizeData({
+          this.sanitizeData({
             watchId: watch.id,
             mailboxId: watch.mailbox.id,
           })
@@ -464,7 +447,7 @@ export class PubSubHandler {
       fileLogger.log(
         "error",
         "Failed to process history changes",
-        sanitizeData({
+        this.sanitizeData({
           error: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
           watchId: watch.id,
@@ -588,9 +571,20 @@ export class PubSubHandler {
 
   private async fetchMessageDetails(
     messageId: string,
-    accessToken: string
+    accessToken: string,
+    mailbox: { email: string; id: string }
   ): Promise<MessageDetails | null> {
     try {
+      // Log the attempt to fetch message details with mailbox info
+      logger.debug(
+        {
+          messageId,
+          mailboxId: mailbox.id,
+          mailboxEmail: mailbox.email,
+        },
+        "Attempting to fetch message details"
+      );
+
       const response = await fetch(
         `${GMAIL_API.MESSAGES}/${messageId}?format=metadata&metadataHeaders=from&metadataHeaders=subject&metadataHeaders=delivered-to&metadataHeaders=content-type&metadataHeaders=x-failed-recipients&metadataHeaders=in-reply-to&metadataHeaders=references`,
         {
@@ -600,33 +594,102 @@ export class PubSubHandler {
         }
       );
 
+      // Handle different response statuses
+      if (response.status === 404) {
+        // For draft messages or recently deleted messages, log and return null
+        logger.info(
+          {
+            messageId,
+            mailboxId: mailbox.id,
+            mailboxEmail: mailbox.email,
+          },
+          "Message not found (possibly a draft or deleted message)"
+        );
+        return null;
+      }
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch message: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to fetch message: ${response.statusText}. Details: ${errorText}`
+        );
       }
 
       const data = (await response.json()) as any;
       const headers = data.payload?.headers || [];
 
-      // Log all headers for debugging bounce detection
-      fileLogger.log("info", "Message headers for bounce detection", {
-        messageId,
-        headers: headers.map((h: any) => ({ name: h.name, value: h.value })),
-      });
+      // Skip draft messages early
+      if (data.labelIds?.includes("DRAFT")) {
+        logger.debug(
+          {
+            messageId,
+            mailboxId: mailbox.id,
+            mailboxEmail: mailbox.email,
+          },
+          "Skipping draft message"
+        );
+        return null;
+      }
 
-      return {
+      // Extract message details
+      const from =
+        headers.find(
+          (h: { name: string; value: string }) =>
+            h.name.toLowerCase() === "from"
+        )?.value || "";
+
+      const subject =
+        headers.find(
+          (h: { name: string; value: string }) =>
+            h.name.toLowerCase() === "subject"
+        )?.value || "";
+
+      // Check if message has required data
+      if (!data.id || !data.threadId) {
+        logger.warn(
+          {
+            messageId,
+            mailboxId: mailbox.id,
+            mailboxEmail: mailbox.email,
+          },
+          "Message data missing required fields"
+        );
+        return null;
+      }
+
+      const messageDetails: MessageDetails = {
         id: data.id,
         threadId: data.threadId,
-        from: headers.find((h: any) => h.name === "From")?.value || "",
-        subject: headers.find((h: any) => h.name === "Subject")?.value || "",
+        from,
+        subject,
         labelIds: data.labelIds || [],
         isReply: this.isReplyMessage(headers),
-        headers: headers.map((h: any) => ({
-          name: h.name,
-          value: h.value,
-        })),
+        headers,
       };
+
+      logger.debug(
+        {
+          messageId,
+          details: messageDetails,
+          mailboxId: mailbox.id,
+          mailboxEmail: mailbox.email,
+        },
+        "Successfully fetched message details"
+      );
+
+      return messageDetails;
     } catch (error) {
-      logger.error({ error, messageId }, "Failed to fetch message details");
+      // Log error with context but don't throw
+      logger.error(
+        {
+          messageId,
+          mailboxId: mailbox.id,
+          mailboxEmail: mailbox.email,
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        "Failed to fetch message details"
+      );
       return null;
     }
   }
@@ -642,7 +705,7 @@ export class PubSubHandler {
     fileLogger.log(
       "debug",
       "Checking message content",
-      sanitizeData({
+      this.sanitizeData({
         messageId: message.id,
         hasMainBody,
         hasPartContent,
@@ -667,7 +730,7 @@ export class PubSubHandler {
     fileLogger.log(
       "debug",
       "Checking if email is external",
-      sanitizeData({
+      this.sanitizeData({
         userEmails,
         senderEmail: normalizedSender,
         isExternal: !userEmails.includes(normalizedSender),
@@ -690,57 +753,83 @@ export class PubSubHandler {
       throw new Error("No valid access token available");
     }
 
-    for (const history of response.history || []) {
+    logger.info(
+      {
+        mailboxId: watch.mailbox.id,
+        mailboxEmail: watch.mailbox.email,
+        historyRecordsCount: response.history?.length || 0,
+      },
+      "Processing history records"
+    );
+
+    for (const record of response.history || []) {
       // Process added messages
-      if (history.messagesAdded) {
-        for (const { message } of history.messagesAdded) {
-          const details = await this.fetchMessageDetails(
-            message.id,
-            accessToken
-          );
-
-          if (!details) continue;
-
-          // Log message details for debugging
-          fileLogger.log("info", "Processing message", {
-            messageId: message.id,
-            from: details.from,
-            subject: details.subject,
-            labelIds: details.labelIds,
-            isReply: details.isReply,
-          });
-
-          // Check for bounce indicators
-          const isBounce = this.isBounceMessage(details);
-          if (isBounce) {
-            fileLogger.log("info", "Bounce detected", {
-              messageId: message.id,
-              from: details.from,
-              subject: details.subject,
-            });
-
-            changes.push({
-              id: message.id,
-              threadId: message.threadId,
-              type: NotificationType.BOUNCE,
-              messageId: message.id,
-              from: details.from,
-            });
+      if (record.messagesAdded) {
+        for (const { message } of record.messagesAdded) {
+          // Skip processing if message is a draft - check early to avoid unnecessary API calls
+          if (message.labelIds.includes("DRAFT")) {
+            logger.debug(
+              {
+                messageId: message.id,
+                mailboxId: watch.mailbox.id,
+                mailboxEmail: watch.mailbox.email,
+              },
+              "Skipping draft message"
+            );
             continue;
           }
 
-          // Check for replies
-          if (details.isReply && this.isExternalReply(details.from, watch)) {
-            fileLogger.log("info", "Reply detected", {
+          const details = await this.fetchMessageDetails(
+            message.id,
+            accessToken,
+            {
+              id: watch.mailbox.id,
+              email: watch.mailbox.email,
+            }
+          );
+
+          if (details) {
+            changes.push({
+              id: record.id,
+              threadId: message.threadId,
+              type: NotificationType.MESSAGE_ADDED,
               messageId: message.id,
               from: details.from,
-              subject: details.subject,
             });
+          }
+        }
+      }
 
+      // Process label changes similarly
+      if (record.labelsAdded) {
+        for (const { message } of record.labelsAdded) {
+          // Skip processing if message is a draft - check early to avoid unnecessary API calls
+          if (message.labelIds.includes("DRAFT")) {
+            logger.debug(
+              {
+                messageId: message.id,
+                mailboxId: watch.mailbox.id,
+                mailboxEmail: watch.mailbox.email,
+              },
+              "Skipping draft message"
+            );
+            continue;
+          }
+
+          const details = await this.fetchMessageDetails(
+            message.id,
+            accessToken,
+            {
+              id: watch.mailbox.id,
+              email: watch.mailbox.email,
+            }
+          );
+
+          if (details) {
             changes.push({
-              id: message.id,
+              id: record.id,
               threadId: message.threadId,
-              type: NotificationType.REPLY,
+              type: NotificationType.LABEL_ADDED,
               messageId: message.id,
               from: details.from,
             });
@@ -748,6 +837,16 @@ export class PubSubHandler {
         }
       }
     }
+
+    logger.info(
+      {
+        mailboxId: watch.mailbox.id,
+        mailboxEmail: watch.mailbox.email,
+        totalChanges: changes.length,
+        changeTypes: changes.map((c) => c.type),
+      },
+      "Completed processing history records"
+    );
 
     return changes;
   }
@@ -816,7 +915,7 @@ export class PubSubHandler {
       fileLogger.log(
         "debug",
         "Starting bounce processing",
-        sanitizeData({
+        this.sanitizeData({
           changeId: change.id,
           threadId: change.threadId,
           messageId: change.messageId,
@@ -834,7 +933,7 @@ export class PubSubHandler {
         fileLogger.log(
           "warn",
           "No email thread found for bounce",
-          sanitizeData({
+          this.sanitizeData({
             threadId: change.threadId,
             messageId: change.messageId,
           })
@@ -845,7 +944,7 @@ export class PubSubHandler {
       fileLogger.log(
         "debug",
         "Found email thread for bounce",
-        sanitizeData({
+        this.sanitizeData({
           threadId: change.threadId,
           sequenceId: emailThread.sequenceId,
           contactId: emailThread.contactId,
@@ -864,7 +963,7 @@ export class PubSubHandler {
         fileLogger.log(
           "debug",
           "Bounce already recorded",
-          sanitizeData({
+          this.sanitizeData({
             threadId: change.threadId,
             sequenceId: emailThread.sequenceId,
             contactId: emailThread.contactId,
@@ -960,7 +1059,7 @@ export class PubSubHandler {
       fileLogger.log(
         "error",
         "Failed to process bounce",
-        sanitizeData({
+        this.sanitizeData({
           error: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
           threadId: change.threadId,
@@ -978,7 +1077,7 @@ export class PubSubHandler {
       fileLogger.log(
         "debug",
         "Starting sequence status updates",
-        sanitizeData({
+        this.sanitizeData({
           totalChanges: changes.length,
           changeTypes: changes.map((c) => c.type),
         })
@@ -988,7 +1087,7 @@ export class PubSubHandler {
         fileLogger.log(
           "debug",
           "Processing change for status update",
-          sanitizeData({
+          this.sanitizeData({
             changeId: change.id,
             threadId: change.threadId,
             type: change.type,
@@ -1054,7 +1153,7 @@ export class PubSubHandler {
       fileLogger.log(
         "error",
         "Failed to update sequence statuses",
-        sanitizeData({
+        this.sanitizeData({
           error: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
         })
@@ -1155,7 +1254,7 @@ export class PubSubHandler {
     headers: Array<{ name: string; value: string }>
   ): boolean {
     return headers.some(
-      (h) =>
+      (h: { name: string; value: string }) =>
         (h.name === "In-Reply-To" && h.value) ||
         (h.name === "References" && h.value) ||
         (h.name === "Subject" && h.value.toLowerCase().startsWith("re:"))

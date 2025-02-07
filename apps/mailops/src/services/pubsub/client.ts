@@ -11,6 +11,17 @@ import { PubSubHandler } from "./handler";
 import path from "path";
 import fs from "fs";
 
+interface PubSubCredentials {
+  client_email: string;
+  private_key: string;
+}
+
+interface PubSubServiceConfig {
+  projectId: string;
+  credentials?: PubSubCredentials;
+  keyFilePath?: string;
+}
+
 export class PubSubService {
   private static instance: PubSubService;
   private pubSubClient: PubSub;
@@ -20,76 +31,92 @@ export class PubSubService {
 
   private constructor() {
     try {
-      // Initialize PubSub client with credentials
-      const options: any = {
-        projectId: process.env.GOOGLE_CLOUD_PROJECT,
-      };
-
-      // First try to load credentials from environment variables
-      const credentials = {
-        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(
-          /\\n/g,
-          "\n"
-        ),
-      };
-
-      if (credentials.client_email && credentials.private_key) {
-        options.credentials = credentials;
-        logger.info(
-          { email: credentials.client_email },
-          "Using environment variables for PubSub authentication"
-        );
-      } else {
-        // If env vars not found, try to load from service account key file
-        const keyFilePath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-        if (keyFilePath) {
-          try {
-            const resolvedPath = path.resolve(process.cwd(), keyFilePath);
-            if (fs.existsSync(resolvedPath)) {
-              const keyFileContent = JSON.parse(
-                fs.readFileSync(resolvedPath, "utf8")
-              );
-              options.credentials = {
-                client_email: keyFileContent.client_email,
-                private_key: keyFileContent.private_key,
-              };
-              logger.info(
-                { keyPath: resolvedPath, email: keyFileContent.client_email },
-                "Using service account key file for PubSub authentication"
-              );
-            } else {
-              throw new Error(
-                `Service account key file not found at: ${resolvedPath}`
-              );
-            }
-          } catch (error) {
-            logger.error(
-              { error, keyPath: keyFilePath },
-              "Failed to load service account key file"
-            );
-            throw error;
-          }
-        } else {
-          throw new Error(
-            "No credentials found in environment variables or key file"
-          );
-        }
-      }
-
-      this.pubSubClient = new PubSub(options);
+      const config = this.initializeConfig();
+      this.pubSubClient = new PubSub(config);
       this.messageHandler = new PubSubHandler();
 
       logger.info(
         {
-          projectId: options.projectId,
-          hasCredentials: !!options.credentials,
+          projectId: config.projectId,
+          hasCredentials: !!config.credentials,
         },
         "PubSub client initialized"
       );
     } catch (error) {
       logger.error({ error }, "Failed to initialize PubSub client");
       throw error;
+    }
+  }
+
+  private initializeConfig(): PubSubServiceConfig {
+    const config: PubSubServiceConfig = {
+      projectId: process.env.GOOGLE_CLOUD_PROJECT!,
+    };
+
+    // Try environment variables first
+    const envCredentials = this.getEnvCredentials();
+    if (envCredentials) {
+      config.credentials = envCredentials;
+      logger.info(
+        { email: envCredentials.client_email },
+        "Using environment variables for PubSub authentication"
+      );
+      return config;
+    }
+
+    // Fall back to key file
+    const keyFileCredentials = this.getKeyFileCredentials();
+    if (keyFileCredentials) {
+      config.credentials = keyFileCredentials;
+      logger.info(
+        { email: keyFileCredentials.client_email },
+        "Using service account key file for PubSub authentication"
+      );
+      return config;
+    }
+
+    throw new Error("No valid credentials found for PubSub initialization");
+  }
+
+  private getEnvCredentials(): PubSubCredentials | null {
+    const client_email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const private_key = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(
+      /\\n/g,
+      "\n"
+    );
+
+    if (client_email && private_key) {
+      return { client_email, private_key };
+    }
+
+    return null;
+  }
+
+  private getKeyFileCredentials(): PubSubCredentials | null {
+    const keyFilePath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (!keyFilePath) return null;
+
+    try {
+      const resolvedPath = path.resolve(process.cwd(), keyFilePath);
+      if (!fs.existsSync(resolvedPath)) {
+        logger.warn(
+          { path: resolvedPath },
+          "Service account key file not found"
+        );
+        return null;
+      }
+
+      const keyFileContent = JSON.parse(fs.readFileSync(resolvedPath, "utf8"));
+      return {
+        client_email: keyFileContent.client_email,
+        private_key: keyFileContent.private_key,
+      };
+    } catch (error) {
+      logger.error(
+        { error, keyPath: keyFilePath },
+        "Failed to load service account key file"
+      );
+      return null;
     }
   }
 
@@ -104,17 +131,13 @@ export class PubSubService {
     try {
       logger.info("Initializing PubSub service...");
 
-      // Get topic and subscription paths
-      const topicName = PUBSUB_CONFIG.TOPIC_NAME;
-      const subscriptionName = PUBSUB_CONFIG.SUBSCRIPTION_NAME;
-      const pushEndpoint = PUBSUB_CONFIG.PUBSUB_AUDIENCE;
+      const { topicName, subscriptionName, pushEndpoint } = this.getConfig();
 
       logger.info(
         { topicName, subscriptionName, pushEndpoint },
         "Checking PubSub configuration"
       );
 
-      // Get the topic
       const topic = this.pubSubClient.topic(topicName);
       const [topicExists] = await topic.exists();
 
@@ -122,32 +145,7 @@ export class PubSubService {
         throw new Error(`Topic ${topicName} does not exist`);
       }
 
-      // Get or create the push subscription
-      const subscriptionOptions: CreateSubscriptionOptions = {
-        pushConfig: {
-          pushEndpoint,
-          oidcToken: {
-            serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-          },
-        },
-        ackDeadlineSeconds: PUBSUB_CONFIG.ACK_DEADLINE_SECONDS,
-      };
-
-      this.subscription = topic.subscription(subscriptionName);
-      const [exists] = await this.subscription.exists();
-
-      if (!exists) {
-        logger.info(
-          { subscriptionName, pushEndpoint },
-          "Creating new push subscription"
-        );
-        [this.subscription] = await topic.createSubscription(
-          subscriptionName,
-          subscriptionOptions
-        );
-      } else {
-        logger.info({ subscriptionName }, "Push subscription already exists");
-      }
+      await this.setupSubscription(topic, subscriptionName, pushEndpoint);
 
       this.isListening = true;
       logger.info("PubSub service initialized successfully");
@@ -165,8 +163,47 @@ export class PubSubService {
     }
   }
 
-  // For push subscriptions, we don't need startListening or stopListening methods
-  // as messages will be delivered to our HTTP endpoint
+  private getConfig() {
+    return {
+      topicName: PUBSUB_CONFIG.TOPIC_NAME,
+      subscriptionName: PUBSUB_CONFIG.SUBSCRIPTION_NAME,
+      pushEndpoint: PUBSUB_CONFIG.PUBSUB_AUDIENCE,
+    };
+  }
+
+  private async setupSubscription(
+    topic: any,
+    subscriptionName: string,
+    pushEndpoint: string
+  ): Promise<void> {
+    const subscriptionOptions: CreateSubscriptionOptions = {
+      pushConfig: {
+        pushEndpoint,
+        oidcToken: {
+          serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        },
+      },
+      ackDeadlineSeconds: PUBSUB_CONFIG.ACK_DEADLINE_SECONDS,
+    };
+
+    this.subscription = topic.subscription(subscriptionName);
+    const [exists] = await this.subscription.exists();
+
+    if (!exists) {
+      logger.info(
+        { subscriptionName, pushEndpoint },
+        "Creating new push subscription"
+      );
+      [this.subscription] = await topic.createSubscription(
+        subscriptionName,
+        subscriptionOptions
+      );
+    } else {
+      logger.info({ subscriptionName }, "Push subscription already exists");
+    }
+  }
+
+  // These methods are kept for potential future use with pull subscriptions
   public async startListening(): Promise<void> {
     logger.info("Push subscription is active, no listener needed");
   }

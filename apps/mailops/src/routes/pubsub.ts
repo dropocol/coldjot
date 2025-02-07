@@ -49,6 +49,8 @@ router.post("/", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    logger.info(req.body, "Received PubSub notification body");
+
     // Validate request body
     const result = PubSubMessageSchema.safeParse(req.body);
     if (!result.success) {
@@ -58,9 +60,10 @@ router.post("/", async (req, res) => {
 
     // Process the notification
     await pubsubHandler.handleNotification(result.data.message);
+    // await pubsubHandler.handleNotification(req.body.message);
 
-    // Acknowledge the message by returning 204 No Content
-    res.status(204).send();
+    // Acknowledge the message by returning 200 OK
+    res.status(200).send();
   } catch (error) {
     logger.error({ error }, "Failed to process PubSub notification");
 

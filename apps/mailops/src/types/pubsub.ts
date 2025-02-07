@@ -1,6 +1,6 @@
 export interface PubSubMessage {
-  data: string; // Base64 encoded data
   messageId: string;
+  data: string;
   publishTime: string;
   attributes?: Record<string, string>;
 }
@@ -10,6 +10,21 @@ export interface PubSubPushRequest {
   subscription: string;
 }
 
+export interface DecodedNotification {
+  emailAddress: string;
+  historyId: string | number;
+}
+
+export interface MessageDetails {
+  id: string;
+  threadId: string;
+  from: string;
+  subject: string;
+  labelIds: string[];
+  isReply: boolean;
+  headers: Array<{ name: string; value: string }>;
+}
+
 export enum NotificationType {
   MESSAGE_ADDED = "MESSAGE_ADDED",
   MESSAGE_DELETED = "MESSAGE_DELETED",
@@ -17,6 +32,7 @@ export enum NotificationType {
   LABEL_REMOVED = "LABEL_REMOVED",
   BOUNCE = "BOUNCE",
   REPLY = "REPLY",
+  HISTORY_GAP = "HISTORY_GAP",
 }
 
 export interface GmailNotification {
@@ -29,8 +45,7 @@ export interface HistoryChange {
   threadId: string;
   type: NotificationType;
   messageId: string;
-  labelIds?: string[];
-  from?: string; // Added for tracking message sender
+  from: string;
 }
 
 export interface NotificationRecord {
@@ -45,24 +60,14 @@ export interface NotificationRecord {
 
 export interface GmailHistoryRecord {
   id: string;
-  messages?: Array<{
-    id: string;
-    threadId: string;
-    labelIds: string[];
-  }>;
   messagesAdded?: Array<{
-    message: {
-      id: string;
-      threadId: string;
-      labelIds: string[];
-    };
+    message: GmailMessageMetadata;
   }>;
   labelsAdded?: Array<{
-    message: {
-      id: string;
-      threadId: string;
-    };
-    labelIds: string[];
+    message: GmailMessageMetadata;
+  }>;
+  labelsRemoved?: Array<{
+    message: GmailMessageMetadata;
   }>;
 }
 
@@ -70,7 +75,6 @@ export interface GmailMessageMetadata {
   id: string;
   threadId: string;
   labelIds: string[];
-  sizeEstimate: number;
   payload: {
     headers: Array<{
       name: string;
@@ -78,12 +82,10 @@ export interface GmailMessageMetadata {
     }>;
     body?: {
       size: number;
-      data?: string;
     };
     parts?: Array<{
       body: {
         size: number;
-        data?: string;
       };
     }>;
   };
