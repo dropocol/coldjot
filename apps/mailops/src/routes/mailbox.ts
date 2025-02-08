@@ -78,6 +78,21 @@ router.post("/watch", async (req, res) => {
       });
     }
 
+    // First, attempt to stop any existing watch for this email
+    try {
+      logger.info(
+        { email },
+        "Attempting to stop any existing watch before setting up new one"
+      );
+      await watchService.stopWatch(email);
+    } catch (error) {
+      // Log the error but continue with setup - the error might just mean there was no watch to stop
+      logger.warn(
+        { error, email },
+        "Error while stopping existing watch - proceeding with new watch setup"
+      );
+    }
+
     // Setup watch for the mailbox
     await watchService.setupWatch({
       userId,

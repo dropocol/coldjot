@@ -224,7 +224,7 @@ export class WatchService {
 
       if (!watch) {
         logger.info({ email }, "No watch found to stop");
-        return;
+        // return;
       }
 
       // Get the mailbox
@@ -254,10 +254,11 @@ export class WatchService {
       // Stop the watch
       await gmail.users.stop({ userId: "me" });
 
-      // Delete the watch record
-      await prisma.emailWatch.delete({
-        where: { email },
-      });
+      if (watch) {
+        await prisma.emailWatch.delete({
+          where: { email },
+        });
+      }
 
       logger.info({ email }, "Successfully stopped watch");
     } catch (error) {

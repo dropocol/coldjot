@@ -8,6 +8,10 @@ import {
   MoreVertical,
   RefreshCw,
   Trash2,
+  Bell,
+  BellOff,
+  Power,
+  PowerOff,
 } from "lucide-react";
 import { Mailbox, EmailAlias } from "@coldjot/database";
 import { Button } from "@/components/ui/button";
@@ -28,13 +32,21 @@ interface MailboxListProps {
   onAccountUpdate: (accountId: string, data: Partial<Mailbox>) => Promise<void>;
   onAccountDelete: (accountId: string) => Promise<void>;
   onAliasesRefresh: (accountId: string) => Promise<void>;
+  onWatchUpdate?: (email: string, action: "start" | "stop") => Promise<void>;
 }
+
+// Feature flag for watch controls
+// const ENABLE_WATCH_CONTROLS =
+//   process.env.NEXT_PUBLIC_ENABLE_WATCH_CONTROLS === "true";
+
+const ENABLE_WATCH_CONTROLS = true;
 
 export function MailboxList({
   accounts,
   onAccountUpdate,
   onAccountDelete,
   onAliasesRefresh,
+  onWatchUpdate,
 }: MailboxListProps) {
   const { toast } = useToast();
   const [expandedAccounts, setExpandedAccounts] = useState<
@@ -59,6 +71,30 @@ export function MailboxList({
       toast({
         title: "Error",
         description: "Failed to refresh aliases. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleWatchUpdate = async (email: string, action: "start" | "stop") => {
+    try {
+      if (!onWatchUpdate) return;
+
+      // Find the account with the matching email to get its userId
+      const account = accounts.find((acc) => acc.email === email);
+      if (!account) {
+        throw new Error("Account not found");
+      }
+
+      await onWatchUpdate(email, action);
+      toast({
+        title: action === "start" ? "Watch Started" : "Watch Stopped",
+        description: `Email watch has been ${action === "start" ? "started" : "stopped"} for ${email}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to ${action} watch. Please try again.`,
         variant: "destructive",
       });
     }
@@ -132,12 +168,38 @@ export function MailboxList({
                         })
                       }
                     >
+                      {account.isActive ? (
+                        <PowerOff className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Power className="mr-2 h-4 w-4" />
+                      )}
                       {account.isActive ? "Deactivate" : "Activate"}
                     </DropdownMenuItem>
+                    {ENABLE_WATCH_CONTROLS && account.provider === "gmail" && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleWatchUpdate(account.email, "stop")
+                          }
+                        >
+                          <BellOff className="mr-2 h-4 w-4" />
+                          Stop Email Watch
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleWatchUpdate(account.email, "start")
+                          }
+                        >
+                          <Bell className="mr-2 h-4 w-4" />
+                          New Email Watch
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuItem
                       onClick={() => onAccountDelete(account.id)}
                       className="text-destructive"
                     >
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Remove Account
                     </DropdownMenuItem>
                   </DropdownMenuContent>

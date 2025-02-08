@@ -171,3 +171,5 @@ const watchRequest = {
 3. Implement proper error handling and logging
 4. Set up monitoring for the subscription
 5. Regular testing of the notification flow
+
+gmail-api-push@system.gserviceaccount.com is needed in Pub/Sub roles with publisher access

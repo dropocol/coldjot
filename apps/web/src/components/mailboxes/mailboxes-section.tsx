@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { MailboxList, type MailboxWithAliases } from "./mailbox-list";
 import { AddMailbox } from "./add-mailbox";
 import type { Mailbox } from "@coldjot/database";
+import { startMailboxWatch, stopMailboxWatch } from "@/lib/api/mailbox";
 
 interface MailboxesSectionProps {
   initialAccounts: MailboxWithAliases[];
@@ -87,6 +88,25 @@ export function MailboxesSection({ initialAccounts }: MailboxesSectionProps) {
     }
   };
 
+  const handleWatchUpdate = async (email: string, action: "start" | "stop") => {
+    try {
+      // Find the account with the matching email to get its userId
+      const account = accounts.find((acc) => acc.email === email);
+      if (!account) {
+        throw new Error("Account not found");
+      }
+
+      if (action === "start") {
+        await startMailboxWatch(account.userId, email);
+      } else {
+        await stopMailboxWatch(email);
+      }
+    } catch (error) {
+      console.error("[EMAIL_WATCH_UPDATE]", error);
+      throw error;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -127,6 +147,7 @@ export function MailboxesSection({ initialAccounts }: MailboxesSectionProps) {
             onAccountUpdate={handleAccountUpdate}
             onAccountDelete={handleAccountDelete}
             onAliasesRefresh={handleAliasesRefresh}
+            onWatchUpdate={handleWatchUpdate}
           />
         )}
       </div>
