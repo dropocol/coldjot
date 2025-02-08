@@ -26,7 +26,8 @@
                 "DATABASE_URL",
                 "REDIS_*",
                 "GOOGLE_*",
-                "QUEUE_PREFIX"
+                "QUEUE_PREFIX",
+                "PUBSUB_*"
             ],
             "outputs": [
                 "dist/**"
@@ -46,7 +47,8 @@
                 "DATABASE_URL",
                 "REDIS_*",
                 "GOOGLE_*",
-                "QUEUE_PREFIX"
+                "QUEUE_PREFIX",
+                "PUBSUB_*"
             ],
             "outputs": [
                 "dist/**"
@@ -62,7 +64,8 @@
                 "DATABASE_URL",
                 "REDIS_*",
                 "GOOGLE_*",
-                "QUEUE_PREFIX"
+                "QUEUE_PREFIX",
+                "PUBSUB_*"
             ]
         },
         "start:prod:watch": {
@@ -75,7 +78,8 @@
                 "DATABASE_URL",
                 "REDIS_*",
                 "GOOGLE_*",
-                "QUEUE_PREFIX"
+                "QUEUE_PREFIX",
+                "PUBSUB_*"
             ]
         }
     }
