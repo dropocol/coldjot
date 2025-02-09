@@ -59,8 +59,8 @@ router.post("/", async (req, res) => {
     }
 
     // Process the notification
-    await pubsubHandler.handleNotification(result.data.message);
-    // await pubsubHandler.handleNotification(req.body.message);
+    // await pubsubHandler.handleNotification(result.data.message);
+    await pubsubHandler.handleNotification(req.body.message);
 
     // Acknowledge the message by returning 200 OK
     res.status(200).send();

@@ -60,60 +60,131 @@ export const isSenderSequenceOwner = (
 
 // Helper functions for bounce processing
 export const isBounceMessage = (headers: MessagePartHeader[]) => {
-  const bounceIndicators = [
-    "mailer-daemon",
-    "mail delivery subsystem",
-    "mail delivery failed",
-    "delivery status notification",
-    "undeliverable",
-    "failed delivery",
-    "delivery failure",
-    "non-delivery report",
-    "returned mail",
-    "delivery problem",
-    "failure notice",
-    "delivery notification",
-  ];
-
+  // Common bounce sender patterns
   const bounceSenders = [
     "mailer-daemon@googlemail.com",
     "postmaster@",
     "mailerdaemon@",
     "mailer-daemon@",
+    "mail delivery subsystem",
+    "mail delivery system",
+    "automated-message@",
+    "system-messages@",
+    "noreply@",
+    "no-reply@",
+    "auto-reply@",
+    "autoreply@",
   ];
 
+  // Common bounce subject patterns
+  const bounceSubjects = [
+    "delivery status notification",
+    "mail delivery failed",
+    "failure notice",
+    "returned mail",
+    "undeliverable",
+    "delivery failed",
+    "failure delivery",
+    "non-delivery report",
+    "delivery problem",
+    "delivery notification",
+    "message delivery failed",
+    "delivery status report",
+    "mail system error",
+    "delayed delivery notification",
+    "permanent delivery failure",
+    "temporary delivery failure",
+    "message blocked",
+    "message not delivered",
+    "auto-reply",
+    "out of office",
+    "automatic reply",
+  ];
+
+  // Extract headers for analysis
+  const fromHeader =
+    headers
+      .find((h) => h.name?.toLowerCase() === "from")
+      ?.value?.toLowerCase() || "";
+  const subjectHeader =
+    headers
+      .find((h) => h.name?.toLowerCase() === "subject")
+      ?.value?.toLowerCase() || "";
+  const contentTypeHeader =
+    headers
+      .find((h) => h.name?.toLowerCase() === "content-type")
+      ?.value?.toLowerCase() || "";
+  const failedRecipientsHeader = headers.find(
+    (h) => h.name?.toLowerCase() === "x-failed-recipients"
+  )?.value;
+  const autoSubmittedHeader =
+    headers
+      .find((h) => h.name?.toLowerCase() === "auto-submitted")
+      ?.value?.toLowerCase() || "";
+  const returnPathHeader =
+    headers
+      .find((h) => h.name?.toLowerCase() === "return-path")
+      ?.value?.toLowerCase() || "";
+  const feedbackTypeHeader =
+    headers
+      .find((h) => h.name?.toLowerCase() === "x-feedback-id")
+      ?.value?.toLowerCase() || "";
+
+  // Check conditions
+  const isFromBounceSender = bounceSenders.some((sender) =>
+    fromHeader.includes(sender)
+  );
+  const hasBouncySubject = bounceSubjects.some((subject) =>
+    subjectHeader.includes(subject)
+  );
+  const hasFailedRecipients = !!failedRecipientsHeader;
+  const isDeliveryStatusReport =
+    contentTypeHeader.includes("report-type=delivery-status") ||
+    contentTypeHeader.includes("delivery-status") ||
+    contentTypeHeader.includes("multipart/report");
+  const isAutoSubmitted =
+    autoSubmittedHeader.includes("auto-generated") ||
+    autoSubmittedHeader.includes("auto-replied") ||
+    autoSubmittedHeader.includes("auto-notified");
+  const isEmptyReturnPath =
+    returnPathHeader === "<>" || returnPathHeader.includes("mailer-daemon");
+  const isFeedbackReport =
+    feedbackTypeHeader.includes("abuse") ||
+    feedbackTypeHeader.includes("bounce");
+
+  // Additional checks for specific mail server responses
+  const hasMailerHeaders = headers.some(
+    (h) =>
+      h.name?.toLowerCase().startsWith("x-failed") ||
+      h.name?.toLowerCase().startsWith("x-bounce") ||
+      h.name?.toLowerCase().includes("delivery-notification")
+  );
+
+  // Log detailed bounce detection analysis
+  const bounceAnalysis = {
+    fromHeader,
+    subjectHeader,
+    contentTypeHeader,
+    hasFailedRecipients,
+    isDeliveryStatusReport,
+    isAutoSubmitted,
+    isEmptyReturnPath,
+    isFeedbackReport,
+    hasMailerHeaders,
+    isFromBounceSender,
+    hasBouncySubject,
+  };
+
+  // Return true if any bounce condition is met
   return (
-    // Check From header for mailer-daemon and known bounce senders
-    headers.some(
-      (h) =>
-        h.name?.toLowerCase() === "from" &&
-        (bounceIndicators.some((indicator) =>
-          h.value?.toLowerCase().includes(indicator)
-        ) ||
-          bounceSenders.some((sender) =>
-            h.value?.toLowerCase().includes(sender)
-          ))
-    ) ||
-    // Check for failed recipients
-    headers.some(
-      (h) => h.name?.toLowerCase() === "x-failed-recipients" && h.value
-    ) ||
-    // Check Content-Type for delivery status
-    headers.some(
-      (h) =>
-        h.name?.toLowerCase() === "content-type" &&
-        (h.value?.toLowerCase().includes("report-type=delivery-status") ||
-          h.value?.toLowerCase().includes("delivery-status") ||
-          h.value?.toLowerCase().includes("multipart/report"))
-    ) ||
-    // Check Subject for bounce indicators
-    headers.some(
-      (h) =>
-        h.name?.toLowerCase() === "subject" &&
-        bounceIndicators.some((indicator) =>
-          h.value?.toLowerCase().includes(indicator)
-        )
-    )
+    isFromBounceSender ||
+    hasBouncySubject ||
+    hasFailedRecipients ||
+    isDeliveryStatusReport ||
+    isAutoSubmitted ||
+    isEmptyReturnPath ||
+    isFeedbackReport ||
+    hasMailerHeaders
   );
 };
 

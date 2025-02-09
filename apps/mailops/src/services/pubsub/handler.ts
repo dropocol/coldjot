@@ -16,7 +16,7 @@ import { SequenceContactStatusEnum, EmailEventEnum } from "@coldjot/types";
 import { refreshTokenIfNeeded } from "@/lib/google/gmail/helper";
 import { Prisma, EmailWatch, Mailbox, EmailAlias } from "@prisma/client";
 import { fileLogger } from "@/lib/log/file-logger";
-import { isBounceMessage } from "@/utils/email";
+import { isBounceMessage, shouldProcessMessage } from "@/utils/email";
 import { updateSequenceStats } from "@/lib/stats";
 import { GMAIL_API } from "@/config/gmail/constants";
 
@@ -694,26 +694,42 @@ export class PubSubHandler {
     }
   }
 
-  private messageHasContent(message: GmailMessageMetadata): boolean {
-    const hasMainBody = !!(
-      message.payload.body && message.payload.body.size > 0
-    );
-    const hasPartContent = !!message.payload.parts?.some(
-      (part) => part.body && part.body.size > 0
+  private messageHasContent(details: MessageDetails): boolean {
+    // Check Content-Type header
+    const contentType =
+      details.headers.find((h) => h.name.toLowerCase() === "content-type")
+        ?.value || "";
+
+    // Check if it's a multipart message
+    const isMultipart = contentType.toLowerCase().includes("multipart");
+
+    // Check if it has a text or html content type
+    const hasTextContent =
+      contentType.toLowerCase().includes("text/plain") ||
+      contentType.toLowerCase().includes("text/html");
+
+    // Check Content-Length header if present
+    const contentLength = parseInt(
+      details.headers.find((h) => h.name.toLowerCase() === "content-length")
+        ?.value || "0"
     );
 
-    fileLogger.log(
-      "debug",
-      "Checking message content",
-      this.sanitizeData({
-        messageId: message.id,
-        hasMainBody,
-        hasPartContent,
-        partsCount: message.payload.parts?.length || 0,
-      })
+    logger.debug(
+      {
+        messageId: details.id,
+        contentType,
+        isMultipart,
+        hasTextContent,
+        contentLength,
+      },
+      "Checking message content"
     );
 
-    return hasMainBody || hasPartContent;
+    // Consider the message has content if:
+    // 1. It's a multipart message (likely has attachments or multiple parts)
+    // 2. It has text content
+    // 3. It has a positive content length
+    return isMultipart || hasTextContent || contentLength > 0;
   }
 
   private isExternalReply(from: string, watch: WatchWithMailbox): boolean {
@@ -766,6 +782,18 @@ export class PubSubHandler {
       // Process added messages
       if (record.messagesAdded) {
         for (const { message } of record.messagesAdded) {
+          // Log message details for debugging
+          logger.info(
+            {
+              messageId: message.id,
+              threadId: message.threadId,
+              labelIds: message.labelIds,
+              mailboxId: watch.mailbox.id,
+              mailboxEmail: watch.mailbox.email,
+            },
+            "Processing added message"
+          );
+
           // Skip processing if message is a draft - check early to avoid unnecessary API calls
           if (message.labelIds.includes("DRAFT")) {
             logger.debug(
@@ -779,6 +807,30 @@ export class PubSubHandler {
             continue;
           }
 
+          // Check if message should be processed
+          const shouldProcess = shouldProcessMessage(message.labelIds);
+          logger.info(
+            {
+              messageId: message.id,
+              shouldProcess,
+              labelIds: message.labelIds,
+              isInbox: message.labelIds.some(
+                (label) =>
+                  label === "INBOX" ||
+                  label.startsWith("CATEGORY_") ||
+                  label === "IMPORTANT"
+              ),
+              isNotSpamOrTrash: !message.labelIds.some(
+                (label) =>
+                  label === "SPAM" || label === "TRASH" || label === "JUNK"
+              ),
+              isSentOrDraft: message.labelIds.some(
+                (label) => label === "SENT" || label === "DRAFT"
+              ),
+            },
+            "Message processing check"
+          );
+
           const details = await this.fetchMessageDetails(
             message.id,
             accessToken,
@@ -789,13 +841,137 @@ export class PubSubHandler {
           );
 
           if (details) {
-            changes.push({
-              id: record.id,
-              threadId: message.threadId,
-              type: NotificationType.MESSAGE_ADDED,
-              messageId: message.id,
-              from: details.from,
-            });
+            // First check if the message has content
+            const hasContent = this.messageHasContent(details);
+            if (!hasContent) {
+              logger.debug(
+                {
+                  messageId: message.id,
+                  mailboxId: watch.mailbox.id,
+                  mailboxEmail: watch.mailbox.email,
+                },
+                "Skipping empty message"
+              );
+              continue;
+            }
+
+            // Check if it's an external message
+            const isExternal = this.isExternalReply(details.from, watch);
+
+            // Check for bounce first
+            const isBounced = isBounceMessage(details.headers);
+            if (isBounced) {
+              logger.info(
+                {
+                  messageId: message.id,
+                  threadId: message.threadId,
+                  from: details.from,
+                  subject: details.subject,
+                  headers: details.headers
+                    .filter((h) =>
+                      [
+                        "x-failed-recipients",
+                        "content-type",
+                        "auto-submitted",
+                        "return-path",
+                        "x-feedback-id",
+                      ].includes(h.name.toLowerCase())
+                    )
+                    .map((h) => ({ name: h.name, value: h.value })),
+                },
+                "Bounce detection - Found bounce message"
+              );
+
+              changes.push({
+                id: record.id,
+                threadId: message.threadId,
+                type: NotificationType.BOUNCE,
+                messageId: message.id,
+                from: details.from,
+              });
+
+              // Process the bounce immediately
+              await this.processBounce({
+                id: record.id,
+                threadId: message.threadId,
+                type: NotificationType.BOUNCE,
+                messageId: message.id,
+                from: details.from,
+              });
+
+              continue; // Skip further processing for bounce messages
+            }
+
+            // Check for reply if not a bounce and is external
+            const isReply = this.isReplyMessage(details.headers);
+            logger.info(
+              {
+                messageId: message.id,
+                threadId: message.threadId,
+                isReply,
+                isExternal,
+                headers: details.headers
+                  .filter((h) =>
+                    ["in-reply-to", "references", "subject"].includes(
+                      h.name.toLowerCase()
+                    )
+                  )
+                  .map((h) => ({ name: h.name, value: h.value })),
+                from: details.from,
+              },
+              "Reply detection check"
+            );
+
+            // Only process replies from external senders
+            if (isReply && isExternal) {
+              logger.info(
+                {
+                  messageId: message.id,
+                  threadId: message.threadId,
+                  from: details.from,
+                },
+                "Reply detection - Found valid external reply"
+              );
+
+              changes.push({
+                id: record.id,
+                threadId: message.threadId,
+                type: NotificationType.REPLY,
+                messageId: message.id,
+                from: details.from,
+              });
+            } else {
+              // For non-reply messages or internal replies
+              changes.push({
+                id: record.id,
+                threadId: message.threadId,
+                type: NotificationType.MESSAGE_ADDED,
+                messageId: message.id,
+                from: details.from,
+              });
+            }
+
+            // Log final decision with all relevant information
+            logger.info(
+              {
+                messageId: message.id,
+                from: details.from,
+                userId: watch.mailbox.userId,
+                isExternal,
+                isReply,
+                isBounced,
+                hasContent,
+                finalType: changes[changes.length - 1].type,
+                classification: {
+                  isExternal,
+                  isReply,
+                  isBounced,
+                  hasContent,
+                  shouldProcess: shouldProcessMessage(message.labelIds),
+                },
+              },
+              "Message classification complete"
+            );
           }
         }
       }
@@ -851,8 +1027,22 @@ export class PubSubHandler {
     return changes;
   }
 
-  private isBounceMessage(details: MessageDetails): boolean {
-    const { from, subject, headers } = details;
+  private isBounceMessage(
+    headers: Array<{ name: string; value: string }>
+  ): boolean {
+    const { from, subject } = headers.reduce(
+      (acc, header) => {
+        if (header.name.toLowerCase() === "from") {
+          acc.from = header.value;
+        }
+        if (header.name.toLowerCase() === "subject") {
+          acc.subject = header.value;
+        }
+        return acc;
+      },
+      { from: "", subject: "" }
+    );
+
     const fromLower = from.toLowerCase();
     const subjectLower = subject.toLowerCase();
 
