@@ -160,21 +160,6 @@ export const isBounceMessage = (headers: MessagePartHeader[]) => {
       h.name?.toLowerCase().includes("delivery-notification")
   );
 
-  // Log detailed bounce detection analysis
-  const bounceAnalysis = {
-    fromHeader,
-    subjectHeader,
-    contentTypeHeader,
-    hasFailedRecipients,
-    isDeliveryStatusReport,
-    isAutoSubmitted,
-    isEmptyReturnPath,
-    isFeedbackReport,
-    hasMailerHeaders,
-    isFromBounceSender,
-    hasBouncySubject,
-  };
-
   // Return true if any bounce condition is met
   return (
     isFromBounceSender ||
@@ -353,6 +338,79 @@ export function splitEmailContent(emailContent: string): {
     body: bodyParts.join("\r\n\r\n"),
   };
 }
+
+// -----------------------------------------
+// -----------------------------------------
+// -----------------------------------------
+
+/**
+ * Check if an email message has content by analyzing its headers
+ */
+export const hasMessageContent = (headers: MessagePartHeader[]): boolean => {
+  // Check Content-Type header
+  const contentType =
+    headers.find((h) => h.name?.toLowerCase() === "content-type")?.value || "";
+
+  // Check if it's a multipart message
+  const isMultipart = contentType.toLowerCase().includes("multipart");
+
+  // Check if it has a text or html content type
+  const hasTextContent =
+    contentType.toLowerCase().includes("text/plain") ||
+    contentType.toLowerCase().includes("text/html");
+
+  // Check Content-Length header if present
+  const contentLength = parseInt(
+    headers.find((h) => h.name?.toLowerCase() === "content-length")?.value ||
+      "0"
+  );
+
+  // Consider the message has content if:
+  // 1. It's a multipart message (likely has attachments or multiple parts)
+  // 2. It has text content
+  // 3. It has a positive content length
+  return isMultipart || hasTextContent || contentLength > 0;
+};
+
+// -----------------------------------------
+// -----------------------------------------
+// -----------------------------------------
+
+/**
+ * Check if an email is from an external sender by comparing against a list of internal emails
+ */
+export const isExternalSender = (
+  fromHeader: string,
+  internalEmails: string[]
+): boolean => {
+  // Extract email from the from header
+  const senderEmail =
+    (fromHeader.match(/<(.+?)>/) ||
+      fromHeader.match(/([^<\s]+@[^>\s]+)/) ||
+      [])[1] || fromHeader;
+  const normalizedSender = senderEmail.toLowerCase().trim();
+  const normalizedInternalEmails = internalEmails.map((email) =>
+    email.toLowerCase().trim()
+  );
+
+  return !normalizedInternalEmails.includes(normalizedSender);
+};
+
+// -----------------------------------------
+// -----------------------------------------
+// -----------------------------------------
+
+/**
+ * Check if a message is a reply by analyzing its headers
+ */
+export const isReplyMessage = (headers: MessagePartHeader[]): boolean => {
+  return headers.some(
+    (h: MessagePartHeader) =>
+      (h.name === "In-Reply-To" && h.value) ||
+      (h.name === "References" && h.value) ||
+      (h.name === "Subject" && h.value?.toLowerCase().startsWith("re:"))
+  );
+};
 
 // -----------------------------------------
 // -----------------------------------------

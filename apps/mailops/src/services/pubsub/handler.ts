@@ -16,9 +16,23 @@ import { SequenceContactStatusEnum, EmailEventEnum } from "@coldjot/types";
 import { refreshTokenIfNeeded } from "@/lib/google/gmail/helper";
 import { Prisma, EmailWatch, Mailbox, EmailAlias } from "@prisma/client";
 import { fileLogger } from "@/lib/log/file-logger";
-import { isBounceMessage, shouldProcessMessage } from "@/utils/email";
+import {
+  isBounceMessage,
+  shouldProcessMessage,
+  hasMessageContent,
+  isExternalSender,
+  isReplyMessage,
+} from "@/utils/email";
 import { updateSequenceStats } from "@/lib/stats";
 import { GMAIL_API } from "@/config/gmail/constants";
+import {
+  sanitizeData,
+  decodeNotification,
+  calculateHistoryGap,
+  isLargeHistoryGap,
+  determineNewStatus,
+  formatError,
+} from "./helper";
 
 interface GmailHistoryResponse {
   history: GmailHistoryRecord[];
@@ -32,6 +46,10 @@ interface WatchWithMailbox extends EmailWatch {
   };
 }
 
+// -----------------------------------------
+// -----------------------------------------
+// -----------------------------------------
+
 export class PubSubHandler {
   private readonly maxRetries = PUBSUB_CONFIG.MAX_RETRIES;
   private readonly backoffSeconds = PUBSUB_CONFIG.BACKOFF_SECONDS;
@@ -39,8 +57,7 @@ export class PubSubHandler {
   async handleNotification(message: PubSubMessage): Promise<void> {
     try {
       this.logNotificationReceived(message);
-
-      const notification = this.decodeNotification(message);
+      const notification = decodeNotification(message);
 
       const watch = await this.getWatchRecord(notification.emailAddress);
 
@@ -48,7 +65,7 @@ export class PubSubHandler {
         fileLogger.log(
           "warn",
           "No watch found for email address",
-          this.sanitizeData({ emailAddress: notification.emailAddress })
+          sanitizeData({ emailAddress: notification.emailAddress })
         );
         return;
       }
@@ -64,7 +81,7 @@ export class PubSubHandler {
       fileLogger.log(
         "info",
         "Successfully processed notification",
-        this.sanitizeData({
+        sanitizeData({
           messageId: message.messageId,
           notificationId: notificationRecord.id,
         })
@@ -77,11 +94,15 @@ export class PubSubHandler {
     }
   }
 
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
+
   private logNotificationReceived(message: PubSubMessage): void {
     fileLogger.log(
       "info",
       "Received PubSub notification",
-      this.sanitizeData({
+      sanitizeData({
         messageId: message.messageId,
         publishTime: message.publishTime,
         attributes: message.attributes,
@@ -89,35 +110,9 @@ export class PubSubHandler {
     );
   }
 
-  private sanitizeData(data: any): any {
-    if (!data) return data;
-
-    const sensitiveFields = [
-      "access_token",
-      "refresh_token",
-      "id_token",
-      "accessToken",
-      "refreshToken",
-      "Authorization",
-      "private_key",
-      "client_secret",
-      "api_key",
-    ];
-
-    if (typeof data === "string") return data;
-    if (Array.isArray(data)) return data.map((item) => this.sanitizeData(item));
-    if (typeof data !== "object") return data;
-
-    const sanitized = { ...data };
-    for (const key in sanitized) {
-      if (sensitiveFields.includes(key)) {
-        sanitized[key] = "[REDACTED]";
-      } else if (typeof sanitized[key] === "object") {
-        sanitized[key] = this.sanitizeData(sanitized[key]);
-      }
-    }
-    return sanitized;
-  }
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private handleError(
     message: string,
@@ -127,50 +122,16 @@ export class PubSubHandler {
     fileLogger.log(
       "error",
       message,
-      this.sanitizeData({
-        error: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
+      sanitizeData({
+        ...formatError(error),
         ...context,
       })
     );
   }
 
-  private decodeNotification(message: PubSubMessage): DecodedNotification {
-    try {
-      logger.info(message, "Decoded notification");
-
-      const decodedData = Buffer.from(message.data, "base64").toString();
-
-      logger.info(decodedData, "Decoded data");
-
-      const parsedData = JSON.parse(decodedData);
-
-      logger.info(parsedData, "Parsed data");
-      logger.info(
-        `Parsed historyId: ${parsedData.historyId} && type: ${typeof parsedData.historyId}`
-      );
-
-      if (!this.isValidNotification(parsedData)) {
-        throw new Error("Invalid notification format: missing required fields");
-      }
-
-      return parsedData;
-    } catch (error) {
-      this.handleError("Failed to decode notification data", error, {
-        messageData: message.data,
-      });
-      throw new Error("Invalid notification format");
-    }
-  }
-
-  private isValidNotification(data: any): data is DecodedNotification {
-    return (
-      typeof data === "object" &&
-      data !== null &&
-      typeof data.emailAddress === "string" &&
-      (typeof data.historyId === "number" || typeof data.historyId === "string")
-    );
-  }
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private async getWatchRecord(
     email: string
@@ -204,7 +165,7 @@ export class PubSubHandler {
     fileLogger.log(
       "debug",
       "Found watch record with mailbox",
-      this.sanitizeData({
+      sanitizeData({
         watchId: watch.id,
         mailboxId: mailbox.id,
         hasAliases: mailbox.aliases.length > 0,
@@ -216,6 +177,10 @@ export class PubSubHandler {
       mailbox,
     };
   }
+
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private async createNotificationRecord(watch: any, notification: any) {
     try {
@@ -268,6 +233,10 @@ export class PubSubHandler {
     }
   }
 
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
+
   private async processNotificationWithRetry(watch: any, notification: any) {
     fileLogger.log("debug", "Starting notification processing with retry", {
       watchId: watch.id,
@@ -305,6 +274,10 @@ export class PubSubHandler {
     }
   }
 
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
+
   private async markNotificationAsProcessed(notificationId: string) {
     try {
       fileLogger.log("debug", "Marking notification as processed", {
@@ -332,6 +305,10 @@ export class PubSubHandler {
     }
   }
 
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
+
   private async processHistoryChanges(
     watch: WatchWithMailbox,
     historyId: string
@@ -340,7 +317,7 @@ export class PubSubHandler {
       fileLogger.log(
         "info",
         "Starting history changes processing",
-        this.sanitizeData({
+        sanitizeData({
           watchEmail: watch.email,
           watchId: watch.id,
           historyId,
@@ -353,7 +330,7 @@ export class PubSubHandler {
         fileLogger.log(
           "error",
           "Failed to get valid access token",
-          this.sanitizeData({
+          sanitizeData({
             watchId: watch.id,
             mailboxId: watch.mailbox.id,
           })
@@ -361,29 +338,17 @@ export class PubSubHandler {
         return;
       }
 
-      const currentHistoryId = BigInt(watch.historyId);
-      const notificationHistoryId = BigInt(historyId);
-      const historyGap = Number(notificationHistoryId - currentHistoryId);
+      const { gap, startHistoryId } = calculateHistoryGap(
+        watch.historyId,
+        historyId
+      );
 
-      fileLogger.log("debug", "History gap analysis", {
-        watchId: watch.id,
-        currentHistoryId: currentHistoryId.toString(),
-        notificationHistoryId: notificationHistoryId.toString(),
-        historyGap,
-      });
-
-      // Use the lower history ID as the start point for negative gaps
-      const startHistoryId =
-        historyGap < 0
-          ? notificationHistoryId.toString()
-          : currentHistoryId.toString();
-
-      if (Math.abs(historyGap) > 10000) {
+      if (isLargeHistoryGap(gap)) {
         fileLogger.log("warn", "Large history gap detected", {
           watchId: watch.id,
-          historyGap,
-          currentHistoryId: currentHistoryId.toString(),
-          notificationHistoryId: notificationHistoryId.toString(),
+          historyGap: gap,
+          currentHistoryId: watch.historyId,
+          notificationHistoryId: historyId,
         });
 
         await this.handleLargeHistoryGap(watch, historyId);
@@ -447,7 +412,7 @@ export class PubSubHandler {
       fileLogger.log(
         "error",
         "Failed to process history changes",
-        this.sanitizeData({
+        sanitizeData({
           error: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
           watchId: watch.id,
@@ -457,6 +422,10 @@ export class PubSubHandler {
       throw error;
     }
   }
+
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private async handleLargeHistoryGap(
     watch: WatchWithMailbox,
@@ -518,20 +487,9 @@ export class PubSubHandler {
     }
   }
 
-  private async getMailbox(email: string) {
-    const mailbox = await prisma.mailbox.findFirst({
-      where: {
-        email: email,
-        isActive: true,
-      },
-    });
-
-    if (!mailbox) {
-      throw new Error(`No mailbox found for email: ${email}`);
-    }
-
-    return mailbox;
-  }
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private async getValidAccessToken(mailbox: any) {
     return refreshTokenIfNeeded({
@@ -542,6 +500,10 @@ export class PubSubHandler {
       expiryDate: mailbox.expires_at!,
     });
   }
+
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private async fetchGmailHistory(
     historyId: string,
@@ -568,6 +530,10 @@ export class PubSubHandler {
       throw error;
     }
   }
+
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private async fetchMessageDetails(
     messageId: string,
@@ -663,7 +629,7 @@ export class PubSubHandler {
         from,
         subject,
         labelIds: data.labelIds || [],
-        isReply: this.isReplyMessage(headers),
+        isReply: isReplyMessage(headers),
         headers,
       };
 
@@ -694,69 +660,9 @@ export class PubSubHandler {
     }
   }
 
-  private messageHasContent(details: MessageDetails): boolean {
-    // Check Content-Type header
-    const contentType =
-      details.headers.find((h) => h.name.toLowerCase() === "content-type")
-        ?.value || "";
-
-    // Check if it's a multipart message
-    const isMultipart = contentType.toLowerCase().includes("multipart");
-
-    // Check if it has a text or html content type
-    const hasTextContent =
-      contentType.toLowerCase().includes("text/plain") ||
-      contentType.toLowerCase().includes("text/html");
-
-    // Check Content-Length header if present
-    const contentLength = parseInt(
-      details.headers.find((h) => h.name.toLowerCase() === "content-length")
-        ?.value || "0"
-    );
-
-    logger.debug(
-      {
-        messageId: details.id,
-        contentType,
-        isMultipart,
-        hasTextContent,
-        contentLength,
-      },
-      "Checking message content"
-    );
-
-    // Consider the message has content if:
-    // 1. It's a multipart message (likely has attachments or multiple parts)
-    // 2. It has text content
-    // 3. It has a positive content length
-    return isMultipart || hasTextContent || contentLength > 0;
-  }
-
-  private isExternalReply(from: string, watch: WatchWithMailbox): boolean {
-    const userEmails = [
-      watch.mailbox.email.toLowerCase(),
-      ...watch.mailbox.aliases.map((alias) => alias.alias.toLowerCase()),
-    ];
-
-    const senderEmail =
-      (from.match(/<(.+?)>/) || from.match(/([^<\s]+@[^>\s]+)/) || [])[1] ||
-      from;
-    const normalizedSender = senderEmail.toLowerCase().trim();
-
-    fileLogger.log(
-      "debug",
-      "Checking if email is external",
-      this.sanitizeData({
-        userEmails,
-        senderEmail: normalizedSender,
-        isExternal: !userEmails.includes(normalizedSender),
-        fromHeader: from,
-        extractedEmail: senderEmail,
-      })
-    );
-
-    return !userEmails.includes(normalizedSender);
-  }
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private async processHistoryRecords(
     response: GmailHistoryResponse,
@@ -842,7 +748,7 @@ export class PubSubHandler {
 
           if (details) {
             // First check if the message has content
-            const hasContent = this.messageHasContent(details);
+            const hasContent = hasMessageContent(details.headers);
             if (!hasContent) {
               logger.debug(
                 {
@@ -856,7 +762,13 @@ export class PubSubHandler {
             }
 
             // Check if it's an external message
-            const isExternal = this.isExternalReply(details.from, watch);
+            const userEmails = [
+              watch.mailbox.email.toLowerCase(),
+              ...watch.mailbox.aliases.map((alias) =>
+                alias.alias.toLowerCase()
+              ),
+            ];
+            const isExternal = isExternalSender(details.from, userEmails);
 
             // Check for bounce first
             const isBounced = isBounceMessage(details.headers);
@@ -903,7 +815,7 @@ export class PubSubHandler {
             }
 
             // Check for reply if not a bounce and is external
-            const isReply = this.isReplyMessage(details.headers);
+            const isReply = isReplyMessage(details.headers);
             logger.info(
               {
                 messageId: message.id,
@@ -1027,85 +939,16 @@ export class PubSubHandler {
     return changes;
   }
 
-  private isBounceMessage(
-    headers: Array<{ name: string; value: string }>
-  ): boolean {
-    const { from, subject } = headers.reduce(
-      (acc, header) => {
-        if (header.name.toLowerCase() === "from") {
-          acc.from = header.value;
-        }
-        if (header.name.toLowerCase() === "subject") {
-          acc.subject = header.value;
-        }
-        return acc;
-      },
-      { from: "", subject: "" }
-    );
-
-    const fromLower = from.toLowerCase();
-    const subjectLower = subject.toLowerCase();
-
-    // Common bounce sender patterns
-    const bounceSenders = [
-      "mailer-daemon",
-      "postmaster",
-      "mail delivery subsystem",
-      "mail delivery system",
-    ];
-
-    // Common bounce subject patterns
-    const bounceSubjects = [
-      "delivery status notification",
-      "failure notice",
-      "returned mail",
-      "undeliverable",
-      "delivery failed",
-      "mail delivery failed",
-      "failure delivery",
-    ];
-
-    // Check for failed recipients header
-    const hasFailedRecipients = headers.some(
-      (h) => h.name.toLowerCase() === "x-failed-recipients" && h.value
-    );
-
-    // Check for delivery status report content type
-    const isDeliveryStatusReport = headers.some(
-      (h) =>
-        h.name.toLowerCase() === "content-type" &&
-        (h.value.toLowerCase().includes("delivery-status") ||
-          h.value.toLowerCase().includes("multipart/report"))
-    );
-
-    // Log bounce detection criteria
-    fileLogger.log("info", "Bounce detection check", {
-      from,
-      subject,
-      hasFailedRecipients,
-      isDeliveryStatusReport,
-      matchesBounceFrom: bounceSenders.some((sender) =>
-        fromLower.includes(sender)
-      ),
-      matchesBounceSubject: bounceSubjects.some((pattern) =>
-        subjectLower.includes(pattern)
-      ),
-    });
-
-    return (
-      hasFailedRecipients ||
-      isDeliveryStatusReport ||
-      bounceSenders.some((sender) => fromLower.includes(sender)) ||
-      bounceSubjects.some((pattern) => subjectLower.includes(pattern))
-    );
-  }
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private async processBounce(change: HistoryChange): Promise<void> {
     try {
       fileLogger.log(
         "debug",
         "Starting bounce processing",
-        this.sanitizeData({
+        sanitizeData({
           changeId: change.id,
           threadId: change.threadId,
           messageId: change.messageId,
@@ -1123,7 +966,7 @@ export class PubSubHandler {
         fileLogger.log(
           "warn",
           "No email thread found for bounce",
-          this.sanitizeData({
+          sanitizeData({
             threadId: change.threadId,
             messageId: change.messageId,
           })
@@ -1134,7 +977,7 @@ export class PubSubHandler {
       fileLogger.log(
         "debug",
         "Found email thread for bounce",
-        this.sanitizeData({
+        sanitizeData({
           threadId: change.threadId,
           sequenceId: emailThread.sequenceId,
           contactId: emailThread.contactId,
@@ -1153,7 +996,7 @@ export class PubSubHandler {
         fileLogger.log(
           "debug",
           "Bounce already recorded",
-          this.sanitizeData({
+          sanitizeData({
             threadId: change.threadId,
             sequenceId: emailThread.sequenceId,
             contactId: emailThread.contactId,
@@ -1249,7 +1092,7 @@ export class PubSubHandler {
       fileLogger.log(
         "error",
         "Failed to process bounce",
-        this.sanitizeData({
+        sanitizeData({
           error: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
           threadId: change.threadId,
@@ -1260,6 +1103,10 @@ export class PubSubHandler {
     }
   }
 
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
+
   private async updateSequenceStatuses(
     changes: HistoryChange[]
   ): Promise<void> {
@@ -1267,7 +1114,7 @@ export class PubSubHandler {
       fileLogger.log(
         "debug",
         "Starting sequence status updates",
-        this.sanitizeData({
+        sanitizeData({
           totalChanges: changes.length,
           changeTypes: changes.map((c) => c.type),
         })
@@ -1277,7 +1124,7 @@ export class PubSubHandler {
         fileLogger.log(
           "debug",
           "Processing change for status update",
-          this.sanitizeData({
+          sanitizeData({
             changeId: change.id,
             threadId: change.threadId,
             type: change.type,
@@ -1302,7 +1149,7 @@ export class PubSubHandler {
           currentStatus: sequenceContact.status,
         });
 
-        const newStatus = this.determineNewStatus(change);
+        const newStatus = determineNewStatus(change.type);
 
         if (!newStatus) {
           fileLogger.log("debug", "No status change needed", {
@@ -1343,7 +1190,7 @@ export class PubSubHandler {
       fileLogger.log(
         "error",
         "Failed to update sequence statuses",
-        this.sanitizeData({
+        sanitizeData({
           error: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
         })
@@ -1351,6 +1198,10 @@ export class PubSubHandler {
       throw error;
     }
   }
+
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
 
   private async findSequenceContact(threadId: string) {
     try {
@@ -1408,46 +1259,5 @@ export class PubSubHandler {
       });
       return null;
     }
-  }
-
-  private determineNewStatus(
-    change: HistoryChange
-  ): SequenceContactStatusEnum | null {
-    fileLogger.log("debug", "Determining new status", {
-      changeType: change.type,
-      messageId: change.messageId,
-    });
-
-    let newStatus: SequenceContactStatusEnum | null = null;
-
-    switch (change.type) {
-      case NotificationType.REPLY:
-        newStatus = SequenceContactStatusEnum.REPLIED;
-        break;
-      case NotificationType.BOUNCE:
-        newStatus = SequenceContactStatusEnum.BOUNCED;
-        break;
-      default:
-        newStatus = null;
-    }
-
-    fileLogger.log("debug", "Determined new status", {
-      changeType: change.type,
-      messageId: change.messageId,
-      newStatus,
-    });
-
-    return newStatus;
-  }
-
-  private isReplyMessage(
-    headers: Array<{ name: string; value: string }>
-  ): boolean {
-    return headers.some(
-      (h: { name: string; value: string }) =>
-        (h.name === "In-Reply-To" && h.value) ||
-        (h.name === "References" && h.value) ||
-        (h.name === "Subject" && h.value.toLowerCase().startsWith("re:"))
-    );
   }
 }
