@@ -90,7 +90,7 @@ export class WatchCleanupService {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const deleteResult = await prisma.notificationHistory.deleteMany({
+      const deleteResult = await prisma.emailWatchHistory.deleteMany({
         where: {
           createdAt: {
             lt: thirtyDaysAgo,

@@ -32,6 +32,9 @@ import {
   isLargeHistoryGap,
   determineNewStatus,
   formatError,
+  isHistoryIdProcessed,
+  isMessageProcessed,
+  canUpdateSequenceContact,
 } from "./helper";
 
 interface GmailHistoryResponse {
@@ -201,16 +204,18 @@ export class PubSubHandler {
         throw new Error("Missing required fields for notification record");
       }
 
-      const record = await prisma.notificationHistory.create({
+      logger.info({}, "Creating notification record");
+      const record = await prisma.emailWatchHistory.create({
         data: {
           id: nanoid(),
           emailWatchId: watch.id,
           historyId: notification.historyId.toString(),
-          notificationType: NotificationType.MESSAGE_ADDED,
+          notificationType: NotificationType.PROCESSING,
           processed: false,
           data: {
             emailAddress: notification.emailAddress,
             historyId: notification.historyId,
+            type: notification.type,
           },
         },
       });
@@ -284,7 +289,7 @@ export class PubSubHandler {
         notificationId,
       });
 
-      const result = await prisma.notificationHistory.update({
+      const result = await prisma.emailWatchHistory.update({
         where: { id: notificationId },
         data: { processed: true },
       });
@@ -324,6 +329,16 @@ export class PubSubHandler {
           currentHistoryId: watch.historyId,
         })
       );
+
+      // Check if this history ID has already been processed
+      const isProcessed = await isHistoryIdProcessed(watch.id, historyId);
+      if (isProcessed) {
+        fileLogger.log("info", "History ID already processed, skipping", {
+          watchId: watch.id,
+          historyId,
+        });
+        return;
+      }
 
       const accessToken = await this.getValidAccessToken(watch.mailbox);
       if (!accessToken) {
@@ -455,7 +470,7 @@ export class PubSubHandler {
 
       const gapSize = Number(BigInt(latestHistoryId) - BigInt(watch.historyId));
 
-      await prisma.notificationHistory.create({
+      await prisma.emailWatchHistory.create({
         data: {
           id: nanoid(),
           emailWatchId: watch.id,
@@ -685,22 +700,27 @@ export class PubSubHandler {
     );
 
     for (const record of response.history || []) {
-      // Process added messages
+      // Process each type of history record separately
       if (record.messagesAdded) {
         for (const { message } of record.messagesAdded) {
-          // Log message details for debugging
-          logger.info(
-            {
-              messageId: message.id,
-              threadId: message.threadId,
-              labelIds: message.labelIds,
-              mailboxId: watch.mailbox.id,
-              mailboxEmail: watch.mailbox.email,
-            },
-            "Processing added message"
+          // Skip if message already processed
+          const isAlreadyProcessed = await isMessageProcessed(
+            message.id,
+            message.threadId
           );
+          if (isAlreadyProcessed) {
+            logger.info(
+              {
+                messageId: message.id,
+                threadId: message.threadId,
+                mailboxId: watch.mailbox.id,
+              },
+              "Message already processed, skipping"
+            );
+            continue;
+          }
 
-          // Skip processing if message is a draft - check early to avoid unnecessary API calls
+          // Skip processing if message is a draft
           if (message.labelIds.includes("DRAFT")) {
             logger.debug(
               {
@@ -712,30 +732,6 @@ export class PubSubHandler {
             );
             continue;
           }
-
-          // Check if message should be processed
-          const shouldProcess = shouldProcessMessage(message.labelIds);
-          logger.info(
-            {
-              messageId: message.id,
-              shouldProcess,
-              labelIds: message.labelIds,
-              isInbox: message.labelIds.some(
-                (label) =>
-                  label === "INBOX" ||
-                  label.startsWith("CATEGORY_") ||
-                  label === "IMPORTANT"
-              ),
-              isNotSpamOrTrash: !message.labelIds.some(
-                (label) =>
-                  label === "SPAM" || label === "TRASH" || label === "JUNK"
-              ),
-              isSentOrDraft: message.labelIds.some(
-                (label) => label === "SENT" || label === "DRAFT"
-              ),
-            },
-            "Message processing check"
-          );
 
           const details = await this.fetchMessageDetails(
             message.id,
@@ -770,9 +766,12 @@ export class PubSubHandler {
             ];
             const isExternal = isExternalSender(details.from, userEmails);
 
-            // Check for bounce first
-            const isBounced = isBounceMessage(details.headers);
-            if (isBounced) {
+            // Determine the message type based on the history record and message details
+            let messageType = NotificationType.MESSAGE_ADDED;
+
+            // Check for bounce first as it's highest priority
+            if (isBounceMessage(details.headers)) {
+              messageType = NotificationType.BOUNCE;
               logger.info(
                 {
                   messageId: message.id,
@@ -793,49 +792,10 @@ export class PubSubHandler {
                 },
                 "Bounce detection - Found bounce message"
               );
-
-              changes.push({
-                id: record.id,
-                threadId: message.threadId,
-                type: NotificationType.BOUNCE,
-                messageId: message.id,
-                from: details.from,
-              });
-
-              // Process the bounce immediately
-              await this.processBounce({
-                id: record.id,
-                threadId: message.threadId,
-                type: NotificationType.BOUNCE,
-                messageId: message.id,
-                from: details.from,
-              });
-
-              continue; // Skip further processing for bounce messages
             }
-
-            // Check for reply if not a bounce and is external
-            const isReply = isReplyMessage(details.headers);
-            logger.info(
-              {
-                messageId: message.id,
-                threadId: message.threadId,
-                isReply,
-                isExternal,
-                headers: details.headers
-                  .filter((h) =>
-                    ["in-reply-to", "references", "subject"].includes(
-                      h.name.toLowerCase()
-                    )
-                  )
-                  .map((h) => ({ name: h.name, value: h.value })),
-                from: details.from,
-              },
-              "Reply detection check"
-            );
-
-            // Only process replies from external senders
-            if (isReply && isExternal) {
+            // Then check for replies from external senders
+            else if (isExternal && isReplyMessage(details.headers)) {
+              messageType = NotificationType.REPLY;
               logger.info(
                 {
                   messageId: message.id,
@@ -844,23 +804,21 @@ export class PubSubHandler {
                 },
                 "Reply detection - Found valid external reply"
               );
+            }
 
-              changes.push({
-                id: record.id,
-                threadId: message.threadId,
-                type: NotificationType.REPLY,
-                messageId: message.id,
-                from: details.from,
-              });
-            } else {
-              // For non-reply messages or internal replies
-              changes.push({
-                id: record.id,
-                threadId: message.threadId,
-                type: NotificationType.MESSAGE_ADDED,
-                messageId: message.id,
-                from: details.from,
-              });
+            const change = {
+              id: record.id,
+              threadId: message.threadId,
+              type: messageType,
+              messageId: message.id,
+              from: details.from,
+            };
+
+            changes.push(change);
+
+            // If it's a bounce, process it immediately
+            if (messageType === NotificationType.BOUNCE) {
+              await this.processBounce(change);
             }
 
             // Log final decision with all relevant information
@@ -870,37 +828,47 @@ export class PubSubHandler {
                 from: details.from,
                 userId: watch.mailbox.userId,
                 isExternal,
-                isReply,
-                isBounced,
+                isReply: messageType === NotificationType.REPLY,
+                isBounced: messageType === NotificationType.BOUNCE,
                 hasContent,
-                finalType: changes[changes.length - 1].type,
+                finalType: messageType,
                 classification: {
                   isExternal,
-                  isReply,
-                  isBounced,
+                  isReply: messageType === NotificationType.REPLY,
+                  isBounced: messageType === NotificationType.BOUNCE,
                   hasContent,
                   shouldProcess: shouldProcessMessage(message.labelIds),
                 },
               },
               "Message classification complete"
             );
+
+            // Record the processed message
+            await prisma.processedMessage.create({
+              data: {
+                messageId: message.id,
+                threadId: message.threadId,
+                type: messageType,
+              },
+            });
           }
         }
       }
 
-      // Process label changes similarly
+      // Process label changes
       if (record.labelsAdded) {
         for (const { message } of record.labelsAdded) {
-          // Skip processing if message is a draft - check early to avoid unnecessary API calls
+          // Skip if message already processed
+          const isAlreadyProcessed = await isMessageProcessed(
+            message.id,
+            message.threadId
+          );
+          if (isAlreadyProcessed) {
+            continue;
+          }
+
+          // Skip processing if message is a draft
           if (message.labelIds.includes("DRAFT")) {
-            logger.debug(
-              {
-                messageId: message.id,
-                mailboxId: watch.mailbox.id,
-                mailboxEmail: watch.mailbox.email,
-              },
-              "Skipping draft message"
-            );
             continue;
           }
 
@@ -926,12 +894,37 @@ export class PubSubHandler {
       }
     }
 
+    // Determine the final notification type based on all changes
+    let finalNotificationType = NotificationType.MESSAGE_ADDED;
+    if (changes.some((c) => c.type === NotificationType.BOUNCE)) {
+      finalNotificationType = NotificationType.BOUNCE;
+    } else if (changes.some((c) => c.type === NotificationType.REPLY)) {
+      finalNotificationType = NotificationType.REPLY;
+    } else if (changes.some((c) => c.type === NotificationType.LABEL_ADDED)) {
+      finalNotificationType = NotificationType.LABEL_ADDED;
+    }
+
+    // Update the EmailWatchHistory record with the final type
+    if (changes.length > 0) {
+      await prisma.emailWatchHistory.updateMany({
+        where: {
+          emailWatchId: watch.id,
+          historyId: response.historyId.toString(),
+          processed: false,
+        },
+        data: {
+          notificationType: finalNotificationType,
+        },
+      });
+    }
+
     logger.info(
       {
         mailboxId: watch.mailbox.id,
         mailboxEmail: watch.mailbox.email,
         totalChanges: changes.length,
         changeTypes: changes.map((c) => c.type),
+        finalType: finalNotificationType,
       },
       "Completed processing history records"
     );
@@ -1155,6 +1148,23 @@ export class PubSubHandler {
           fileLogger.log("debug", "No status change needed", {
             threadId: change.threadId,
             currentType: change.type,
+          });
+          continue;
+        }
+
+        // Check if we can update the sequence contact
+        const canUpdate = await canUpdateSequenceContact(
+          sequenceContact.sequenceId,
+          sequenceContact.contactId,
+          newStatus
+        );
+
+        if (!canUpdate) {
+          fileLogger.log("debug", "Sequence contact cannot be updated", {
+            threadId: change.threadId,
+            sequenceContactId: sequenceContact.id,
+            currentStatus: sequenceContact.status,
+            newStatus,
           });
           continue;
         }

@@ -33,6 +33,7 @@ export enum NotificationType {
   BOUNCE = "BOUNCE",
   REPLY = "REPLY",
   HISTORY_GAP = "HISTORY_GAP",
+  PROCESSING = "PROCESSING",
 }
 
 export interface GmailNotification {

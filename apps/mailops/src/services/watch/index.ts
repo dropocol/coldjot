@@ -116,6 +116,34 @@ export class WatchService {
         expiresAt
       );
 
+      // First get the current history ID before stopping any existing watch
+      const profile = await gmail.users.getProfile({
+        userId: "me",
+      });
+
+      const currentHistoryId = profile.data.historyId?.toString();
+
+      if (!currentHistoryId) {
+        throw new Error("Could not get current history ID from Gmail");
+      }
+
+      logger.info(
+        { email, currentHistoryId },
+        "Retrieved current Gmail history ID"
+      );
+
+      // Stop any existing watch to prevent duplicate notifications
+      try {
+        await gmail.users.stop({ userId: "me" });
+        logger.info({ email }, "Stopped existing watch");
+      } catch (error) {
+        // Ignore errors from stop - it might not exist
+        logger.debug(
+          { error, email },
+          "Error stopping existing watch - might not exist"
+        );
+      }
+
       // Setup watch request
       const watchRequest = {
         userId: "me",
@@ -125,10 +153,24 @@ export class WatchService {
         },
       };
 
-      // Attempt to setup watch
+      // Attempt to setup new watch
       const response = await gmail.users.watch(watchRequest);
 
-      logger.info({ email, response: response.data }, "Watch setup completed");
+      logger.info(
+        {
+          email,
+          responseHistoryId: response.data.historyId,
+          currentHistoryId,
+        },
+        "Watch setup completed"
+      );
+
+      // Set expiration to 6 days (slightly less than Gmail's 7 days)
+      const expiration = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000);
+
+      // Use the current history ID instead of the watch response history ID
+      // This ensures we don't miss any events that occurred during setup
+      const historyId = currentHistoryId;
 
       // Check for existing watch
       const existingWatch = await prisma.emailWatch.findUnique({
@@ -139,27 +181,33 @@ export class WatchService {
         await prisma.emailWatch.update({
           where: { email },
           data: {
-            historyId: response.data.historyId?.toString() || "0",
-            expiration: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+            historyId,
+            expiration,
+            updatedAt: new Date(),
           },
         });
-        logger.info({ email }, "Updated existing watch");
+        logger.info(
+          { email, historyId, oldHistoryId: existingWatch.historyId },
+          "Updated existing watch"
+        );
         return;
       }
 
       // Create new watch record
-      const expiration = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
       await prisma.emailWatch.create({
         data: {
           id: nanoid(),
           userId,
           email,
-          historyId: response.data.historyId?.toString() || "0",
+          historyId,
           expiration,
         },
       });
 
-      logger.info({ email }, "Successfully setup watch for email");
+      logger.info(
+        { email, historyId },
+        "Successfully setup new watch for email"
+      );
     } catch (error) {
       const watchError = error as WatchError;
       logger.error(

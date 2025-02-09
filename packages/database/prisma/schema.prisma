@@ -447,31 +447,46 @@ model SequenceMailbox {
 
 model EmailWatch {
     id         String   @id
-    userId     String   @map("user_id")
+    userId     String
     email      String   @unique
-    historyId  String   @map("history_id")
+    historyId  String
     expiration DateTime
-    createdAt  DateTime @default(now()) @map("created_at")
-    updatedAt  DateTime @default(now()) @map("updated_at")
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @default(now())
 
-    notifications NotificationHistory[]
+    notifications EmailWatchHistory[]
+    // @@map("email_watch")
 
     @@index([userId])
-    @@map("email_watch")
 }
 
-model NotificationHistory {
+model EmailWatchHistory {
     id               String   @id
-    emailWatchId     String   @map("email_watch_id")
-    historyId        String   @map("history_id")
-    notificationType String   @map("notification_type")
+    emailWatchId     String
+    historyId        String
+    notificationType String
     processed        Boolean  @default(false)
     data             Json?
-    createdAt        DateTime @default(now()) @map("created_at")
+    createdAt        DateTime @default(now())
 
     emailWatch EmailWatch @relation(fields: [emailWatchId], references: [id], onDelete: Cascade)
+    // @@map("notification_history")
 
     @@index([emailWatchId])
     @@index([processed])
-    @@map("notification_history")
+}
+
+// Add after EmailWatchHistory model
+
+model ProcessedMessage {
+    id        String   @id @default(cuid())
+    messageId String   @unique
+    threadId  String
+    type      String // 'REPLY', 'BOUNCE', etc.
+    processed Boolean  @default(true)
+    createdAt DateTime @default(now())
+
+    @@index([messageId])
+    @@index([threadId])
+    @@index([type])
 }
