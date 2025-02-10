@@ -59,6 +59,8 @@ export async function GET(
 
       if (contact.status === SequenceContactStatusEnum.REPLIED) {
         status = SequenceContactStatusEnum.REPLIED;
+      } else if (contact.status === SequenceContactStatusEnum.BOUNCED) {
+        status = SequenceContactStatusEnum.BOUNCED;
       } else if (contact.completed) {
         status = SequenceContactStatusEnum.COMPLETED;
         // } else if (latestEvent?.type.toLowerCase() === "bounced") {

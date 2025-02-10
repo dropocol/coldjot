@@ -207,12 +207,20 @@ export function SequenceContacts({
   }, [sequenceId, isActive]);
 
   const getStatusDetails = (contact: ExtendedSequenceContact) => {
-    console.log(contact.status);
     if (contact.status === SequenceContactStatusEnum.REPLIED) {
       return (
         <div className="flex items-center gap-2 text-green-600">
           <MessageSquare className="w-4 h-4" />
           <span>Replied</span>
+        </div>
+      );
+    }
+
+    if (contact.status === SequenceContactStatusEnum.BOUNCED) {
+      return (
+        <div className="flex items-center gap-2 text-red-600">
+          <AlertCircle className="w-4 h-4" />
+          <span>Bounced</span>
         </div>
       );
     }

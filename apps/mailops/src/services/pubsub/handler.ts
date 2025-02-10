@@ -983,6 +983,7 @@ export class PubSubHandler {
           completed: true,
           completedAt: new Date(),
           updatedAt: new Date(),
+          nextScheduledAt: null,
         },
       });
 
