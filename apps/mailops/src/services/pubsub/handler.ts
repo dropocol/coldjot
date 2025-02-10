@@ -815,6 +815,8 @@ export class PubSubHandler {
           // If it's a bounce, process it immediately
           if (messageType === NotificationType.BOUNCE) {
             await this.processBounce(change);
+          } else if (messageType === NotificationType.REPLY) {
+            await this.processReply(change);
           }
 
           // Log final decision with all relevant information
@@ -1011,6 +1013,171 @@ export class PubSubHandler {
       fileLogger.log(
         "error",
         "Failed to process bounce",
+        sanitizeData({
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          threadId: change.threadId,
+          changeId: change.id,
+        })
+      );
+      throw error;
+    }
+  }
+
+  // -----------------------------------------
+  // -----------------------------------------
+  // -----------------------------------------
+
+  private async processReply(change: HistoryChange): Promise<void> {
+    try {
+      fileLogger.log(
+        "debug",
+        "Starting reply processing",
+        sanitizeData({
+          changeId: change.id,
+          threadId: change.threadId,
+          messageId: change.messageId,
+        })
+      );
+
+      const emailThread = await prisma.emailThread.findUnique({
+        where: { threadId: change.threadId },
+        include: {
+          sequence: true,
+        },
+      });
+
+      if (!emailThread) {
+        fileLogger.log(
+          "warn",
+          "No email thread found for reply",
+          sanitizeData({
+            threadId: change.threadId,
+            messageId: change.messageId,
+          })
+        );
+        return;
+      }
+
+      fileLogger.log(
+        "debug",
+        "Found email thread for reply",
+        sanitizeData({
+          threadId: change.threadId,
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+        })
+      );
+
+      const existingReply = await prisma.emailEvent.findFirst({
+        where: {
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+          type: EmailEventEnum.REPLIED,
+        },
+      });
+
+      if (existingReply) {
+        fileLogger.log(
+          "debug",
+          "Reply already recorded",
+          sanitizeData({
+            threadId: change.threadId,
+            sequenceId: emailThread.sequenceId,
+            contactId: emailThread.contactId,
+            existingReplyId: existingReply.id,
+          })
+        );
+        return;
+      }
+
+      const sentEvent = await prisma.emailEvent.findFirst({
+        where: {
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+          type: EmailEventEnum.SENT,
+        },
+      });
+
+      if (!sentEvent) {
+        fileLogger.log("warn", "No sent event found for reply", {
+          threadId: change.threadId,
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+        });
+        return;
+      }
+
+      fileLogger.log("debug", "Found sent event for reply", {
+        sentEventId: sentEvent.id,
+        trackingId: sentEvent.trackingId,
+      });
+
+      const replyEvent = await prisma.emailEvent.create({
+        data: {
+          type: EmailEventEnum.REPLIED,
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+          trackingId: sentEvent.trackingId,
+          metadata: {
+            messageId: change.messageId,
+            threadId: change.threadId,
+            from: change.from,
+          },
+        },
+      });
+
+      fileLogger.log("info", "Created reply event", {
+        replyEventId: replyEvent.id,
+        sequenceId: emailThread.sequenceId,
+        contactId: emailThread.contactId,
+      });
+
+      const updateResult = await prisma.sequenceContact.updateMany({
+        where: {
+          sequenceId: emailThread.sequenceId,
+          contactId: emailThread.contactId,
+          status: {
+            notIn: [
+              SequenceContactStatusEnum.COMPLETED,
+              SequenceContactStatusEnum.BOUNCED,
+              SequenceContactStatusEnum.OPTED_OUT,
+            ],
+          },
+        },
+        data: {
+          status: SequenceContactStatusEnum.REPLIED,
+          completed: true,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+          nextScheduledAt: null,
+        },
+      });
+
+      fileLogger.log("info", "Updated sequence contact status", {
+        threadId: change.threadId,
+        sequenceId: emailThread.sequenceId,
+        contactId: emailThread.contactId,
+        updatedCount: updateResult.count,
+      });
+
+      await updateSequenceStats(
+        emailThread.sequenceId,
+        EmailEventEnum.REPLIED,
+        emailThread.contactId
+      );
+
+      fileLogger.log("info", "Successfully processed reply", {
+        threadId: change.threadId,
+        sequenceId: emailThread.sequenceId,
+        contactId: emailThread.contactId,
+        replyEventId: replyEvent.id,
+        statusUpdated: updateResult.count > 0,
+      });
+    } catch (error) {
+      fileLogger.log(
+        "error",
+        "Failed to process reply",
         sanitizeData({
           error: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,

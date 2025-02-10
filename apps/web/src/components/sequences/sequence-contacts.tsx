@@ -216,11 +216,14 @@ export function SequenceContacts({
       );
     }
 
-    if (contact.status === SequenceContactStatusEnum.BOUNCED) {
+    if (
+      contact.status === SequenceContactStatusEnum.BOUNCED ||
+      contact.status === SequenceContactStatusEnum.ERROR
+    ) {
       return (
         <div className="flex items-center gap-2 text-red-600">
           <AlertCircle className="w-4 h-4" />
-          <span>Bounced</span>
+          <span>Failed</span>
         </div>
       );
     }
@@ -230,18 +233,6 @@ export function SequenceContacts({
         <div className="flex items-center gap-2 text-green-600">
           <CheckCircle2 className="w-4 h-4" />
           <span>Completed</span>
-        </div>
-      );
-    }
-
-    if (
-      contact.status === SequenceContactStatusEnum.BOUNCED ||
-      contact.status === SequenceContactStatusEnum.ERROR
-    ) {
-      return (
-        <div className="flex items-center gap-2 text-red-600">
-          <AlertCircle className="w-4 h-4" />
-          <span>Failed</span>
         </div>
       );
     }
