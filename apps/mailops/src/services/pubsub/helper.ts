@@ -2,10 +2,18 @@ import {
   NotificationType,
   PubSubMessage,
   DecodedNotification,
+  MessageDetails,
 } from "../../types/pubsub";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import { logger } from "@/lib/log";
 import { prisma } from "@coldjot/database";
+import { nanoid } from "nanoid";
+import { Prisma } from "@prisma/client";
+import {
+  isBounceMessage,
+  isExternalSender,
+  isReplyMessage,
+} from "@/utils/email";
 
 /**
  * Sanitize sensitive data from logs
@@ -323,4 +331,156 @@ export const canUpdateSequenceContact = async (
 
   // Allow update if current status is different from new status
   return sequenceContact.status !== newStatus;
+};
+
+/**
+ * Create a processed message record
+ */
+export const createProcessedMessageRecord = async (
+  messageId: string,
+  threadId: string,
+  type: NotificationType
+): Promise<void> => {
+  try {
+    await prisma.processedMessage.create({
+      data: {
+        messageId,
+        threadId,
+        type: type.toString(),
+      },
+    });
+
+    logger.debug(
+      { messageId, threadId, type },
+      "Successfully created processed message record"
+    );
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2002 is the error code for unique constraint violation
+      if (error.code === "P2002") {
+        logger.debug(
+          { messageId, threadId, type },
+          "Processed message record already exists"
+        );
+        return;
+      }
+    }
+    logger.error(
+      { error, messageId, threadId, type },
+      "Failed to create processed message record"
+    );
+    throw error;
+  }
+};
+
+/**
+ * Determine notification type from message details
+ */
+export const determineNotificationType = async (
+  details: MessageDetails,
+  userEmails: string[],
+  threadId: string
+): Promise<NotificationType> => {
+  // Check for bounce first as it's highest priority
+  if (isBounceMessage(details.headers)) {
+    return NotificationType.BOUNCE;
+  }
+
+  // Then check for replies from external senders
+  const isExternal = isExternalSender(details.from, userEmails);
+  if (isExternal && isReplyMessage(details.headers)) {
+    return NotificationType.REPLY;
+  }
+
+  // Check if this is the first message in the thread
+  const isFirstMessage = await isOriginalMessage(threadId, details.messageId);
+  if (isFirstMessage) {
+    return NotificationType.ORIGINAL_MESSAGE;
+  }
+
+  // If none of the above conditions match, it's a regular message
+  return NotificationType.MESSAGE_ADDED;
+};
+
+/**
+ * Check if a message is the original message in a thread
+ */
+export const isOriginalMessage = async (
+  threadId: string,
+  messageId: string
+): Promise<boolean> => {
+  const messages = await prisma.processedMessage.findMany({
+    where: { threadId },
+    orderBy: { createdAt: "asc" },
+    take: 1,
+  });
+
+  return messages.length === 0;
+};
+
+/**
+ * Create or update email watch history record
+ */
+export const createOrUpdateWatchHistory = async (
+  watchId: string,
+  historyId: string,
+  notificationType: NotificationType,
+  data: any,
+  isProcessed: boolean = false
+): Promise<void> => {
+  try {
+    const id = nanoid();
+    await prisma.emailWatchHistory.upsert({
+      where: {
+        id,
+      },
+      create: {
+        id,
+        emailWatchId: watchId,
+        historyId: historyId.toString(),
+        notificationType: notificationType.toString(),
+        processed: isProcessed,
+        data,
+      },
+      update: {
+        notificationType: notificationType.toString(),
+        processed: isProcessed,
+        data,
+      },
+    });
+
+    logger.debug(
+      { watchId, historyId, notificationType, isProcessed },
+      "Successfully created/updated watch history record"
+    );
+  } catch (error) {
+    logger.error(
+      { error, watchId, historyId, notificationType },
+      "Failed to create/update watch history record"
+    );
+    throw error;
+  }
+};
+
+/**
+ * Create initial watch history record
+ */
+export const createInitialWatchHistory = async (
+  watchId: string,
+  historyId: string,
+  emailAddress: string
+): Promise<any> => {
+  return prisma.emailWatchHistory.create({
+    data: {
+      id: nanoid(),
+      emailWatchId: watchId,
+      historyId: historyId.toString(),
+      notificationType: NotificationType.PROCESSING,
+      processed: false,
+      data: {
+        historyId,
+        emailAddress,
+      },
+    },
+  });
 };

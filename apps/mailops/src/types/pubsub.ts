@@ -17,6 +17,7 @@ export interface DecodedNotification {
 
 export interface MessageDetails {
   id: string;
+  messageId: string;
   threadId: string;
   from: string;
   subject: string;
@@ -26,14 +27,12 @@ export interface MessageDetails {
 }
 
 export enum NotificationType {
-  MESSAGE_ADDED = "MESSAGE_ADDED",
-  MESSAGE_DELETED = "MESSAGE_DELETED",
-  LABEL_ADDED = "LABEL_ADDED",
-  LABEL_REMOVED = "LABEL_REMOVED",
-  BOUNCE = "BOUNCE",
-  REPLY = "REPLY",
-  HISTORY_GAP = "HISTORY_GAP",
   PROCESSING = "PROCESSING",
+  MESSAGE_ADDED = "MESSAGE_ADDED",
+  REPLY = "REPLY",
+  BOUNCE = "BOUNCE",
+  HISTORY_GAP = "HISTORY_GAP",
+  ORIGINAL_MESSAGE = "ORIGINAL_MESSAGE",
 }
 
 export interface GmailNotification {
