@@ -1,5 +1,4 @@
 import { prisma } from "@coldjot/database";
-import { logger } from "@/lib/logger";
 import { queueApi } from "@/lib/queue/queue-api-client";
 
 class SequenceProcessor {
@@ -41,11 +40,7 @@ class SequenceProcessor {
         userId,
         testMode
       );
-      logger.info(
-        `Sequence ${sequenceId} launched with job ID ${result.jobId}`
-      );
     } catch (error) {
-      logger.error(`Error launching sequence ${sequenceId}:`, error);
       throw error;
     }
   }
@@ -66,9 +61,7 @@ class SequenceProcessor {
 
       // Pause sequence via queue API
       await queueApi.pauseSequence(sequenceId, userId);
-      logger.info(`Sequence ${sequenceId} paused`);
     } catch (error) {
-      logger.error(`Error pausing sequence ${sequenceId}:`, error);
       throw error;
     }
   }
@@ -89,9 +82,7 @@ class SequenceProcessor {
 
       // Resume sequence via queue API
       await queueApi.resumeSequence(sequenceId, userId);
-      logger.info(`Sequence ${sequenceId} resumed`);
     } catch (error) {
-      logger.error(`Error resuming sequence ${sequenceId}:`, error);
       throw error;
     }
   }
@@ -100,7 +91,6 @@ class SequenceProcessor {
     try {
       return await queueApi.getSequenceHealth(sequenceId);
     } catch (error) {
-      logger.error(`Error getting sequence health for ${sequenceId}:`, error);
       throw error;
     }
   }

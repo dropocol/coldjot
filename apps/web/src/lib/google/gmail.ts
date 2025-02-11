@@ -3,6 +3,9 @@ import { encode as base64Encode } from "js-base64";
 import { prisma } from "@coldjot/database";
 import { gmail_v1 } from "googleapis";
 
+import { refreshAccessToken, refreshEmailAccessToken } from "./google-account";
+import { Prisma, Mailbox } from "@prisma/client";
+
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
@@ -19,6 +22,90 @@ interface CreateDraftOptions {
 interface SendDraftOptions {
   accessToken: string;
   draftId: string;
+}
+
+interface MailboxCredentials {
+  mailboxId: string;
+  userId: string;
+  accessToken: string;
+  refreshToken: string;
+  expiryDate: number | null;
+}
+
+type MailboxSelect = {
+  id: true;
+  userId: true;
+  access_token: true;
+  refresh_token: true;
+  expires_at: true;
+};
+
+type SequenceMailboxWithMailbox = {
+  mailbox: {
+    id: string;
+    userId: string;
+    access_token: string;
+    refresh_token: string;
+    expires_at: number | null;
+  };
+};
+
+/**
+ * Check if the access token needs to be refreshed
+ * Refreshes token if it's about to expire within 5 minutes
+ */
+export function shouldRefreshToken(credentials: MailboxCredentials): boolean {
+  const expiryDate = credentials.expiryDate
+    ? credentials.expiryDate * 1000
+    : new Date().getTime();
+
+  const now = new Date().getTime() + 5 * 60 * 1000; // 5 minutes buffer
+  const needsRefresh = Boolean(expiryDate && expiryDate < now);
+
+  if (needsRefresh) {
+  }
+
+  return needsRefresh;
+}
+
+/**
+ * Refresh the access token if needed for email operations
+ * Returns the current valid access token (either refreshed or existing)
+ */
+export async function refreshEmailTokenIfNeeded(
+  credentials: MailboxCredentials
+): Promise<string> {
+  try {
+    if (shouldRefreshToken(credentials)) {
+      console.log("🔄 Attempting to refresh email access token", {
+        userId: credentials.userId,
+      });
+
+      const newAccessToken = await refreshEmailAccessToken(
+        credentials.userId,
+        credentials.refreshToken
+      );
+
+      if (!newAccessToken) {
+        throw new Error("Failed to refresh email access token");
+      }
+
+      console.log("✅ Email access token refreshed successfully", {
+        userId: credentials.userId,
+      });
+
+      return newAccessToken;
+    }
+
+    return credentials.accessToken;
+  } catch (error) {
+    console.error("❌ Failed to refresh email access token", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: credentials.userId,
+    });
+    throw error;
+  }
 }
 
 export async function getGmailClient(accessToken: string) {
@@ -142,17 +229,31 @@ export async function getGmailThread(accessToken: string, threadId: string) {
   return response.data;
 }
 
-export async function getGmailSubject(gmail: gmail_v1.Gmail, threadId: string) {
-  const thread = await gmail.users.threads.get({
-    userId: "me",
-    id: threadId,
-    format: "metadata",
-    metadataHeaders: ["subject"],
-  });
+export async function getGmailSubject(
+  gmail: gmail_v1.Gmail,
+  threadId: string
+): Promise<string | undefined> {
+  try {
+    const thread = await gmail.users.threads.get({
+      userId: "me",
+      id: threadId,
+      format: "metadata",
+      metadataHeaders: ["subject"],
+    });
 
-  return thread.data.messages?.[0]?.payload?.headers?.find(
-    (header: any) => header.name.toLowerCase() === "subject"
-  )?.value;
+    const subject = thread.data.messages?.[0]?.payload?.headers?.find(
+      (header: any) => header.name.toLowerCase() === "subject"
+    )?.value;
+
+    return subject || undefined;
+  } catch (error) {
+    console.error("Failed to get Gmail subject", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      threadId,
+    });
+    return undefined;
+  }
 }
 
 export async function updateEmailSubject(
@@ -163,27 +264,72 @@ export async function updateEmailSubject(
     // Get the email tracking record
     const emailTracking = await prisma.emailTracking.findUnique({
       where: { id: trackingId },
-      select: { threadId: true, subject: true },
+      select: {
+        threadId: true,
+        subject: true,
+        sequenceId: true,
+      },
     });
 
     if (!emailTracking?.threadId || emailTracking.subject) {
       return; // No threadId or already has subject
     }
 
-    const gmail = await getGmailClient(accessToken);
+    // Get sequence mailbox for credentials
+    const sequenceMailbox = (await prisma.sequenceMailbox.findUnique({
+      where: { sequenceId: emailTracking.sequenceId! },
+      include: {
+        mailbox: {
+          select: {
+            id: true,
+            userId: true,
+            access_token: true,
+            refresh_token: true,
+            expires_at: true,
+          },
+        },
+      },
+    })) as SequenceMailboxWithMailbox | null;
+
+    if (
+      !sequenceMailbox?.mailbox?.access_token ||
+      !sequenceMailbox.mailbox.refresh_token
+    ) {
+      console.error("No valid mailbox credentials found for sequence", {
+        sequenceId: emailTracking.sequenceId,
+        trackingId,
+      });
+      return;
+    }
+
+    // Prepare credentials for token refresh
+    const credentials: MailboxCredentials = {
+      mailboxId: sequenceMailbox.mailbox.id,
+      userId: sequenceMailbox.mailbox.userId,
+      accessToken: sequenceMailbox.mailbox.access_token,
+      refreshToken: sequenceMailbox.mailbox.refresh_token,
+      expiryDate: sequenceMailbox.mailbox.expires_at,
+    };
+
+    // Get fresh access token using email-specific refresh
+    const freshAccessToken = await refreshEmailTokenIfNeeded(credentials);
+
+    // Get Gmail client with fresh token
+    const gmail = await getGmailEmailClient(freshAccessToken);
     const subject = await getGmailSubject(gmail, emailTracking.threadId);
 
-    if (subject) {
-      // Update the email tracking record with the subject
+    if (typeof subject === "string") {
       await prisma.emailTracking.update({
         where: { id: trackingId },
         data: { subject },
       });
     }
-
-    return subject;
   } catch (error) {
-    console.error("Error updating email subject:", error);
+    console.error("Failed to update email subject", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      trackingId,
+    });
     throw error;
   }
 }
