@@ -50,22 +50,34 @@ export function EmailDetailsDrawer({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-[600px]">
+      <SheetContent className="w-full sm:max-w-[800px]">
         <SheetHeader>
-          <SheetTitle>Email Details</SheetTitle>
+          <SheetTitle className="text-xl">{email.subject}</SheetTitle>
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
           <div className="space-y-6 py-6">
             {/* Email Info */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium mb-2">Subject</h3>
-                <p className="text-sm text-muted-foreground">{email.subject}</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 flex items-center gap-2">
+                {replyEvents.length > 0 && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Mail className="h-3 w-3" />
+                    Replied
+                  </Badge>
+                )}
+                {bounceEvents.length > 0 && (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Bounced
+                  </Badge>
+                )}
               </div>
-              <div>
-                <h3 className="text-sm font-medium mb-2">Recipient</h3>
-                <p className="text-sm text-muted-foreground">
+              <div className="space-y-1">
+                <h3 className="text-xs font-medium text-muted-foreground">
+                  Recipient
+                </h3>
+                <p className="text-sm">
                   {email.contact ? (
                     <span>
                       {email.contact.name} ({email.contact.email})
@@ -75,61 +87,51 @@ export function EmailDetailsDrawer({
                   )}
                 </p>
               </div>
-              <div>
-                <h3 className="text-sm font-medium mb-2">Message ID</h3>
-                <p className="text-sm font-mono text-muted-foreground">
-                  {email.messageId}
-                </p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium mb-2">Sent At</h3>
-                <p className="text-sm text-muted-foreground">
+              <div className="space-y-1">
+                <h3 className="text-xs font-medium text-muted-foreground">
+                  Sent At
+                </h3>
+                <p className="text-sm">
                   {format(new Date(email.sentAt!), "PPpp")}
                 </p>
+              </div>
+              <div className="col-span-2 space-y-1">
+                <h3 className="text-xs font-medium text-muted-foreground">
+                  Message ID
+                </h3>
+                <p className="text-sm font-mono break-all">{email.messageId}</p>
               </div>
             </div>
 
             <Separator />
 
             {/* Stats */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">Statistics</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Eye className="h-4 w-4" />
-                      Opens
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <div className="text-2xl font-bold">
-                      {openEvents.length}
-                    </div>
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Quick Stats</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 rounded-lg border p-2">
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="font-medium">{openEvents.length} opens</div>
                     {openEvents.length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        First opened{" "}
+                        First:{" "}
                         {formatDistanceToNow(
                           new Date(openEvents[openEvents.length - 1].timestamp),
                           { addSuffix: true }
                         )}
                       </p>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <MousePointerClick className="h-4 w-4" />
-                      Clicks
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <div className="text-2xl font-bold">{totalClicks}</div>
+                <div className="flex items-center gap-2 rounded-lg border p-2">
+                  <MousePointerClick className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="font-medium">{totalClicks} clicks</div>
                     {clickEvents.length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        First clicked{" "}
+                        First:{" "}
                         {formatDistanceToNow(
                           new Date(
                             clickEvents[clickEvents.length - 1].timestamp
@@ -138,28 +140,9 @@ export function EmailDetailsDrawer({
                         )}
                       </p>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
-            </div>
-
-            <Separator />
-
-            {/* Status Badges */}
-            <div className="flex flex-wrap gap-2">
-              {replyEvents.length > 0 && (
-                <Badge variant="secondary" className="gap-1">
-                  <Mail className="h-3 w-3" />
-                  Replied
-                </Badge>
-              )}
-
-              {bounceEvents.length > 0 && (
-                <Badge variant="destructive" className="gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Bounced
-                </Badge>
-              )}
             </div>
 
             <Separator />

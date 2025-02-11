@@ -163,6 +163,7 @@ export class EmailService {
               userId: "me",
               id: response.data.id,
             });
+
             logger.info("✅ Original tracked message deleted from sent folder");
           } catch (err) {
             logger.error("Error deleting original tracked message:", err);

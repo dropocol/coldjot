@@ -2,8 +2,6 @@ import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { getGmailEmail, updateEmailSubject } from "@/lib/google/gmail";
 import type { EmailTracking, EmailEvent, TrackedLink } from "@/types/email";
-import type { JsonValue } from "@prisma/client/runtime/library";
-
 // Helper function to transform raw email data
 function transformEmailData(email: any): EmailTracking {
   // Calculate opens from events
