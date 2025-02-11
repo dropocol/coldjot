@@ -55,7 +55,7 @@ export class JobManager {
 - Delay (ms): ${delay}
 - Delay (minutes): ${(delay / (1000 * 60)).toFixed(2)}
 - To: ${job.to}
-- Subject: ${job.subject}
+- Subject: Removed from interface
 ---`);
     }
 

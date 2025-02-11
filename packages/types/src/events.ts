@@ -6,6 +6,7 @@ export interface EmailTrackingMetadata {
   sequenceId?: string;
   stepId?: string;
   contactId?: string;
+  subject?: string;
   [key: string]: any;
 }
 

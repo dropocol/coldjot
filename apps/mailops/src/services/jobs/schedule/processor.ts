@@ -432,9 +432,10 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       const previousStepIndex = currentStep.order - 1;
       const previousSubject = sequence.steps[previousStepIndex]?.subject || "";
 
-      const subject = currentStep.replyToThread
-        ? `Re: ${previousSubject}`
-        : currentStep.subject;
+      // TODO : This should be handled in the email processor for better accuracy
+      // const subject = currentStep.replyToThread
+      //   ? `Re: ${previousSubject}`
+      //   : currentStep.subject;
 
       // Get threadId from SequenceContact if it exists
       const sequenceContact = await prisma.sequenceContact.findUnique({
@@ -461,7 +462,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
           willUseThreadId: currentStep.replyToThread
             ? sequenceContact?.threadId
             : undefined,
-          subject,
+          // subject,
           previousSubject,
           stepOrder: currentStep.order,
         },
@@ -487,7 +488,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         userId: sequence.userId,
         sequenceMailboxId: sequence.sequenceMailboxId,
         to: contact.email,
-        subject: subject || currentStep.subject || "",
+        // subject: subject || currentStep.subject || "",
         threadId:
           currentStep.replyToThread && sequenceContact?.threadId
             ? sequenceContact.threadId

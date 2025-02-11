@@ -21,7 +21,7 @@ export interface EmailJob {
   messageId?: string;
   scheduledTime?: string;
   to: string;
-  subject?: string;
+  // subject?: string;
   threadId?: string;
   testMode?: boolean;
   disableSending?: boolean;

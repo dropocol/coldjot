@@ -58,21 +58,22 @@ model Session {
 }
 
 model Contact {
-    id          String            @id @default(cuid())
-    firstName   String
-    lastName    String
-    name        String
-    email       String            @unique
-    userId      String
-    createdAt   DateTime          @default(now())
-    updatedAt   DateTime          @updatedAt
-    contacts    SequenceContact[] @relation("ContactToSequence")
-    stats       SequenceStats[]
-    user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-    drafts      Draft[]
-    emailLists  EmailList[]       @relation("EmailListContacts")
-    EmailEvent  EmailEvent[]
-    EmailThread EmailThread[]
+    id            String            @id @default(cuid())
+    firstName     String
+    lastName      String
+    name          String
+    email         String            @unique
+    userId        String
+    createdAt     DateTime          @default(now())
+    updatedAt     DateTime          @updatedAt
+    contacts      SequenceContact[] @relation("ContactToSequence")
+    stats         SequenceStats[]
+    user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    drafts        Draft[]
+    emailLists    EmailList[]       @relation("EmailListContacts")
+    EmailEvent    EmailEvent[]
+    EmailThread   EmailThread[]
+    EmailTracking EmailTracking[]
 
     @@index([userId])
 }
@@ -82,13 +83,14 @@ model Template {
     userId  String
     name    String
     subject String @default("")
-    content String
+    content String @default("")
 
-    createdAt    DateTime       @default(now())
-    updatedAt    DateTime       @updatedAt
-    user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-    drafts       Draft[]
-    SequenceStep SequenceStep[]
+    createdAt     DateTime        @default(now())
+    updatedAt     DateTime        @updatedAt
+    user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+    drafts        Draft[]
+    SequenceStep  SequenceStep[]
+    EmailTracking EmailTracking[]
 }
 
 model Draft {
@@ -150,6 +152,7 @@ model Sequence {
     EmailThread     EmailThread[]
     businessHours   BusinessHours?
     SequenceHealth  SequenceHealth?
+    EmailTracking   EmailTracking[]
 
     @@index([userId])
 }
@@ -162,7 +165,7 @@ model SequenceStep {
     timing           String    @default("immediate")
     delayAmount      Int?
     delayUnit        String?
-    subject          String?
+    subject          String?   @default("")
     content          String?   @db.Text
     includeSignature Boolean   @default(true)
     note             String?   @db.Text
@@ -271,8 +274,20 @@ model EmailTracking {
     createdAt  DateTime  @default(now())
     updatedAt  DateTime  @updatedAt
 
-    links  TrackedLink[]
-    events EmailEvent[]
+    // New fields
+    subject String @default("")
+    // previewText String? // Email preview text
+    // templateId  String? // Reference to the template used
+
+    // Relations
+    links      TrackedLink[]
+    events     EmailEvent[]
+    contact    Contact?      @relation(fields: [contactId], references: [id])
+    sequence   Sequence?     @relation(fields: [sequenceId], references: [id])
+    // template Template?     @relation(fields: [templateId], references: [id])
+    // @@index([templateId])
+    Template   Template?     @relation(fields: [templateId], references: [id])
+    templateId String?
 
     @@index([messageId])
     @@index([threadId])
@@ -280,20 +295,22 @@ model EmailTracking {
     @@index([status])
     @@index([sequenceId])
     @@index([userId])
+    @@index([contactId])
 }
 
 model EmailEvent {
-    id         String   @id @default(cuid())
-    trackingId String
-    type       String
-    metadata   Json?
-    timestamp  DateTime @default(now())
+    id        String   @id @default(cuid())
+    type      String
+    metadata  Json?
+    timestamp DateTime @default(now())
 
-    tracking   EmailTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
-    Contact    Contact?      @relation(fields: [contactId], references: [id])
+    trackingId String
     contactId  String?
-    Sequence   Sequence?     @relation(fields: [sequenceId], references: [id])
     sequenceId String?
+
+    Contact  Contact?      @relation(fields: [contactId], references: [id])
+    Sequence Sequence?     @relation(fields: [sequenceId], references: [id])
+    tracking EmailTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
 
     @@index([trackingId])
     @@index([type])

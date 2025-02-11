@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import ListDetailsView from "../../../components/lists/list-details-view";
+import ListDetailsView from "@/components/lists/list-details-view";
 
 export const metadata: Metadata = {
   title: "List Details",

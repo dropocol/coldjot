@@ -26,6 +26,8 @@ import { getWorkerOptions } from "@/config";
 import { ScheduleGenerator, scheduleGenerator } from "@/lib/schedule";
 import { replacePlaceholders, validatePlaceholders } from "@/lib/placeholders";
 import { getSequenceMailboxWithId } from "@/lib/mailbox";
+import { gmailClientService } from "@/lib/google";
+import { determineEmailSubject } from "@/lib/email-subject";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
   private serviceManager = ServiceManager.getInstance();
@@ -85,6 +87,10 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         step.content = template.content;
       }
 
+      if (step.replyToThread) {
+        // Get original subject from thread
+      }
+
       // Get contact info
       // TODO : Check if the contact is available
       logger.info(`🔍 Fetching contact info ${data.contactId}`);
@@ -110,27 +116,23 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         return { success: false, error: "No valid mailbox found" };
       }
 
-      // Create tracking metadata
-      logger.info("📊 Creating tracking metadata");
-      const trackingMetadata: EmailTrackingMetadata = {
-        email: data.to,
-        userId: data.userId,
-        sequenceId: data.sequenceId,
-        stepId: data.stepId,
-        contactId: data.contactId,
-      };
+      // Get Gmail client for subject fetching if needed
+      const gmail =
+        step.replyToThread && mailbox
+          ? await gmailClientService.getClient(data.userId, mailbox.id!)
+          : undefined;
 
-      // Create tracking object
-      const tracking = await createEmailTracking(trackingMetadata);
-      if (!tracking) {
-        throw new Error("Failed to create tracking information");
-      }
-
-      // Replace placeholders in subject and content
-      const processedSubject = replacePlaceholders(
-        data.subject || step.subject || "",
-        { contact }
+      // Determine email subject based on context
+      const subjectInfo = await determineEmailSubject(
+        step,
+        data.threadId,
+        gmail,
+        contact
       );
+
+      logger.info({ subjectInfo }, "📧 Determined email subject");
+
+      // Replace placeholders in content
       const processedContent = replacePlaceholders(step.content || "", {
         contact,
       });
@@ -149,20 +151,38 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         );
       }
 
+      // Create tracking metadata
+      logger.info("📊 Creating tracking metadata");
+      const trackingMetadata: EmailTrackingMetadata = {
+        email: data.to,
+        userId: data.userId,
+        sequenceId: data.sequenceId,
+        stepId: data.stepId,
+        contactId: data.contactId,
+        subject: subjectInfo.subject, // Use the determined subject
+      };
+
+      // Create tracking object
+      const tracking = await createEmailTracking(trackingMetadata);
+      if (!tracking) {
+        throw new Error("Failed to create tracking information");
+      }
+
       // Prepare email options
       logger.info(
         {
           to: data.to,
-          subject: processedSubject,
+          subject: subjectInfo.subject,
           threadId: data.threadId,
           testMode: data.testMode,
           disableSending: data.disableSending,
         },
         "📧 Preparing email options"
       );
+
       const emailOptions: SendEmailOptions = {
         to: data.to,
-        subject: processedSubject,
+        subject: subjectInfo.subject,
         html: processedContent,
         replyTo: mailbox.email || "",
         threadId: data.threadId || "",
@@ -209,7 +229,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
               contactId: data.contactId,
               userId: data.userId,
               firstMessageId: emailResult.messageId!,
-              subject: data.subject || step.subject || "",
+              subject: subjectInfo.originalSubject || "",
               isFake: emailResult.isFake ?? false,
             },
           });
@@ -246,9 +266,9 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     if (!data.to) {
       throw new Error("Email recipient is required");
     }
-    if (!data.subject) {
-      throw new Error("Email subject is required");
-    }
+    // if (!data.subject) {
+    //   throw new Error("Email subject is required");
+    // }
     if (!data.userId) {
       throw new Error("User ID is required");
     }
