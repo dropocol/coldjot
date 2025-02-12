@@ -15,7 +15,7 @@ import {
   generateDemoChartData,
 } from "@/components/stats/demo-data";
 import { startOfToday, startOfWeek, subDays } from "date-fns";
-import { TimelineSection } from "@/components/sequences/timeline/timeline-section";
+import { RecentEmails } from "@/components/sequences/timeline/recent-emails";
 
 // Demo mode for development and preview
 const DEMO_MODE = false;
@@ -255,13 +255,7 @@ export default async function Home({
 
       <StatsChartSection data={chartData} />
 
-      <div className="p-0">
-        <h2 className="text-lg font-semibold">Timeline</h2>
-        <p className="text-sm text-muted-foreground">
-          See the timeline of your email campaigns
-        </p>
-      </div>
-      <TimelineSection userId={session.user.id} />
+      <RecentEmails userId={session.user.id} />
     </div>
   );
 }
