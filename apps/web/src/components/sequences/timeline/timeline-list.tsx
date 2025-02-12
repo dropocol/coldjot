@@ -10,7 +10,8 @@ import { useSearchParams } from "next/navigation";
 import type { EmailTracking } from "@/types/email";
 
 interface TimelineListProps {
-  sequenceId: string;
+  sequenceId?: string;
+  userId?: string;
 }
 
 interface TimelineResponse {
@@ -22,7 +23,7 @@ interface TimelineResponse {
   nextPage: number | undefined;
 }
 
-export function TimelineList({ sequenceId }: TimelineListProps) {
+export function TimelineList({ sequenceId, userId }: TimelineListProps) {
   const searchParams = useSearchParams();
   const [selectedEmail, setSelectedEmail] = useState<EmailTracking | null>(
     null
@@ -40,10 +41,13 @@ export function TimelineList({ sequenceId }: TimelineListProps) {
     if (date) queryParams.set("date", date);
     queryParams.set("page", context.pageParam.toString());
     queryParams.set("limit", "20");
+    if (userId) queryParams.set("userId", userId);
 
-    const response = await fetch(
-      `/api/sequences/${sequenceId}/timeline?${queryParams.toString()}`
-    );
+    const endpoint = sequenceId
+      ? `/api/sequences/${sequenceId}/timeline`
+      : `/api/timeline`;
+
+    const response = await fetch(`${endpoint}?${queryParams.toString()}`);
 
     if (!response.ok) {
       throw new Error("Failed to fetch timeline data");
@@ -54,7 +58,7 @@ export function TimelineList({ sequenceId }: TimelineListProps) {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery({
-      queryKey: ["timeline", sequenceId, searchParams.toString()],
+      queryKey: ["timeline", sequenceId, userId, searchParams.toString()],
       queryFn: fetchTimelineData,
       initialPageParam: 1,
       getNextPageParam: (lastPage: TimelineResponse) =>

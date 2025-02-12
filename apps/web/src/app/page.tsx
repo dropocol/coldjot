@@ -1,8 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Mail, Users, FileText, Building2 } from "lucide-react";
 import { StatsGrid } from "@/components/stats/stats-grid";
 import { StatsChartSection } from "@/components/stats/stats-chart-section";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +15,7 @@ import {
   generateDemoChartData,
 } from "@/components/stats/demo-data";
 import { startOfToday, startOfWeek, subDays } from "date-fns";
+import { TimelineSection } from "@/components/sequences/timeline/timeline-section";
 
 // Demo mode for development and preview
 const DEMO_MODE = false;
@@ -256,47 +255,13 @@ export default async function Home({
 
       <StatsChartSection data={chartData} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Link href="/sequences">
-          <Button
-            variant="outline"
-            className="w-full h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <Mail className="h-8 w-8" />
-            <span>Email Sequences</span>
-          </Button>
-        </Link>
-
-        <Link href="/contacts">
-          <Button
-            variant="outline"
-            className="w-full h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <Users className="h-8 w-8" />
-            <span>Contacts</span>
-          </Button>
-        </Link>
-
-        <Link href="/templates">
-          <Button
-            variant="outline"
-            className="w-full h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <FileText className="h-8 w-8" />
-            <span>Templates</span>
-          </Button>
-        </Link>
-
-        <Link href="/organizations">
-          <Button
-            variant="outline"
-            className="w-full h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <Building2 className="h-8 w-8" />
-            <span>Organizations</span>
-          </Button>
-        </Link>
+      <div className="p-0">
+        <h2 className="text-lg font-semibold">Timeline</h2>
+        <p className="text-sm text-muted-foreground">
+          See the timeline of your email campaigns
+        </p>
       </div>
+      <TimelineSection userId={session.user.id} />
     </div>
   );
 }

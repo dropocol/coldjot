@@ -17,6 +17,7 @@ interface TimelineHeaderProps {
   isLoading?: boolean;
   onRefresh?: () => void;
   onExport?: () => void;
+  isUserTimeline?: boolean;
 }
 
 export function TimelineHeader({
@@ -24,23 +25,14 @@ export function TimelineHeader({
   isLoading,
   onRefresh,
   onExport,
+  isUserTimeline = false,
 }: TimelineHeaderProps) {
   const router = useRouter();
 
   return (
-    <div className="space-y-4 border-b pb-4 flex items-center justify-between">
-      <TimelineFilters />
+    <div className="space-y-4 border-b pb-4">
       <div className="flex items-center justify-between">
-        {/* <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {sequence.name}
-          </h1>
-          {sequence.emailList && (
-            <p className="text-sm text-muted-foreground">
-              Sending to list: {sequence.emailList.name}
-            </p>
-          )}
-        </div> */}
+        <TimelineFilters />
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
