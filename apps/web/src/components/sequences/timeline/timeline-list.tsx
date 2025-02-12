@@ -124,28 +124,6 @@ export function TimelineList({ sequenceId, userId }: TimelineListProps) {
     setIsInfiniteScroll((prev) => !prev);
   };
 
-  if (
-    (!isInfiniteScroll && paginationQuery.isLoading) ||
-    (isInfiniteScroll && infiniteQuery.isLoading)
-  ) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (
-    (!isInfiniteScroll && paginationQuery.isError) ||
-    (isInfiniteScroll && infiniteQuery.isError)
-  ) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        Failed to load timeline data
-      </div>
-    );
-  }
-
   const renderEmails = () => {
     if (isInfiniteScroll) {
       const emails =
@@ -189,35 +167,61 @@ export function TimelineList({ sequenceId, userId }: TimelineListProps) {
     ));
   };
 
+  if (
+    (!isInfiniteScroll && paginationQuery.isLoading) ||
+    (isInfiniteScroll && infiniteQuery.isLoading)
+  ) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (
+    (!isInfiniteScroll && paginationQuery.isError) ||
+    (isInfiniteScroll && infiniteQuery.isError)
+  ) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Failed to load timeline data
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="space-y-4">
-        {renderEmails()}
-        <PaginationControls
-          currentPage={page}
-          totalPages={Math.ceil(
-            (isInfiniteScroll
-              ? infiniteQuery.data?.pages[0]?.total
-              : paginationQuery.data?.total) ?? 0 / limit
-          )}
-          pageSize={limit}
-          totalItems={
-            isInfiniteScroll
-              ? (infiniteQuery.data?.pages[0]?.total ?? 0)
-              : (paginationQuery.data?.total ?? 0)
-          }
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-          isInfiniteScroll={isInfiniteScroll}
-          onScrollModeToggle={toggleScrollMode}
-          isLoading={
-            (!isInfiniteScroll && paginationQuery.isLoading) ||
-            (isInfiniteScroll && infiniteQuery.isLoading)
-          }
-          hasNextPage={infiniteQuery.hasNextPage}
-          isFetchingNextPage={infiniteQuery.isFetchingNextPage}
-          infiniteScrollRef={isInfiniteScroll ? ref : undefined}
-        />
+      <div className="h-full flex flex-col space-y-12">
+        <div className="flex-1 overflow-auto min-h-0">
+          <div className="space-y-4">{renderEmails()}</div>
+        </div>
+        <div className="flex-none">
+          <PaginationControls
+            currentPage={page}
+            totalPages={Math.ceil(
+              (isInfiniteScroll
+                ? infiniteQuery.data?.pages[0]?.total
+                : paginationQuery.data?.total) ?? 0 / limit
+            )}
+            pageSize={limit}
+            totalItems={
+              isInfiniteScroll
+                ? (infiniteQuery.data?.pages[0]?.total ?? 0)
+                : (paginationQuery.data?.total ?? 0)
+            }
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            isInfiniteScroll={isInfiniteScroll}
+            onScrollModeToggle={toggleScrollMode}
+            isLoading={
+              (!isInfiniteScroll && paginationQuery.isLoading) ||
+              (isInfiniteScroll && infiniteQuery.isLoading)
+            }
+            hasNextPage={infiniteQuery.hasNextPage}
+            isFetchingNextPage={infiniteQuery.isFetchingNextPage}
+            infiniteScrollRef={isInfiniteScroll ? ref : undefined}
+          />
+        </div>
       </div>
 
       <EmailDetailsDrawer

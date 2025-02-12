@@ -145,8 +145,17 @@ export async function GET(req: Request) {
       return dateB - dateA;
     });
 
+    // return NextResponse.json({
+    //   emails: Array(30).fill(emails).flat(),
+    //   total: 200,
+    //   page: 1,
+    //   limit: 20,
+    //   hasMore: skip + emails.length < total,
+    //   nextPage: skip + emails.length < total ? page + 1 : undefined,
+    // });
+
     return NextResponse.json({
-      emails,
+      emails: Array(100).fill(emails).flat(),
       total,
       page,
       limit,

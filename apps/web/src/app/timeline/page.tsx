@@ -19,18 +19,18 @@ export default function TimelinePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-8 space-y-6">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+    <main className="max-w-5xl mx-auto overflow-hidden py-8">
+      <div className="relative">
+        <div className="bg-background z-10">
           <PageHeader
             title="Timeline"
             description="View and manage your email campaign timeline."
           />
+          <Separator className="mt-6" />
         </div>
-        <Separator />
-      </div>
 
-      <TimelineSection userId={session.user.id} />
-    </div>
+        <TimelineSection userId={session.user.id} />
+      </div>
+    </main>
   );
 }

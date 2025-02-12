@@ -46,7 +46,7 @@ export function TimelineSection({ userId }: TimelineSectionProps) {
   }, [userId]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 py-8">
       <TimelineHeader
         sequence={{
           id: userId,
