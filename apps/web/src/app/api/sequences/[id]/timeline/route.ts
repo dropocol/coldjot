@@ -124,9 +124,14 @@ export async function GET(
           },
           links: true,
         },
-        orderBy: {
-          sentAt: "desc",
-        },
+        orderBy: [
+          {
+            sentAt: "desc",
+          },
+          {
+            createdAt: "desc",
+          },
+        ],
         skip,
         take: limit,
       }),

@@ -1,6 +1,5 @@
 export const CONTACT_PROCESSING_CONFIG = {
-  // TODO: Change to 1 minute
-  CHECK_INTERVAL: 15000, // 5 seconds
+  CHECK_INTERVAL: 15000, // 15 seconds
   BATCH_SIZE: 100,
 } as const;
 

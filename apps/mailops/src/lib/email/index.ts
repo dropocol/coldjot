@@ -171,7 +171,7 @@ export class EmailService {
         }
 
         // Create tracking records
-        // TODO : The emailId should be the messageId or something else
+
         // TODO : Update createEmailTrackingRecord with trackingId, sequenceId, contactId, stepId etc
 
         // TODO : Check the code again
