@@ -10,27 +10,32 @@ function transformEmailData(email: any): EmailTracking {
 
   // Sort events by timestamp to get the first open
   const sortedOpenEvents = [...openEvents].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
   const firstOpenAt =
     sortedOpenEvents.length > 0
-      ? new Date(sortedOpenEvents[0].timestamp)
+      ? new Date(sortedOpenEvents[sortedOpenEvents.length - 1].timestamp)
       : null;
 
   // Calculate clicks from events and links
   const clickEvents = email.events.filter((e: any) => e.type === "clicked");
   const sortedClickEvents = [...clickEvents].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
   const firstClickAt =
     sortedClickEvents.length > 0
-      ? new Date(sortedClickEvents[0].timestamp)
+      ? new Date(sortedClickEvents[sortedClickEvents.length - 1].timestamp)
       : null;
 
   // Calculate total clicks from links
   const totalClicks = email.links.reduce((total: number, link: any) => {
     return total + (link.clickCount || 0);
   }, 0);
+
+  // Get sent timestamp from events or fallback to email.sentAt
+  const sentEvent = email.events.find((e: any) => e.type === "sent");
+  const sentAt =
+    email.sentAt || (sentEvent ? new Date(sentEvent.timestamp) : null);
 
   return {
     id: email.id,
@@ -45,9 +50,7 @@ function transformEmailData(email: any): EmailTracking {
     contactId: email.contactId,
     userId: email.userId || "",
     openCount: openCount,
-    sentAt:
-      email.sentAt ||
-      new Date(email.events.find((e: any) => e.type === "sent")?.timestamp),
+    sentAt: sentAt,
     openedAt: firstOpenAt,
     clickedAt: firstClickAt,
     createdAt: email.createdAt,
@@ -140,8 +143,6 @@ export async function GET(
 
     // Update missing subjects if we have access to Gmail
     if (sequenceMailbox?.mailbox?.access_token) {
-      console.log("Updating missing subjects");
-
       await Promise.all(
         rawEmails
           .filter((email) => !email.subject && email.threadId)
@@ -171,10 +172,22 @@ export async function GET(
           },
           links: true,
         },
+        orderBy: [
+          {
+            sentAt: "desc",
+          },
+          {
+            createdAt: "desc",
+          },
+        ],
       });
 
-      // Transform updated emails
-      const emails = updatedEmails.map(transformEmailData);
+      // Transform and sort updated emails
+      const emails = updatedEmails.map(transformEmailData).sort((a, b) => {
+        const dateA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+        const dateB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+        return dateB - dateA;
+      });
 
       return NextResponse.json({
         emails,
@@ -186,8 +199,12 @@ export async function GET(
       });
     }
 
-    // If no Gmail access, just return the raw emails
-    const emails = rawEmails.map(transformEmailData);
+    // If no Gmail access, transform and sort the raw emails
+    const emails = rawEmails.map(transformEmailData).sort((a, b) => {
+      const dateA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+      const dateB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
     return NextResponse.json({
       emails,
