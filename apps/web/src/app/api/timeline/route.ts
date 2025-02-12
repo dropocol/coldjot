@@ -155,7 +155,7 @@ export async function GET(req: Request) {
     // });
 
     return NextResponse.json({
-      emails: Array(100).fill(emails).flat(),
+      emails,
       total,
       page,
       limit,

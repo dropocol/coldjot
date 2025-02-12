@@ -18,6 +18,16 @@ export async function determineEmailSubject(
   gmail?: gmail_v1.Gmail,
   contact?: Contact
 ): Promise<SubjectInfo> {
+  // Process subject with placeholders
+  const processSubject = (subject: string) => {
+    return contact
+      ? replacePlaceholders(subject, {
+          contact,
+          fallbacks: {},
+        })
+      : subject;
+  };
+
   try {
     // Determine if this is the first email by checking existing emails in thread
     let isFirstEmail = true;
@@ -30,12 +40,7 @@ export async function determineEmailSubject(
 
     // Case 1: First email in sequence or non-reply step
     if (isFirstEmail || !step.replyToThread) {
-      const processedSubject = contact
-        ? replacePlaceholders(step.subject || "No Subject", {
-            contact,
-            fallbacks: {},
-          })
-        : step.subject || "No Subject";
+      const processedSubject = processSubject(step.subject || "No Subject");
       return {
         subject: processedSubject,
         isReply: false,
@@ -53,9 +58,13 @@ export async function determineEmailSubject(
         });
 
         if (emailThread?.subject) {
-          const subject = emailThread.subject.startsWith("Re:")
-            ? emailThread.subject
-            : `Re: ${emailThread.subject}`;
+          // Process the subject before adding Re:
+          const processedSubject = processSubject(
+            step.subject || emailThread.subject
+          );
+          const subject = processedSubject.startsWith("Re:")
+            ? processedSubject
+            : `Re: ${processedSubject}`;
 
           return {
             subject,
@@ -75,9 +84,13 @@ export async function determineEmailSubject(
         });
 
         if (emailTracking?.subject) {
-          const subject = emailTracking.subject.startsWith("Re:")
-            ? emailTracking.subject
-            : `Re: ${emailTracking.subject}`;
+          // Process the subject before adding Re:
+          const processedSubject = processSubject(
+            step.subject || emailTracking.subject
+          );
+          const subject = processedSubject.startsWith("Re:")
+            ? processedSubject
+            : `Re: ${processedSubject}`;
 
           return {
             subject,
@@ -95,15 +108,17 @@ export async function determineEmailSubject(
         if (!threadSubject) {
           logger.warn("No subject found in thread, using step subject");
           return {
-            subject: step.subject || "No Subject",
+            subject: processSubject(step.subject || "No Subject"),
             isReply: false,
           };
         }
 
+        // Process the subject before adding Re:
+        const processedSubject = processSubject(step.subject || threadSubject);
         return {
-          subject: threadSubject.startsWith("Re:")
-            ? threadSubject
-            : `Re: ${threadSubject}`,
+          subject: processedSubject.startsWith("Re:")
+            ? processedSubject
+            : `Re: ${processedSubject}`,
           isReply: true,
           originalSubject: threadSubject,
         };
@@ -112,7 +127,7 @@ export async function determineEmailSubject(
           error,
         });
         return {
-          subject: step.subject || "No Subject",
+          subject: processSubject(step.subject || "No Subject"),
           isReply: false,
         };
       }
@@ -120,14 +135,14 @@ export async function determineEmailSubject(
 
     // Case 3: Default to step subject for any other case
     return {
-      subject: step.subject || "No Subject",
+      subject: processSubject(step.subject || "No Subject"),
       isReply: false,
     };
   } catch (error) {
     logger.error("Error determining email subject:", error);
     // Fallback to step subject in case of any error
     return {
-      subject: step.subject || "No Subject",
+      subject: processSubject(step.subject || "No Subject"),
       isReply: false,
     };
   }
