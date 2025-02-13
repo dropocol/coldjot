@@ -69,10 +69,24 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const body = await req.json();
+    const json = await req.json();
+    const { firstName, lastName, email } = json;
+
+    // Before creating, check if the contact already exists
+    const existingContact = await prisma.contact.findUnique({
+      where: { email },
+    });
+
+    if (existingContact) {
+      return NextResponse.json(existingContact);
+    }
+
     const contact = await prisma.contact.create({
       data: {
-        ...body,
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`,
+        email,
         userId: session.user.id,
       },
     });
