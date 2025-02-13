@@ -23,6 +23,8 @@ import {
   MoreHorizontal,
   SendHorizonal,
   UserPlus,
+  Plus,
+  User2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -52,6 +54,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import ContactDetailsDrawer from "./contact-details-drawer";
 import { AddToSequenceModal } from "./add-to-sequence-modal";
+import { PaginationControls } from "@/components/pagination";
 
 interface ContactListProps {
   searchQuery?: string;
@@ -59,6 +62,10 @@ interface ContactListProps {
   onSearchEnd?: () => void;
   initialContacts: Contact[];
   onAddContact?: () => void;
+  page: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
 // Helper function to format LinkedIn URL
@@ -85,6 +92,10 @@ export default function ContactList({
   onSearchEnd,
   initialContacts,
   onAddContact,
+  page,
+  limit,
+  onPageChange,
+  onPageSizeChange,
 }: ContactListProps) {
   const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>(initialContacts);
@@ -101,6 +112,7 @@ export default function ContactList({
     useState<Contact | null>(null);
   const [contactToAddToSequence, setContactToAddToSequence] =
     useState<Contact | null>(null);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -111,14 +123,18 @@ export default function ContactList({
       setIsLoading(true);
       onSearchStart?.();
       try {
-        const url =
-          searchQuery.length >= 2
-            ? `/api/contacts/search?q=${encodeURIComponent(searchQuery)}`
-            : "/api/contacts";
+        const queryParams = new URLSearchParams();
+        queryParams.set("page", page.toString());
+        queryParams.set("limit", limit.toString());
+        if (searchQuery.length >= 2) {
+          queryParams.set("q", searchQuery);
+        }
 
+        const url = `/api/contacts?${queryParams.toString()}`;
         const response = await fetch(url);
         const data = await response.json();
-        setContacts(data);
+        setContacts(data.contacts);
+        setTotal(data.total);
       } catch (error) {
         console.error("Failed to fetch contacts:", error);
       } finally {
@@ -131,7 +147,7 @@ export default function ContactList({
     if (searchQuery.length === 0 || searchQuery.length >= 2) {
       fetchContacts();
     }
-  }, [searchQuery, onSearchStart, onSearchEnd, isInitialLoad]);
+  }, [searchQuery, onSearchStart, onSearchEnd, isInitialLoad, page, limit]);
 
   const showLoading = isLoading || isInitialLoad;
   const showEmptyState = !showLoading && contacts.length === 0;
@@ -178,7 +194,7 @@ export default function ContactList({
   };
 
   return (
-    <div>
+    <div className="space-y-4">
       {showLoading ? (
         <div className="flex items-center justify-center py-8">
           <div className="space-y-4 text-center">
@@ -192,14 +208,16 @@ export default function ContactList({
       ) : showEmptyState ? (
         <div className="text-center py-12">
           <div className="flex justify-center mb-4">
-            <UserPlus className="h-12 w-12 text-muted-foreground" />
+            <User2 className="h-12 w-12 text-muted-foreground" />
           </div>
           <h3 className="text-lg font-medium mb-2">Add your first contact</h3>
           <p className="text-muted-foreground mb-4">
-            Start building your network by adding contacts and managing their
-            information in one place.
+            Start adding contacts to manage your email campaigns effectively.
           </p>
-          <Button onClick={onAddContact}>Add Contact</Button>
+          <Button onClick={onAddContact}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
+          </Button>
         </div>
       ) : (
         <>
@@ -350,6 +368,15 @@ export default function ContactList({
               </TableBody>
             </Table>
           </div>
+
+          <PaginationControls
+            currentPage={page}
+            totalPages={Math.ceil(total / limit)}
+            pageSize={limit}
+            totalItems={total}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+          />
         </>
       )}
 

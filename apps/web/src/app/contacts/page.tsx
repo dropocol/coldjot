@@ -9,13 +9,51 @@ import ContactList from "../../components/contacts/contact-list";
 import { Separator } from "@/components/ui/separator";
 import AddContactModal from "@/components/contacts/add-contact-drawer";
 import { Contact } from "@prisma/client";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 export default function ContactsPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
+
+  const page = parseInt(searchParams.get("page") ?? "1");
+  const limit = parseInt(searchParams.get("limit") ?? "20");
+
+  const createQueryString = (params: Record<string, string | null>) => {
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === null) {
+        newSearchParams.delete(key);
+      } else {
+        newSearchParams.set(key, value);
+      }
+    });
+
+    return newSearchParams.toString();
+  };
+
+  const handlePageChange = (newPage: number) => {
+    router.push(
+      `${pathname}?${createQueryString({
+        page: newPage.toString(),
+      })}`
+    );
+  };
+
+  const handlePageSizeChange = (newLimit: number) => {
+    router.push(
+      `${pathname}?${createQueryString({
+        page: "1",
+        limit: newLimit.toString(),
+      })}`
+    );
+  };
 
   const handleSearch = (value: string) => {
     setActiveSearch(value);
@@ -53,6 +91,10 @@ export default function ContactsPage() {
         initialContacts={contacts}
         onSearchEnd={() => setIsSearching(false)}
         onAddContact={() => setShowAddModal(true)}
+        page={page}
+        limit={limit}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
       />
 
       {showAddModal && (

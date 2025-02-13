@@ -11,11 +11,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, FileText, Plus, Eye, ScrollText } from "lucide-react";
+import {
+  Edit2,
+  Trash2,
+  FileText,
+  Plus,
+  Eye,
+  ScrollText,
+  MoreVertical,
+  Copy,
+} from "lucide-react";
 import PreviewTemplateDrawer from "./preview-template-drawer";
 import EditTemplateDrawer from "./edit-template-drawer";
 import DeleteTemplateDialog from "./delete-template-dialog";
 import { toast } from "react-hot-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TemplateListProps {
   searchQuery?: string;
@@ -74,6 +89,33 @@ export default function TemplateList({
 
   const showLoading = isLoading || isInitialLoad;
   const showEmptyState = !showLoading && templates.length === 0;
+
+  const handleDuplicate = async (template: Template) => {
+    try {
+      const response = await fetch("/api/templates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: `${template.name} (Copy)`,
+          subject: template.subject,
+          content: template.content,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to duplicate template");
+      }
+
+      const duplicatedTemplate = await response.json();
+      setTemplates((prev) => [duplicatedTemplate, ...prev]);
+      toast.success("Template duplicated successfully");
+    } catch (error) {
+      console.error("Failed to duplicate template:", error);
+      toast.error("Failed to duplicate template");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -135,20 +177,35 @@ export default function TemplateList({
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditingTemplate(template)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeletingTemplate(template)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setEditingTemplate(template)}
+                            >
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDuplicate(template)}
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDeletingTemplate(template)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
