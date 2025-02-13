@@ -52,7 +52,7 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
       const response = await fetch("/api/sequences");
       if (!response.ok) throw new Error("Failed to fetch sequences");
       const data = await response.json();
-      setSequences(data);
+      setSequences(data.sequences || []);
     } catch (error) {
       console.error("Error fetching sequences:", error);
       toast.error("Failed to load sequences");

@@ -9,6 +9,7 @@ import TemplateList from "@/components/templates/template-list";
 import { Separator } from "@/components/ui/separator";
 import AddTemplateDrawer from "@/components/templates/add-template-drawer";
 import { Template } from "@prisma/client";
+import { usePagination } from "@/hooks/use-pagination";
 
 export default function TemplatesPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,6 +17,7 @@ export default function TemplatesPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const pagination = usePagination({ enableInfiniteScroll: false });
 
   const handleSearch = (value: string) => {
     setActiveSearch(value);
@@ -56,6 +58,10 @@ export default function TemplatesPage() {
         initialTemplates={templates}
         onSearchEnd={() => setIsSearching(false)}
         onAddTemplate={() => setShowAddModal(true)}
+        page={pagination.page}
+        limit={pagination.limit}
+        onPageChange={pagination.onPageChange}
+        onPageSizeChange={pagination.onPageSizeChange}
       />
 
       {showAddModal && (

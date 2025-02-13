@@ -7,12 +7,14 @@ import { LocalSearch } from "@/components/ui/local-search";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import EmailListsView from "../../components/lists/email-list";
+import { usePagination } from "@/hooks/use-pagination";
 
 export default function ListsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const pagination = usePagination({ enableInfiniteScroll: false });
 
   const handleSearch = (value: string) => {
     setActiveSearch(value);
@@ -52,6 +54,10 @@ export default function ListsPage() {
         onSearchEnd={() => setIsSearching(false)}
         showAddModal={showAddModal}
         onAddModalClose={handleToggleModal}
+        page={pagination.page}
+        limit={pagination.limit}
+        onPageChange={pagination.onPageChange}
+        onPageSizeChange={pagination.onPageSizeChange}
       />
     </div>
   );

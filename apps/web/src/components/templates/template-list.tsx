@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Template } from "@prisma/client";
+import { useRouter } from "next/navigation";
+import EditTemplateDrawer from "./edit-template-drawer";
 import {
   Table,
   TableBody,
@@ -22,7 +24,6 @@ import {
   Copy,
 } from "lucide-react";
 import PreviewTemplateDrawer from "./preview-template-drawer";
-import EditTemplateDrawer from "./edit-template-drawer";
 import DeleteTemplateDialog from "./delete-template-dialog";
 import { toast } from "react-hot-toast";
 import {
@@ -31,6 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PaginationControls } from "@/components/pagination";
 
 interface TemplateListProps {
   searchQuery?: string;
@@ -38,6 +40,19 @@ interface TemplateListProps {
   onSearchEnd?: () => void;
   initialTemplates: Template[];
   onAddTemplate?: () => void;
+  page: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}
+
+interface TemplateResponse {
+  templates: Template[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+  nextPage: number | undefined;
 }
 
 export default function TemplateList({
@@ -46,6 +61,10 @@ export default function TemplateList({
   onSearchEnd,
   initialTemplates,
   onAddTemplate,
+  page,
+  limit,
+  onPageChange,
+  onPageSizeChange,
 }: TemplateListProps) {
   const [templates, setTemplates] = useState<Template[]>(initialTemplates);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,6 +74,7 @@ export default function TemplateList({
   const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(
     null
   );
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -65,14 +85,18 @@ export default function TemplateList({
       setIsLoading(true);
       onSearchStart?.();
       try {
-        const url =
-          searchQuery.length >= 2
-            ? `/api/templates/search?q=${encodeURIComponent(searchQuery)}`
-            : "/api/templates";
+        const queryParams = new URLSearchParams();
+        queryParams.set("page", page.toString());
+        queryParams.set("limit", limit.toString());
+        if (searchQuery.length >= 2) {
+          queryParams.set("q", searchQuery);
+        }
 
+        const url = `/api/templates?${queryParams.toString()}`;
         const response = await fetch(url);
-        const data = await response.json();
-        setTemplates(data);
+        const data: TemplateResponse = await response.json();
+        setTemplates(data.templates);
+        setTotal(data.total);
       } catch (error) {
         console.error("Failed to fetch templates:", error);
       } finally {
@@ -85,7 +109,7 @@ export default function TemplateList({
     if (searchQuery.length === 0 || searchQuery.length >= 2) {
       fetchTemplates();
     }
-  }, [searchQuery, onSearchStart, onSearchEnd, isInitialLoad]);
+  }, [searchQuery, onSearchStart, onSearchEnd, isInitialLoad, page, limit]);
 
   const showLoading = isLoading || isInitialLoad;
   const showEmptyState = !showLoading && templates.length === 0;
@@ -213,6 +237,15 @@ export default function TemplateList({
               </TableBody>
             </Table>
           </div>
+
+          <PaginationControls
+            currentPage={page}
+            totalPages={Math.ceil(total / limit)}
+            pageSize={limit}
+            totalItems={total}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+          />
         </>
       )}
 

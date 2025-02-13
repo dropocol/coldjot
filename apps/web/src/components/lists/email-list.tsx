@@ -29,60 +29,78 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
+import { PaginationControls } from "@/components/pagination";
 
 interface EmailListsViewProps {
   searchQuery?: string;
-  onSearchStart?: () => void;
   onSearchEnd?: () => void;
-  showAddModal?: boolean;
-  onAddModalClose?: () => void;
+  showAddModal: boolean;
+  onAddModalClose: () => void;
+  page: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}
+
+type EmailListWithCount = EmailList & {
+  _count: {
+    contacts: number;
+  };
+};
+
+interface ListResponse {
+  lists: EmailListWithCount[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+  nextPage: number | undefined;
 }
 
 const EmailListsView = ({
   searchQuery = "",
-  onSearchStart,
   onSearchEnd,
-  showAddModal = false,
+  showAddModal,
   onAddModalClose,
+  page,
+  limit,
+  onPageChange,
+  onPageSizeChange,
 }: EmailListsViewProps) => {
   const router = useRouter();
-  const [lists, setLists] = useState<EmailList[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [lists, setLists] = useState<EmailListWithCount[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLists = async () => {
-    onSearchStart?.();
-    try {
-      setError(null);
-      const url =
-        searchQuery.length >= 2
-          ? `/api/lists/search?q=${encodeURIComponent(searchQuery)}`
-          : "/api/lists";
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to fetch lists");
-      }
-
-      const data = await response.json();
-      setLists(data);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to load lists";
-      setError(errorMessage);
-      toast.error("Failed to load email lists");
-    } finally {
-      setLoading(false);
-      onSearchEnd?.();
-    }
-  };
-
   useEffect(() => {
-    if (searchQuery.length === 0 || searchQuery.length >= 2) {
-      fetchLists();
-    }
-  }, [searchQuery]);
+    const fetchLists = async () => {
+      setIsLoading(true);
+      try {
+        const queryParams = new URLSearchParams();
+        queryParams.set("page", page.toString());
+        queryParams.set("limit", limit.toString());
+        if (searchQuery) {
+          queryParams.set("q", searchQuery);
+        }
+
+        const response = await fetch(`/api/lists?${queryParams.toString()}`);
+        const data: ListResponse = await response.json();
+        setLists(data.lists);
+        setTotal(data.total);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to load lists";
+        setError(errorMessage);
+        toast.error("Failed to load email lists");
+      } finally {
+        setIsLoading(false);
+        onSearchEnd?.();
+      }
+    };
+
+    fetchLists();
+  }, [searchQuery, page, limit, onSearchEnd]);
 
   const handleCreateList = async (
     list: Omit<EmailList, "id" | "createdAt" | "updatedAt">
@@ -139,9 +157,10 @@ const EmailListsView = ({
   };
 
   const handleRetry = () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-    fetchLists();
+    // Assuming you want to fetch the first page again
+    onPageChange(1);
   };
 
   const handleComposeToList = (list: EmailList) => {
@@ -170,7 +189,7 @@ const EmailListsView = ({
         </Alert>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="rounded-md border">
           <div className="p-4">Loading...</div>
         </div>
@@ -216,7 +235,7 @@ const EmailListsView = ({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span>{list.contacts.length} contacts</span>
+                      <span>{list._count?.contacts ?? 0} contacts</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -278,6 +297,15 @@ const EmailListsView = ({
           </Table>
         </div>
       )}
+
+      <PaginationControls
+        currentPage={page}
+        totalPages={Math.ceil(total / limit)}
+        pageSize={limit}
+        totalItems={total}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
 
       <CreateListModal
         open={showAddModal}

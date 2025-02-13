@@ -40,7 +40,7 @@ interface PaginationControlsProps {
   infiniteScrollRef?: (node?: Element | null) => void;
 }
 
-const PAGE_SIZE_OPTIONS = [1, 5, 10, 20, 30, 50, 100];
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50, 100];
 
 export function PaginationControls({
   currentPage,

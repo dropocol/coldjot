@@ -1,27 +1,66 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function GET(req: Request) {
   try {
-    const lists = await prisma.emailList.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      include: {
-        contacts: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const session = await auth();
+    if (!session) {
+      return new Response("Unauthorized", { status: 401 });
+    }
 
-    return NextResponse.json(lists);
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") ?? "1");
+    const limit = parseInt(searchParams.get("limit") ?? "20");
+    const query = searchParams.get("q");
+
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: Prisma.EmailListWhereInput = {
+      userId: session.user.id,
+      ...(query
+        ? {
+            OR: [
+              { name: { contains: query, mode: "insensitive" as const } },
+              {
+                description: { contains: query, mode: "insensitive" as const },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    // Get lists with pagination
+    const [lists, total] = await Promise.all([
+      prisma.emailList.findMany({
+        where,
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          contacts: true,
+          _count: {
+            select: {
+              contacts: true,
+            },
+          },
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.emailList.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      lists,
+      total,
+      page,
+      limit,
+      hasMore: skip + lists.length < total,
+      nextPage: skip + lists.length < total ? page + 1 : undefined,
+    });
   } catch (error) {
     console.error("Failed to fetch lists:", error);
     return NextResponse.json(
