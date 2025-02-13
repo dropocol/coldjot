@@ -332,35 +332,6 @@ export const processContactShared = async (
       throw new Error("Could not calculate send time");
     }
 
-    // Handle subject and thread ID logic
-    // const previousStepIndex = currentStepIndex >= 1 ? currentStepIndex - 1 : 0;
-    // const previousSubject = sequence.steps[previousStepIndex]?.subject || "";
-    // const subject = step.replyToThread
-    //   ? `Re: ${previousSubject}`
-    //   : step.subject;
-
-    // 6. Create email job
-    // const emailJob: EmailJob = {
-    //   sequenceId: sequence.id,
-    //   contactId: contact.id,
-    //   stepId: step.id,
-    //   userId: sequence.userId,
-    //   sequenceMailboxId: sequence.sequenceMailbox.id,
-    //   // TODO : Remove this and properly handle test mode
-    //   to: contact.email,
-    //   subject: subject || "",
-    //   threadId: options.threadId,
-    //   scheduledTime: sendTime.toISOString(),
-    //   testMode,
-    //   disableSending: sequence.disableSending,
-    // };
-
-    // 7. Add to queue
-    // await jobManager.addEmailJob(emailJob);
-
-    logger.info(`📧 Created email job for contact: ${contact.email}`);
-    logger.info(sequence);
-
     // 8. Update contact status and progress
     await updateSequenceContactStatus(
       sequence.id,
