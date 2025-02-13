@@ -25,6 +25,15 @@ interface EmailList {
   contacts: Contact[];
 }
 
+interface ListResponse {
+  lists: EmailList[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+  nextPage: number | undefined;
+}
+
 interface ListSelectorProps {
   sequenceId: string;
   onListSelected: () => void;
@@ -43,8 +52,8 @@ export function ListSelector({
       try {
         const response = await fetch("/api/lists");
         if (!response.ok) throw new Error("Failed to fetch lists");
-        const data = await response.json();
-        setLists(data);
+        const data: ListResponse = await response.json();
+        setLists(data.lists);
       } catch (error) {
         console.error("Error fetching lists:", error);
       }
