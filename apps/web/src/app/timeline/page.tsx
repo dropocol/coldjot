@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Separator } from "@/components/ui/separator";
 import { TimelineSection } from "@/components/sequences/timeline/timeline-section";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
+import { usePagination } from "@/hooks/use-pagination";
 
 export default function TimelinePage() {
   const { data: session, status } = useSession();
+  const pagination = usePagination({ enableInfiniteScroll: true });
 
   if (status === "loading") {
     return null;
@@ -29,7 +30,15 @@ export default function TimelinePage() {
           <Separator className="mt-6" />
         </div>
 
-        <TimelineSection userId={session.user.id} />
+        <TimelineSection
+          userId={session.user.id}
+          page={pagination.page}
+          limit={pagination.limit}
+          onPageChange={pagination.onPageChange}
+          onPageSizeChange={pagination.onPageSizeChange}
+          isInfiniteScroll={pagination.isInfiniteScroll}
+          onScrollModeToggle={pagination.onScrollModeToggle}
+        />
       </div>
     </main>
   );

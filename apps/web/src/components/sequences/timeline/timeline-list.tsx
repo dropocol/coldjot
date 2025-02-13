@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { TimelineItem } from "./timeline-item";
 import { EmailDetailsDrawer } from "./email-details-drawer";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { PaginationControls } from "@/components/pagination";
 import { useInView } from "react-intersection-observer";
 import type { EmailTracking } from "@/types/email";
@@ -13,6 +12,12 @@ import type { EmailTracking } from "@/types/email";
 interface TimelineListProps {
   sequenceId?: string;
   userId?: string;
+  page: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  isInfiniteScroll: boolean;
+  onScrollModeToggle?: () => void;
 }
 
 interface TimelineResponse {
@@ -24,41 +29,25 @@ interface TimelineResponse {
   nextPage: number | undefined;
 }
 
-export function TimelineList({ sequenceId, userId }: TimelineListProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+export function TimelineList({
+  sequenceId,
+  userId,
+  page,
+  limit,
+  onPageChange,
+  onPageSizeChange,
+  isInfiniteScroll,
+  onScrollModeToggle,
+}: TimelineListProps) {
   const [selectedEmail, setSelectedEmail] = useState<EmailTracking | null>(
     null
   );
-  const [isInfiniteScroll, setIsInfiniteScroll] = useState(false);
   const { ref, inView } = useInView();
-
-  const page = parseInt(searchParams.get("page") ?? "1");
-  const limit = parseInt(searchParams.get("limit") ?? "20");
-  const status = searchParams.get("status");
-  const date = searchParams.get("date");
-
-  const createQueryString = (params: Record<string, string | null>) => {
-    const newSearchParams = new URLSearchParams(searchParams.toString());
-
-    Object.entries(params).forEach(([key, value]) => {
-      if (value === null) {
-        newSearchParams.delete(key);
-      } else {
-        newSearchParams.set(key, value);
-      }
-    });
-
-    return newSearchParams.toString();
-  };
 
   const fetchTimelineData = async (
     pageParam = page
   ): Promise<TimelineResponse> => {
     const queryParams = new URLSearchParams();
-    if (status && status !== "all") queryParams.set("status", status);
-    if (date) queryParams.set("date", date);
     queryParams.set("page", pageParam.toString());
     queryParams.set("limit", limit.toString());
     if (userId) queryParams.set("userId", userId);
@@ -78,14 +67,14 @@ export function TimelineList({ sequenceId, userId }: TimelineListProps) {
 
   // Regular pagination query
   const paginationQuery = useQuery<TimelineResponse>({
-    queryKey: ["timeline", sequenceId, userId, page, limit, status, date],
+    queryKey: ["timeline", sequenceId, userId, page, limit],
     queryFn: () => fetchTimelineData(page),
     enabled: !isInfiniteScroll,
   });
 
   // Infinite scroll query
   const infiniteQuery = useInfiniteQuery({
-    queryKey: ["timeline-infinite", sequenceId, userId, limit, status, date],
+    queryKey: ["timeline-infinite", sequenceId, userId, limit],
     queryFn: ({ pageParam = 1 }) => fetchTimelineData(pageParam),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
@@ -103,26 +92,27 @@ export function TimelineList({ sequenceId, userId }: TimelineListProps) {
     infiniteQuery.fetchNextPage();
   }
 
-  const handlePageChange = (newPage: number) => {
-    router.push(
-      `${pathname}?${createQueryString({
-        page: newPage.toString(),
-      })}`
+  if (
+    (!isInfiniteScroll && paginationQuery.isLoading) ||
+    (isInfiniteScroll && infiniteQuery.isLoading)
+  ) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
     );
-  };
+  }
 
-  const handlePageSizeChange = (newLimit: number) => {
-    router.push(
-      `${pathname}?${createQueryString({
-        page: "1",
-        limit: newLimit.toString(),
-      })}`
+  if (
+    (!isInfiniteScroll && paginationQuery.isError) ||
+    (isInfiniteScroll && infiniteQuery.isError)
+  ) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Failed to load timeline data
+      </div>
     );
-  };
-
-  const toggleScrollMode = () => {
-    setIsInfiniteScroll((prev) => !prev);
-  };
+  }
 
   const renderEmails = () => {
     if (isInfiniteScroll) {
@@ -167,28 +157,6 @@ export function TimelineList({ sequenceId, userId }: TimelineListProps) {
     ));
   };
 
-  if (
-    (!isInfiniteScroll && paginationQuery.isLoading) ||
-    (isInfiniteScroll && infiniteQuery.isLoading)
-  ) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (
-    (!isInfiniteScroll && paginationQuery.isError) ||
-    (isInfiniteScroll && infiniteQuery.isError)
-  ) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        Failed to load timeline data
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="h-full flex flex-col space-y-12">
@@ -209,10 +177,10 @@ export function TimelineList({ sequenceId, userId }: TimelineListProps) {
                 ? (infiniteQuery.data?.pages[0]?.total ?? 0)
                 : (paginationQuery.data?.total ?? 0)
             }
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
             isInfiniteScroll={isInfiniteScroll}
-            onScrollModeToggle={toggleScrollMode}
+            onScrollModeToggle={onScrollModeToggle}
             isLoading={
               (!isInfiniteScroll && paginationQuery.isLoading) ||
               (isInfiniteScroll && infiniteQuery.isLoading)

@@ -8,9 +8,23 @@ import { useQueryClient } from "@tanstack/react-query";
 
 interface TimelineSectionProps {
   userId: string;
+  page: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  isInfiniteScroll: boolean;
+  onScrollModeToggle?: () => void;
 }
 
-export function TimelineSection({ userId }: TimelineSectionProps) {
+export function TimelineSection({
+  userId,
+  page,
+  limit,
+  onPageChange,
+  onPageSizeChange,
+  isInfiniteScroll,
+  onScrollModeToggle,
+}: TimelineSectionProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -56,7 +70,15 @@ export function TimelineSection({ userId }: TimelineSectionProps) {
         onRefresh={handleRefresh}
         onExport={handleExport}
       />
-      <TimelineList userId={userId} />
+      <TimelineList
+        userId={userId}
+        page={page}
+        limit={limit}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        isInfiniteScroll={isInfiniteScroll}
+        onScrollModeToggle={onScrollModeToggle}
+      />
     </div>
   );
 }
