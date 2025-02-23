@@ -20,6 +20,11 @@ interface GmailSendAs {
   isDefault?: boolean;
 }
 
+interface StateData {
+  userId: string;
+  returnPath: string;
+}
+
 async function fetchAndSaveAliases(gmail: any, mailboxId: string) {
   try {
     // Fetch Gmail settings including send-as aliases
@@ -107,7 +112,9 @@ export async function GET(request: Request) {
       redirectUri: process.env.GOOGLE_REDIRECT_URI_EMAIL,
     });
 
-    const userId = decrypt(state);
+    // Decrypt and parse state
+    const decryptedState = decrypt(state);
+    const { userId, returnPath } = JSON.parse(decryptedState) as StateData;
 
     try {
       // Get tokens from code
@@ -225,9 +232,9 @@ export async function GET(request: Request) {
         // Continue with the flow even if watch setup fails
       }
 
-      // Redirect back to settings page
+      // Redirect back to the return path with success message
       return Response.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/settings?success=gmail_connected`
+        `${process.env.NEXT_PUBLIC_APP_URL}${returnPath}?success=gmail_connected`
       );
     } catch (tokenError: any) {
       console.error("[GMAIL_CALLBACK] Token Error:", {

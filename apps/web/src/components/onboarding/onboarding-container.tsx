@@ -1,12 +1,18 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { OnboardingLayout } from "./onboarding-layout";
 import { WelcomeStep } from "./welcome-step";
 import { EmailSetupStep } from "./email-setup-step";
 import { BusinessHoursStep } from "./business-hours-step";
 import { ContactSetupStep } from "./contact-setup-step";
 import { FinalSetupStep } from "./final-setup-step";
+import {
+  updateOnboardingStep,
+  completeOnboarding,
+} from "@/app/actions/onboarding";
+import { toast } from "react-hot-toast";
 
 const STEPS = [
   {
@@ -37,24 +43,66 @@ const STEPS = [
 ];
 
 export function OnboardingContainer() {
+  const { data: session } = useSession();
   const [currentStep, setCurrentStep] = useState(0);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const handleNext = () => {
+  useEffect(() => {
+    // Initialize with the step from session
+    if (session?.user?.onboardingStep) {
+      setCurrentStep(session.user.onboardingStep);
+    }
+  }, [session]);
+
+  // Handle success/error states from Gmail connection
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+    const reason = searchParams.get("reason");
+
+    if (success === "gmail_connected") {
+      toast.success("Gmail account connected successfully", {
+        duration: 2000, // Show for 2 seconds
+      });
+
+      // Wait for toast to be shown before moving to next step
+      setTimeout(() => {
+        handleNext();
+      }, 5000);
+    } else if (error) {
+      toast.error(`Failed to connect Gmail account: ${reason || error}`, {
+        duration: 3000, // Show error for longer
+      });
+    }
+  }, [searchParams]);
+
+  // Redirect to dashboard if onboarding is already completed
+  useEffect(() => {
+    if (session?.user?.onboardingCompleted) {
+      router.replace("/dashboard");
+    }
+  }, [session, router]);
+
+  const handleNext = async () => {
     if (currentStep < STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      await updateOnboardingStep(nextStep);
+      setCurrentStep(nextStep);
     }
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      const prevStep = currentStep - 1;
+      await updateOnboardingStep(prevStep);
+      setCurrentStep(prevStep);
     }
   };
 
-  const handleComplete = () => {
-    // Save onboarding state and redirect to dashboard
-    router.push("/");
+  const handleComplete = async () => {
+    await completeOnboarding();
+    router.push("/dashboard");
   };
 
   const renderStep = () => {
@@ -76,14 +124,21 @@ export function OnboardingContainer() {
     }
   };
 
+  // Show loading state while session is loading
+  if (!session) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <OnboardingLayout
-      currentStep={currentStep + 1}
-      totalSteps={STEPS.length}
-      title={STEPS[currentStep].title}
-      description={STEPS[currentStep].description}
-    >
-      {renderStep()}
-    </OnboardingLayout>
+    <>
+      <OnboardingLayout
+        currentStep={currentStep + 1}
+        totalSteps={STEPS.length}
+        title={STEPS[currentStep].title}
+        description={STEPS[currentStep].description}
+      >
+        {renderStep()}
+      </OnboardingLayout>
+    </>
   );
 }

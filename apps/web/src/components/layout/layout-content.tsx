@@ -30,6 +30,8 @@ export function LayoutContent({ children, session }: LayoutContentProps) {
   const isPublic = isPublicPath(pathname);
   const showSidebar = !isPublic && !!session;
 
+  const hasCompletedOnboarding = session?.user?.onboardingCompleted;
+
   // Handle authentication
   useEffect(() => {
     if (!isPublic && !session) {
@@ -50,7 +52,7 @@ export function LayoutContent({ children, session }: LayoutContentProps) {
     <div className="relative h-screen">
       {/* <EnvironmentBanner /> */}
       <div className="flex h-full">
-        {showSidebar && (
+        {showSidebar && !hasCompletedOnboarding && (
           <div className="hidden w-auto shrink-0 md:block">
             <Sidebar />
           </div>

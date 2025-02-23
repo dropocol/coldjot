@@ -20,7 +20,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
       title: "Smart Email Sequences",
       description:
         "Create personalized email campaigns that adapt to recipient engagement",
-      iconColor: "text-blue-600",
+      iconColor: "text-primary",
       colSpan: "col-span-12 md:col-span-4",
     },
     {
@@ -28,7 +28,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
       title: "Intelligent Scheduling",
       description:
         "Send emails at the perfect time based on your business hours",
-      iconColor: "text-emerald-600",
+      iconColor: "text-primary",
       colSpan: "col-span-12 md:col-span-4",
     },
     {
@@ -36,28 +36,28 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
       title: "Advanced Targeting",
       description:
         "Segment your audience and create targeted campaigns for better results",
-      iconColor: "text-purple-600",
+      iconColor: "text-primary",
       colSpan: "col-span-12 md:col-span-4",
     },
     {
       icon: Users,
       title: "Contact Management",
       description: "Organize contacts into lists and track engagement metrics",
-      iconColor: "text-amber-600",
+      iconColor: "text-primary",
       colSpan: "col-span-12 md:col-span-4",
     },
     {
       icon: Sparkles,
       title: "AI-Powered Templates",
       description: "Create engaging email content with AI assistance",
-      iconColor: "text-indigo-600",
+      iconColor: "text-primary",
       colSpan: "col-span-12 md:col-span-4",
     },
     {
       icon: Zap,
       title: "Automation & Analytics",
       description: "Automate your outreach and get detailed insights",
-      iconColor: "text-rose-600",
+      iconColor: "text-primary",
       colSpan: "col-span-12 md:col-span-4",
     },
   ];
