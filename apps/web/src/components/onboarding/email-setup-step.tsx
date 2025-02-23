@@ -1,19 +1,27 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Mail, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, AlertCircle, Loader2, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "react-hot-toast";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { cn } from "@/lib/utils";
 
 interface EmailSetupStepProps {
   onNext: () => void;
   onBack: () => void;
+  hasConnectedEmail?: boolean;
 }
 
-export function EmailSetupStep({ onNext, onBack }: EmailSetupStepProps) {
+export function EmailSetupStep({
+  onNext,
+  onBack,
+  hasConnectedEmail = false,
+}: EmailSetupStepProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   const emailProviders = [
     {
@@ -51,20 +59,33 @@ export function EmailSetupStep({ onNext, onBack }: EmailSetupStepProps) {
 
   return (
     <div className="space-y-6">
-      <Alert className="flex items-center gap-2 bg-yellow-500/10 border-yellow-500/20 text-yellow-700">
-        <AlertDescription className="text-sm flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          Your credentials are securely stored and we only request the minimum
-          required permissions.
-        </AlertDescription>
-      </Alert>
+      {hasConnectedEmail ? (
+        <Alert className="flex items-center gap-2 bg-emerald-500/10 border-emerald-500/20 text-emerald-700">
+          <AlertDescription className="text-sm flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Email account successfully connected! You can proceed to the next
+            step.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert className="flex items-center gap-2 bg-yellow-500/10 border-yellow-500/20 text-yellow-700">
+          <AlertDescription className="text-sm flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Your credentials are securely stored and we only request the minimum
+            required permissions.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-4">
         {emailProviders.map((provider) => (
           <Card
             key={provider.id}
-            className="p-6 hover:bg-accent cursor-pointer transition-colors shadow-none"
-            onClick={handleConnectGmail}
+            className={cn(
+              "p-6 transition-colors shadow-none",
+              !hasConnectedEmail && "hover:bg-accent cursor-pointer"
+            )}
+            onClick={!hasConnectedEmail ? handleConnectGmail : undefined}
           >
             <div className="flex items-center space-x-4">
               <div className="h-12 w-12 rounded-full bg-background p-2">
@@ -83,6 +104,8 @@ export function EmailSetupStep({ onNext, onBack }: EmailSetupStepProps) {
               </div>
               {isConnecting ? (
                 <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+              ) : hasConnectedEmail ? (
+                <CheckCircle className="h-5 w-5 text-emerald-500" />
               ) : (
                 <Mail className="h-5 w-5 text-muted-foreground" />
               )}
@@ -92,8 +115,8 @@ export function EmailSetupStep({ onNext, onBack }: EmailSetupStepProps) {
       </div>
 
       <div className="flex justify-between">
-        <Button variant="outline" onClick={onBack}>
-          Back
+        <Button variant="ghost" onClick={onNext}>
+          I'll do this later
         </Button>
         <Button onClick={onNext}>Continue</Button>
       </div>

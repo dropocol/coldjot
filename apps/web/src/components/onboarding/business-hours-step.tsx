@@ -16,6 +16,7 @@ import {
 import { Check, ChevronsUpDown, Clock } from "lucide-react";
 import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
+import { toast } from "react-hot-toast";
 
 interface BusinessHoursStepProps {
   onNext: () => void;
@@ -41,6 +42,7 @@ export function BusinessHoursStep({ onNext, onBack }: BusinessHoursStepProps) {
   });
 
   const [open, setOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleWorkDayToggle = (day: number) => {
     const newWorkDays = settings.workDays.includes(day)
@@ -60,6 +62,37 @@ export function BusinessHoursStep({ onNext, onBack }: BusinessHoursStepProps) {
   const handleTimezoneChange = (value: string) => {
     setSettings({ ...settings, timezone: value });
     setOpen(false);
+  };
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      const response = await fetch("/api/business-hours", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          timezone: settings.timezone,
+          workDays: settings.workDays,
+          workHoursStart: settings.workHoursStart,
+          workHoursEnd: settings.workHoursEnd,
+          type: "default",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save business hours");
+      }
+
+      toast.success("Business hours saved successfully");
+      onNext();
+    } catch (error) {
+      console.error("Failed to save business hours:", error);
+      toast.error("Failed to save business hours");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -166,10 +199,12 @@ export function BusinessHoursStep({ onNext, onBack }: BusinessHoursStepProps) {
       </div>
 
       <div className="flex justify-between pt-6">
-        <Button variant="outline" onClick={onBack}>
-          Back
+        <Button variant="ghost" onClick={onNext}>
+          I'll do this later
         </Button>
-        <Button onClick={onNext}>Continue</Button>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Continue"}
+        </Button>
       </div>
     </div>
   );

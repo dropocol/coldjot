@@ -1,24 +1,24 @@
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { OnboardingContainer } from "@/components/onboarding/onboarding-container";
-
-export const metadata = {
-  title: "Onboarding - ColdJot",
-  description: "Set up your ColdJot account and start sending email sequences",
-};
+import { auth } from "@/auth";
+import { ONBOARDING_STEPS } from "@/lib/constants";
 
 export default async function OnboardingPage() {
   const session = await auth();
-
-  // Redirect to login if not authenticated
   if (!session?.user) {
-    redirect("/login");
+    redirect("/auth/signin");
   }
 
-  // Redirect to dashboard if onboarding is completed
+  // If onboarding is completed, redirect to dashboard
   if (session.user.onboardingCompleted) {
     redirect("/dashboard");
   }
 
-  return <OnboardingContainer />;
+  // Get the current step from the session, defaulting to 0 if not set
+  const currentStep = session.user.onboardingStep ?? 0;
+
+  console.log("Current step", currentStep);
+  console.log("Session user", session.user);
+
+  // Redirect to the current step
+  redirect(`/onboarding/${ONBOARDING_STEPS[currentStep].id}`);
 }

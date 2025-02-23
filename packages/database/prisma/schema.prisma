@@ -400,6 +400,7 @@ model BusinessHours {
     updatedAt      DateTime   @updatedAt
     type           String     @default("business")
 
+    @@unique([userId, type])
     @@index([userId])
     @@index([sequenceId])
 }

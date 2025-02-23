@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { OnboardingLayout } from "./onboarding-layout";
 import { WelcomeStep } from "./welcome-step";
@@ -13,45 +13,50 @@ import {
   completeOnboarding,
 } from "@/app/actions/onboarding";
 import { toast } from "react-hot-toast";
-
-const STEPS = [
-  {
-    id: "welcome",
-    title: "Welcome to ColdJot",
-    description: "Let's get you set up with everything you need",
-  },
-  {
-    id: "email",
-    title: "Connect Your Email",
-    description: "Set up your email account to start sending sequences",
-  },
-  {
-    id: "business-hours",
-    title: "Business Hours",
-    description: "Configure when your emails should be sent",
-  },
-  {
-    id: "contacts",
-    title: "Contact Management",
-    description: "Import or create your first contact list",
-  },
-  {
-    id: "final",
-    title: "Complete Setup",
-    description: "Review your setup and start using ColdJot",
-  },
-];
+import { ONBOARDING_STEPS } from "@/lib/constants";
 
 export function OnboardingContainer() {
   const { data: session } = useSession();
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(
+    session?.user?.onboardingStep ?? 0
+  );
+  const [hasConnectedEmail, setHasConnectedEmail] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
+  // Synchronize URL with current step
   useEffect(() => {
-    // Initialize with the step from session
-    if (session?.user?.onboardingStep) {
-      setCurrentStep(session.user.onboardingStep);
+    if (!session?.user) return;
+
+    const stepFromUrl = pathname.split("/").pop();
+    const onboardingStep = session.user.onboardingStep ?? 0;
+    const correctStepUrl = `/onboarding/${ONBOARDING_STEPS[onboardingStep].id}`;
+
+    // Only redirect if we're on the wrong step
+    if (pathname !== correctStepUrl) {
+      router.replace(correctStepUrl);
+    }
+
+    setCurrentStep(onboardingStep);
+  }, [pathname, session, router]);
+
+  // Check for connected mailboxes
+  useEffect(() => {
+    const checkMailboxes = async () => {
+      try {
+        const response = await fetch("/api/mailboxes/count");
+        if (response.ok) {
+          const { count } = await response.json();
+          setHasConnectedEmail(count > 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch mailboxes:", error);
+      }
+    };
+
+    if (session?.user?.id) {
+      checkMailboxes();
     }
   }, [session]);
 
@@ -63,16 +68,16 @@ export function OnboardingContainer() {
 
     if (success === "gmail_connected") {
       toast.success("Gmail account connected successfully", {
-        duration: 2000, // Show for 2 seconds
+        duration: 2000,
       });
-
+      setHasConnectedEmail(true);
       // Wait for toast to be shown before moving to next step
       setTimeout(() => {
         handleNext();
-      }, 5000);
+      }, 2000);
     } else if (error) {
       toast.error(`Failed to connect Gmail account: ${reason || error}`, {
-        duration: 3000, // Show error for longer
+        duration: 3000,
       });
     }
   }, [searchParams]);
@@ -85,10 +90,11 @@ export function OnboardingContainer() {
   }, [session, router]);
 
   const handleNext = async () => {
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < ONBOARDING_STEPS.length - 1) {
       const nextStep = currentStep + 1;
       await updateOnboardingStep(nextStep);
       setCurrentStep(nextStep);
+      router.replace(`/onboarding/${ONBOARDING_STEPS[nextStep].id}`);
     }
   };
 
@@ -97,6 +103,7 @@ export function OnboardingContainer() {
       const prevStep = currentStep - 1;
       await updateOnboardingStep(prevStep);
       setCurrentStep(prevStep);
+      router.replace(`/onboarding/${ONBOARDING_STEPS[prevStep].id}`);
     }
   };
 
@@ -110,7 +117,13 @@ export function OnboardingContainer() {
       case 0:
         return <WelcomeStep onNext={handleNext} />;
       case 1:
-        return <EmailSetupStep onNext={handleNext} onBack={handleBack} />;
+        return (
+          <EmailSetupStep
+            onNext={handleNext}
+            onBack={handleBack}
+            hasConnectedEmail={hasConnectedEmail}
+          />
+        );
       case 2:
         return <BusinessHoursStep onNext={handleNext} onBack={handleBack} />;
       case 3:
@@ -133,9 +146,9 @@ export function OnboardingContainer() {
     <>
       <OnboardingLayout
         currentStep={currentStep + 1}
-        totalSteps={STEPS.length}
-        title={STEPS[currentStep].title}
-        description={STEPS[currentStep].description}
+        totalSteps={ONBOARDING_STEPS.length}
+        title={ONBOARDING_STEPS[currentStep].title}
+        description={ONBOARDING_STEPS[currentStep].description}
       >
         {renderStep()}
       </OnboardingLayout>

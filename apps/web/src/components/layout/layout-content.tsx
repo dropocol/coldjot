@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import type { Session } from "next-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { ONBOARDING_STEPS } from "@/lib/constants";
 
 // Pages that are public (don't require authentication)
 const publicPaths = [
@@ -29,15 +30,26 @@ export function LayoutContent({ children, session }: LayoutContentProps) {
   const router = useRouter();
   const isPublic = isPublicPath(pathname);
   const showSidebar = !isPublic && !!session;
+  const currentPath = pathname.split("/").pop();
 
   const hasCompletedOnboarding = session?.user?.onboardingCompleted;
+  const onboardingStep = session?.user?.onboardingStep ?? 0;
 
-  // Handle authentication
+  // Handle authentication and onboarding
   useEffect(() => {
     if (!isPublic && !session) {
       router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname)}`);
+    } else if (!hasCompletedOnboarding && !pathname.startsWith("/onboarding")) {
+      router.push(`/onboarding/${ONBOARDING_STEPS[onboardingStep].id}`);
     }
-  }, [isPublic, session, router, pathname]);
+  }, [
+    isPublic,
+    session,
+    router,
+    pathname,
+    hasCompletedOnboarding,
+    onboardingStep,
+  ]);
 
   // Show loading state while redirecting
   if (!isPublic && !session) {
@@ -52,7 +64,7 @@ export function LayoutContent({ children, session }: LayoutContentProps) {
     <div className="relative h-screen">
       {/* <EnvironmentBanner /> */}
       <div className="flex h-full">
-        {showSidebar && !hasCompletedOnboarding && (
+        {showSidebar && hasCompletedOnboarding && (
           <div className="hidden w-auto shrink-0 md:block">
             <Sidebar />
           </div>

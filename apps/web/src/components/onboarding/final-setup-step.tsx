@@ -70,8 +70,8 @@ export function FinalSetupStep({ onComplete, onBack }: FinalSetupStepProps) {
       </Card>
 
       <div className="flex justify-between">
-        <Button variant="outline" onClick={onBack}>
-          Back
+        <Button variant="ghost" onClick={onComplete}>
+          I'll do this later
         </Button>
         <Button onClick={onComplete} size="lg">
           Go to Dashboard
