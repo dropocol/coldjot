@@ -82,6 +82,10 @@ model Contact {
 
     @@unique([userId, email])
     @@index([userId])
+    @@index([email])
+    @@index([firstName])
+    @@index([lastName])
+    @@index([name])
 }
 
 model Template {
