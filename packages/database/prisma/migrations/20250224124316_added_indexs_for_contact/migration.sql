@@ -1,11 +1,11 @@
 -- CreateIndex
-CREATE INDEX "Contact_email_idx" ON "Contact"("email");
+CREATE INDEX IF NOT EXISTS "Contact_email_idx" ON "Contact"("email");
 
 -- CreateIndex
-CREATE INDEX "Contact_firstName_idx" ON "Contact"("firstName");
+CREATE INDEX IF NOT EXISTS "Contact_firstName_idx" ON "Contact"("firstName");
 
 -- CreateIndex
-CREATE INDEX "Contact_lastName_idx" ON "Contact"("lastName");
+CREATE INDEX IF NOT EXISTS "Contact_lastName_idx" ON "Contact"("lastName");
 
 -- CreateIndex
-CREATE INDEX "Contact_name_idx" ON "Contact"("name");
+CREATE INDEX IF NOT EXISTS "Contact_name_idx" ON "Contact"("name");
