@@ -24,8 +24,13 @@ export default function ContactsPage() {
     setIsSearching(true);
   };
 
-  const handleAddContact = (newContact: Contact) => {
-    setContacts((prev) => [newContact, ...prev]);
+  const handleAddContact = (newContact: Contact | Contact[]) => {
+    if (Array.isArray(newContact)) {
+      setContacts((prev) => [...newContact, ...prev]);
+    } else {
+      setContacts((prev) => [newContact, ...prev]);
+    }
+    pagination.onPageChange(1); // Reset to first page after adding contacts
   };
 
   return (

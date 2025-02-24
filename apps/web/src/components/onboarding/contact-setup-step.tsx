@@ -10,11 +10,11 @@ import {
   Loader2,
   X,
   Upload,
+  FileUp,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "react-hot-toast";
 import Papa from "papaparse";
-import { tryCatch } from "@/utils/try-catch";
 
 interface ContactSetupStepProps {
   onNext: () => void;
@@ -33,7 +33,7 @@ interface ParsedContacts {
 }
 
 export function ContactSetupStep({ onNext, onBack }: ContactSetupStepProps) {
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<string>("manual");
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<ContactForm>({
     firstName: "",
@@ -49,16 +49,16 @@ export function ContactSetupStep({ onNext, onBack }: ContactSetupStepProps) {
 
   const importMethods = [
     {
-      id: "csv",
-      name: "Import CSV",
-      icon: FileSpreadsheet,
-      description: "Upload your contacts from a CSV file (max 1,000 contacts)",
-    },
-    {
       id: "manual",
       name: "Add Manually",
       icon: Plus,
       description: "Create contacts one by one",
+    },
+    {
+      id: "csv",
+      name: "Import CSV",
+      icon: FileSpreadsheet,
+      description: "Upload your contacts from a CSV file (max 1,000 contacts)",
     },
   ];
 
@@ -90,7 +90,7 @@ export function ContactSetupStep({ onNext, onBack }: ContactSetupStepProps) {
           }
 
           setParsedContacts({ contacts, file });
-          setUploadSuccess(false); // Reset success state when new file is selected
+          setUploadSuccess(false);
         },
         error: (error) => {
           console.error("CSV parsing error:", error);
@@ -198,29 +198,21 @@ export function ContactSetupStep({ onNext, onBack }: ContactSetupStepProps) {
         </Alert>
       )}
 
-      <Alert className="flex items-center gap-2 bg-yellow-500/10 border-yellow-500/20 text-yellow-700">
-        <AlertDescription className="text-sm flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          CSV file can contain up to 1,000 contacts. Any additional contacts
-          will be ignored to prevent system abuse.
-        </AlertDescription>
-      </Alert>
-
       <div className="space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Choose Import Method</Label>
-            <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {importMethods.map((method) => (
                 <Card
                   key={method.id}
-                  className={`p-4 shadow-none hover:bg-accent cursor-pointer transition-colors ${
-                    selectedMethod === method.id ? "border-primary" : ""
+                  className={`p-4 flex items-center gap-2 shadow-none hover:bg-accent cursor-pointer transition-colors ${
+                    selectedMethod === method.id ? "border-gray-400" : ""
                   }`}
                   onClick={() => setSelectedMethod(method.id)}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="p-2 rounded-full bg-primary/10">
+                    <div className="p-2 rounded-full h-9 w-9 bg-primary/10">
                       <method.icon className="h-5 w-5 text-primary" />
                     </div>
                     <div className="flex-1">
@@ -276,50 +268,47 @@ export function ContactSetupStep({ onNext, onBack }: ContactSetupStepProps) {
                 />
                 {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
               </div>
-              <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding Contact...
-                  </>
-                ) : (
-                  "Add Contact"
-                )}
-              </Button>
             </form>
           )}
 
           {selectedMethod === "csv" && (
             <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="flex-1 flex-row items-center gap-2">
+              <Card className="p-8 border-dashed shadow-none border-slate-300">
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <div className="p-4 rounded-full bg-primary/10">
+                    <FileUp className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="font-medium">Upload CSV File</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Your CSV should include columns for: First Name, Last
+                      Name, and Email Address
+                    </p>
+                  </div>
                   <Input
                     ref={fileInputRef}
                     type="file"
                     accept=".csv"
                     onChange={handleFileSelect}
-                    className="cursor-pointer"
+                    className="cursor-pointer max-w-sm"
                     disabled={isLoading}
                   />
                   {parsedContacts && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {parsedContacts.file.name} (
-                      {parsedContacts.contacts.length} contacts)
-                    </p>
-                  )}
-                </div>
-                {parsedContacts && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleFileDelete}
-                      className="shrink-0"
-                      disabled={isLoading}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    {parsedContacts && (
+                    <>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <FileSpreadsheet className="h-4 w-4" />
+                        {parsedContacts.file.name} (
+                        {parsedContacts.contacts.length} contacts)
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleFileDelete}
+                          className="h-6 w-6"
+                          disabled={isLoading}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <Button
                         onClick={handleUpload}
                         disabled={isLoading}
@@ -328,7 +317,7 @@ export function ContactSetupStep({ onNext, onBack }: ContactSetupStepProps) {
                         {isLoading ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Importing Contacts...
+                            Importing...
                           </>
                         ) : (
                           <>
@@ -337,15 +326,18 @@ export function ContactSetupStep({ onNext, onBack }: ContactSetupStepProps) {
                           </>
                         )}
                       </Button>
-                    )}
-                  </>
-                )}
-              </div>
+                    </>
+                  )}
+                </div>
+              </Card>
 
-              <p className="text-sm text-muted-foreground">
-                Your CSV should include columns for: First Name, Last Name, and
-                Email Address
-              </p>
+              <Alert className="flex items-center gap-2 bg-yellow-500/10 border-yellow-500/20 text-yellow-700">
+                <AlertDescription className="text-sm flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  CSV file can contain up to 1,000 contacts. Any additional
+                  contacts will be ignored to prevent system abuse.
+                </AlertDescription>
+              </Alert>
             </div>
           )}
         </div>
@@ -355,9 +347,22 @@ export function ContactSetupStep({ onNext, onBack }: ContactSetupStepProps) {
         <Button variant="ghost" onClick={onNext}>
           I'll do this later
         </Button>
-        <Button onClick={onNext} disabled={isLoading}>
-          Continue
-        </Button>
+        {selectedMethod === "manual" ? (
+          <Button onClick={handleManualSubmit} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create Contact"
+            )}
+          </Button>
+        ) : (
+          <Button onClick={onNext} disabled={isLoading}>
+            Continue
+          </Button>
+        )}
       </div>
     </div>
   );

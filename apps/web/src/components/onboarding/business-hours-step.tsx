@@ -203,7 +203,7 @@ export function BusinessHoursStep({ onNext, onBack }: BusinessHoursStepProps) {
           I'll do this later
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Continue"}
+          {isSaving ? "Saving..." : "Save & Continue"}
         </Button>
       </div>
     </div>
