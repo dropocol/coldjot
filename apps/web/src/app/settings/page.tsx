@@ -1,52 +1,10 @@
 import { auth } from "@/auth";
-import { prisma } from "@coldjot/database";
-import { Separator } from "@/components/ui/separator";
-import ProfileSettings from "@/components/settings/profile-settings";
-import EmailSettings from "@/components/settings/email-settings";
-import GoogleIntegration from "@/components/settings/google-integration";
-import { SettingsMessageHandler } from "@/components/settings/settings-message-handler";
-import { SettingsLayout } from "@/components/settings/settings-layout";
+import { redirect } from "next/navigation";
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const account = await prisma.account.findFirst({
-    where: {
-      userId: session.user.id,
-      provider: "google",
-    },
-    select: {
-      access_token: true,
-      refresh_token: true,
-      providerAccountId: true,
-      expires_at: true,
-    },
-  });
-
-  return (
-    <SettingsLayout>
-      <div className="space-y-8">
-        <SettingsMessageHandler />
-
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your account settings and preferences.
-          </p>
-        </div>
-        <Separator />
-
-        <div className="space-y-10">
-          <ProfileSettings user={session.user} />
-          <Separator />
-
-          <EmailSettings />
-          <Separator />
-
-          <GoogleIntegration account={account} />
-        </div>
-      </div>
-    </SettingsLayout>
-  );
+  // Redirect to the profile settings page
+  redirect("/settings/profile");
 }

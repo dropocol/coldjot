@@ -4,7 +4,7 @@ import { User } from "@coldjot/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-export default function ProfileSettings({ user }: { user: User }) {
+export default function ProfileSettings({ user }) {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold tracking-tight">Profile</h2>
