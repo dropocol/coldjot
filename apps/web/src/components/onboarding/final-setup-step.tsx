@@ -69,10 +69,7 @@ export function FinalSetupStep({ onComplete, onBack }: FinalSetupStepProps) {
         </div>
       </Card>
 
-      <div className="flex justify-between">
-        <Button variant="ghost" onClick={onComplete}>
-          I'll do this later
-        </Button>
+      <div className="flex justify-end">
         <Button onClick={onComplete} size="lg">
           Go to Dashboard
           <ArrowRight className="ml-2 h-4 w-4" />

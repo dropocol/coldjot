@@ -19,7 +19,7 @@ export default async function OnboardingStepPage({
 
   // Redirect to dashboard if onboarding is completed
   if (session.user.onboardingCompleted) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   // Redirect to appropriate step if step is invalid or doesn't match user's progress

@@ -74,11 +74,22 @@ export async function POST(req: Request) {
 
     // Before creating, check if the contact already exists
     const existingContact = await prisma.contact.findUnique({
-      where: { email },
+      where: {
+        userId_email: {
+          userId: session.user.id,
+          email,
+        },
+      },
     });
 
     if (existingContact) {
-      return NextResponse.json(existingContact);
+      // return NextResponse.json(existingContact);
+      return NextResponse.json(
+        {
+          error: "Email already exists in your contacts",
+        },
+        { status: 409 }
+      );
     }
 
     const contact = await prisma.contact.create({

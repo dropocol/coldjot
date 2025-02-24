@@ -30,15 +30,18 @@ export function OnboardingContainer() {
     if (!session?.user) return;
 
     const stepFromUrl = pathname.split("/").pop();
+    const stepIndex = ONBOARDING_STEPS.findIndex(
+      (step) => step.id === stepFromUrl
+    );
     const onboardingStep = session.user.onboardingStep ?? 0;
-    const correctStepUrl = `/onboarding/${ONBOARDING_STEPS[onboardingStep].id}`;
 
-    // Only redirect if we're on the wrong step
-    if (pathname !== correctStepUrl) {
-      router.replace(correctStepUrl);
+    // Only update if the URL step is invalid or less than the current step
+    if (stepIndex === -1 || stepIndex < onboardingStep) {
+      router.replace(`/onboarding/${ONBOARDING_STEPS[onboardingStep].id}`);
+      setCurrentStep(onboardingStep);
+    } else {
+      setCurrentStep(stepIndex);
     }
-
-    setCurrentStep(onboardingStep);
   }, [pathname, session, router]);
 
   // Check for connected mailboxes
@@ -85,7 +88,7 @@ export function OnboardingContainer() {
   // Redirect to dashboard if onboarding is already completed
   useEffect(() => {
     if (session?.user?.onboardingCompleted) {
-      router.replace("/dashboard");
+      router.replace("/");
     }
   }, [session, router]);
 
@@ -109,7 +112,7 @@ export function OnboardingContainer() {
 
   const handleComplete = async () => {
     await completeOnboarding();
-    router.push("/dashboard");
+    router.push("/");
   };
 
   const renderStep = () => {

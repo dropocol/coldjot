@@ -10,7 +10,7 @@ export default async function OnboardingPage() {
 
   // If onboarding is completed, redirect to dashboard
   if (session.user.onboardingCompleted) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   // Get the current step from the session, defaulting to 0 if not set

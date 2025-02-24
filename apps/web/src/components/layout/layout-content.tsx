@@ -5,7 +5,7 @@ import { EnvironmentBanner } from "./environment-banner";
 import Sidebar from "./Sidebar";
 import type { Session } from "next-auth";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ONBOARDING_STEPS } from "@/lib/constants";
 
 // Pages that are public (don't require authentication)
@@ -25,23 +25,54 @@ interface LayoutContentProps {
   session: Session | null;
 }
 
+function LoadingSpinner() {
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+    </div>
+  );
+}
+
 export function LayoutContent({ children, session }: LayoutContentProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
   const isPublic = isPublicPath(pathname);
   const showSidebar = !isPublic && !!session;
-  const currentPath = pathname.split("/").pop();
 
   const hasCompletedOnboarding = session?.user?.onboardingCompleted;
   const onboardingStep = session?.user?.onboardingStep ?? 0;
+  const isOnboardingPath = pathname.startsWith("/onboarding");
 
   // Handle authentication and onboarding
   useEffect(() => {
-    if (!isPublic && !session) {
-      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname)}`);
-    } else if (!hasCompletedOnboarding && !pathname.startsWith("/onboarding")) {
-      router.push(`/onboarding/${ONBOARDING_STEPS[onboardingStep].id}`);
-    }
+    let mounted = true;
+
+    const handleNavigation = async () => {
+      try {
+        if (!isPublic && !session) {
+          await router.push(
+            `/auth/signin?callbackUrl=${encodeURIComponent(pathname)}`
+          );
+        } else if (session && !hasCompletedOnboarding && !isOnboardingPath) {
+          await router.push(
+            `/onboarding/${ONBOARDING_STEPS[onboardingStep].id}`
+          );
+        } else {
+          // Only set loading to false if no navigation is needed
+          if (mounted) setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Navigation error:", error);
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    handleNavigation();
+
+    return () => {
+      mounted = false;
+    };
   }, [
     isPublic,
     session,
@@ -49,15 +80,17 @@ export function LayoutContent({ children, session }: LayoutContentProps) {
     pathname,
     hasCompletedOnboarding,
     onboardingStep,
+    isOnboardingPath,
   ]);
 
-  // Show loading state while redirecting
+  // Show loading spinner while in loading state
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  // Don't render anything if not authenticated on a protected route
   if (!isPublic && !session) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    return null;
   }
 
   return (

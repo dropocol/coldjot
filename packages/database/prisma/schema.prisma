@@ -67,7 +67,7 @@ model Contact {
     firstName     String
     lastName      String
     name          String
-    email         String            @unique
+    email         String
     userId        String
     createdAt     DateTime          @default(now())
     updatedAt     DateTime          @updatedAt
@@ -80,6 +80,7 @@ model Contact {
     EmailThread   EmailThread[]
     EmailTracking EmailTracking[]
 
+    @@unique([userId, email])
     @@index([userId])
 }
 
