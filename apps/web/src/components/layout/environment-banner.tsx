@@ -24,6 +24,10 @@ export function EnvironmentBanner() {
   // Using APP_ENV from process.env, defaulting to 'development'
   const currentEnv = (process.env.NEXT_PUBLIC_APP_ENV ||
     "development") as keyof typeof environmentConfig;
+
+  // Don't show banner in production
+  if (currentEnv === "production") return null;
+
   const config = environmentConfig[currentEnv];
 
   if (!config) return null;

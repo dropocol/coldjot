@@ -48,6 +48,7 @@ export async function createEmailTracking(
       stepId: metadata.stepId,
       contactId: metadata.contactId,
       status: "pending",
+      subject: metadata.subject,
       metadata: {
         email: metadata.email,
         userId: metadata.userId,
@@ -182,11 +183,16 @@ export async function recordLinkClick(linkId: string): Promise<void> {
 
     // Always update stats for clicks as we want to track all clicks
     // TODO: fix this
-    // await updateSequenceStats(
-    //   trackedLink.emailTracking.sequenceId,
-    //   "clicked",
-    //   trackedLink.emailTracking.contactId
-    // );
+    if (
+      trackedLink.emailTracking.sequenceId &&
+      trackedLink.emailTracking.contactId
+    ) {
+      // await updateSequenceStats(
+      //   trackedLink.emailTracking.sequenceId!,
+      //   EmailEventEnum.CLICKED,
+      //   trackedLink.emailTracking.contactId!
+      // );
+    }
   } catch (error) {
     console.error("Error recording link click:", error);
     throw error;
@@ -726,6 +732,8 @@ export class TrackingService {
             events: {
               create: {
                 type: EmailEventEnum.CLICKED,
+                sequenceId: tracking.sequenceId,
+                contactId: tracking.contactId,
                 timestamp: new Date(),
                 metadata: {
                   linkId: linkId,

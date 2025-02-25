@@ -84,7 +84,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         });
 
       const aliasesToDelete = Array.from(currentAliases).filter(
-        (alias) => !gmailAliases.has(alias)
+        (alias) => !gmailAliases.has(alias as string)
       );
 
       // Perform updates in a transaction

@@ -1,26 +1,81 @@
-# ColdJot
+<a href="https://coldjot.com">
+  <img alt="ColdJot - Modern email automation platform for businesses" src="https://app.coldjot.com/images/screenshot/github.png">
+</a>
 
-ColdJot is a modern web application for managing and automating email operations with a focus on productivity and efficiency.
+<h3 align="center">ColdJot</h3>
 
-## 🌟 Features
+<p align="center">
+    The modern email automation platform for managing and streamlining your email operations.
+    <br />
+    <a href="https://coldjot.com"><strong>Learn more »</strong></a>
+    <br />
+    <br />
+    <a href="#introduction"><strong>Introduction</strong></a> ·
+    <a href="#features"><strong>Features</strong></a> ·
+    <a href="#screenshot"><strong>Screenshot</strong></a> ·
+    <a href="#tech-stack"><strong>Tech Stack</strong></a> ·
+    <a href="#self-hosting"><strong>Self-hosting</strong></a> ·
+    <a href="#contributing"><strong>Contributing</strong></a>
+</p>
 
-- **User Authentication**: Secure sign-in and sign-up functionality with Google OAuth integration
-- **Email Operations**: Advanced email management and automation capabilities
-- **Modern Web Interface**: Responsive design with a clean, intuitive user interface
-- **Real-time Processing**: Queue-based processing for efficient email operations
-- **Multi-environment Support**: Development, production, and custom environment configurations
+<p align="center">
+  <a href="https://github.com/dropocol/coldjot/blob/main/LICENSE.md">
+    <img src="https://img.shields.io/badge/license-AGPL--v3-orange" alt="License" />
+  </a>
+</p>
 
-## 🏗️ Project Structure
+<br/>
 
-The project follows a monorepo structure with multiple applications:
+## Introduction
 
-```
-apps/
-├── web/           # Main web application (Next.js)
-└── mailops/       # Email operations service
-```
+ColdJot is a powerful email automation platform designed to help businesses manage and streamline their email operations. With a focus on productivity and efficiency, ColdJot provides advanced email management capabilities, real-time processing, and a modern web interface.
 
-## 🚀 Getting Started
+## Features
+
+- **Advanced Email Operations**
+
+  - Queue-based email processing
+  - Email tracking and analytics
+  - Template management
+  - Automated sequences
+  - Contact management
+
+- **Real-time Processing**
+
+  - Efficient queue-based operations
+  - Rate limiting and cooldown management
+  - System health monitoring
+  - Performance metrics tracking
+
+- **Modern Interface**
+
+  - Clean and intuitive UI
+  - Responsive design
+  - Rich text editor
+
+- **Security & Privacy**
+  - Secure authentication with Google OAuth
+  - Privacy-focused design
+  - Data protection measures
+  - Role-based access control
+
+## Screenshot
+
+<img alt="ColdJot - Modern email automation platform for businesses" src="https://app.coldjot.com/images/screenshot/app.png">
+
+## Tech Stack
+
+- [Next.js](https://nextjs.org/) – framework
+- [TypeScript](https://www.typescriptlang.org/) – language
+- [Tailwind](https://tailwindcss.com/) – CSS
+- [PostgreSQL](https://www.postgresql.org/) – database
+- [Redis](https://redis.io/) – caching & queues
+- [BullMQ](https://docs.bullmq.io/) – job processing
+- [Auth.js](https://authjs.dev) – authentication
+- [Turborepo](https://turbo.build/repo) – monorepo
+- [Prisma](https://www.prisma.io/) – ORM
+
+## Self-Hosting
 
 ### Prerequisites
 
@@ -33,7 +88,7 @@ apps/
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-org/coldjot.git
+git clone https://github.com/dropocol/coldjot.git
 cd coldjot
 ```
 
@@ -45,7 +100,7 @@ npm install
 
 3. Set up environment variables:
 
-   - Copy the example env files in `apps/web/env/` and `apps/mailops/env/`
+   - Copy the example env files in `apps/web/env/`, `apps/mailops/env/` and `apps/packages/env/`
    - Configure the necessary environment variables
 
 4. Start the development server:
@@ -54,39 +109,13 @@ npm install
 npm run dev
 ```
 
-## 🔧 Configuration
+## Contributing
 
-The application requires several environment variables to be set:
+We love our contributors! Here's how you can contribute:
 
-- `DATABASE_URL`: PostgreSQL connection string
-- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`: Redis configuration
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: Google OAuth credentials
-- Additional environment-specific variables
+- [Open an issue](https://github.com/dropocol/coldjot/issues) if you believe you've encountered a bug.
+- Make a [pull request](https://github.com/dropocol/coldjot/pull) to add new features/make quality-of-life improvements/fix bugs.
 
-## 🛠️ Tech Stack
+## License
 
-- **Frontend**: Next.js, React, TypeScript, TailwindCSS
-- **Backend**: Node.js
-- **Database**: PostgreSQL
-- **Caching**: Redis
-- **Authentication**: NextAuth.js with Google OAuth
-- **Infrastructure**: Production-ready deployment setup
-
-## 🔐 Security
-
-- Secure authentication flow with NextAuth.js
-- Environment-based configuration management
-- Protected API routes
-- Secure session handling
-
-## 📝 License
-
-[Your License Here]
-
-## 🤝 Contributing
-
-[Your Contributing Guidelines Here]
-
----
-
-For more information, please contact the development team.
+ColdJot is open-source under the GNU Affero General Public License Version 3 (AGPLv3) or any later version. You can [find it here](https://github.com/dropocol/coldjot/blob/main/LICENSE.md).

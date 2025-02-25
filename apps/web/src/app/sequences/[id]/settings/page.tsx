@@ -1,7 +1,11 @@
 import { prisma } from "@coldjot/database";
 import { notFound } from "next/navigation";
 import { SequenceSettings } from "@/components/sequences/sequence-settings";
-import type { BusinessHours } from "@coldjot/types";
+import type {
+  BusinessHours,
+  BusinessScheduleEnum,
+  BusinessScheduleType,
+} from "@coldjot/types";
 
 export default async function SequenceSettingsPage({
   params,
@@ -16,6 +20,12 @@ export default async function SequenceSettingsPage({
     },
     include: {
       businessHours: true,
+      sequenceMailbox: {
+        include: {
+          mailbox: true,
+          alias: true,
+        },
+      },
     },
   });
 
@@ -29,7 +39,7 @@ export default async function SequenceSettingsPage({
         id: sequence.id,
         name: sequence.name,
         accessLevel: sequence.accessLevel as "team" | "private",
-        scheduleType: sequence.scheduleType as "business" | "custom",
+        scheduleType: sequence.scheduleType as BusinessScheduleType,
         businessHours: sequence.businessHours
           ? ({
               timezone: sequence.businessHours.timezone,
@@ -42,7 +52,13 @@ export default async function SequenceSettingsPage({
         testMode: sequence.testMode,
         disableSending: sequence.disableSending ?? false,
         testEmails: sequence.testEmails ?? [],
-        mailboxId: sequence.mailboxId,
+        sequenceMailbox: sequence.sequenceMailbox
+          ? {
+              id: sequence.sequenceMailbox.id,
+              mailboxId: sequence.sequenceMailbox.mailboxId,
+              aliasId: sequence.sequenceMailbox.aliasId,
+            }
+          : null,
       }}
     />
   );

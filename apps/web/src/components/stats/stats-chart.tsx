@@ -31,10 +31,10 @@ const COLORS = {
     stroke: "#a78bfa", // violet-400
     fill: "#8b5cf6", // violet-500
   },
-  uniqueOpens: {
-    stroke: "#fb923c", // orange-400
-    fill: "#f97316", // orange-500
-  },
+  // uniqueOpens: {
+  //   stroke: "#fb923c", // orange-400
+  //   fill: "#f97316", // orange-500
+  // },
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -77,7 +77,7 @@ export function StatsChart({ data }: StatsChartProps) {
             Overview of email campaign performance over time
           </p>
         </div>
-        <div className="h-[400px] w-full pr-8">
+        <div className="h-[300px] w-full pr-8">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
@@ -120,7 +120,7 @@ export function StatsChart({ data }: StatsChartProps) {
                     stopOpacity={0}
                   />
                 </linearGradient>
-                <linearGradient id="uniqueOpens" x1="0" y1="0" x2="0" y2="1">
+                {/* <linearGradient id="uniqueOpens" x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="0%"
                     stopColor={COLORS.uniqueOpens.fill}
@@ -131,7 +131,7 @@ export function StatsChart({ data }: StatsChartProps) {
                     stopColor={COLORS.uniqueOpens.fill}
                     stopOpacity={0}
                   />
-                </linearGradient>
+                </linearGradient> */}
               </defs>
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -184,7 +184,7 @@ export function StatsChart({ data }: StatsChartProps) {
                 fillOpacity={1}
                 fill="url(#replied)"
               />
-              <Area
+              {/* <Area
                 type="basis"
                 dataKey="uniqueOpens"
                 name="Unique Opens"
@@ -192,7 +192,7 @@ export function StatsChart({ data }: StatsChartProps) {
                 strokeWidth={1.5}
                 fillOpacity={1}
                 fill="url(#uniqueOpens)"
-              />
+              /> */}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -218,13 +218,13 @@ export function StatsChart({ data }: StatsChartProps) {
             />
             <span className="text-sm text-muted-foreground">Replied</span>
           </div>
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <div
               className="h-3 w-3 rounded-full"
               style={{ backgroundColor: COLORS.uniqueOpens.fill }}
             />
             <span className="text-sm text-muted-foreground">Unique Opens</span>
-          </div>
+          </div> */}
         </div>
       </div>
     </Card>

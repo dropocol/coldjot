@@ -1,3 +1,8 @@
+import { BusinessScheduleEnum } from "./enums";
+// ------------------------
+// ------------------------
+// ------------------------
+
 export enum StepTypeEnum {
   MANUAL_EMAIL = "MANUAL_EMAIL",
   AUTOMATED_EMAIL = "AUTOMATED_EMAIL",
@@ -102,13 +107,13 @@ export interface SequenceContact {
   };
 }
 
-export interface BusinessHours {
-  timezone: string;
-  workDays: number[];
-  workHoursStart: string;
-  workHoursEnd: string;
-  holidays: Date[];
-}
+// export interface BusinessHours {
+//   timezone: string;
+//   workDays: number[];
+//   workHoursStart: string;
+//   workHoursEnd: string;
+//   holidays: Date[];
+// }
 
 export interface SequenceStats {
   id: string;
@@ -156,12 +161,15 @@ export interface RateLimits {
 
 export type StepTiming = "immediate" | "delay";
 
+export type BusinessScheduleType = BusinessScheduleEnum;
+
 export interface BusinessHours {
   timezone: string;
   workDays: number[];
   workHoursStart: string;
   workHoursEnd: string;
   holidays: Date[];
+  type: BusinessScheduleType;
 }
 
 export interface SequenceContact {

@@ -26,6 +26,11 @@ import {
   PlayCircle,
   Building2,
   ExternalLink,
+  MoreVertical,
+  Send,
+  Trash,
+  CheckCheck,
+  MessageSquare,
 } from "lucide-react";
 import { ListSelector } from "@/components/lists/list-selector";
 import { formatDistanceToNow, format } from "date-fns";
@@ -39,6 +44,12 @@ import {
 import type { Contact, SequenceContact, StepStatus } from "@coldjot/types";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import type { SequenceContactStatusType } from "@coldjot/types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Add extended SequenceContact type with all required properties
 interface ExtendedSequenceContact {
@@ -118,6 +129,53 @@ export function SequenceContacts({
     }
   };
 
+  const handleSendNow = async (contactId: string) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        `/api/sequences/${sequenceId}/contacts/${contactId}/send-now`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to send now");
+
+      await refreshContacts();
+      toast.success("Contact scheduled for immediate sending");
+    } catch (error) {
+      toast.error("Failed to schedule immediate sending");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (
+    contactId: string,
+    status: SequenceContactStatusType
+  ) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        `/api/sequences/${sequenceId}/contacts/${contactId}/status`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to update status");
+
+      await refreshContacts();
+      toast.success("Contact status updated successfully");
+    } catch (error) {
+      toast.error("Failed to update contact status");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const refreshContacts = async () => {
     try {
       setIsLoading(true);
@@ -149,11 +207,11 @@ export function SequenceContacts({
   }, [sequenceId, isActive]);
 
   const getStatusDetails = (contact: ExtendedSequenceContact) => {
-    if (contact.completed) {
+    if (contact.status === SequenceContactStatusEnum.REPLIED) {
       return (
         <div className="flex items-center gap-2 text-green-600">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Completed</span>
+          <MessageSquare className="w-4 h-4" />
+          <span>Replied</span>
         </div>
       );
     }
@@ -166,6 +224,15 @@ export function SequenceContacts({
         <div className="flex items-center gap-2 text-red-600">
           <AlertCircle className="w-4 h-4" />
           <span>Failed</span>
+        </div>
+      );
+    }
+
+    if (contact.completed) {
+      return (
+        <div className="flex items-center gap-2 text-green-600">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>Completed</span>
         </div>
       );
     }
@@ -226,7 +293,7 @@ export function SequenceContacts({
         />
       </div>
 
-      <div className="border rounded-lg">
+      <div className="p-0">
         <Table>
           <TableHeader>
             <TableRow>
@@ -352,20 +419,59 @@ export function SequenceContacts({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() =>
-                        handleRemoveContact(sequenceContact.contactId)
-                      }
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <X className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MoreVertical className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleSendNow(sequenceContact.id)}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Now
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleStatusUpdate(
+                              sequenceContact.id,
+                              SequenceContactStatusEnum.COMPLETED
+                            )
+                          }
+                        >
+                          <CheckCheck className="h-4 w-4 mr-2" />
+                          Mark as Completed
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleStatusUpdate(
+                              sequenceContact.id,
+                              SequenceContactStatusEnum.REPLIED
+                            )
+                          }
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Mark as Replied
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleRemoveContact(sequenceContact.contactId)
+                          }
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

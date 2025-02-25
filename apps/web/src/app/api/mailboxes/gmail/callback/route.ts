@@ -20,6 +20,11 @@ interface GmailSendAs {
   isDefault?: boolean;
 }
 
+interface StateData {
+  userId: string;
+  returnPath: string;
+}
+
 async function fetchAndSaveAliases(gmail: any, mailboxId: string) {
   try {
     // Fetch Gmail settings including send-as aliases
@@ -107,7 +112,9 @@ export async function GET(request: Request) {
       redirectUri: process.env.GOOGLE_REDIRECT_URI_EMAIL,
     });
 
-    const userId = decrypt(state);
+    // Decrypt and parse state
+    const decryptedState = decrypt(state);
+    const { userId, returnPath } = JSON.parse(decryptedState) as StateData;
 
     try {
       // Get tokens from code
@@ -191,10 +198,6 @@ export async function GET(request: Request) {
             scope: tokens.scope || null,
             id_token: tokens.id_token || null,
             providerAccountId: userInfo.id || "",
-            // If this is the first account, make it default
-            isDefault: !(await prisma.mailbox.findFirst({
-              where: { userId, isDefault: true },
-            })),
           },
         });
         accountId = createdAccount.id;
@@ -205,9 +208,33 @@ export async function GET(request: Request) {
       const gmail = google.gmail({ version: "v1", auth: oauth2Client });
       await fetchAndSaveAliases(gmail, accountId);
 
-      // Redirect back to settings page
+      // Send a request to mailops to setup watch
+      console.log(
+        "Sending request to mailops to setup watch",
+        `${process.env.NEXT_PUBLIC_MAILOPS_API_URL}/mailbox/watch`,
+        userId,
+        userInfo.email
+      );
+      const watchResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_MAILOPS_API_URL}/mailbox/watch`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId, email: userInfo.email }),
+        }
+      );
+
+      if (!watchResponse.ok) {
+        const error = await watchResponse.json();
+        console.error("[GMAIL_CALLBACK] Failed to setup watch:", error);
+        // Continue with the flow even if watch setup fails
+      }
+
+      // Redirect back to the return path with success message
       return Response.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/settings?success=gmail_connected`
+        `${process.env.NEXT_PUBLIC_APP_URL}${returnPath}?success=gmail_connected`
       );
     } catch (tokenError: any) {
       console.error("[GMAIL_CALLBACK] Token Error:", {

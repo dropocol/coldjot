@@ -43,16 +43,31 @@ export async function PUT(
 
     const json = await req.json();
     delete json.sequenceId;
-    delete json.templateId;
     delete json.type;
+
+    // Prepare update data
+    const updateData = { ...json };
+
+    // If templateId is explicitly set to null (unlinking), remove it and keep content/subject
+    if (json.templateId === null) {
+      updateData.templateId = null;
+    }
+
+    // If templateId is provided, clear content and subject
+    if (json.templateId) {
+      updateData.content = null;
+      updateData.subject = null;
+    }
+
+    console.log("Update Data", updateData);
 
     // Update the step
     const step = await prisma.sequenceStep.update({
       where: {
         id: stepId,
-        sequenceId: sequenceId, // Extra safety: ensure step belongs to sequence
+        sequenceId: sequenceId,
       },
-      data: json,
+      data: updateData,
     });
 
     return NextResponse.json(step);

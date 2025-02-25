@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Loader2, SendHorizonal, Search } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -52,7 +53,7 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
       const response = await fetch("/api/sequences");
       if (!response.ok) throw new Error("Failed to fetch sequences");
       const data = await response.json();
-      setSequences(data);
+      setSequences(data.sequences || []);
     } catch (error) {
       console.error("Error fetching sequences:", error);
       toast.error("Failed to load sequences");
@@ -93,19 +94,19 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
   );
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
             <SendHorizonal className="h-5 w-5" />
             Add Contact to Sequence
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             Add {contact.firstName} {contact.lastName} to an email sequence
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <div className="relative">
+        <div className="relative mt-4">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search sequences..."
@@ -115,7 +116,7 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
           />
         </div>
 
-        <div className="relative min-h-[300px] max-h-[400px] overflow-auto rounded-md border">
+        <div className="relative min-h-[300px] max-h-[400px] overflow-auto rounded-md border mt-4">
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
               <Loader2 className="h-6 w-6 animate-spin" />
@@ -183,7 +184,7 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
             </Table>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

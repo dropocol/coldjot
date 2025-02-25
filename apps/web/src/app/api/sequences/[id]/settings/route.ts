@@ -1,107 +1,151 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
-import type { BusinessHours } from "@coldjot/types";
+import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
+import { BusinessScheduleEnum } from "@coldjot/types";
 
 interface UpdateSettingsBody {
   name?: string;
   accessLevel?: "team" | "private";
   testMode?: boolean;
   disableSending?: boolean;
-  scheduleType?: "business" | "custom";
+  scheduleType?: BusinessScheduleType;
   businessHours?: BusinessHours;
   testEmails?: string[];
-  mailboxId?: string | null;
+  mailboxId?: string;
+  aliasId?: string | null;
+  clearDeprecatedMailboxId?: boolean;
 }
 
 export async function PATCH(
-  req: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = (await req.json()) as UpdateSettingsBody;
     const { id } = await params;
+    const json: UpdateSettingsBody = await request.json();
+    console.log("json.businessHours", json);
 
-    console.log("body", body);
+    // Validate the request
+    if (
+      json.scheduleType &&
+      ![BusinessScheduleEnum.BUSINESS, BusinessScheduleEnum.CUSTOM].includes(
+        json.scheduleType
+      )
+    ) {
+      return NextResponse.json(
+        { error: "Invalid schedule type" },
+        { status: 400 }
+      );
+    }
 
-    // Validate sequence ownership
-    const existingSequence = await prisma.sequence.findFirst({
-      where: {
-        id,
-        userId: session.user.id,
+    // Start building the update data
+    const updateData: any = {};
+
+    // Handle basic fields
+    if (json.name !== undefined) updateData.name = json.name;
+    if (json.accessLevel !== undefined)
+      updateData.accessLevel = json.accessLevel;
+    if (json.testMode !== undefined) updateData.testMode = json.testMode;
+    if (json.disableSending !== undefined)
+      updateData.disableSending = json.disableSending;
+    if (json.scheduleType !== undefined)
+      updateData.scheduleType = json.scheduleType;
+    if (json.testEmails !== undefined) updateData.testEmails = json.testEmails;
+
+    // Get the current sequence with its business hours
+    const existingSequence = await prisma.sequence.findUnique({
+      where: { id },
+      include: {
+        businessHours: true,
+        sequenceMailbox: true,
       },
     });
 
     if (!existingSequence) {
-      return new NextResponse("Sequence not found", { status: 404 });
+      return NextResponse.json(
+        { error: "Sequence not found" },
+        { status: 404 }
+      );
     }
 
-    // Start a transaction to update sequence and business hours
-    const result = await prisma.$transaction(async (tx) => {
-      // Update sequence settings
-      const sequence = await tx.sequence.update({
-        where: {
-          id,
-          userId: session.user.id,
-        },
-        data: {
-          ...(body.name && { name: body.name }),
-          ...(body.accessLevel && { accessLevel: body.accessLevel }),
-          ...(typeof body.testMode === "boolean" && {
-            testMode: body.testMode,
-          }),
-          ...(body.scheduleType && { scheduleType: body.scheduleType }),
-          ...(typeof body.disableSending === "boolean" && {
-            disableSending: body.disableSending,
-          }),
-          ...(body.testEmails && { testEmails: body.testEmails }),
-          ...(body.mailboxId !== undefined && { mailboxId: body.mailboxId }),
-        },
-        include: {
-          businessHours: true,
-        },
-      });
-
-      // Handle business hours if provided
-      if (body.scheduleType === "business" && body.businessHours) {
-        const businessHours = await tx.businessHours.upsert({
-          where: { sequenceId: id },
-          create: {
-            sequenceId: id,
-            userId: session.user.id,
-            timezone: body.businessHours.timezone,
-            workDays: body.businessHours.workDays,
-            workHoursStart: body.businessHours.workHoursStart,
-            workHoursEnd: body.businessHours.workHoursEnd,
-            holidays: body.businessHours.holidays.map((h) => new Date(h)),
-          },
-          update: {
-            timezone: body.businessHours.timezone,
-            workDays: body.businessHours.workDays,
-            workHoursStart: body.businessHours.workHoursStart,
-            workHoursEnd: body.businessHours.workHoursEnd,
-            holidays: body.businessHours.holidays.map((h) => new Date(h)),
+    // Handle business hours
+    if (json.businessHours) {
+      if (existingSequence.businessHours) {
+        // Update existing business hours
+        await prisma.businessHours.update({
+          where: { id: existingSequence.businessHours.id },
+          data: {
+            timezone: json.businessHours.timezone,
+            workDays: json.businessHours.workDays,
+            workHoursStart: json.businessHours.workHoursStart,
+            workHoursEnd: json.businessHours.workHoursEnd,
+            holidays: json.businessHours.holidays || [],
+            type: json.businessHours.type,
           },
         });
-        return { ...sequence, businessHours };
-      } else if (body.scheduleType === "custom") {
-        // Remove business hours if schedule type is custom
-        await tx.businessHours.deleteMany({
-          where: { sequenceId: id },
+      } else {
+        // Create new business hours
+        await prisma.businessHours.create({
+          data: {
+            userId: session.user.id,
+            sequenceId: id,
+            timezone: json.businessHours.timezone,
+            workDays: json.businessHours.workDays,
+            workHoursStart: json.businessHours.workHoursStart,
+            workHoursEnd: json.businessHours.workHoursEnd,
+            holidays: json.businessHours.holidays || [],
+            type: json.businessHours.type,
+          },
         });
       }
+    }
 
-      return sequence;
+    // Handle mailbox and alias updates
+    if (json.mailboxId !== undefined || json.aliasId !== undefined) {
+      if (existingSequence.sequenceMailbox) {
+        // Update existing SequenceMailbox
+        await prisma.sequenceMailbox.update({
+          where: { id: existingSequence.sequenceMailbox.id },
+          data: {
+            ...(json.mailboxId && { mailboxId: json.mailboxId }),
+            ...(json.aliasId !== undefined && { aliasId: json.aliasId }),
+          },
+        });
+      } else if (json.mailboxId) {
+        // Create new SequenceMailbox
+        await prisma.sequenceMailbox.create({
+          data: {
+            sequenceId: id,
+            mailboxId: json.mailboxId,
+            aliasId: json.aliasId || null,
+            userId: session.user.id,
+          },
+        });
+      }
+    }
+
+    // Update sequence and return with all relations
+    const sequence = await prisma.sequence.update({
+      where: { id },
+      data: updateData,
+      include: {
+        sequenceMailbox: true,
+        businessHours: true,
+      },
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(sequence);
   } catch (error) {
-    console.error("[SEQUENCE_SETTINGS_PATCH]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    console.error("Error updating sequence settings:", error);
+    return NextResponse.json(
+      { error: "Failed to update sequence settings" },
+      { status: 500 }
+    );
   }
 }

@@ -20,8 +20,16 @@ import { processContactShared } from "./helper";
 interface SequenceWithRelations {
   id: string;
   userId: string;
-  mailboxId: string;
   name?: string;
+  sequenceMailbox: {
+    id: string;
+    sequenceId: string;
+    mailboxId: string;
+    aliasId: string | null;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
   steps: {
     id: string;
     sequenceId: string;
@@ -105,14 +113,14 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
         throw new Error("Sequence not found");
       }
 
-      if (!dbSequence.mailboxId) {
+      if (!dbSequence.sequenceMailbox) {
         throw new Error("Sequence mailbox not found");
       }
 
       // Cast database sequence to our expected type
       const sequence: SequenceWithRelations = {
         ...dbSequence,
-        mailboxId: dbSequence.mailboxId || "",
+        sequenceMailbox: dbSequence.sequenceMailbox,
         steps: dbSequence.steps.map((step) => ({
           ...step,
           stepType: step.stepType as StepTypeEnum,
@@ -122,6 +130,12 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
           replyToThread: step.replyToThread ?? false,
           templateId: step.templateId,
         })),
+        businessHours: dbSequence.businessHours
+          ? {
+              ...dbSequence.businessHours,
+              type: dbSequence.businessHours.type as BusinessScheduleEnum,
+            }
+          : null,
       };
 
       logger.info(`📋 Sequence details for ${sequence.name}:`, {

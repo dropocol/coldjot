@@ -236,8 +236,6 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
                   >
                     {item.type === "contact" ? (
                       <User className="h-4 w-4 text-muted-foreground/70" />
-                    ) : item.type === "company" ? (
-                      <Building2 className="h-4 w-4 text-muted-foreground/70" />
                     ) : null}
                     <div className="flex flex-col flex-1 min-w-0">
                       {item.type === "action" ? (

@@ -1,8 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Mail, Users, FileText, Building2 } from "lucide-react";
 import { StatsGrid } from "@/components/stats/stats-grid";
 import { StatsChartSection } from "@/components/stats/stats-chart-section";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +15,7 @@ import {
   generateDemoChartData,
 } from "@/components/stats/demo-data";
 import { startOfToday, startOfWeek, subDays } from "date-fns";
+import { RecentEmails } from "@/components/sequences/timeline/recent-emails";
 
 // Demo mode for development and preview
 const DEMO_MODE = false;
@@ -239,9 +238,14 @@ export default async function Home({
   const chartData = await getUserChartData(session.user.id, dateRange);
 
   return (
-    <div className="max-w-5xl mx-auto py-10 space-y-8">
+    <div className="max-w-5xl mx-auto py-8 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-semibold">Welcome to ColdJot</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">Welcome to ColdJot</h1>
+          <p className="text-sm text-muted-foreground">
+            Check your email stats and manage your email sequences.
+          </p>
+        </div>
         <DateRangeSelectorWrapper />
       </div>
 
@@ -251,47 +255,7 @@ export default async function Home({
 
       <StatsChartSection data={chartData} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Link href="/sequences">
-          <Button
-            variant="outline"
-            className="w-full h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <Mail className="h-8 w-8" />
-            <span>Email Sequences</span>
-          </Button>
-        </Link>
-
-        <Link href="/contacts">
-          <Button
-            variant="outline"
-            className="w-full h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <Users className="h-8 w-8" />
-            <span>Contacts</span>
-          </Button>
-        </Link>
-
-        <Link href="/templates">
-          <Button
-            variant="outline"
-            className="w-full h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <FileText className="h-8 w-8" />
-            <span>Templates</span>
-          </Button>
-        </Link>
-
-        <Link href="/organizations">
-          <Button
-            variant="outline"
-            className="w-full h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <Building2 className="h-8 w-8" />
-            <span>Organizations</span>
-          </Button>
-        </Link>
-      </div>
+      <RecentEmails userId={session.user.id} />
     </div>
   );
 }

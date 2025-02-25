@@ -96,15 +96,15 @@ export class RateLimitService {
       }
 
       // Log keys being checked
-      logger.info(
-        {
-          keys,
-          userId,
-          sequenceId,
-          contactId,
-        },
-        "Checking rate limits for keys:"
-      );
+      // logger.info(
+      //   {
+      //     keys,
+      //     userId,
+      //     sequenceId,
+      //     contactId,
+      //   },
+      //   "Checking rate limits for keys:"
+      // );
 
       const results = await pipeline.exec();
       if (!results) {
@@ -126,13 +126,13 @@ export class RateLimitService {
           value,
           error: result?.[0] || null,
         });
-        logger.info(
-          {
-            key: keys[index],
-            value,
-          },
-          `Rate limit value for ${keys[index]}:`
-        );
+        // logger.info(
+        //   {
+        //     key: keys[index],
+        //     value,
+        //   },
+        //   `Rate limit value for ${keys[index]}:`
+        // );
       });
 
       // Check cooldown first
@@ -191,19 +191,19 @@ export class RateLimitService {
       const isAllowed = maxCount < this.DEFAULT_RATE_LIMIT;
 
       // Log detailed information for debugging
-      logger.info(
-        {
-          userId,
-          sequenceId,
-          contactId,
-          maxCount,
-          isAllowed,
-          keys,
-          debugInfo,
-          limits,
-        },
-        "Rate limit check result:"
-      );
+      // logger.info(
+      //   {
+      //     userId,
+      //     sequenceId,
+      //     contactId,
+      //     maxCount,
+      //     isAllowed,
+      //     keys,
+      //     debugInfo,
+      //     limits,
+      //   },
+      //   "Rate limit check result:"
+      // );
 
       return {
         allowed: isAllowed,
@@ -280,20 +280,20 @@ export class RateLimitService {
       const results = await pipeline.exec();
 
       // Log increment operation results
-      logger.info(
-        {
-          userId,
-          sequenceId,
-          contactId,
-          keys,
-          results: results?.map((r, i) => ({
-            key: keys[Math.floor(i / 4)],
-            value: r?.[1],
-            error: r?.[0],
-          })),
-        },
-        "Rate limit increment results:"
-      );
+      // logger.info(
+      //   {
+      //     userId,
+      //     sequenceId,
+      //     contactId,
+      //     keys,
+      //     results: results?.map((r, i) => ({
+      //       key: keys[Math.floor(i / 4)],
+      //       value: r?.[1],
+      //       error: r?.[0],
+      //     })),
+      //   },
+      //   "Rate limit increment results:"
+      // );
     } catch (error) {
       logger.error(
         {

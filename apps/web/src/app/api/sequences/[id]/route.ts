@@ -2,6 +2,48 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const sequence = await prisma.sequence.findUnique({
+      where: {
+        id: id,
+        userId: session.user.id,
+      },
+      include: {
+        steps: {
+          orderBy: {
+            order: "asc",
+          },
+        },
+        _count: {
+          select: {
+            contacts: true,
+          },
+        },
+      },
+    });
+
+    if (!sequence) {
+      return new NextResponse("Sequence not found", { status: 404 });
+    }
+
+    return NextResponse.json(sequence);
+  } catch (error) {
+    console.error("[SEQUENCE_GET]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}
+
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

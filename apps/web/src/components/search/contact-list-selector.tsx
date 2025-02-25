@@ -105,7 +105,7 @@ export function ContactListSelector({
             </div>
           </div>
 
-          <div className="border rounded-lg">
+          <div className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>

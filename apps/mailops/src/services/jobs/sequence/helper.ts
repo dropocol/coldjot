@@ -1,6 +1,7 @@
-import { prisma } from "@coldjot/database";
+import { prisma, SequenceMailbox } from "@coldjot/database";
 import {
   BusinessHours,
+  BusinessScheduleEnum,
   Mailbox,
   SequenceContactStatusEnum,
   SequenceContactStatusType,
@@ -22,34 +23,8 @@ export function getDefaultBusinessHours(): BusinessHours {
     workHoursStart: "09:00",
     workHoursEnd: "17:00",
     holidays: [],
+    type: BusinessScheduleEnum.BUSINESS,
   };
-}
-
-/**
- * Get sender mailbox
- */
-export async function getSequenceMailbox(
-  sequenceId: string
-): Promise<Mailbox | null> {
-  const sequence = await prisma.sequence.findUnique({
-    where: { id: sequenceId },
-  });
-  if (!sequence) {
-    throw new Error("Sequence not found");
-  }
-  return getSenderMailbox(sequence.userId!, sequence.mailboxId!);
-}
-
-export async function getSequenceMailboxId(
-  sequenceId: string
-): Promise<string | null> {
-  const sequence = await prisma.sequence.findUnique({
-    where: { id: sequenceId },
-  });
-  if (!sequence) {
-    throw new Error("Sequence not found");
-  }
-  return sequence.mailboxId;
 }
 
 /**
@@ -174,6 +149,7 @@ export async function getSequenceWithDetails(sequenceId: string) {
   return prisma.sequence.findUnique({
     where: { id: sequenceId },
     include: {
+      sequenceMailbox: true,
       steps: {
         orderBy: { order: "asc" },
       },
@@ -274,10 +250,13 @@ interface ProcessContactOptions {
   sequence: {
     id: string;
     userId: string;
-    mailboxId: string;
+    // sequenceMailboxId: string;
+    sequenceMailbox: SequenceMailbox;
     steps: any[];
     businessHours?: any;
     status?: string;
+    disableSending?: boolean;
+    testMode?: boolean;
   };
   contact: {
     id: string;
@@ -353,39 +332,11 @@ export const processContactShared = async (
       throw new Error("Could not calculate send time");
     }
 
-    // Handle subject and thread ID logic
-    const previousStepIndex = currentStepIndex >= 1 ? currentStepIndex - 1 : 0;
-    const previousSubject = sequence.steps[previousStepIndex]?.subject || "";
-    const subject = step.replyToThread
-      ? `Re: ${previousSubject}`
-      : step.subject;
-
-    // 6. Create email job
-    const emailJob: EmailJob = {
-      sequenceId: sequence.id,
-      contactId: contact.id,
-      stepId: step.id,
-      userId: sequence.userId,
-      mailboxId: sequence.mailboxId,
-      // TODO : Remove this and properly handle test mode
-      to: contact.email,
-      subject: subject || "",
-      threadId: options.threadId,
-      scheduledTime: sendTime.toISOString(),
-      testMode,
-      disableSending: options.disableSending,
-    };
-
-    // 7. Add to queue
-    await jobManager.addEmailJob(emailJob);
-
-    logger.info(`📧 Created email job for contact: ${contact.email}`);
-
     // 8. Update contact status and progress
     await updateSequenceContactStatus(
       sequence.id,
       contact.id,
-      SequenceContactStatusEnum.SCHEDULED,
+      SequenceContactStatusEnum.IN_PROGRESS,
       {
         currentStep,
         nextScheduledAt: sendTime,

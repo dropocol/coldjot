@@ -41,8 +41,8 @@ export default async function ProfileSettingsPage() {
           <ProfileSettings user={session.user} />
           <Separator />
 
-          <EmailSettings />
-          <Separator />
+          {/* <EmailSettings /> */}
+          {/* <Separator /> */}
 
           <GoogleIntegration account={account} />
         </div>

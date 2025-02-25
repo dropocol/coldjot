@@ -9,6 +9,7 @@ import ContactList from "../../components/contacts/contact-list";
 import { Separator } from "@/components/ui/separator";
 import AddContactModal from "@/components/contacts/add-contact-drawer";
 import { Contact } from "@prisma/client";
+import { usePagination } from "@/hooks/use-pagination";
 
 export default function ContactsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,14 +17,20 @@ export default function ContactsPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const pagination = usePagination({ enableInfiniteScroll: false });
 
   const handleSearch = (value: string) => {
     setActiveSearch(value);
     setIsSearching(true);
   };
 
-  const handleAddContact = (newContact: Contact) => {
-    setContacts((prev) => [newContact, ...prev]);
+  const handleAddContact = (newContact: Contact | Contact[]) => {
+    if (Array.isArray(newContact)) {
+      setContacts((prev) => [...newContact, ...prev]);
+    } else {
+      setContacts((prev) => [newContact, ...prev]);
+    }
+    pagination.onPageChange(1); // Reset to first page after adding contacts
   };
 
   return (
@@ -53,6 +60,10 @@ export default function ContactsPage() {
         initialContacts={contacts}
         onSearchEnd={() => setIsSearching(false)}
         onAddContact={() => setShowAddModal(true)}
+        page={pagination.page}
+        limit={pagination.limit}
+        onPageChange={pagination.onPageChange}
+        onPageSizeChange={pagination.onPageSizeChange}
       />
 
       {showAddModal && (

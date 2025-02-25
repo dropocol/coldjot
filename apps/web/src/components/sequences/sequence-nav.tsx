@@ -23,6 +23,11 @@ export function SequenceNav({ sequenceId }: SequenceNavProps) {
       active: pathname === `/sequences/${sequenceId}/contacts`,
     },
     {
+      name: "Timeline",
+      href: `/sequences/${sequenceId}/timeline`,
+      active: pathname === `/sequences/${sequenceId}/timeline`,
+    },
+    {
       name: "Settings",
       href: `/sequences/${sequenceId}/settings`,
       active: pathname === `/sequences/${sequenceId}/settings`,

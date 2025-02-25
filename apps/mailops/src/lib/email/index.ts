@@ -130,6 +130,8 @@ export class EmailService {
           threadHeaders.messageId = sentMessageDetails.messageId;
         }
 
+        let untrackedResponse: gmail_v1.Schema$Message | null = null;
+        null;
         // Create untracked version for sender's sent folder
         if (options.html && response.data.id) {
           const encodedUntrackedMessage = await createUntrackedMessage({
@@ -144,14 +146,16 @@ export class EmailService {
           });
 
           // Insert untracked version in sender's sent folder
-          await gmail.users.messages.insert({
-            userId: "me",
-            requestBody: {
-              raw: encodedUntrackedMessage,
-              threadId: sentMessageDetails.threadId,
-              labelIds: [EmailLabelEnum.SENT],
-            },
-          });
+          untrackedResponse = (
+            await gmail.users.messages.insert({
+              userId: "me",
+              requestBody: {
+                raw: encodedUntrackedMessage,
+                threadId: sentMessageDetails.threadId,
+                labelIds: [EmailLabelEnum.SENT],
+              },
+            })
+          ).data;
 
           // Delete the original tracked message from sent folder
           try {
@@ -159,6 +163,7 @@ export class EmailService {
               userId: "me",
               id: response.data.id,
             });
+
             logger.info("✅ Original tracked message deleted from sent folder");
           } catch (err) {
             logger.error("Error deleting original tracked message:", err);
@@ -166,13 +171,19 @@ export class EmailService {
         }
 
         // Create tracking records
-        // TODO : The emailId should be the messageId or something else
+
         // TODO : Update createEmailTrackingRecord with trackingId, sequenceId, contactId, stepId etc
 
+        // TODO : Check the code again
+        // Update subject if it's not set
+        // options.subject = sentMessageDetails.subject || options.subject;
         await this.updateEmailTracking(
           options.tracking.id,
           options,
-          response.data
+          response.data,
+          {
+            untrackedMessageId: untrackedResponse?.id || "",
+          }
         );
 
         await this.createEmailEvent(
@@ -240,7 +251,8 @@ export class EmailService {
   private async updateEmailTracking(
     trackingId: string,
     options: SendEmailOptions,
-    trackedResponse: gmail_v1.Schema$Message
+    trackedResponse: gmail_v1.Schema$Message,
+    metadata?: any
   ): Promise<void> {
     logger.info("📝 Updating email tracking record");
 
@@ -252,6 +264,7 @@ export class EmailService {
         messageId: trackedResponse.id || undefined,
         threadId: trackedResponse.threadId || undefined,
         status: EmailTrackingStatusEnum.SENT,
+        subject: options.subject,
         events: {
           create: {
             type: EmailEventEnum.SENT,
@@ -259,6 +272,7 @@ export class EmailService {
             contactId: options.contactId,
             metadata: {
               messageId: trackedResponse.id || "",
+              ...metadata,
               threadId: trackedResponse.threadId || "",
               stepId: options.stepId,
             },
@@ -327,9 +341,13 @@ export class EmailService {
     options: SendEmailOptions,
     trackedResponse: gmail_v1.Schema$Message
   ): Promise<void> {
-    logger.info("📝 Creating email event");
-
-    logger.info({ options });
+    logger.info(
+      {
+        contactId: options.contactId,
+        sequenceId: options.sequenceId,
+      },
+      "📝 Creating email event"
+    );
 
     // Update sequence stats for the sent event
     if (options.sequenceId && options.contactId) {

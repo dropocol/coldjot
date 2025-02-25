@@ -7,7 +7,11 @@ import {
   Mail,
   MoreVertical,
   RefreshCw,
-  Check,
+  Trash2,
+  Bell,
+  BellOff,
+  Power,
+  PowerOff,
 } from "lucide-react";
 import { Mailbox, EmailAlias } from "@coldjot/database";
 import { Button } from "@/components/ui/button";
@@ -16,54 +20,38 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
-type MailboxWithAliases = Mailbox & {
+export type MailboxWithAliases = Mailbox & {
   aliases: EmailAlias[];
-  defaultAliasId: string | null;
 };
 
 interface MailboxListProps {
   accounts: MailboxWithAliases[];
-  onAccountUpdate: (
-    accountId: string,
-    data: Partial<MailboxWithAliases>
-  ) => Promise<void>;
+  onAccountUpdate: (accountId: string, data: Partial<Mailbox>) => Promise<void>;
   onAccountDelete: (accountId: string) => Promise<void>;
   onAliasesRefresh: (accountId: string) => Promise<void>;
+  onWatchUpdate?: (email: string, action: "start" | "stop") => Promise<void>;
 }
+
+// Feature flag for watch controls
+// const ENABLE_WATCH_CONTROLS =
+//   process.env.NEXT_PUBLIC_ENABLE_WATCH_CONTROLS === "true";
+
+const ENABLE_WATCH_CONTROLS = true;
 
 export function MailboxList({
   accounts,
   onAccountUpdate,
   onAccountDelete,
   onAliasesRefresh,
+  onWatchUpdate,
 }: MailboxListProps) {
   const { toast } = useToast();
   const [expandedAccounts, setExpandedAccounts] = useState<
     Record<string, boolean>
   >({});
-  const [selectedAliases, setSelectedAliases] = useState<
-    Record<string, string>
-  >(() => {
-    // Initialize with defaultAliasId or primary email
-    return accounts.reduce(
-      (acc, account) => {
-        const defaultAlias = account.aliases.find(
-          (a) => a.id === account.defaultAliasId
-        );
-        acc[account.id] = defaultAlias?.alias || account.email;
-        return acc;
-      },
-      {} as Record<string, string>
-    );
-  });
 
   const handleToggleExpand = (accountId: string) => {
     setExpandedAccounts((prev) => ({
@@ -88,34 +76,25 @@ export function MailboxList({
     }
   };
 
-  const handleAliasSelect = async (accountId: string, alias: string) => {
+  const handleWatchUpdate = async (email: string, action: "start" | "stop") => {
     try {
-      // Find the alias ID
-      const account = accounts.find((a) => a.id === accountId);
-      if (!account) return;
+      if (!onWatchUpdate) return;
 
-      const selectedAlias = account.aliases.find((a) => a.alias === alias);
-      const defaultAliasId = selectedAlias?.id;
+      // Find the account with the matching email to get its userId
+      const account = accounts.find((acc) => acc.email === email);
+      if (!account) {
+        throw new Error("Account not found");
+      }
 
-      // Update the selected alias in state
-      setSelectedAliases((prev) => ({
-        ...prev,
-        [accountId]: alias,
-      }));
-
-      // Update the account settings in the database
-      await onAccountUpdate(accountId, {
-        defaultAliasId: defaultAliasId || null,
-      });
-
+      await onWatchUpdate(email, action);
       toast({
-        title: "Alias selected",
-        description: "Your default sending alias has been updated.",
+        title: action === "start" ? "Watch Started" : "Watch Stopped",
+        description: `Email watch has been ${action === "start" ? "started" : "stopped"} for ${email}`,
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update sending alias. Please try again.",
+        description: `Failed to ${action} watch. Please try again.`,
         variant: "destructive",
       });
     }
@@ -124,12 +103,6 @@ export function MailboxList({
   return (
     <div className="space-y-4">
       {accounts.map((account) => {
-        const selectedAlias = selectedAliases[account.id] || account.email;
-        const allAliases = [
-          { alias: account.email, name: account.name || account.email },
-          ...account.aliases,
-        ];
-
         return (
           <div
             key={account.id}
@@ -139,70 +112,19 @@ export function MailboxList({
               <div className="flex items-center space-x-4">
                 <Mail className="h-5 w-5 text-muted-foreground" />
                 <div className="space-y-1">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="-ml-2 h-auto justify-start px-2 py-1.5 focus-visible:ring-0"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <div className="flex flex-col items-start">
-                            <div className="flex items-center space-x-2">
-                              <span className="font-medium">
-                                {account.name || account.email}
-                              </span>
-                              {account.isDefault && (
-                                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                                  Default
-                                </span>
-                              )}
-                              {!account.isActive && (
-                                <span className="rounded-md bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive">
-                                  Inactive
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                              <span>Send as:</span>
-                              <span className="font-medium text-foreground">
-                                {selectedAlias}
-                              </span>
-                              <ChevronDown className="h-3 w-3" />
-                            </div>
-                          </div>
-                        </div>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[300px]">
-                      <DropdownMenuLabel>Send As</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={selectedAlias}
-                        onValueChange={(value) =>
-                          handleAliasSelect(account.id, value)
-                        }
-                      >
-                        {allAliases.map((alias) => (
-                          <DropdownMenuRadioItem
-                            key={alias.alias}
-                            value={alias.alias}
-                            className="flex items-center justify-between"
-                          >
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {alias.name || alias.alias}
-                              </span>
-                              <span className="text-sm text-muted-foreground">
-                                {alias.alias}
-                              </span>
-                            </div>
-                            {selectedAlias === alias.alias && (
-                              <Check className="h-4 w-4 text-primary" />
-                            )}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium">
+                      {account.name || account.email}
+                    </span>
+                    {!account.isActive && (
+                      <span className="rounded-md bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive">
+                        Inactive
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {account.email}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -241,25 +163,43 @@ export function MailboxList({
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem
                       onClick={() =>
-                        onAccountUpdate(account.id, { isDefault: true })
-                      }
-                      className={cn(account.isDefault && "bg-accent")}
-                    >
-                      Set as Default
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
                         onAccountUpdate(account.id, {
                           isActive: !account.isActive,
                         })
                       }
                     >
+                      {account.isActive ? (
+                        <PowerOff className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Power className="mr-2 h-4 w-4" />
+                      )}
                       {account.isActive ? "Deactivate" : "Activate"}
                     </DropdownMenuItem>
+                    {ENABLE_WATCH_CONTROLS && account.provider === "gmail" && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleWatchUpdate(account.email, "stop")
+                          }
+                        >
+                          <BellOff className="mr-2 h-4 w-4" />
+                          Stop Email Watch
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleWatchUpdate(account.email, "start")
+                          }
+                        >
+                          <Bell className="mr-2 h-4 w-4" />
+                          New Email Watch
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuItem
                       onClick={() => onAccountDelete(account.id)}
                       className="text-destructive"
                     >
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Remove Account
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -289,9 +229,6 @@ export function MailboxList({
                               {alias.alias}
                             </div>
                           </div>
-                          {selectedAlias === alias.alias && (
-                            <Check className="h-4 w-4 text-primary" />
-                          )}
                         </div>
                       ))}
                     </div>

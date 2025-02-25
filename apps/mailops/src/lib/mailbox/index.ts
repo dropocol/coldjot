@@ -1,6 +1,19 @@
 import { prisma } from "@coldjot/database";
 import { EmailAlias, Mailbox, MailboxCredentials } from "@coldjot/types";
 
+export async function getSequenceMailboxId(
+  sequenceId: string
+): Promise<string | null> {
+  const mailbox = await prisma.sequenceMailbox.findUnique({
+    where: { sequenceId: sequenceId },
+  });
+  if (!mailbox) {
+    // throw new Error("Sequence mailbox not found");
+    return null;
+  }
+  return mailbox.mailboxId;
+}
+
 /**
  * Get user's mailbox details
  */
@@ -23,22 +36,95 @@ export async function getSenderMailbox(
     return null;
   }
 
-  let defaultAlias: EmailAlias | undefined = undefined;
-  if (mailbox.defaultAliasId && mailbox.aliases?.length) {
-    defaultAlias = mailbox.aliases.find(
-      (alias) => alias.id === mailbox.defaultAliasId
-    );
-  }
-
   return {
     id: mailbox.id,
-    name: defaultAlias?.name || mailbox.name || "",
-    email: defaultAlias?.alias || mailbox.email || "",
+    name: mailbox.name || "",
+    email: mailbox.email || "",
     accessToken: mailbox.access_token,
     refreshToken: mailbox.refresh_token,
     expiryDate: mailbox.expires_at || 0,
     // aliases: mailbox.aliases,
     // defaultAliasId: mailbox.defaultAliasId || undefined,
+  };
+}
+
+/**
+ * Get sequence mailbox details
+ */
+export async function getSequenceMailboxWithId(
+  id: string
+): Promise<Mailbox | null> {
+  console.log("🔍 Getting sequence mailbox with id", id);
+  const sequenceMailbox = await prisma.sequenceMailbox.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      alias: true,
+      mailbox: true,
+    },
+  });
+
+  if (
+    !sequenceMailbox?.mailbox.providerAccountId ||
+    !sequenceMailbox?.mailbox.access_token ||
+    !sequenceMailbox?.mailbox.refresh_token
+  ) {
+    return null;
+  }
+
+  return {
+    id: sequenceMailbox.mailbox.id,
+    name: sequenceMailbox.alias?.name || sequenceMailbox.mailbox.name || "",
+    email: sequenceMailbox.alias?.alias || sequenceMailbox.mailbox.email || "",
+    accessToken: sequenceMailbox.mailbox.access_token,
+    refreshToken: sequenceMailbox.mailbox.refresh_token,
+    expiryDate: sequenceMailbox.mailbox.expires_at || 0,
+  };
+}
+
+/**
+ * Get sequence mailbox details
+ */
+export async function getSequenceMailbox(
+  sequenceMailboxId: string,
+  sequenceId: string,
+  userId: string
+): Promise<Mailbox | null> {
+  console.log(
+    "🔍 Getting sequence mailbox",
+    sequenceMailboxId,
+    sequenceId,
+    userId
+  );
+
+  const sequenceMailbox = await prisma.sequenceMailbox.findUnique({
+    where: {
+      sequenceId: sequenceId,
+      mailboxId: sequenceMailboxId,
+      userId: userId,
+    },
+    include: {
+      alias: true,
+      mailbox: true,
+    },
+  });
+
+  if (
+    !sequenceMailbox?.mailbox.providerAccountId ||
+    !sequenceMailbox?.mailbox.access_token ||
+    !sequenceMailbox?.mailbox.refresh_token
+  ) {
+    return null;
+  }
+
+  return {
+    id: sequenceMailbox.mailbox.id,
+    name: sequenceMailbox.alias?.name || sequenceMailbox.mailbox.name || "",
+    email: sequenceMailbox.alias?.alias || sequenceMailbox.mailbox.email || "",
+    accessToken: sequenceMailbox.mailbox.access_token,
+    refreshToken: sequenceMailbox.mailbox.refresh_token,
+    expiryDate: sequenceMailbox.mailbox.expires_at || 0,
   };
 }
 

@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import type { DefaultSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import {
   findGoogleAccount,
@@ -6,12 +7,21 @@ import {
   findUserGoogleAccounts,
   refreshGoogleToken,
 } from "@/lib/db/user";
+import { PrismaClient } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
     error?: "RefreshTokenError";
+    user: {
+      id: string;
+      role: string;
+      onboardingCompleted: boolean;
+      onboardingStep: number;
+    } & DefaultSession["user"];
   }
 }
+
+const prisma = new PrismaClient();
 
 export const authConfig: NextAuthConfig = {
   providers: [
@@ -38,9 +48,9 @@ export const authConfig: NextAuthConfig = {
           ].join(" "),
         },
       },
-      profile(profile) {
-        return { role: profile.role ?? "user", ...profile };
-      },
+      // profile(profile) {
+      //   return { role: profile.role ?? "user", ...profile };
+      // },
     }),
   ],
   trustHost: true,
@@ -52,11 +62,10 @@ export const authConfig: NextAuthConfig = {
           console.log("🚀 Signing in with Google...");
           console.log(user, account, profile);
 
+          // const existingAccount = await findGoogleAccount(user.sub!);
           const existingAccount = await findGoogleAccount(
             account.providerAccountId
           );
-
-          console.log("existingAccount", existingAccount);
 
           if (existingAccount) {
             await updateGoogleAccount(account.providerAccountId, {
@@ -68,6 +77,7 @@ export const authConfig: NextAuthConfig = {
             });
 
             console.log("updatedAccount");
+            return true;
           } else {
             if (!user.id) return false;
           }
@@ -79,11 +89,24 @@ export const authConfig: NextAuthConfig = {
     },
 
     async session({ session, user, token }) {
-      // console.log("Session", session, user, token);
+      // Get user's onboarding status
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          role: true,
+          onboardingCompleted: true,
+          onboardingStep: true,
+        },
+      });
 
-      // token.sub is the user id for jwt strategy
-      // const googleAccounts = await findUserGoogleAccounts(token.sub!);
-      const googleAccounts = await findUserGoogleAccounts(user.id!);
+      // Add onboarding status to session
+      session.user.onboardingCompleted = dbUser?.onboardingCompleted ?? false;
+      session.user.onboardingStep = dbUser?.onboardingStep ?? 0;
+      session.user.role = dbUser?.role ?? "user";
+      session.user.id = user.id;
+
+      // Handle Google account refresh token
+      const googleAccounts = await findUserGoogleAccounts(user.id);
       const [googleAccount] = googleAccounts;
 
       if (

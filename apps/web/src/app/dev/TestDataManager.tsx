@@ -16,7 +16,7 @@ import testData from "./testData.json";
 // Function to generate random contacts
 function generateContacts(count: number) {
   const { firstNames, lastNames, titles } = testData.contactGenerator;
-  const contacts = [];
+  const contacts: any = [];
 
   for (let i = 0; i < count; i++) {
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
@@ -29,8 +29,6 @@ function generateContacts(count: number) {
       lastName,
       name: `${firstName} ${lastName}`,
       email,
-      title,
-      linkedinUrl: `https://linkedin.com/in/${firstName.toLowerCase()}-${lastName.toLowerCase()}`,
     });
   }
 

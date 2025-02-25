@@ -1,3 +1,5 @@
+"use server";
+
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { auth } from "@/auth";
@@ -33,10 +35,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get return path from request body
+    const { returnPath = "/settings" } = await request.json();
+
     // Log OAuth configuration
     console.log("OAuth Configuration:", {
       clientId: process.env.GOOGLE_CLIENT_ID_EMAIL?.slice(0, 30) + "...",
-      redirectUri: `http://localhost:3000/api/email-accounts/gmail/callback`,
+      redirectUri: process.env.GOOGLE_REDIRECT_URI_EMAIL,
       scopes: SCOPES,
     });
 
@@ -44,9 +49,8 @@ export async function POST(request: Request) {
     const url = oauth2Client.generateAuthUrl({
       access_type: "offline",
       scope: SCOPES,
-      //   include_granted_scopes: true,
       prompt: "consent",
-      state: encrypt(session.user.id),
+      state: encrypt(JSON.stringify({ userId: session.user.id, returnPath })),
     });
 
     console.log("[GMAIL_AUTH] Generated OAuth URL:", url.slice(0, 100) + "...");

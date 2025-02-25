@@ -159,7 +159,7 @@ export const SequenceStats = ({ stats }: SequenceStatsProps) => {
             <stat.icon className={`w-5 h-5 ${stat.color}`} />
             <span className="text-sm text-muted-foreground">{stat.title}</span>
           </div>
-          <div className="text-2xl font-bold">{stat.value}</div>
+          <div className="text-2xl font-semibold">{stat.value}</div>
           {stat.subValue && (
             <div className="text-sm text-muted-foreground mt-1">
               {stat.subValue}

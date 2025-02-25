@@ -53,7 +53,7 @@ export function StatsCard({
         <Icon className={cn("w-5 h-5", color)} />
         <span className="text-sm text-muted-foreground">{title}</span>
       </div>
-      <div className="text-2xl font-bold">{value.toLocaleString()}</div>
+      <div className="text-2xl font-semibold">{value.toLocaleString()}</div>
       {percentage !== undefined && (
         <div className="text-sm text-muted-foreground mt-1">
           {percentage.toFixed(2)}%

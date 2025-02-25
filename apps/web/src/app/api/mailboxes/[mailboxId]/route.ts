@@ -46,26 +46,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
     const { mailboxId } = await params;
     const body = await req.json();
-    const {
-      isActive,
-      isDefault,
-      name,
-      settings: newSettings,
-      defaultAliasId,
-    } = body;
-
-    // If setting as default, unset any existing default
-    if (isDefault) {
-      await prisma.mailbox.updateMany({
-        where: {
-          userId: session.user.id,
-          isDefault: true,
-        },
-        data: {
-          isDefault: false,
-        },
-      });
-    }
+    const { isActive, name } = body;
 
     // Get current account to merge settings
     const currentAccount = await prisma.mailbox.findUnique({
@@ -79,23 +60,6 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       return new NextResponse("Not Found", { status: 404 });
     }
 
-    // If defaultAliasId is provided, verify it belongs to this account
-    if (defaultAliasId !== undefined) {
-      // Only verify if defaultAliasId is not null (null means use primary email)
-      if (defaultAliasId !== null) {
-        const alias = await prisma.emailAlias.findUnique({
-          where: {
-            id: defaultAliasId,
-            mailboxId: mailboxId,
-          },
-        });
-
-        if (!alias) {
-          return new NextResponse("Invalid alias ID", { status: 400 });
-        }
-      }
-    }
-
     const account = await prisma.mailbox.update({
       where: {
         id: mailboxId,
@@ -103,9 +67,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       },
       data: {
         ...(isActive !== undefined && { isActive }),
-        ...(isDefault !== undefined && { isDefault }),
         ...(name !== undefined && { name }),
-        ...(defaultAliasId !== undefined && { defaultAliasId }),
       },
       include: {
         aliases: true,
@@ -128,6 +90,48 @@ export async function DELETE(req: Request, { params }: RouteParams) {
 
     const { mailboxId } = await params;
 
+    // Get the mailbox first to get its email
+    const mailbox = await prisma.mailbox.findUnique({
+      where: {
+        id: mailboxId,
+        userId: session.user.id,
+      },
+    });
+
+    if (!mailbox) {
+      return new NextResponse("Not Found", { status: 404 });
+    }
+
+    // First, stop the Gmail watch
+    try {
+      const stopWatchResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_MAILOPS_API_URL}/mailbox/watch/${encodeURIComponent(mailbox.email)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!stopWatchResponse.ok) {
+        console.error(
+          "[EMAIL_ACCOUNT_DELETE] Failed to stop watch:",
+          await stopWatchResponse.text()
+        );
+        // Continue with deletion even if watch stop fails
+      } else {
+        console.log(
+          "[EMAIL_ACCOUNT_DELETE] Successfully stopped watch for:",
+          mailbox.email
+        );
+      }
+
+      // Wait a moment to ensure watch is stopped
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (watchError) {
+      console.error("[EMAIL_ACCOUNT_DELETE] Error stopping watch:", watchError);
+      // Continue with deletion even if watch stop fails
+    }
+
+    // Then delete the mailbox
     await prisma.mailbox.delete({
       where: {
         id: mailboxId,

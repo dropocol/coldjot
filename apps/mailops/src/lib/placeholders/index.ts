@@ -1,14 +1,7 @@
 import { Contact } from "@prisma/client";
 
-// Types for placeholder functionality
-export interface PlaceholderContact extends Contact {
-  company?: {
-    name?: string;
-  } | null;
-}
-
 export interface PlaceholderOptions {
-  contact: PlaceholderContact;
+  contact: Contact;
   fallbacks?: Record<string, string>;
 }
 
@@ -38,8 +31,6 @@ export function replacePlaceholders(
         fallbacks.name ||
         "",
       email: contact.email || fallbacks.email || "",
-      title: contact.title || fallbacks.title || "",
-      company: contact.company?.name || fallbacks.company || "",
     };
 
     // Replace each placeholder

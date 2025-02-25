@@ -27,12 +27,14 @@ interface SequenceListProps {
   initialSequences: Sequence[];
   showCreateModal: boolean;
   onCloseCreateModal: () => void;
+  onAddSequence?: () => void;
 }
 
 export function SequenceList({
   initialSequences,
   showCreateModal,
   onCloseCreateModal,
+  onAddSequence,
 }: SequenceListProps) {
   const [sequences, setSequences] = useState<Sequence[]>(initialSequences);
   const [showStepEditor, setShowStepEditor] = useState(false);
@@ -74,13 +76,7 @@ export function SequenceList({
             Build custom campaigns to automate emails, set more meetings, and
             convert more customers.
           </p>
-          <Button
-            onClick={() => {
-              onCloseCreateModal();
-            }}
-          >
-            Create a sequence
-          </Button>
+          <Button onClick={onAddSequence}>Create a sequence</Button>
         </div>
       ) : (
         <div className="space-y-4">
@@ -107,7 +103,7 @@ function SequenceListItem({ sequence }: { sequence: Sequence }) {
   };
 
   return (
-    <div className="p-4 border rounded-lg">
+    <div className="p-0">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h3 className="font-medium">{sequence.name}</h3>

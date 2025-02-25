@@ -1,9 +1,10 @@
 import ContactPageClient from "./contact-page-client";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function ContactPage({ params }: PageProps) {
-  return <ContactPageClient contactId={params.id} />;
+export default async function ContactPage({ params }: PageProps) {
+  const { id } = await params;
+  return <ContactPageClient contactId={id} />;
 }

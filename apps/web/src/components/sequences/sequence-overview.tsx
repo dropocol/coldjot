@@ -8,11 +8,17 @@ import { AddSequenceStep } from "./steps/add-sequence-step";
 import { SequenceStepEditor } from "./steps/sequence-step-editor";
 import { SequenceEmailEditor } from "./editor/sequence-email-editor";
 import { toast } from "react-hot-toast";
-import type {
-  SequenceStats as SequenceStatsType,
-  SequenceStep,
-  SequenceStatus,
-  BusinessHours,
+import {
+  type SequenceStats as SequenceStatsType,
+  type SequenceStep,
+  type SequenceStatus,
+  type BusinessHours,
+  type StepPriority,
+  type StepTiming,
+  type StepTypeEnum,
+  type StepData,
+  type StepType,
+  StepPriority as StepPriorityEnum,
 } from "@coldjot/types";
 
 // Define a minimal sequence type for the overview page
@@ -55,6 +61,15 @@ interface EmailEditorData {
   includeSignature?: boolean;
   replyToThread?: boolean;
   previousStepId?: string;
+  templateId?: string;
+}
+
+interface StepEditorData {
+  timing?: "immediate" | "delay";
+  priority?: "high" | "medium" | "low";
+  delayAmount?: number;
+  delayUnit?: "minutes" | "hours" | "days";
+  note?: string;
 }
 
 export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
@@ -65,6 +80,9 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
   const [editingStep, setEditingStep] = useState<SequenceStep | null>(null);
   const [emailEditorData, setEmailEditorData] = useState<
     EmailEditorData | undefined
+  >(undefined);
+  const [stepEditorData, setStepEditorData] = useState<
+    StepEditorData | undefined
   >(undefined);
 
   const handleStepReorder = async (reorderedSteps: SequenceStep[]) => {
@@ -105,7 +123,22 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
   };
 
   const handleStepEdit = (step: SequenceStep) => {
+    if (!step) return;
+
+    const stepData: StepEditorData = {
+      timing: step.timing as "immediate" | "delay",
+      priority:
+        step.priority === StepPriorityEnum.HIGH
+          ? "high"
+          : step.priority === StepPriorityEnum.LOW
+            ? "low"
+            : "medium",
+      delayAmount: step.delayAmount || undefined,
+      delayUnit: (step.delayUnit as "minutes" | "hours" | "days") || undefined,
+      note: step.note || undefined,
+    };
     setEditingStep(step);
+    setStepEditorData(stepData);
     setShowStepEditor(true);
   };
 
@@ -115,11 +148,12 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
       currentStepIndex > 0 ? steps[currentStepIndex - 1].id : undefined;
 
     const emailData: EmailEditorData = {
-      subject: step.subject ?? undefined,
-      content: step.content ?? undefined,
+      subject: step.subject || undefined,
+      content: step.content || undefined,
       includeSignature: step.includeSignature,
       replyToThread: step.replyToThread ?? undefined,
       previousStepId,
+      templateId: step.templateId || undefined,
     };
     setEditingStep(step);
     setEmailEditorData(emailData);
@@ -153,6 +187,11 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
           body: JSON.stringify({
             ...editingStep,
             ...emailData,
+            // Clear content and subject if using template
+            ...(emailData.templateId && {
+              content: null,
+              subject: null,
+            }),
           }),
         }
       );
@@ -274,6 +313,25 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
     bounceRate: stats?.bounceRate || 0,
   });
 
+  // const mapStatsToDisplay = (
+  //   stats: SequenceStatsType | null
+  // ): SequenceStatsDisplay => ({
+  //   totalEmails: 1214,
+  //   sentEmails: 1214,
+  //   openedEmails: 765,
+  //   uniqueOpens: 391,
+  //   clickedEmails: 1149,
+  //   repliedEmails: 178,
+  //   bouncedEmails: 0,
+  //   unsubscribed: 0,
+  //   interested: 0,
+  //   peopleContacted: 376,
+  //   openRate: 62,
+  //   clickRate: 94,
+  //   replyRate: 14,
+  //   bounceRate: 0,
+  // });
+
   return (
     <div className="space-y-8">
       <div>
@@ -316,9 +374,10 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
         onClose={() => {
           setShowStepEditor(false);
           setEditingStep(null);
+          setStepEditorData(undefined);
         }}
         onSave={handleStepSave}
-        initialData={editingStep}
+        initialData={stepEditorData}
       />
 
       <SequenceEmailEditor

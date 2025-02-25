@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   Search,
   Sparkles,
+  Calendar,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,11 @@ const managementRoutes = [
     label: "Sequences",
     icon: Sparkles, // Assuming Sparkles icon is suitable; replace with appropriate icon if needed
     href: "/sequences",
+  },
+  {
+    label: "Timeline",
+    icon: Calendar,
+    href: "/timeline",
   },
 
   {

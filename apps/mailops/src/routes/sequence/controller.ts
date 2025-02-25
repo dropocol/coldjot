@@ -6,7 +6,11 @@ import { rateLimitService } from "@/services/core/rate-limit/service";
 import { resetSequence } from "@/services/jobs/sequence/helper";
 import { logger } from "@/lib/log";
 import { ProcessingJobEnum, BusinessScheduleEnum } from "@coldjot/types";
-import type { BusinessHours, ProcessingJob } from "@coldjot/types";
+import type {
+  BusinessHours,
+  ProcessingJob,
+  BusinessScheduleType,
+} from "@coldjot/types";
 
 // Initialize services
 const serviceManager = ServiceManager.getInstance();
@@ -15,16 +19,51 @@ const jobManager = serviceManager.getJobManager();
 // Update monitoring service to use schedule service
 const monitoringService = new MonitoringService(serviceManager);
 
+const DEFAULT_BUSINESS_HOURS: BusinessHours = {
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  workDays: [1, 2, 3, 4, 5], // Monday to Friday
+  workHoursStart: "09:00",
+  workHoursEnd: "17:00",
+  holidays: [],
+  type: BusinessScheduleEnum.BUSINESS,
+};
+
+// TODO : move to helper file
 // Helper function to get business hours
-async function getBusinessHours(
+async function getSequenceBusinessHours(
+  sequenceId: string,
   userId: string
-): Promise<BusinessHours | undefined> {
+): Promise<BusinessHours> {
   const settings = await prisma.businessHours.findFirst({
-    where: { userId },
+    where: {
+      userId,
+      sequenceId,
+    },
   });
 
   if (!settings) {
-    return undefined;
+    // create default business hours
+    const defaultSettings = await prisma.businessHours.create({
+      data: {
+        userId,
+        sequenceId,
+        timezone: DEFAULT_BUSINESS_HOURS.timezone,
+        workDays: DEFAULT_BUSINESS_HOURS.workDays,
+        workHoursStart: DEFAULT_BUSINESS_HOURS.workHoursStart,
+        workHoursEnd: DEFAULT_BUSINESS_HOURS.workHoursEnd,
+        holidays: DEFAULT_BUSINESS_HOURS.holidays,
+        type: DEFAULT_BUSINESS_HOURS.type,
+      },
+    });
+
+    return {
+      timezone: defaultSettings.timezone,
+      workDays: defaultSettings.workDays,
+      workHoursStart: defaultSettings.workHoursStart,
+      workHoursEnd: defaultSettings.workHoursEnd,
+      holidays: defaultSettings.holidays,
+      type: defaultSettings.type as BusinessScheduleEnum,
+    };
   }
 
   return {
@@ -33,6 +72,7 @@ async function getBusinessHours(
     workHoursStart: settings.workHoursStart,
     workHoursEnd: settings.workHoursEnd,
     holidays: settings.holidays,
+    type: settings.type as BusinessScheduleEnum,
   };
 }
 
@@ -48,6 +88,7 @@ export async function launchSequence(req: Request, res: Response) {
         userId,
       },
       include: {
+        businessHours: true,
         steps: {
           orderBy: { order: "asc" },
         },
@@ -77,7 +118,7 @@ export async function launchSequence(req: Request, res: Response) {
     }
 
     // Get business hours settings
-    const businessHours = await getBusinessHours(userId);
+    const businessHours = await getSequenceBusinessHours(id, userId);
 
     // Update sequence status
     await prisma.sequence.update({
@@ -90,19 +131,16 @@ export async function launchSequence(req: Request, res: Response) {
     const type = ProcessingJobEnum.SEQUENCE;
     // Create and schedule the job
     const processingJob: ProcessingJob = {
+      sequenceId: id,
       type: type,
-      id: `${type}-${id}-${Date.now()}`,
-      priority: 1,
-      data: {
-        sequenceId: id,
-        userId,
-        scheduleType: businessHours
+      userId,
+      scheduleType:
+        businessHours?.type === BusinessScheduleEnum.BUSINESS
           ? BusinessScheduleEnum.BUSINESS
           : BusinessScheduleEnum.CUSTOM,
-        businessHours,
-        testMode: sequence.testMode,
-        disableSending: sequence.disableSending,
-      },
+      businessHours,
+      testMode: sequence.testMode,
+      disableSending: sequence.disableSending,
     };
 
     // Add the job using the job manager

@@ -10,6 +10,7 @@ import {
   type SequenceStep,
   StepTypeEnum,
   type EmailJob,
+  BusinessScheduleEnum,
 } from "@coldjot/types";
 import { rateLimitService } from "@/services/core/rate-limit/service";
 import { createEmailTracking } from "@/lib/tracking";
@@ -24,7 +25,9 @@ import { QUEUE_NAMES } from "@/config";
 import { getWorkerOptions } from "@/config";
 import { ScheduleGenerator, scheduleGenerator } from "@/lib/schedule";
 import { replacePlaceholders, validatePlaceholders } from "@/lib/placeholders";
-import { getSenderMailbox } from "@/lib/mailbox";
+import { getSequenceMailboxWithId } from "@/lib/mailbox";
+import { gmailClientService } from "@/lib/google";
+import { determineEmailSubject } from "@/lib/email-subject";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
   private serviceManager = ServiceManager.getInstance();
@@ -74,47 +77,62 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       logger.info(`🔍 Fetching sequence step ${data.stepId}`);
       const step = await this.getAndValidateSequenceStep(data.stepId);
 
+      // get template info
+      const template = await prisma.template.findUnique({
+        where: { id: step.templateId || "" },
+      });
+
+      if (template) {
+        step.subject = template.subject;
+        step.content = template.content;
+      }
+
+      if (step.replyToThread) {
+        // Get original subject from thread
+      }
+
       // Get contact info
       // TODO : Check if the contact is available
       logger.info(`🔍 Fetching contact info ${data.contactId}`);
       const contact = await prisma.contact.findUnique({
         where: { id: data.contactId },
-        include: {
-          company: true, // Include company info for personalization
-        },
       });
 
       if (!contact) {
         throw new Error(`Contact ${data.contactId} not found`);
       }
 
-      logger.info(`🔍 Fetching mailbox info ${data.userId}`);
-      const mailbox = await getSenderMailbox(data.userId, data.mailboxId);
+      logger.info(`🔍 Fetching mailbox info ${data.sequenceMailboxId}`);
+      // const mailbox = await getSenderMailbox(
+      //   data.userId,
+      //   data.sequenceMailboxId
+      // );
+
+      console.log("🔍 Fetching mailbox info with data", data);
+      const mailbox = await getSequenceMailboxWithId(data.sequenceMailboxId);
+
       if (!mailbox) {
-        throw new Error(`No valid mailbox found for user ${data.userId}`);
+        // throw new Error(`No valid mailbox found for user ${data.userId}`);
+        return { success: false, error: "No valid mailbox found" };
       }
 
-      // Create tracking metadata
-      logger.info("📊 Creating tracking metadata");
-      const trackingMetadata: EmailTrackingMetadata = {
-        email: data.to,
-        userId: data.userId,
-        sequenceId: data.sequenceId,
-        stepId: data.stepId,
-        contactId: data.contactId,
-      };
+      // Get Gmail client for subject fetching if needed
+      const gmail =
+        step.replyToThread && mailbox
+          ? await gmailClientService.getClient(data.userId, mailbox.id!)
+          : undefined;
 
-      // Create tracking object
-      const tracking = await createEmailTracking(trackingMetadata);
-      if (!tracking) {
-        throw new Error("Failed to create tracking information");
-      }
-
-      // Replace placeholders in subject and content
-      const processedSubject = replacePlaceholders(
-        data.subject || step.subject || "",
-        { contact }
+      // Determine email subject based on context
+      const subjectInfo = await determineEmailSubject(
+        step,
+        data.threadId,
+        gmail,
+        contact
       );
+
+      logger.info({ subjectInfo }, "📧 Determined email subject");
+
+      // Replace placeholders in content
       const processedContent = replacePlaceholders(step.content || "", {
         contact,
       });
@@ -133,20 +151,38 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         );
       }
 
+      // Create tracking metadata
+      logger.info("📊 Creating tracking metadata");
+      const trackingMetadata: EmailTrackingMetadata = {
+        email: data.to,
+        userId: data.userId,
+        sequenceId: data.sequenceId,
+        stepId: data.stepId,
+        contactId: data.contactId,
+        subject: subjectInfo.subject, // Use the determined subject
+      };
+
+      // Create tracking object
+      const tracking = await createEmailTracking(trackingMetadata);
+      if (!tracking) {
+        throw new Error("Failed to create tracking information");
+      }
+
       // Prepare email options
       logger.info(
         {
           to: data.to,
-          subject: processedSubject,
+          subject: subjectInfo.subject,
           threadId: data.threadId,
           testMode: data.testMode,
           disableSending: data.disableSending,
         },
         "📧 Preparing email options"
       );
+
       const emailOptions: SendEmailOptions = {
         to: data.to,
-        subject: processedSubject,
+        subject: subjectInfo.subject,
         html: processedContent,
         replyTo: mailbox.email || "",
         threadId: data.threadId || "",
@@ -193,7 +229,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
               contactId: data.contactId,
               userId: data.userId,
               firstMessageId: emailResult.messageId!,
-              subject: data.subject || step.subject || "",
+              subject: subjectInfo.originalSubject || "",
               isFake: emailResult.isFake ?? false,
             },
           });
@@ -230,9 +266,9 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     if (!data.to) {
       throw new Error("Email recipient is required");
     }
-    if (!data.subject) {
-      throw new Error("Email subject is required");
-    }
+    // if (!data.subject) {
+    //   throw new Error("Email subject is required");
+    // }
     if (!data.userId) {
       throw new Error("User ID is required");
     }
@@ -319,6 +355,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
       const steps = await prisma.sequenceStep.findMany({
         where: { sequenceId: data.sequenceId },
+        orderBy: { order: "asc" },
       });
 
       logger.info(steps, "🚀 ~ EmailProcessor ~ steps:");
@@ -327,11 +364,22 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
       logger.info(nextStep, "🚀 ~ EmailProcessor ~ nextStep:");
 
+      // TODO : improve the enum type issue as businessHours.type is not typed
       // calculate the nextRunTime
       const nextRunTime = await this.scheduleGenerator.calculateNextRun(
         new Date(),
         nextStep as SequenceStep,
-        sequence.businessHours || getDefaultBusinessHours()
+        // sequence.businessHours || getDefaultBusinessHours()
+        sequence.businessHours
+          ? {
+              timezone: sequence.businessHours.timezone,
+              workDays: sequence.businessHours.workDays,
+              workHoursStart: sequence.businessHours.workHoursStart,
+              workHoursEnd: sequence.businessHours.workHoursEnd,
+              holidays: sequence.businessHours.holidays,
+              type: sequence.businessHours.type as BusinessScheduleEnum,
+            }
+          : getDefaultBusinessHours()
       );
 
       logger.info(nextRunTime, "🚀 ~ EmailProcessor ~ nextRunTime:");

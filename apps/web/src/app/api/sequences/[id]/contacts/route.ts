@@ -57,7 +57,11 @@ export async function GET(
       // Determine status based on contact record and latest event
       let status: SequenceContactStatusEnum;
 
-      if (contact.completed) {
+      if (contact.status === SequenceContactStatusEnum.REPLIED) {
+        status = SequenceContactStatusEnum.REPLIED;
+      } else if (contact.status === SequenceContactStatusEnum.BOUNCED) {
+        status = SequenceContactStatusEnum.BOUNCED;
+      } else if (contact.completed) {
         status = SequenceContactStatusEnum.COMPLETED;
         // } else if (latestEvent?.type.toLowerCase() === "bounced") {
       } else if (contact.status === SequenceContactStatusEnum.BOUNCED) {

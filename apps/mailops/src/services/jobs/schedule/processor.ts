@@ -19,6 +19,7 @@ import {
   EmailJobEnum,
   SequenceContactStatusEnum,
   SequenceStatus,
+  BusinessScheduleEnum,
 } from "@coldjot/types";
 import { EMAIL_SCHEDULER_CONFIG } from "@/config";
 import { QUEUE_NAMES } from "@/config";
@@ -30,12 +31,13 @@ type SequenceWithRelations = {
   id: string;
   userId: string;
   steps: SequenceStep[];
-  businessHours: BusinessHours | null;
+  businessHours?: BusinessHours;
   testMode: boolean;
   disableSending: boolean;
-  mailboxId: string;
+  sequenceMailboxId: string;
 };
 
+// TODO : Create proper types
 // Define our email processing type
 interface SequenceContactWithRelations {
   id: string;
@@ -163,7 +165,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
               status: true,
               testMode: true,
               disableSending: true,
-              mailboxId: true,
+              sequenceMailbox: true,
               steps: {
                 orderBy: {
                   order: "asc",
@@ -236,7 +238,13 @@ export class ScheduleProcessor extends BaseProcessor<any> {
             ...email,
             sequence: {
               ...email.sequence,
-              mailboxId: email.sequence.mailboxId || "",
+              sequenceMailboxId: email.sequence.sequenceMailbox!.id,
+              businessHours: email.sequence.businessHours
+                ? {
+                    ...email.sequence.businessHours,
+                    type: BusinessScheduleEnum.BUSINESS,
+                  }
+                : undefined,
               steps: email.sequence.steps.map((step) => ({
                 ...step,
                 status: StepStatus.ACTIVE,
@@ -249,14 +257,17 @@ export class ScheduleProcessor extends BaseProcessor<any> {
 
           await this.processEmail(emailWithStatus);
         } catch (error) {
-          logger.error("❌ Error processing email", {
-            id: email.id,
-            sequenceId: email.sequenceId,
-            contactId: email.contactId,
-            email: email.contact.email,
-            error: error instanceof Error ? error.message : "Unknown error",
-            stack: error instanceof Error ? error.stack : undefined,
-          });
+          logger.error(
+            {
+              id: email.id,
+              sequenceId: email.sequenceId,
+              contactId: email.contactId,
+              email: email.contact.email,
+              error: error instanceof Error ? error.message : "Unknown error",
+              stack: error instanceof Error ? error.stack : undefined,
+            },
+            "❌ Error processing email"
+          );
           // Continue with next email even if one fails
           continue;
         }
@@ -397,7 +408,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       const nextSendTime = await scheduleGenerator.calculateNextRun(
         new Date(),
         currentStep,
-        sequence.businessHours || undefined
+        sequence.businessHours
       );
 
       if (!nextSendTime) {
@@ -409,6 +420,10 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         throw new Error("Could not calculate next send time");
       }
 
+      logger.info(sequence.businessHours, "🕒 Business hours");
+      logger.info(currentStep, "🕒 Current step");
+      logger.info(nextSendTime, "🕒 Next send time");
+
       logger.debug("⏰ Next send time calculated", {
         nextSendTime: nextSendTime.toISOString(),
         delay: nextSendTime.getTime() - Date.now(),
@@ -417,9 +432,10 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       const previousStepIndex = currentStep.order - 1;
       const previousSubject = sequence.steps[previousStepIndex]?.subject || "";
 
-      const subject = currentStep.replyToThread
-        ? `Re: ${previousSubject}`
-        : currentStep.subject;
+      // TODO : This should be handled in the email processor for better accuracy
+      // const subject = currentStep.replyToThread
+      //   ? `Re: ${previousSubject}`
+      //   : currentStep.subject;
 
       // Get threadId from SequenceContact if it exists
       const sequenceContact = await prisma.sequenceContact.findUnique({
@@ -446,7 +462,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
           willUseThreadId: currentStep.replyToThread
             ? sequenceContact?.threadId
             : undefined,
-          subject,
+          // subject,
           previousSubject,
           stepOrder: currentStep.order,
         },
@@ -470,9 +486,9 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         contactId: contact.id,
         stepId: currentStep.id,
         userId: sequence.userId,
-        mailboxId: sequence.mailboxId,
+        sequenceMailboxId: sequence.sequenceMailboxId,
         to: contact.email,
-        subject: subject || currentStep.subject || "",
+        // subject: subject || currentStep.subject || "",
         threadId:
           currentStep.replyToThread && sequenceContact?.threadId
             ? sequenceContact.threadId
@@ -495,11 +511,11 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       // Add a check in EmailThread model to see if the threadId is fake
       // if it is, do not create the job
 
-      const thread = await prisma.emailThread.findUnique({
-        where: {
-          threadId: emailJob.threadId,
-        },
-      });
+      // const thread = await prisma.emailThread.findUnique({
+      //   where: {
+      //     threadId: emailJob.threadId,
+      //   },
+      // });
 
       // if (thread?.isFake) {
       //   await this.jobManager.addEmailJob(emailJob);

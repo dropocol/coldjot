@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -38,7 +38,13 @@ interface SequenceStepEditorProps {
   open: boolean;
   onClose: () => void;
   onSave: (data: any) => void;
-  initialData?: any;
+  initialData?: {
+    timing?: "immediate" | "delay";
+    priority?: "high" | "medium" | "low";
+    delayAmount?: number;
+    delayUnit?: DelayUnit;
+    note?: string;
+  };
 }
 
 export function SequenceStepEditor({
@@ -48,15 +54,31 @@ export function SequenceStepEditor({
   initialData,
 }: SequenceStepEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, watch, control } = useForm<StepFormData>({
-    defaultValues: {
-      type: "manual_email",
-      timing: "immediate",
-      priority: "medium",
-      delayAmount: 30,
-      delayUnit: "minutes",
-    },
-  });
+  const { register, handleSubmit, watch, control, reset } =
+    useForm<StepFormData>({
+      defaultValues: {
+        type: "manual_email",
+        timing: initialData?.timing || "immediate",
+        priority: initialData?.priority || "medium",
+        delayAmount: initialData?.delayAmount || 30,
+        delayUnit: initialData?.delayUnit || "minutes",
+        note: initialData?.note || "",
+      },
+    });
+
+  // Reset form when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        type: "manual_email",
+        timing: initialData.timing || "immediate",
+        priority: initialData.priority || "medium",
+        delayAmount: initialData.delayAmount || 30,
+        delayUnit: initialData.delayUnit || "minutes",
+        note: initialData.note || "",
+      });
+    }
+  }, [initialData, reset]);
 
   const timing = watch("timing");
   const delayAmount = watch("delayAmount");
@@ -88,7 +110,9 @@ export function SequenceStepEditor({
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent className="w-[600px] sm:max-w-[600px]">
         <SheetHeader>
-          <SheetTitle>Add Sequence Step</SheetTitle>
+          <SheetTitle>
+            {initialData ? "Edit Sequence Step" : "Add Sequence Step"}
+          </SheetTitle>
         </SheetHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-6">
