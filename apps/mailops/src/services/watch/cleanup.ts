@@ -13,18 +13,34 @@ export class WatchCleanupService {
   }
 
   async start(): Promise<void> {
-    logger.info("Starting watch cleanup service");
+    logger.info(
+      {
+        devMode: WATCH_CONFIG.DEV.ENABLED,
+        devSettings: WATCH_CONFIG.DEV.ENABLED ? WATCH_CONFIG.DEV : null,
+      },
+      "Starting watch cleanup service"
+    );
 
     // Run cleanup immediately
     await this.cleanup();
 
-    // Schedule periodic cleanup
-    this.cleanupInterval = setInterval(
-      () => this.cleanup(),
-      WATCH_CONFIG.CLEANUP_INTERVAL_HOURS * 60 * 60 * 1000
-    );
+    // Calculate interval based on environment
+    const intervalMs = WATCH_CONFIG.DEV.ENABLED
+      ? WATCH_CONFIG.DEV.CLEANUP_INTERVAL_MINUTES * 60 * 1000 // Use dev settings
+      : WATCH_CONFIG.CLEANUP_INTERVAL_HOURS * 60 * 60 * 1000; // Use production settings
 
-    logger.info("Watch cleanup service started successfully");
+    // Schedule periodic cleanup
+    this.cleanupInterval = setInterval(() => this.cleanup(), intervalMs);
+
+    logger.info(
+      {
+        devMode: WATCH_CONFIG.DEV.ENABLED,
+        intervalMinutes: WATCH_CONFIG.DEV.ENABLED
+          ? WATCH_CONFIG.DEV.CLEANUP_INTERVAL_MINUTES
+          : WATCH_CONFIG.CLEANUP_INTERVAL_HOURS * 60,
+      },
+      "Watch cleanup service started successfully"
+    );
   }
 
   async stop(): Promise<void> {
@@ -45,11 +61,38 @@ export class WatchCleanupService {
     logger.info("Watch cleanup service stopped successfully");
   }
 
-  private async cleanup(): Promise<void> {
+  /**
+   * Run a cleanup cycle to check for watches that need renewal
+   * This method is made public to allow for manual triggering in debug scenarios
+   */
+  async cleanup(): Promise<void> {
     try {
+      logger.info(
+        { devMode: WATCH_CONFIG.DEV.ENABLED },
+        "Starting cleanup cycle"
+      );
+
       const now = new Date();
-      const renewalBuffer = new Date(
-        now.getTime() + WATCH_CONFIG.RENEWAL_BUFFER_HOURS * 60 * 60 * 1000
+
+      // Use a much shorter renewal buffer in development mode
+      const renewalBuffer = WATCH_CONFIG.DEV.ENABLED
+        ? new Date(
+            now.getTime() + WATCH_CONFIG.DEV.RENEWAL_BUFFER_MINUTES * 60 * 1000
+          )
+        : new Date(
+            now.getTime() + WATCH_CONFIG.RENEWAL_BUFFER_HOURS * 60 * 60 * 1000
+          );
+
+      logger.info(
+        {
+          now: now.toISOString(),
+          renewalBuffer: renewalBuffer.toISOString(),
+          devMode: WATCH_CONFIG.DEV.ENABLED,
+          bufferUsed: WATCH_CONFIG.DEV.ENABLED
+            ? `${WATCH_CONFIG.DEV.RENEWAL_BUFFER_MINUTES} minutes`
+            : `${WATCH_CONFIG.RENEWAL_BUFFER_HOURS} hours`,
+        },
+        "Calculated renewal buffer time"
       );
 
       // Find watches that need renewal
@@ -61,8 +104,32 @@ export class WatchCleanupService {
         },
       });
 
+      // Log all watches for debugging in dev mode
+      if (WATCH_CONFIG.DEV.ENABLED) {
+        const allWatches = await prisma.emailWatch.findMany();
+        logger.info(
+          {
+            allWatchesCount: allWatches.length,
+            allWatches: allWatches.map((w) => ({
+              id: w.id,
+              email: w.email,
+              expiration: w.expiration,
+              needsRenewal: w.expiration <= renewalBuffer,
+            })),
+          },
+          "All watches in the system"
+        );
+      }
+
       logger.info(
-        { count: watchesToRenew.length },
+        {
+          count: watchesToRenew.length,
+          watches: watchesToRenew.map((w) => ({
+            id: w.id,
+            email: w.email,
+            expiration: w.expiration,
+          })),
+        },
         "Found watches that need renewal"
       );
 
@@ -111,3 +178,20 @@ export class WatchCleanupService {
     }
   }
 }
+
+// Get an instance of the cleanup service
+// const watchCleanupService = new WatchCleanupService();
+
+// Option 1: Set a watch to expire soon and let the automatic process handle it
+// await watchCleanupService.setWatchNearExpirationByEmail('your.email@example.com', 3);
+// The next cleanup cycle will detect this watch needs renewal
+
+// Option 2: Force immediate renewal
+// await watchCleanupService.forceRenewWatchByEmail('your.email@example.com');
+
+// Option 3: Manually trigger a cleanup cycle
+// await watchCleanupService.manualCleanup();
+
+// Option 4: Run a comprehensive test of the renewal process
+// const testResult = await watchCleanupService.testWatchRenewalProcess('your.email@example.com');
+// console.log(JSON.stringify(testResult, null, 2));

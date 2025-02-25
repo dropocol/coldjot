@@ -47,6 +47,8 @@ export class WatchService {
   private pubSubClient: PubSub;
   private oauth2Client: OAuth2Client;
 
+  private TOPIC_NAME: string = `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/${process.env.PUBSUB_TOPIC_NAME}`;
+
   constructor() {
     this.pubSubClient = new PubSub({
       projectId: process.env.GOOGLE_CLOUD_PROJECT,
@@ -69,8 +71,8 @@ export class WatchService {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        labelIds: WATCH_CONFIG.LABEL_IDS,
-        topicName: WATCH_CONFIG.TOPIC_NAME,
+        // labelIds: WATCH_CONFIG.LABEL_IDS,
+        topicName: this.TOPIC_NAME,
       }),
     });
 
@@ -149,7 +151,7 @@ export class WatchService {
         userId: "me",
         requestBody: {
           // Don't specify labelIds to watch all labels
-          topicName: `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/${process.env.PUBSUB_TOPIC_NAME}`,
+          topicName: this.TOPIC_NAME,
         },
       };
 
@@ -243,6 +245,8 @@ export class WatchService {
 
       // Create new watch
       const watchResponse = await this.createWatchRequest(accessToken);
+
+      logger.info({ watchResponse }, "Watch response");
 
       // Update expiration
       const expiration = new Date();
@@ -381,3 +385,37 @@ export class WatchService {
     }
   }
 }
+
+// // Export the WatchService as the default export
+// export default WatchService;
+
+// // Re-export the WatchCleanupService
+// export { WatchCleanupService } from "./cleanup";
+
+// // Re-export the WatchDebugService (only in development)
+// if (
+//   process.env.NODE_ENV === "development" ||
+//   process.env.WATCH_DEV_MODE === "true"
+// ) {
+//   // This ensures the debug service is only available in development
+//   // eslint-disable-next-line @typescript-eslint/no-var-requires
+//   const { WatchDebugService } = require("./debug");
+//   exports.WatchDebugService = WatchDebugService;
+// }
+
+// // Export the WatchService as the default export
+// export default WatchService;
+
+// // Re-export the WatchCleanupService
+// export { WatchCleanupService } from "./cleanup";
+
+// // Re-export the WatchDebugService (only in development)
+// if (
+//   process.env.NODE_ENV === "development" ||
+//   process.env.WATCH_DEV_MODE === "true"
+// ) {
+//   // This ensures the debug service is only available in development
+//   // eslint-disable-next-line @typescript-eslint/no-var-requires
+//   const { WatchDebugService } = require("./debug");
+//   exports.WatchDebugService = WatchDebugService;
+// }
