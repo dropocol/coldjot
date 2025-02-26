@@ -49,7 +49,7 @@ import {
   REMOVE_LIST_COMMAND,
 } from "@lexical/list";
 import { $isListNode, ListNode } from "@lexical/list";
-import { LinkDialog } from "../link-dialog";
+import { LinkDialog } from "../../components/link-dialog";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { $isLinkNode, LinkNode } from "@lexical/link";
 

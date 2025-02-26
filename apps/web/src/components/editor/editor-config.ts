@@ -8,8 +8,7 @@ import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { MarkNode } from "@lexical/mark";
 import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { ImageNode } from "./nodes/image-node";
-import { InlineImageNode } from "./nodes/InlineImageNode";
-import { DraggableBlockNode } from "./nodes/draggable-block-node";
+import { InlineImageNode } from "./nodes/inline-image-node";
 
 export const theme: EditorThemeClasses = {
   text: {
@@ -106,7 +105,6 @@ export const editorConfig: InitialConfigType = {
     ImageNode,
     InlineImageNode,
     MarkNode,
-    DraggableBlockNode,
     HorizontalRuleNode,
   ],
 };

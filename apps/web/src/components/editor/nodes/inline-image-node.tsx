@@ -1,11 +1,6 @@
 "use client";
 
-import type {
-  DOMConversionMap,
-  DOMConversionOutput,
-  NodeKey,
-  SerializedLexicalNode,
-} from "lexical";
+import type { DOMConversionMap, DOMConversionOutput, NodeKey } from "lexical";
 import { DecoratorNode } from "lexical";
 import type { JSX } from "react";
 import * as React from "react";

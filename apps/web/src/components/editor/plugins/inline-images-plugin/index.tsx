@@ -1,14 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import type { LexicalCommand } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $insertNodes, createCommand } from "lexical";
-import { useEffect } from "react";
-import type { InlineImagePayload } from "../../nodes/InlineImageNode";
 import {
   $createInlineImageNode,
   InlineImageNode,
-} from "../../nodes/InlineImageNode";
+} from "../../nodes/inline-image-node";
+import type { InlineImagePayload } from "../../nodes/inline-image-node";
 
 export type InsertInlineImagePayload = Readonly<InlineImagePayload>;
 

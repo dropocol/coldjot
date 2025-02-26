@@ -1,11 +1,14 @@
 "use client";
 
+import type { JSX } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getSelection,
   $isRangeSelection,
   COMMAND_PRIORITY_EDITOR,
   createCommand,
+  $createParagraphNode,
+  $insertNodes,
 } from "lexical";
 import { $createHorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { useEffect } from "react";
@@ -23,20 +26,17 @@ export function HorizontalRulePlugin(): JSX.Element | null {
       () => {
         const selection = $getSelection();
 
-        if ($isRangeSelection(selection)) {
-          const focusNode = selection.focus.getNode();
-          if (focusNode !== null) {
-            const horizontalRuleNode = $createHorizontalRuleNode();
-            selection.insertParagraph();
-            selection.focus
-              .getNode()
-              .getTopLevelElementOrThrow()
-              .insertBefore(horizontalRuleNode);
-            return true;
-          }
+        if (!$isRangeSelection(selection)) {
+          return false;
         }
 
-        return false;
+        const horizontalRuleNode = $createHorizontalRuleNode();
+        const paragraphNode = $createParagraphNode();
+
+        selection.insertNodes([horizontalRuleNode, paragraphNode]);
+        paragraphNode.select();
+
+        return true;
       },
       COMMAND_PRIORITY_EDITOR
     );

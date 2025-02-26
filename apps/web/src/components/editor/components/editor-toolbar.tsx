@@ -22,11 +22,6 @@ import {
   ImagePlus,
 } from "lucide-react";
 import {
-  INSERT_IMAGE_COMMAND,
-  INSERT_INLINE_IMAGE_COMMAND,
-  InsertImageUriDialog,
-} from "../plugins/images-plugin";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -36,6 +31,13 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { $createHeadingNode } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";
+
+import {
+  INSERT_IMAGE_COMMAND,
+  INSERT_INLINE_IMAGE_COMMAND,
+  InsertImageUriDialog,
+} from "../plugins/images-plugin";
+import { INSERT_HORIZONTAL_RULE_COMMAND } from "../plugins/horizontal-line-plugin";
 
 interface EditorToolbarProps {
   editorInstance: LexicalEditor | null;
@@ -229,7 +231,12 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
                 size="sm"
                 className="flex-shrink-0"
                 onClick={() => {
-                  console.log("Divider clicked");
+                  if (editorInstance) {
+                    editorInstance.dispatchCommand(
+                      INSERT_HORIZONTAL_RULE_COMMAND,
+                      undefined
+                    );
+                  }
                 }}
                 aria-label="Insert divider"
               >
