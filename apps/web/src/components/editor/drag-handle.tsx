@@ -27,6 +27,7 @@ export function DragHandle({
         type="button"
         className="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100 transition-colors"
         onClick={onAddClick}
+        aria-label="Add block"
       >
         <Plus className="h-4 w-4 text-gray-600" />
       </button>
@@ -35,6 +36,7 @@ export function DragHandle({
         className="flex h-6 w-6 cursor-grab items-center justify-center rounded hover:bg-gray-100 transition-colors"
         onDragStart={onDragStart}
         draggable
+        aria-label="Drag block"
       >
         <svg
           width="16"

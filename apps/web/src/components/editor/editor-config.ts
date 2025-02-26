@@ -8,6 +8,7 @@ import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { MarkNode } from "@lexical/mark";
 import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { ImageNode } from "./nodes/image-node";
+import { InlineImageNode } from "./nodes/InlineImageNode";
 import { DraggableBlockNode } from "./nodes/draggable-block-node";
 
 export const theme: EditorThemeClasses = {
@@ -21,12 +22,12 @@ export const theme: EditorThemeClasses = {
     superscript: "text-[0.8em] top-[-0.5em]",
   },
   heading: {
-    h1: "text-4xl font-bold mt-6 mb-4",
-    h2: "text-3xl font-bold mt-5 mb-3",
-    h3: "text-2xl font-bold mt-4 mb-2",
-    h4: "text-xl font-bold mt-3 mb-1",
-    h5: "text-lg font-bold mt-2 mb-1",
-    h6: "text-base font-bold mt-2 mb-1",
+    h1: "text-3xl font-bold mt-6 mb-4 text-gray-900",
+    h2: "text-2xl font-bold mt-5 mb-3 text-gray-900",
+    h3: "text-xl font-bold mt-4 mb-2 text-gray-900",
+    h4: "text-lg font-bold mt-3 mb-1 text-gray-900",
+    h5: "text-base font-bold mt-2 mb-1 text-gray-900",
+    h6: "text-sm font-bold mt-2 mb-1 text-gray-900",
   },
   list: {
     ul: "list-disc list-inside pl-4 my-2",
@@ -37,8 +38,8 @@ export const theme: EditorThemeClasses = {
     },
     checklist: "flex items-center gap-2 my-1",
   },
-  image: "max-w-full h-auto my-4",
-  quote: "border-l-4 border-gray-200 pl-4 my-4 italic",
+  image: "max-w-full h-auto my-4 rounded-md",
+  quote: "border-l-4 border-gray-200 pl-4 my-4 italic text-gray-700",
   link: "text-primary underline cursor-pointer hover:text-primary/80",
   code: "bg-muted px-1.5 py-0.5 rounded font-mono text-sm",
   codeHighlight: {
@@ -80,7 +81,8 @@ export const theme: EditorThemeClasses = {
   mark: "bg-yellow-200 rounded px-1",
   markOverlap: "bg-yellow-100",
   draggableBlock: "relative hover:bg-muted/50 rounded-lg p-2 transition-colors",
-  horizontalRule: "my-4 border-t border-border",
+  horizontalRule: "my-6 border-t border-gray-200",
+  paragraph: "my-2 leading-relaxed text-gray-800",
 };
 
 export const editorConfig: InitialConfigType = {
@@ -102,6 +104,7 @@ export const editorConfig: InitialConfigType = {
     AutoLinkNode,
     LinkNode,
     ImageNode,
+    InlineImageNode,
     MarkNode,
     DraggableBlockNode,
     HorizontalRuleNode,

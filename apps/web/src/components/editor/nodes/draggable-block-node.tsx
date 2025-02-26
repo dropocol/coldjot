@@ -26,7 +26,7 @@ export class DraggableBlockNode extends ElementNode {
     dom.className = config.theme.draggableBlock || "";
     dom.setAttribute("draggable", "true");
     dom.setAttribute("data-lexical-node-key", this.__key);
-    dom.classList.add("editor-paragraph");
+    dom.classList.add("draggable-block");
     return dom;
   }
 

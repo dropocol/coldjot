@@ -1,6 +1,7 @@
 "use client";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import type { JSX } from "react";
 import {
   $createParagraphNode,
   $getRoot,
@@ -16,6 +17,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { $createDraggableBlockNode } from "../nodes/draggable-block-node";
+import {
+  Image as ImageIcon,
+  Variable,
+  SplitSquareVertical,
+  Minus,
+  Smile,
+  Columns,
+} from "lucide-react";
+import { INSERT_IMAGE_COMMAND } from "./images-plugin";
+import { INSERT_HORIZONTAL_RULE_COMMAND } from "./horizontal-rule-plugin";
 
 export const INSERT_COMPONENT_COMMAND = createCommand(
   "INSERT_COMPONENT_COMMAND"
@@ -23,34 +34,40 @@ export const INSERT_COMPONENT_COMMAND = createCommand(
 
 const COMPONENTS = [
   {
-    id: "text",
-    name: "Text Block",
-    description: "A simple text block for content",
-    icon: "📝",
-  },
-  {
     id: "image",
     name: "Image",
     description: "Add an image to your email",
-    icon: "🖼️",
+    icon: <ImageIcon className="h-5 w-5" />,
+  },
+  {
+    id: "variable",
+    name: "Data Variable",
+    description: "Insert dynamic content",
+    icon: <Variable className="h-5 w-5" />,
   },
   {
     id: "button",
     name: "Button",
     description: "Add a call-to-action button",
-    icon: "🔘",
+    icon: <SplitSquareVertical className="h-5 w-5" />,
   },
   {
     id: "divider",
-    name: "Divider",
+    name: "Horizontal Divider",
     description: "Add a horizontal line divider",
-    icon: "➖",
+    icon: <Minus className="h-5 w-5" />,
   },
   {
-    id: "spacer",
-    name: "Spacer",
-    description: "Add vertical spacing",
-    icon: "↕️",
+    id: "icon",
+    name: "Icon",
+    description: "Add an icon to your email",
+    icon: <Smile className="h-5 w-5" />,
+  },
+  {
+    id: "columns",
+    name: "Columns",
+    description: "Create a multi-column layout",
+    icon: <Columns className="h-5 w-5" />,
   },
 ] as const;
 
@@ -71,13 +88,37 @@ export function ComponentPickerPlugin(): JSX.Element {
 
   const insertComponent = (componentId: string) => {
     editor.update(() => {
-      const root = $getRoot();
-      const block = $createDraggableBlockNode();
-      const paragraph = $createParagraphNode();
-      paragraph.append(block);
-      root.append(paragraph);
+      // Handle different component types
+      switch (componentId) {
+        case "image":
+          // Use the image plugin command
+          editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
+            src: "https://source.unsplash.com/random/800x400?nature",
+            altText: "Sample image",
+            type: "image",
+            version: 1,
+          });
+          break;
+        case "divider":
+          // Use the horizontal rule plugin command
+          editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
+          break;
+        case "variable":
+        case "button":
+        case "icon":
+        case "columns":
+        default:
+          // For other components, create a draggable block as a placeholder
+          const root = $getRoot();
+          const block = $createDraggableBlockNode();
+          const paragraph = $createParagraphNode();
+          paragraph.append(block);
+          root.append(paragraph);
+          break;
+      }
     });
     setShowPicker(false);
+    console.log(`Inserted component: ${componentId}`);
   };
 
   return (
@@ -94,7 +135,7 @@ export function ComponentPickerPlugin(): JSX.Element {
               className="h-auto flex-col gap-2 p-4"
               onClick={() => insertComponent(component.id)}
             >
-              <span className="text-2xl">{component.icon}</span>
+              <div className="text-2xl">{component.icon}</div>
               <span className="font-medium">{component.name}</span>
               <span className="text-sm text-muted-foreground">
                 {component.description}
