@@ -15,11 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export function EmailEditor() {
   // Email details state
   const [title, setTitle] = useState("Payment issue");
-  const [fromName, setFromName] = useState("Freelance");
-  const [fromEmail, setFromEmail] = useState("zee");
-  const [replyTo, setReplyTo] = useState("zee@zeeshankhan.me");
-  const [subject, setSubject] = useState("");
-  const [previewText, setPreviewText] = useState("");
   const [editorContent, setEditorContent] = useState("");
 
   // Editor state
@@ -55,7 +50,7 @@ export function EmailEditor() {
   }, [editorInstance]);
 
   return (
-    <div className="flex flex-1 gap-0 h-screen">
+    <div className="flex flex-1 gap-0 min-h-screen">
       {/* Main Editor Section */}
       <div className="flex-1">
         <Tabs
@@ -124,43 +119,9 @@ export function EmailEditor() {
       </div>
 
       {/* Analysis Panel */}
-      <div className="w-[400px] border-l bg-white ">
-        <div className="px-6 py-4">
+      <div className="w-[400px] border-l bg-white flex flex-col h-screen sticky top-0">
+        <div className="flex-1 px-6 py-4 overflow-y-auto overflow-x-hidden">
           <EmailAnalysis content={editorContent} />
-          {/* <Tabs defaultValue="stats" className="w-full">
-            <TabsList className="w-full">
-              <TabsTrigger value="settings" className="flex-1">
-                Settings
-              </TabsTrigger>
-              <TabsTrigger value="requests" className="flex-1">
-                Requests
-              </TabsTrigger>
-              <TabsTrigger value="generative" className="flex-1">
-                Generative
-              </TabsTrigger>
-              <TabsTrigger value="stats" className="flex-1">
-                Stats
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="stats" className="mt-4">
-              <EmailAnalysis content={editorContent} />
-            </TabsContent>
-            <TabsContent value="settings">
-              <p className="text-sm text-muted-foreground">
-                Settings panel coming soon...
-              </p>
-            </TabsContent>
-            <TabsContent value="requests">
-              <p className="text-sm text-muted-foreground">
-                Requests panel coming soon...
-              </p>
-            </TabsContent>
-            <TabsContent value="generative">
-              <p className="text-sm text-muted-foreground">
-                AI features coming soon...
-              </p>
-            </TabsContent>
-          </Tabs> */}
         </div>
       </div>
     </div>

@@ -64,10 +64,7 @@ export function EditorContent() {
   };
 
   return (
-    <div
-      className="min-h-[400px] bg-white rounded-md shadow-sm border pl-6"
-      ref={editorRef}
-    >
+    <div className="min-h-[400px] rounded-md shadow-none pl-6" ref={editorRef}>
       <div className="relative">
         <div className="flex items-center gap-2 p-2">
           <button
