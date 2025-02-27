@@ -420,15 +420,17 @@ function canDropImage(event: DragEvent): boolean {
 }
 
 function getDragSelection(event: DragEvent): Range | null | undefined {
-  let range;
-  const domSelection = getDOMSelectionFromTarget(event.target);
+  const domSelection = window.getSelection();
+  let range: Range | null = null;
+
   if (document.caretRangeFromPoint) {
     range = document.caretRangeFromPoint(event.clientX, event.clientY);
-  } else if (event.rangeParent && domSelection !== null) {
-    domSelection.collapse(event.rangeParent, event.rangeOffset || 0);
-    range = domSelection.getRangeAt(0);
-  } else {
-    throw Error(`Cannot get the selection when dragging`);
+  } else if (domSelection) {
+    // Modern approach using Selection API
+    const position = domSelection.getRangeAt(0);
+    if (position) {
+      range = position;
+    }
   }
 
   return range;

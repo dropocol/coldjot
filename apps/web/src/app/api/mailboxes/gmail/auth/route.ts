@@ -27,6 +27,12 @@ export async function POST(request: Request) {
     process.env.GOOGLE_REDIRECT_URI_EMAIL
   );
 
+  console.log("oauth2Client", {
+    clientId: process.env.GOOGLE_CLIENT_ID_EMAIL,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET_EMAIL,
+    redirectUri: process.env.GOOGLE_REDIRECT_URI_EMAIL,
+  });
+
   try {
     // Check authentication
     const session = await auth();
@@ -35,8 +41,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get return path from request body
-    const { returnPath = "/settings" } = await request.json();
+    // Get return path from request body with safe parsing
+    let returnPath = "/settings";
+    try {
+      const body = await request.json();
+      returnPath = body.returnPath || returnPath;
+    } catch (e) {
+      console.log(
+        "[GMAIL_AUTH] No body provided or invalid JSON, using default returnPath"
+      );
+    }
 
     // Log OAuth configuration
     console.log("OAuth Configuration:", {

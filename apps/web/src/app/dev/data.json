@@ -1,0 +1,198 @@
+{
+    "templates": [
+        {
+            "name": "Welcome Email",
+            "subject": "Welcome to {{company}}!",
+            "content": "Dear {{firstName}},\n\nWelcome to {{company}}! We're excited to have you on board.\n\nBest regards,\n{{senderName}}"
+        },
+        {
+            "name": "Follow-up Meeting",
+            "subject": "Follow-up: {{meetingTopic}} Discussion",
+            "content": "Hi {{firstName}},\n\nThank you for our discussion about {{meetingTopic}}. I wanted to summarize our key points:\n\n{{summary}}\n\nBest,\n{{senderName}}"
+        },
+        {
+            "name": "Sales Outreach",
+            "subject": "Improving {{company}}'s {{department}} Efficiency",
+            "content": "Hi {{firstName}},\n\nI noticed {{company}} is looking to enhance its {{department}} operations. Our solution has helped similar companies achieve {{benefit}}.\n\nWould you be interested in a quick chat?\n\nBest regards,\n{{senderName}}"
+        }
+    ],
+    "contactGenerator": {
+        "count": 25,
+        "firstNames": [
+            "James",
+            "Emma",
+            "Michael",
+            "Olivia",
+            "William",
+            "Sophia",
+            "Alexander",
+            "Isabella",
+            "Daniel",
+            "Mia",
+            "David",
+            "Charlotte",
+            "Joseph",
+            "Ava",
+            "Andrew",
+            "Amelia",
+            "John",
+            "Harper",
+            "Thomas",
+            "Evelyn"
+        ],
+        "lastNames": [
+            "Smith",
+            "Johnson",
+            "Williams",
+            "Brown",
+            "Jones",
+            "Garcia",
+            "Miller",
+            "Davis",
+            "Rodriguez",
+            "Martinez",
+            "Hernandez",
+            "Lopez",
+            "Gonzalez",
+            "Wilson",
+            "Anderson",
+            "Thomas",
+            "Taylor",
+            "Moore",
+            "Jackson",
+            "Martin"
+        ],
+        "companies": [
+            "TechCorp",
+            "InnovateSolutions",
+            "GlobalTech",
+            "DataSystems",
+            "SmartTech",
+            "FutureTech",
+            "CloudNine",
+            "DigitalWave",
+            "NextGen Solutions",
+            "CyberTech"
+        ],
+        "departments": [
+            "Engineering",
+            "Sales",
+            "Marketing",
+            "Operations",
+            "Human Resources",
+            "Finance",
+            "Product",
+            "Customer Success",
+            "Research",
+            "Development"
+        ],
+        "titles": [
+            "Software Engineer",
+            "Product Manager",
+            "Marketing Director",
+            "Sales Manager",
+            "CEO",
+            "CTO",
+            "HR Director",
+            "Project Manager",
+            "Business Analyst",
+            "Operations Director"
+        ],
+        "domains": [
+            "company.com",
+            "corp.com",
+            "tech.co",
+            "enterprise.com",
+            "solutions.com",
+            "group.com",
+            "global.com",
+            "systems.com"
+        ]
+    },
+    "emailLists": [
+        {
+            "name": "High Priority Leads",
+            "description": "Key decision makers and potential clients",
+            "tags": [
+                "high-priority",
+                "decision-makers",
+                "leads"
+            ],
+            "contactsPercentage": 40
+        },
+        {
+            "name": "Tech Companies",
+            "description": "Contacts from technology sector",
+            "tags": [
+                "tech",
+                "software",
+                "it"
+            ],
+            "contactsPercentage": 30
+        },
+        {
+            "name": "Marketing Contacts",
+            "description": "Marketing professionals and decision makers",
+            "tags": [
+                "marketing",
+                "advertising",
+                "communications"
+            ],
+            "contactsPercentage": 30
+        }
+    ],
+    "sequences": [
+        {
+            "name": "Sales Outreach - Tech",
+            "accessLevel": "team",
+            "scheduleType": "business",
+            "status": "active",
+            "testMode": false,
+            "disableSending": false,
+            "testEmails": [],
+            "steps": [
+                {
+                    "stepType": "manual_email",
+                    "priority": "high",
+                    "timing": "immediate",
+                    "subject": "Introducing Our Solution",
+                    "content": "Hi {{firstName}},\n\nI noticed {{company}} is expanding its {{department}}...",
+                    "includeSignature": true,
+                    "replyToThread": false,
+                    "order": 1
+                },
+                {
+                    "stepType": "manual_email",
+                    "priority": "medium",
+                    "timing": "delay",
+                    "delayAmount": 3,
+                    "delayUnit": "days",
+                    "subject": "Following up",
+                    "content": "Hi {{firstName}},\n\nI wanted to follow up on my previous email...",
+                    "includeSignature": true,
+                    "replyToThread": true,
+                    "order": 2
+                }
+            ]
+        }
+    ],
+    "businessHours": {
+        "timezone": "America/New_York",
+        "workDays": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ],
+        "workHoursStart": "09:00",
+        "workHoursEnd": "17:00",
+        "type": "business",
+        "holidays": [
+            "2024-12-25",
+            "2024-01-01",
+            "2024-07-04",
+            "2024-12-31"
+        ]
+    }
+}

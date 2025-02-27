@@ -272,7 +272,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
         </div>
 
         <div className="flex flex-col gap-2">
-          {/* <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-500">
             {spamStatus}
             {spamReasons.length > 0 && (
               <>
@@ -282,7 +282,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
                 </span>
               </>
             )}
-          </span> */}
+          </span>
 
           <Button
             variant="outline"
