@@ -23,7 +23,7 @@ const GAUGE_CONFIG = {
   thickness: 0.09,
   margin: {
     top: 0,
-    bottom: 80,
+    bottom: 40,
   },
 } as const;
 
@@ -117,7 +117,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
   return (
     <div className="space-y-8">
       {/* Gauge Chart */}
-      <div className="flex w-full items-center justify-center pt-12">
+      <div className="flex w-full items-center justify-center">
         <div className="relative">
           <svg
             width={GAUGE_CONFIG.width}
@@ -144,20 +144,26 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
               />
             </g>
           </svg>
-          <div className="absolute top-24 left-1/2 -translate-x-1/2 transform text-center">
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 transform text-center">
             <div className="text-5xl font-semibold">{readabilityScore}</div>
             <div className="text-sm font-medium text-gray-500">
               Readability Score
             </div>
           </div>
+
+          <p className="text-sm mx-6 text-gray-500">
+            Your readability score is calculated using the Flesch-Kincaid
+            formula, which considers the number of words, sentences, and reading
+            time for your email.
+          </p>
         </div>
       </div>
 
-      <p className="text-sm text-gray-500">
+      {/* <p className="text-sm text-gray-500">
         Your readability score is calculated using the Flesch-Kincaid formula,
         which considers the number of words, sentences, and reading time for
         your email.
-      </p>
+      </p> */}
 
       <div className="h-px bg-gray-200" />
 

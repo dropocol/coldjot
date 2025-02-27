@@ -230,31 +230,6 @@ export const calculateReadability = (
     readTimeSeconds,
   };
 };
-// Helper function to determine reading ease level
-const getReadingEaseLevel = (score: number) => {
-  if (score >= 100) {
-    return { text: "Perfect", color: "#22c55e", section: "green" };
-  }
-  if (score >= 90) {
-    return { text: "Conversational", color: "#22c55e", section: "green" };
-  }
-  if (score >= 80) {
-    return { text: "Clear", color: "#f97316", section: "yellow" };
-  }
-  if (score >= 70) {
-    return { text: "Fairly Easy", color: "#eab308", section: "yellow" };
-  }
-  if (score >= 60) {
-    return { text: "Challenging", color: "#f97316", section: "orange" };
-  }
-  if (score >= 50) {
-    return { text: "Difficult", color: "#f97316", section: "orange" };
-  }
-  if (score >= 30) {
-    return { text: "Graduate", color: "#ef4444", section: "red" };
-  }
-  return { text: "Complex", color: "#ef4444", section: "red" };
-};
 
 // 0-30 Very Confusing
 // 30-50 Difficult
@@ -263,3 +238,26 @@ const getReadingEaseLevel = (score: number) => {
 // 70-80 Fairly Easy
 // 80-90 Easy
 // 90-100 Perfect
+
+// Helper function to determine reading ease level
+const getReadingEaseLevel = (score: number) => {
+  if (score >= 90) {
+    return { text: "Perfect", color: "#22c55e", section: "green" };
+  }
+  if (score >= 80) {
+    return { text: "Easy", color: "#22c55e", section: "green" };
+  }
+  if (score >= 70) {
+    return { text: "Fairly Easy", color: "#eab308", section: "yellow" };
+  }
+  if (score >= 60) {
+    return { text: "Standard", color: "#f97316", section: "yellow" };
+  }
+  if (score >= 50) {
+    return { text: "Fairly Difficult", color: "#f97316", section: "orange" };
+  }
+  if (score >= 30) {
+    return { text: "Difficult", color: "#ef4444", section: "red" };
+  }
+  return { text: "Very Confusing", color: "#ef4444", section: "red" };
+};
