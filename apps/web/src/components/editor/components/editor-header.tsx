@@ -42,35 +42,19 @@ export function EditorHeader({
                 "rounded-none border-b-2 border-transparent px-3 py-1.5 text-sm font-medium",
                 activeTab === "design" && "border-primary text-primary"
               )}
+              onClick={() => onTabChange("design")}
             >
               Design
             </TabsTrigger>
             <TabsTrigger
-              value="code"
+              value="details"
               className={cn(
                 "rounded-none border-b-2 border-transparent px-3 py-1.5 text-sm font-medium",
-                activeTab === "code" && "border-primary text-primary"
+                activeTab === "details" && "border-primary text-primary"
               )}
+              onClick={() => onTabChange("details")}
             >
-              Code
-            </TabsTrigger>
-            <TabsTrigger
-              value="preview"
-              className={cn(
-                "rounded-none border-b-2 border-transparent px-3 py-1.5 text-sm font-medium",
-                activeTab === "preview" && "border-primary text-primary"
-              )}
-            >
-              Preview
-            </TabsTrigger>
-            <TabsTrigger
-              value="settings"
-              className={cn(
-                "rounded-none border-b-2 border-transparent px-3 py-1.5 text-sm font-medium",
-                activeTab === "settings" && "border-primary text-primary"
-              )}
-            >
-              Settings
+              Details
             </TabsTrigger>
           </TabsList>
         </div>

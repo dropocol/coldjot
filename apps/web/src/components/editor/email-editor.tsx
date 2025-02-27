@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
-import { LexicalEditor } from "lexical";
+import { LexicalEditor, $getRoot } from "lexical";
 import { editorConfig } from "./editor-config";
 import { EditorHeader } from "./components/editor-header";
 import { EmailDetails } from "./components/email-details";
 import { EditorToolbar } from "./components/editor-toolbar";
 import { EditorContent } from "./components/editor-content";
 import { EditorReference } from "./components/editor-reference";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { EmailAnalysis } from "./components/email-analysis";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function EmailEditor() {
   // Email details state
@@ -19,6 +20,7 @@ export function EmailEditor() {
   const [replyTo, setReplyTo] = useState("zee@zeeshankhan.me");
   const [subject, setSubject] = useState("");
   const [previewText, setPreviewText] = useState("");
+  const [editorContent, setEditorContent] = useState("");
 
   // Editor state
   const [editorInstance, setEditorInstance] = useState<LexicalEditor | null>(
@@ -30,69 +32,137 @@ export function EmailEditor() {
     setEditorInstance(editor);
   };
 
+  // Update editor content for analysis
+  useEffect(() => {
+    if (editorInstance) {
+      editorInstance.registerUpdateListener(({ editorState }) => {
+        // Get the stringified state
+        const stringifiedEditorState = JSON.stringify(editorState.toJSON());
+
+        // Parse it back to get a clean state
+        const parsedEditorState = editorInstance.parseEditorState(
+          stringifiedEditorState
+        );
+
+        // Read the content
+        const content = parsedEditorState.read(() => {
+          return $getRoot().getTextContent();
+        });
+
+        setEditorContent(content);
+      });
+    }
+  }, [editorInstance]);
+
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={setActiveTab}
-      className="flex flex-1 flex-col"
-    >
-      {/* Header */}
-      <EditorHeader
-        title={title}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
+    <div className="flex flex-1 gap-0 h-screen">
+      {/* Main Editor Section */}
+      <div className="flex-1">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex flex-1 flex-col"
+        >
+          {/* Header */}
+          <EditorHeader
+            title={title}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
 
-      {/* Main Content */}
-      <div className="mx-auto mt-6 px-8 w-full max-w-3xl">
-        <div className="flex flex-col">
-          {/* Tab Content */}
-          <TabsContent value="design">
-            {/* Email Details */}
-            <EmailDetails
-              fromName={fromName}
-              setFromName={setFromName}
-              fromEmail={fromEmail}
-              setFromEmail={setFromEmail}
-              replyTo={replyTo}
-              setReplyTo={setReplyTo}
-              subject={subject}
-              setSubject={setSubject}
-              previewText={previewText}
-              setPreviewText={setPreviewText}
-            />
+          {/* Main Content */}
+          <div className="mx-auto mt-6 px-8 w-full max-w-3xl">
+            <div className="flex flex-col">
+              {/* Tab Content */}
+              <TabsContent value="design">
+                {/* Email Details */}
+                {/* <EmailDetails
+                  fromName={fromName}
+                  setFromName={setFromName}
+                  fromEmail={fromEmail}
+                  setFromEmail={setFromEmail}
+                  replyTo={replyTo}
+                  setReplyTo={setReplyTo}
+                  subject={subject}
+                  setSubject={setSubject}
+                  previewText={previewText}
+                  setPreviewText={setPreviewText}
+                /> */}
 
-            {/* Editor Toolbar */}
-            <EditorToolbar editorInstance={editorInstance} />
+                {/* Editor Toolbar */}
+                <EditorToolbar editorInstance={editorInstance} />
 
-            {/* Editor */}
-            <LexicalComposer initialConfig={editorConfig}>
-              <div className="editor-container">
-                <EditorReference onChange={handleEditorReference} />
-                <EditorContent />
-              </div>
-            </LexicalComposer>
-          </TabsContent>
+                {/* Editor */}
+                <LexicalComposer initialConfig={editorConfig}>
+                  <div className="editor-container">
+                    <EditorReference onChange={handleEditorReference} />
+                    <EditorContent />
+                  </div>
+                </LexicalComposer>
+              </TabsContent>
 
-          <TabsContent value="code">
-            <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
-              <p className="text-gray-500">Code view coming soon...</p>
+              <TabsContent value="code">
+                <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
+                  <p className="text-gray-500">Code view coming soon...</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="preview">
+                <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
+                  <p className="text-gray-500">Preview coming soon...</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="settings">
+                <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
+                  <p className="text-gray-500">Settings coming soon...</p>
+                </div>
+              </TabsContent>
             </div>
-          </TabsContent>
+          </div>
+        </Tabs>
+      </div>
 
-          <TabsContent value="preview">
-            <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
-              <p className="text-gray-500">Preview coming soon...</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
-              <p className="text-gray-500">Settings coming soon...</p>
-            </div>
-          </TabsContent>
+      {/* Analysis Panel */}
+      <div className="w-[400px] border-l bg-white ">
+        <div className="px-6 py-4">
+          <EmailAnalysis content={editorContent} />
+          {/* <Tabs defaultValue="stats" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="settings" className="flex-1">
+                Settings
+              </TabsTrigger>
+              <TabsTrigger value="requests" className="flex-1">
+                Requests
+              </TabsTrigger>
+              <TabsTrigger value="generative" className="flex-1">
+                Generative
+              </TabsTrigger>
+              <TabsTrigger value="stats" className="flex-1">
+                Stats
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="stats" className="mt-4">
+              <EmailAnalysis content={editorContent} />
+            </TabsContent>
+            <TabsContent value="settings">
+              <p className="text-sm text-muted-foreground">
+                Settings panel coming soon...
+              </p>
+            </TabsContent>
+            <TabsContent value="requests">
+              <p className="text-sm text-muted-foreground">
+                Requests panel coming soon...
+              </p>
+            </TabsContent>
+            <TabsContent value="generative">
+              <p className="text-sm text-muted-foreground">
+                AI features coming soon...
+              </p>
+            </TabsContent>
+          </Tabs> */}
         </div>
       </div>
-    </Tabs>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
+import { $generateHtmlFromNodes } from "@lexical/html";
 
 // Plugins
 import ImagesPlugin from "../plugins/images-plugin";
@@ -32,13 +33,51 @@ export function EditorContent() {
     }
   };
 
+  const handleExport = () => {
+    editor.update(() => {
+      const html = $generateHtmlFromNodes(editor);
+
+      // Get clean text content
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = html;
+      const textContent = tempDiv.textContent || "";
+      const cleanText = textContent
+        .replace(/\s+/g, " ")
+        .replace(/\n+/g, "\n")
+        .trim();
+
+      // Create debug info
+      const debugInfo = {
+        html,
+        cleanText,
+        wordCount: cleanText.split(/\s+/).length,
+        words: cleanText.split(/\s+/),
+      };
+
+      // Copy HTML to clipboard
+      navigator.clipboard.writeText(html).then(() => {
+        console.log("Debug Info:", debugInfo);
+        console.log("Word count:", debugInfo.wordCount);
+        console.log("Words:", debugInfo.words);
+      });
+    });
+  };
+
   return (
     <div
       className="min-h-[400px] bg-white rounded-md shadow-sm border pl-6"
       ref={editorRef}
     >
       <div className="relative">
-        <div className="flex items-center gap-2 p-2"></div>
+        <div className="flex items-center gap-2 p-2">
+          <button
+            onClick={handleExport}
+            className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+            title="Copy HTML content to clipboard"
+          >
+            Export HTML
+          </button>
+        </div>
         <div className="relative group">
           <RichTextPlugin
             contentEditable={
