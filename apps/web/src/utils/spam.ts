@@ -47,7 +47,7 @@ const spamTriggerWords = [
   "winner",
   "selected",
   "congratulations",
-  "you’ve won",
+  "you've won",
   "claim",
   "verify",
   "confirm",
@@ -102,7 +102,7 @@ const spamTriggerWords = [
   "time-sensitive",
   "urgent response",
   "immediate action",
-  "don’t miss",
+  "don't miss",
   "last chance",
   "final notice",
   "alert",
@@ -163,11 +163,21 @@ const urlShorteners = ["bit.ly", "tinyurl", "goo.gl", "t.co"];
 
 // Comprehensive spam detection function
 export const checkEmailSpam = (email: string): SpamCheckResult => {
-  const cleanedEmail = cleanText(email);
-  const words = cleanedEmail.split(/\s+/).filter((w) => w.length > 0);
-  const sentences = cleanedEmail
+  // Create a temporary div to parse HTML content
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = email;
+
+  // Get clean text for text-based analysis
+  const cleanedText = cleanText(tempDiv.textContent || "");
+  const words = cleanedText.split(/\s+/).filter((w) => w.length > 0);
+  const sentences = cleanedText
     .split(/[.!?]+/)
     .filter((s) => s.trim().length > 0);
+
+  // HTML analysis
+  const links = tempDiv.getElementsByTagName("a");
+  const images = tempDiv.getElementsByTagName("img");
+  const scripts = tempDiv.getElementsByTagName("script");
   const hasURL = email.match(/https?:\/\/[^\s]+/g) !== null;
 
   let spamScore = 100;
@@ -184,8 +194,8 @@ export const checkEmailSpam = (email: string): SpamCheckResult => {
     },
     {
       condition: (() => {
-        const uppercaseCount = (cleanedEmail.match(/[A-Z]/g) || []).length;
-        const totalLetters = (cleanedEmail.match(/[a-zA-Z]/g) || []).length;
+        const uppercaseCount = (cleanedText.match(/[A-Z]/g) || []).length;
+        const totalLetters = (cleanedText.match(/[a-zA-Z]/g) || []).length;
         const uppercaseRatio =
           totalLetters > 0 ? uppercaseCount / totalLetters : 0;
         return uppercaseRatio > 0.3;
@@ -199,7 +209,7 @@ export const checkEmailSpam = (email: string): SpamCheckResult => {
       reason: "Excessive exclamation points (>3)",
     },
     {
-      condition: (cleanedEmail.match(/[@#$%]/g) || []).length > 5,
+      condition: (cleanedText.match(/[@#$%]/g) || []).length > 5,
       penalty: 10,
       reason: "Excessive special characters (@, #, $, % > 5)",
     },
@@ -207,7 +217,7 @@ export const checkEmailSpam = (email: string): SpamCheckResult => {
     // Content Analysis
     {
       condition: spamTriggerWords.some((phrase) =>
-        cleanedEmail.toLowerCase().includes(phrase)
+        cleanedText.toLowerCase().includes(phrase)
       ),
       penalty: 10,
       reason: "Spam trigger phrases detected",
@@ -227,13 +237,13 @@ export const checkEmailSpam = (email: string): SpamCheckResult => {
 
     // Link Analysis
     {
-      condition: (email.match(/https?:\/\/[^\s]+/g) || []).length > 2,
+      condition: links.length > 2,
       penalty: 12,
       reason: "Too many links (>2)",
     },
     {
-      condition: (email.match(/https?:\/\/[^\s]+/g) || []).some((link) =>
-        urlShorteners.some((shortener) => link.includes(shortener))
+      condition: Array.from(links).some((link) =>
+        urlShorteners.some((shortener) => link.href.includes(shortener))
       ),
       penalty: 15,
       reason: "Use of URL shorteners (e.g., bit.ly, tinyurl)",
@@ -241,29 +251,24 @@ export const checkEmailSpam = (email: string): SpamCheckResult => {
 
     // HTML Content Checks
     {
-      condition: email.match(/<[^>]+>/g) !== null,
-      penalty: 5,
-      reason: "Presence of HTML tags",
-    },
-    {
-      condition: email.includes("<script>"),
+      condition: scripts.length > 0,
       penalty: 20,
       reason: "Contains <script> tags (potential malware)",
     },
     {
-      condition: (email.match(/<a[^>]*>/g) || []).length > 5,
+      condition: links.length > 5,
       penalty: 12,
       reason: "Excessive <a> tags (>5 links)",
     },
     {
-      condition: (email.match(/<img[^>]*>/g) || []).length > 3,
+      condition: images.length > 3,
       penalty: 8,
       reason: "Too many <img> tags (>3 images)",
     },
 
     // Readability Check
     {
-      condition: calculateReadability(cleanedEmail).score < 30,
+      condition: calculateReadability(cleanedText).score < 30,
       penalty: 5,
       reason: "Low readability score (<30, difficult to read)",
     },
@@ -284,6 +289,19 @@ export const checkEmailSpam = (email: string): SpamCheckResult => {
       "Bonus: Professional formatting (no URLs, well-structured)"
     );
   }
+
+  // Debug logging
+  console.log("Spam Analysis Debug:", {
+    textLength: cleanedText.length,
+    htmlLength: email.length,
+    linkCount: links.length,
+    imageCount: images.length,
+    scriptCount: scripts.length,
+    wordCount: words.length,
+    sentenceCount: sentences.length,
+    spamScore,
+    reasons: detectedReasons,
+  });
 
   // Determine status
   let status: string;

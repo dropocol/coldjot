@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { LexicalEditor, $getRoot } from "lexical";
+import { $generateHtmlFromNodes } from "@lexical/html";
 import { editorConfig } from "./editor-config";
 import { EditorHeader } from "./components/editor-header";
 import { EmailDetails } from "./components/email-details";
@@ -15,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export function EmailEditor() {
   // Email details state
   const [title, setTitle] = useState("Payment issue");
-  const [editorContent, setEditorContent] = useState("");
+  const [editorContent, setEditorContent] = useState({ text: "", html: "" });
 
   // Editor state
   const [editorInstance, setEditorInstance] = useState<LexicalEditor | null>(
@@ -40,11 +41,15 @@ export function EmailEditor() {
         );
 
         // Read the content
-        const content = parsedEditorState.read(() => {
-          return $getRoot().getTextContent();
-        });
+        parsedEditorState.read(() => {
+          const textContent = $getRoot().getTextContent();
+          const htmlContent = $generateHtmlFromNodes(editorInstance);
 
-        setEditorContent(content);
+          setEditorContent({
+            text: textContent,
+            html: htmlContent,
+          });
+        });
       });
     }
   }, [editorInstance]);

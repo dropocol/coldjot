@@ -4,9 +4,20 @@ import { checkEmailSpam } from "@/utils";
 
 import { arc } from "d3-shape";
 import { getTextStats, calculateReadability } from "@/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { Zap } from "lucide-react";
 
 interface EmailAnalysisProps {
-  content: string;
+  content: {
+    text: string;
+    html: string;
+  };
 }
 
 interface ArcDatum {
@@ -28,19 +39,20 @@ const GAUGE_CONFIG = {
 } as const;
 
 export function EmailAnalysis({ content }: EmailAnalysisProps) {
-  // console.log("Content:", content);
-
   // Get readability score and text statistics
-  const { score: readabilityScore, level: readingEase } =
-    calculateReadability(content);
-  const stats = getTextStats(content);
+  const { score: readabilityScore, level: readingEase } = calculateReadability(
+    content.text
+  );
+  const stats = getTextStats(content.text);
 
-  // Get spam analysis
+  // Get spam analysis with HTML content
   const {
     score: spamScore,
     status: spamStatus,
     reasons: spamReasons,
-  } = checkEmailSpam(content);
+  } = checkEmailSpam(content.html);
+
+  console.log("Spam score:", spamScore);
 
   // Calculate read time (minimum 15 seconds, based on 210 WPM)
   const readTime = Math.max(Math.ceil((stats.totalWords / 210) * 60), 15);
@@ -171,7 +183,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
       <div className="grid grid-cols-2 gap-5">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-medium">{stats.totalWords}</span>
+            <span className="text-xl font-medium">{stats.totalWords}</span>
           </div>
           <span className="pb-2 text-sm text-gray-500">Word Count</span>
           <div className="h-px bg-gray-200" />
@@ -179,7 +191,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-medium">{stats.totalSentences}</span>
+            <span className="text-xl font-medium">{stats.totalSentences}</span>
           </div>
           <span className="pb-2 text-sm text-gray-500">Sentence Count</span>
           <div className="h-px bg-gray-200" />
@@ -187,7 +199,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-medium">{readingEase.text}</span>
+            <span className="text-xl font-medium">{readingEase.text}</span>
             <svg
               width="1em"
               height="1em"
@@ -208,7 +220,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-medium">{readTime} sec</span>
+            <span className="text-xl font-medium">{readTime} sec</span>
           </div>
           <span className="pb-2 text-sm text-gray-500">Read Time</span>
           <div className="h-px bg-gray-200" />
@@ -217,7 +229,33 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
 
       {/* Delivery Score */}
       <div className="flex flex-col gap-3">
-        <span className="text-base font-medium">Delivery Score</span>
+        <div className="flex items-center justify-between">
+          <span className="text-base font-medium">Delivery Score</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5">
+                  <div className="text-xs font-medium text-gray-500">
+                    23 credits left
+                  </div>
+                  <div className="h-4 w-4 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-[10px] font-medium text-primary">
+                      ?
+                    </span>
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="w-80">
+                <p className="text-sm">
+                  Test your email deliverability with our AI system. Each test
+                  consumes 1 credit and provides detailed insights about
+                  potential delivery issues.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
         <div className="flex flex-col items-center justify-center gap-3">
           <div className="flex h-6 w-full items-center justify-between gap-1">
             {Array.from({ length: 40 }).map((_, i) => (
@@ -232,17 +270,32 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
             ))}
           </div>
         </div>
-        <span className="mt-2 text-sm text-gray-500">
-          {spamStatus}
-          {spamReasons.length > 0 && (
-            <>
-              <br />
-              <span className="text-red-500">
-                Issues found: {spamReasons.join(", ")}
-              </span>
-            </>
-          )}
-        </span>
+
+        <div className="flex flex-col gap-2">
+          {/* <span className="text-sm text-gray-500">
+            {spamStatus}
+            {spamReasons.length > 0 && (
+              <>
+                <br />
+                <span className="text-red-500">
+                  Issues found: {spamReasons.join(", ")}
+                </span>
+              </>
+            )}
+          </span> */}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full mt-2"
+            onClick={() => {
+              console.log("Running AI test...");
+            }}
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            Run AI Test
+          </Button>
+        </div>
       </div>
     </div>
   );
