@@ -7,7 +7,10 @@ import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badg
 import { SequenceControls } from "@/components/sequences/sequence-controls";
 import { SequenceNav } from "@/components/sequences/sequence-nav";
 import { LaunchSequenceModal } from "@/components/sequences/launch-sequence-modal";
+import { SequenceSetupChecklist } from "@/components/sequences/sequence-setup-checklist";
 import { SequenceStatus } from "@coldjot/types";
+import { isSequenceReadyToLaunch } from "@/lib/sequence-utils";
+import { Sparkles } from "lucide-react";
 
 interface SequenceHeaderProps {
   sequence: {
@@ -17,12 +20,23 @@ interface SequenceHeaderProps {
     contactCount: number;
     testMode?: boolean;
     disabledSending?: boolean;
+    steps?: any[];
+    businessHours?: any;
+    _count?: {
+      contacts: number;
+    };
   };
 }
 
 export function SequenceHeader({ sequence }: SequenceHeaderProps) {
   const router = useRouter();
   const [showLaunchModal, setShowLaunchModal] = useState(false);
+
+  // Only check readiness for draft sequences to avoid unnecessary calculations
+  const isDraft = sequence.status === SequenceStatus.DRAFT;
+  const { isReady } = isDraft
+    ? isSequenceReadyToLaunch(sequence)
+    : { isReady: false };
 
   return (
     <>
@@ -32,20 +46,22 @@ export function SequenceHeader({ sequence }: SequenceHeaderProps) {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <SequenceStatusBadge status={sequence.status} />
             <span>•</span>
-            <span>{sequence.contactCount} contacts</span>
+            <span>
+              {sequence._count?.contacts || sequence.contactCount} contacts
+            </span>
           </div>
         </div>
         <div className="flex gap-3">
-          {sequence.status !== SequenceStatus.ACTIVE &&
-            sequence.status !== SequenceStatus.PAUSED && (
-              <Button
-                variant="default"
-                disabled={sequence.contactCount === 0}
-                onClick={() => setShowLaunchModal(true)}
-              >
-                Launch Sequence
-              </Button>
-            )}
+          {isDraft && isReady && (
+            <Button
+              variant="default"
+              className="gap-2"
+              onClick={() => setShowLaunchModal(true)}
+            >
+              <Sparkles className="h-4 w-4" />
+              Launch Sequence
+            </Button>
+          )}
 
           <SequenceControls
             sequenceId={sequence.id}
@@ -57,13 +73,19 @@ export function SequenceHeader({ sequence }: SequenceHeaderProps) {
         </div>
       </div>
 
+      {isDraft && (
+        <div className="mt-6 mb-6 max-w-5xl mx-auto">
+          <SequenceSetupChecklist sequence={sequence as any} />
+        </div>
+      )}
+
       <SequenceNav sequenceId={sequence.id} />
 
       <LaunchSequenceModal
         open={showLaunchModal}
         onClose={() => setShowLaunchModal(false)}
         sequenceId={sequence.id}
-        contactCount={sequence.contactCount}
+        contactCount={sequence._count?.contacts || sequence.contactCount}
         testMode={sequence.testMode || false}
         onStatusChange={() => {
           router.refresh();

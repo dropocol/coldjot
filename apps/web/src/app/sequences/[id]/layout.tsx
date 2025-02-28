@@ -22,6 +22,9 @@ export default async function SequenceLayout({
       id: id,
     },
     include: {
+      steps: true,
+      businessHours: true,
+      sequenceMailbox: true,
       _count: {
         select: {
           contacts: true,
@@ -42,6 +45,7 @@ export default async function SequenceLayout({
           name: sequence.name,
           status: sequence.status as SequenceStatus,
           contactCount: sequence._count.contacts,
+          ...(sequence as any),
         }}
       />
 

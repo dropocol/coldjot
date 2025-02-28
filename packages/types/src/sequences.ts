@@ -1,4 +1,5 @@
 import { BusinessScheduleEnum } from "./enums";
+import { SequenceMailbox } from "./mailbox";
 // ------------------------
 // ------------------------
 // ------------------------
@@ -87,6 +88,7 @@ export interface Sequence {
   testEmails: string[];
   emailListId?: string | null;
   businessHours?: BusinessHours;
+  sequenceMailbox?: SequenceMailbox;
 }
 
 export interface SequenceContact {
