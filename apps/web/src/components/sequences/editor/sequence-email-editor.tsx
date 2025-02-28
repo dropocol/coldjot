@@ -22,6 +22,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 interface SequenceEmailEditorProps {
@@ -66,6 +76,7 @@ export function SequenceEmailEditor({
   const [isTemplateUnlinked, setIsTemplateUnlinked] = useState(
     !initialData?.templateId
   );
+  const [showUnlinkAlert, setShowUnlinkAlert] = useState(false);
 
   const isEditorDisabled = Boolean(currentTemplateId) && !isTemplateUnlinked;
 
@@ -164,11 +175,8 @@ export function SequenceEmailEditor({
   };
 
   const handleUnlinkTemplate = (checked: boolean) => {
-    setIsTemplateUnlinked(checked);
     if (checked) {
-      // When unlinking, keep the current content and subject editable
-      // but clear the template connection
-      setCurrentTemplateId(undefined);
+      setShowUnlinkAlert(true);
     } else {
       // When relinking, fetch the template content again
       if (initialData?.templateId) {
@@ -176,6 +184,12 @@ export function SequenceEmailEditor({
         fetchTemplateContent();
       }
     }
+  };
+
+  const confirmUnlink = () => {
+    setIsTemplateUnlinked(true);
+    setCurrentTemplateId(undefined);
+    setShowUnlinkAlert(false);
   };
 
   // Move fetchTemplateContent outside of useEffect so we can reuse it
@@ -341,7 +355,7 @@ export function SequenceEmailEditor({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex-1 min-h-0 overflow-hidden rounded-md border border-input bg-background h-full">
+                  <div className="flex-1 min-h-0 overflow-hidden rounded-md bg-background h-full">
                     <RichTextEditor
                       key={`editor-${isEditorDisabled}`}
                       initialContent={content}
@@ -359,7 +373,7 @@ export function SequenceEmailEditor({
                 )}
               </div>
 
-              <div className="flex-shrink-0 flex items-center space-x-2">
+              {/* <div className="flex-shrink-0 flex items-center space-x-2">
                 <Checkbox
                   id="signature"
                   checked={includeSignature}
@@ -368,17 +382,17 @@ export function SequenceEmailEditor({
                   }
                 />
                 <Label htmlFor="signature">Include Signature</Label>
-              </div>
+              </div> */}
             </div>
 
             {/* Right column - Preview */}
             <div className="flex flex-col min-h-0 overflow-hidden">
-              <div className="flex-shrink-0 space-y-2 p-6 bg-muted/30">
+              {/* <div className="flex-shrink-0 space-y-2 p-6 bg-muted/30">
                 <h3 className="text-sm font-medium">
                   Generate Preview for Contact (optional)
                 </h3>
                 <Input placeholder="Choose a contact" />
-              </div>
+              </div> */}
 
               <div className="flex-1 overflow-y-auto p-6 bg-muted/30">
                 <div className="p-4 bg-white rounded-lg">
@@ -409,7 +423,9 @@ export function SequenceEmailEditor({
           <div className="flex-shrink-0 flex justify-between items-center pt-4 mt-4 border-t">
             <div className="flex items-center gap-2">
               <TemplateCommand onSelect={handleTemplateSelect} />
-              {sequenceId && stepId && (
+
+              {/* DO NOT DELETE THIS */}
+              {/* {sequenceId && stepId && (
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -435,7 +451,7 @@ export function SequenceEmailEditor({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              )}
+              )} */}
             </div>
             <div className="flex gap-3">
               <Button type="button" variant="outline" onClick={onClose}>
@@ -445,6 +461,26 @@ export function SequenceEmailEditor({
             </div>
           </div>
         </form>
+
+        <AlertDialog open={showUnlinkAlert} onOpenChange={setShowUnlinkAlert}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unlink from Template?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will disconnect the email from the template, allowing you
+                to edit the content freely. Any changes you make won't affect
+                the original template, and future template updates won't be
+                reflected here. This action can't be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmUnlink}>
+                Unlink Template
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );

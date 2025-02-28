@@ -24,14 +24,14 @@ export interface Placeholder {
 
 export const DEFAULT_PLACEHOLDERS: Placeholder[] = [
   {
-    name: "name",
-    label: "Recipient's Name",
-    description: "The full name of the email recipient",
+    name: "firstName",
+    label: "First Name",
+    description: "The first name of the email recipient",
   },
   {
-    name: "job_title",
-    label: "Job Title",
-    description: "The job title being applied for",
+    name: "lastName",
+    label: "Last Name",
+    description: "The last name of the email recipient",
   },
 ];
 
