@@ -14,6 +14,41 @@
             "name": "Sales Outreach",
             "subject": "Improving {{company}}'s {{department}} Efficiency",
             "content": "Hi {{firstName}},\n\nI noticed {{company}} is looking to enhance its {{department}} operations. Our solution has helped similar companies achieve {{benefit}}.\n\nWould you be interested in a quick chat?\n\nBest regards,\n{{senderName}}"
+        },
+        {
+            "name": "Product Demo Request",
+            "subject": "{{product}} Demo for {{company}}",
+            "content": "Hi {{firstName}},\n\nI'd love to show you how {{product}} can help streamline your {{department}} processes at {{company}}. Our platform has helped companies like yours achieve:\n\n- {{benefit1}}\n- {{benefit2}}\n- {{benefit3}}\n\nWould you be open to a 30-minute demo this week?\n\nBest regards,\n{{senderName}}"
+        },
+        {
+            "name": "Event Invitation",
+            "subject": "Join us for {{eventName}} - Exclusive Invite",
+            "content": "Dear {{firstName}},\n\nYou're invited to {{eventName}}, an exclusive event for {{industry}} leaders.\n\nDate: {{eventDate}}\nTime: {{eventTime}}\nLocation: {{eventLocation}}\n\nSpaces are limited. RSVP by {{rsvpDate}}.\n\nBest regards,\n{{senderName}}"
+        },
+        {
+            "name": "Service Renewal",
+            "subject": "Your {{product}} Subscription - Renewal Notice",
+            "content": "Dear {{firstName}},\n\nYour {{product}} subscription for {{company}} is due for renewal on {{renewalDate}}. As a valued customer, we're offering you:\n\n{{specialOffer}}\n\nWould you like to discuss your renewal options?\n\nBest regards,\n{{senderName}}"
+        },
+        {
+            "name": "Partnership Proposal",
+            "subject": "{{company}} + {{partnerCompany}} Partnership Opportunity",
+            "content": "Hi {{firstName}},\n\nI'm reaching out because I see great potential for collaboration between {{company}} and {{partnerCompany}} in the {{industry}} space.\n\nOur {{solution}} could complement your {{offering}} by providing {{benefit}}.\n\nWould you be interested in exploring this partnership?\n\nBest regards,\n{{senderName}}"
+        },
+        {
+            "name": "Customer Success Check-in",
+            "subject": "How's your experience with {{product}}?",
+            "content": "Hi {{firstName}},\n\nI noticed you've been using {{product}} for {{duration}} now. I wanted to check in and see how things are going.\n\nHave you had a chance to explore our new {{feature}} that helps with {{benefit}}?\n\nI'm here to help if you need any assistance or have questions.\n\nBest regards,\n{{senderName}}"
+        },
+        {
+            "name": "Industry Insights",
+            "subject": "{{industry}} Trends: Insights for {{company}}",
+            "content": "Dear {{firstName}},\n\nI came across some interesting trends in the {{industry}} sector that could impact {{company}}'s {{department}}:\n\n{{insight1}}\n{{insight2}}\n{{insight3}}\n\nWould you like to discuss how these trends might affect your business?\n\nBest regards,\n{{senderName}}"
+        },
+        {
+            "name": "Webinar Follow-up",
+            "subject": "Resources from {{webinarTitle}} Webinar",
+            "content": "Hi {{firstName}},\n\nThank you for attending our webinar on {{webinarTitle}}. As promised, here are the resources we discussed:\n\n- {{resource1}}\n- {{resource2}}\n- {{resource3}}\n\nIf you'd like to learn more about {{topic}}, I'd be happy to schedule a follow-up call.\n\nBest regards,\n{{senderName}}"
         }
     ],
     "contactGenerator": {

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Send, Info } from "lucide-react";
-import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { TemplateCommand } from "@/components/templates/template-command";
 import { toast } from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";
@@ -262,13 +262,10 @@ export function SequenceEmailEditor({
           </DialogTitle>
         </DialogHeader>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col flex-1 overflow-hidden"
-        >
-          <div className="grid grid-cols-2 gap-6 flex-1 min-h-0">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="grid grid-cols-2 gap-6 flex-1 min-h-0 p-0">
             {/* Left column */}
-            <div className="flex flex-col gap-4 overflow-hidden">
+            <div className="flex flex-col gap-4 min-h-0">
               {previousStepId && (
                 <div className="flex-shrink-0 flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                   <div className="space-y-0.5">
@@ -286,7 +283,7 @@ export function SequenceEmailEditor({
 
               <div className="flex-shrink-0 space-y-4">
                 <Label htmlFor="subject">Subject</Label>
-                <div className="px-px">
+                <div className="relative">
                   <Input
                     id="subject"
                     value={subject}
@@ -331,7 +328,7 @@ export function SequenceEmailEditor({
                 </div>
               )}
 
-              <div className="flex-1 overflow-hidden px-px">
+              <div className="flex-1 min-h-0">
                 {isLoadingTemplate &&
                 currentTemplateId &&
                 !isTemplateUnlinked ? (
@@ -344,18 +341,21 @@ export function SequenceEmailEditor({
                     </div>
                   </div>
                 ) : (
-                  <RichTextEditor
-                    key={`editor-${isEditorDisabled}`}
-                    initialContent={content}
-                    onChange={setContent}
-                    placeholder="Write your email content..."
-                    className={cn(
-                      "h-full flex flex-col",
-                      isEditorDisabled && "opacity-70"
-                    )}
-                    editorClassName="flex-1 overflow-y-auto"
-                    readOnly={isEditorDisabled}
-                  />
+                  <div className="flex-1 min-h-0 overflow-hidden rounded-md border border-input bg-background h-full">
+                    <RichTextEditor
+                      key={`editor-${isEditorDisabled}`}
+                      initialContent={content}
+                      onChange={setContent}
+                      placeholder="Write your email content..."
+                      className={cn(
+                        "h-full overflow-hidden flex flex-col",
+                        isEditorDisabled && "opacity-70"
+                      )}
+                      // className="max-h-[calc(100vh-400px)]"
+                      editorClassName="flex-1 min-h-[300px] overflow-y-auto"
+                      readOnly={isEditorDisabled}
+                    />
+                  </div>
                 )}
               </div>
 

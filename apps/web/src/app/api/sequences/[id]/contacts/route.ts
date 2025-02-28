@@ -14,6 +14,10 @@ export async function GET(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") ?? "1");
+    const limit = parseInt(searchParams.get("limit") ?? "20");
+    const skip = (page - 1) * limit;
 
     // Get the sequence with its steps
     const sequence = await prisma.sequence.findUnique({
@@ -33,7 +37,17 @@ export async function GET(
 
     const totalSteps = sequence.steps.length;
 
-    // Get sequence contacts with their latest status and events
+    // Get total count
+    const total = await prisma.sequenceContact.count({
+      where: {
+        sequenceId: id,
+        sequence: {
+          userId: session.user.id,
+        },
+      },
+    });
+
+    // Get sequence contacts with their latest status and events with pagination
     const sequenceContacts = await prisma.sequenceContact.findMany({
       where: {
         sequenceId: id,
@@ -45,8 +59,10 @@ export async function GET(
         contact: {},
       },
       orderBy: {
-        updatedAt: "desc",
+        createdAt: "desc",
       },
+      skip,
+      take: limit,
     });
 
     // Format contacts with their latest status and activity
@@ -81,6 +97,7 @@ export async function GET(
     return NextResponse.json({
       contacts: enrichedContacts,
       totalSteps: sequence.steps.length,
+      total,
     });
   } catch (error) {
     console.error("[SEQUENCE_CONTACTS_GET]", error);

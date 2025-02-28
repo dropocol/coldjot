@@ -64,8 +64,9 @@ export function TemplateCommand({ onSelect }: TemplateCommandProps) {
           );
         });
 
+  //  Always set modal={true} to to allow scrolling the parent page and popover to work
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="gap-2">
           <FileText className="h-4 w-4" />

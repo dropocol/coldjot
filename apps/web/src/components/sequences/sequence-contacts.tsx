@@ -50,6 +50,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PaginationControls } from "@/components/pagination";
 
 // Add extended SequenceContact type with all required properties
 interface ExtendedSequenceContact {
@@ -72,16 +73,25 @@ interface ExtendedSequenceContact {
 interface SequenceContactsProps {
   sequenceId: string;
   isActive: boolean;
+  page: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
 export function SequenceContacts({
   sequenceId,
   isActive,
+  page,
+  limit,
+  onPageChange,
+  onPageSizeChange,
 }: SequenceContactsProps) {
   const [contacts, setContacts] = useState<ExtendedSequenceContact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [totalSteps, setTotalSteps] = useState(0);
+  const [total, setTotal] = useState(0);
 
   const handleAddContact = async (contact: Contact) => {
     try {
@@ -179,11 +189,18 @@ export function SequenceContacts({
   const refreshContacts = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/contacts`);
+      const queryParams = new URLSearchParams();
+      queryParams.set("page", page.toString());
+      queryParams.set("limit", limit.toString());
+
+      const response = await fetch(
+        `/api/sequences/${sequenceId}/contacts?${queryParams.toString()}`
+      );
       if (response.ok) {
         const data = await response.json();
         setContacts(data.contacts as ExtendedSequenceContact[]);
         setTotalSteps(data.totalSteps);
+        setTotal(data.total);
       }
     } catch (error) {
       console.error("Failed to refresh contacts:", error);
@@ -204,7 +221,7 @@ export function SequenceContacts({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [sequenceId, isActive]);
+  }, [sequenceId, isActive, page, limit]);
 
   const getStatusDetails = (contact: ExtendedSequenceContact) => {
     if (contact.status === SequenceContactStatusEnum.REPLIED) {
@@ -494,6 +511,15 @@ export function SequenceContacts({
           </TableBody>
         </Table>
       </div>
+
+      <PaginationControls
+        currentPage={page}
+        totalPages={Math.ceil(total / limit)}
+        pageSize={limit}
+        totalItems={total}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
     </div>
   );
 }

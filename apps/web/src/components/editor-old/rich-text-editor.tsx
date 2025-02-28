@@ -211,7 +211,8 @@ export function RichTextEditor({
         </div>
       )}
       <div className={cn("flex-1 min-h-0 relative", editorClassName)}>
-        <EditorContent editor={editor} className="h-full overflow-y-auto" />
+        {/* className="h-full overflow-y-auto" */}
+        <EditorContent editor={editor} className="h-full overflow-y-auton" />
       </div>
       <LinkDialog
         open={showLinkDialog}
