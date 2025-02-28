@@ -170,14 +170,7 @@ When refusing, v0 MUST NOT apologize or provide an explanation for the refusal. 
 
 /\*\*
 
-- TypeScript Rules \*/ { "typescript": { // Type Definitions and Safety - Use explicit type annotations for function parameters and return types - Prefer interfaces for object shapes that can be implemented or extended - Use type aliases for unions, intersections, and complex types - Never use 'any' type - use 'unknown' for truly unknown types - Leverage TypeScript's utility types (Partial<T>, Pick<T>, Record<K,T>, etc.) - Enable strict mode in tsconfig.json (strict: true)
-      // Type Organization and Architecture
-      - Organize types by domain/feature in separate files
-      - Export shared types from a central 'types' directory
-      - Use descriptive type names that reflect their purpose
-      - Follow naming conventions: IInterface, TType, EEnum
-      - Keep type definitions close to their implementation
-      - Use barrel exports (index.ts) for type organization
+- TypeScript Rules \*/ { "typescript": { // Type Definitions and Safety - Use explicit type annotations for function parameters and return types - Prefer interfaces for object shapes that can be implemented or extended - Use type aliases for unions, intersections, and complex types - Never use 'any' type - use 'unknown' for truly unknown types - Leverage TypeScript's utility types (Partial<T>, Pick<T>, Record<K,T>, etc.) - Enable strict mode in tsconfig.json (strict: true) // Type Organization and Architecture - Organize types by domain/feature in separate files - Export shared types from a central 'types' directory - Use descriptive type names that reflect their purpose - Follow naming conventions: IInterface, TType, EEnum - Keep type definitions close to their implementation - Use barrel exports (index.ts) for type organization
 
       // Generics and Advanced Types
       - Use generics for reusable components and functions
@@ -194,60 +187,65 @@ When refusing, v0 MUST NOT apologize or provide an explanation for the refusal. 
       - Use nullish coalescing (??) for default values
       - Add type guards for null checks
       - Document nullable properties in interfaces
+
   },
 
 /\*\*
 
 - Node.js Rules \*/ "nodejs": { // Async Programming
 
+  - Always use async/await over callbacks or raw promises
+  - Implement proper error boundaries with try/catch
+  - Use Promise.all/allSettled for parallel operations
+  - Handle promise rejections with global handlers
+  - Implement proper timeout mechanisms
+  - Use AbortController for cancellable operations
 
-    - Always use async/await over callbacks or raw promises
-    - Implement proper error boundaries with try/catch
-    - Use Promise.all/allSettled for parallel operations
-    - Handle promise rejections with global handlers
-    - Implement proper timeout mechanisms
-    - Use AbortController for cancellable operations
+  // Error Handling and Logging
 
-    // Error Handling and Logging
-    - Create domain-specific error classes extending Error
-    - Include detailed error messages and codes
-    - Implement structured logging with levels (debug, info, warn, error)
-    - Use correlation IDs for request tracking
-    - Implement proper stack trace handling
-    - Set up centralized error monitoring
+  - Create domain-specific error classes extending Error
+  - Include detailed error messages and codes
+  - Implement structured logging with levels (debug, info, warn, error)
+  - Use correlation IDs for request tracking
+  - Implement proper stack trace handling
+  - Set up centralized error monitoring
 
-    // Architecture and File Structure
-    - Follow domain-driven design principles
-    - Implement clean architecture layers (controllers, services, repositories)
-    - Use dependency injection for better testability
-    - Separate business logic from infrastructure concerns
-    - Implement repository pattern for data access
-    - Use middleware for cross-cutting concerns
+  // Architecture and File Structure
 
-    // Performance Optimization
-    - Implement proper caching strategies (Redis, in-memory)
-    - Use connection pooling for database connections
-    - Implement rate limiting and request throttling
-    - Use streams for large data operations
-    - Implement proper memory management
-    - Profile and optimize hot code paths
+  - Follow domain-driven design principles
+  - Implement clean architecture layers (controllers, services, repositories)
+  - Use dependency injection for better testability
+  - Separate business logic from infrastructure concerns
+  - Implement repository pattern for data access
+  - Use middleware for cross-cutting concerns
 
-    // Security Best Practices
-    - Sanitize all user inputs
-    - Implement proper authentication and authorization
-    - Use security headers (helmet)
-    - Keep dependencies updated and audit regularly
-    - Implement proper CORS policies
-    - Use environment variables for sensitive data
-    - Regular security audits and penetration testing
+  // Performance Optimization
 
-    // Testing Strategy
-    - Write unit tests for business logic (Jest)
-    - Implement integration tests for APIs
-    - Use mocking for external dependencies
-    - Maintain high test coverage (>80%)
-    - Implement end-to-end tests for critical paths
-    - Use test containers for integration tests
+  - Implement proper caching strategies (Redis, in-memory)
+  - Use connection pooling for database connections
+  - Implement rate limiting and request throttling
+  - Use streams for large data operations
+  - Implement proper memory management
+  - Profile and optimize hot code paths
+
+  // Security Best Practices
+
+  - Sanitize all user inputs
+  - Implement proper authentication and authorization
+  - Use security headers (helmet)
+  - Keep dependencies updated and audit regularly
+  - Implement proper CORS policies
+  - Use environment variables for sensitive data
+  - Regular security audits and penetration testing
+
+  // Testing Strategy
+
+  - Write unit tests for business logic (Jest)
+  - Implement integration tests for APIs
+  - Use mocking for external dependencies
+  - Maintain high test coverage (>80%)
+  - Implement end-to-end tests for critical paths
+  - Use test containers for integration tests
 
 },
 
@@ -255,54 +253,58 @@ When refusing, v0 MUST NOT apologize or provide an explanation for the refusal. 
 
 - React/Next.js Rules \*/ "react": { // Component Architecture
 
+  - Use functional components with hooks
+  - Implement proper component composition
+  - Keep components small and focused (Single Responsibility)
+  - Use proper prop typing with TypeScript
+  - Implement proper error boundaries
+  - Use React.memo for performance optimization
 
-    - Use functional components with hooks
-    - Implement proper component composition
-    - Keep components small and focused (Single Responsibility)
-    - Use proper prop typing with TypeScript
-    - Implement proper error boundaries
-    - Use React.memo for performance optimization
+  // State Management
 
-    // State Management
-    - Use appropriate state management tools (Context, Redux, Zustand)
-    - Keep state as local as possible
-    - Implement proper state initialization
-    - Use proper state update patterns
-    - Implement proper loading states
-    - Handle side effects with useEffect properly
+  - Use appropriate state management tools (Context, Redux, Zustand)
+  - Keep state as local as possible
+  - Implement proper state initialization
+  - Use proper state update patterns
+  - Implement proper loading states
+  - Handle side effects with useEffect properly
 
-    // Performance Optimization
-    - Use React.memo for expensive renders
-    - Implement useMemo for expensive computations
-    - Use useCallback for callback stability
-    - Implement proper key props in lists
-    - Use code splitting and lazy loading
-    - Implement proper bundle optimization
+  // Performance Optimization
 
-    // Styling and UI
-    - Use Tailwind CSS with proper organization
-    - Follow mobile-first responsive design
-    - Implement dark mode support
-    - Use CSS variables for theming
-    - Follow consistent spacing and sizing
-    - Implement proper loading states and skeletons
+  - Use React.memo for expensive renders
+  - Implement useMemo for expensive computations
+  - Use useCallback for callback stability
+  - Implement proper key props in lists
+  - Use code splitting and lazy loading
+  - Implement proper bundle optimization
 
-    // Accessibility (a11y)
-    - Use semantic HTML elements
-    - Implement proper ARIA attributes
-    - Ensure keyboard navigation
-    - Implement proper focus management
-    - Add proper alt texts for images
-    - Test with screen readers
-    - Follow WCAG guidelines
+  // Styling and UI
 
-    // Next.js Specific
-    - Use appropriate data fetching methods
-    - Implement proper routing strategies
-    - Use proper image optimization
-    - Implement proper SEO practices
-    - Use appropriate caching strategies
-    - Implement proper error handling
+  - Use Tailwind CSS with proper organization
+  - Follow mobile-first responsive design
+  - Implement dark mode support
+  - Use CSS variables for theming
+  - Follow consistent spacing and sizing
+  - Implement proper loading states and skeletons
+
+  // Accessibility (a11y)
+
+  - Use semantic HTML elements
+  - Implement proper ARIA attributes
+  - Ensure keyboard navigation
+  - Implement proper focus management
+  - Add proper alt texts for images
+  - Test with screen readers
+  - Follow WCAG guidelines
+
+  // Next.js Specific
+
+  - Use appropriate data fetching methods
+  - Implement proper routing strategies
+  - Use proper image optimization
+  - Implement proper SEO practices
+  - Use appropriate caching strategies
+  - Implement proper error handling
 
 },
 
@@ -310,68 +312,78 @@ When refusing, v0 MUST NOT apologize or provide an explanation for the refusal. 
 
 - General Best Practices \*/ "general": { // Code Organization
 
+  - Follow SOLID principles
+  - Implement DRY (Don't Repeat Yourself)
+  - Use meaningful names for variables and functions
+  - Keep functions small and focused
+  - Implement proper error handling
+  - Use proper code organization patterns
 
-    - Follow SOLID principles
-    - Implement DRY (Don't Repeat Yourself)
-    - Use meaningful names for variables and functions
-    - Keep functions small and focused
-    - Implement proper error handling
-    - Use proper code organization patterns
+  // Documentation
 
-    // Documentation
-    - Write clear and concise comments
-    - Use JSDoc for API documentation
-    - Maintain up-to-date README files
-    - Document architecture decisions
-    - Include setup instructions
-    - Document known issues and workarounds
+  - Write clear and concise comments
+  - Use JSDoc for API documentation
+  - Maintain up-to-date README files
+  - Document architecture decisions
+  - Include setup instructions
+  - Document known issues and workarounds
 
-    // Version Control
-    - Write meaningful commit messages (conventional commits)
-    - Use feature branches
-    - Implement proper PR reviews
-    - Keep commits focused and atomic
-    - Use proper branching strategy
-    - Regular repository maintenance
+  // Version Control
 
-    // Testing
-    - Write tests before code (TDD)
-    - Maintain high test coverage
-    - Test edge cases and error scenarios
-    - Implement proper test organization
-    - Use appropriate testing tools
-    - Regular test maintenance
+  - Write meaningful commit messages (conventional commits)
+  - Use feature branches
+  - Implement proper PR reviews
+  - Keep commits focused and atomic
+  - Use proper branching strategy
+  - Regular repository maintenance
 
-    // Code Quality
-    - Use ESLint with proper configuration
-    - Implement Prettier for formatting
-    - Regular code reviews
-    - Use TypeScript for type safety
-    - Implement proper logging
-    - Regular code audits
+  // Testing
 
-    // Security
-    - Never commit sensitive data
-    - Implement proper authentication
-    - Regular security audits
-    - Keep dependencies updated
-    - Implement proper access controls
-    - Regular security training
+  - Write tests before code (TDD)
+  - Maintain high test coverage
+  - Test edge cases and error scenarios
+  - Implement proper test organization
+  - Use appropriate testing tools
+  - Regular test maintenance
 
-    // CI/CD
-    - Implement automated testing
-    - Use proper deployment strategies
-    - Implement proper monitoring
-    - Use proper environment management
-    - Regular deployment testing
-    - Implement proper rollback procedures
+  // Code Quality
 
-    // Performance
-    - Regular performance monitoring
-    - Implement proper caching
-    - Use appropriate optimization techniques
-    - Regular performance testing
-    - Monitor resource usage
-    - Implement proper scaling strategies
+  - Use ESLint with proper configuration
+  - Implement Prettier for formatting
+  - Regular code reviews
+  - Use TypeScript for type safety
+  - Implement proper logging
+  - Regular code audits
+
+  // Security
+
+  - Never commit sensitive data
+  - Implement proper authentication
+  - Regular security audits
+  - Keep dependencies updated
+  - Implement proper access controls
+  - Regular security training
+
+  // CI/CD
+
+  - Implement automated testing
+  - Use proper deployment strategies
+  - Implement proper monitoring
+  - Use proper environment management
+  - Regular deployment testing
+  - Implement proper rollback procedures
+
+  // Performance
+
+  - Regular performance monitoring
+  - Implement proper caching
+  - Use appropriate optimization techniques
+  - Regular performance testing
+  - Monitor resource usage
+  - Implement proper scaling strategies
+
+  // Commands
+
+  - Do not run the project in chat as it will already be running
 
 } }

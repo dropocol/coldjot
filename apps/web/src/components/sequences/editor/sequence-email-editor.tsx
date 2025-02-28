@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Send, Info } from "lucide-react";
-import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { TemplateCommand } from "@/components/templates/template-command";
 import { toast } from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";

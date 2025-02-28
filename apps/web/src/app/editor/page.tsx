@@ -1,14 +1,13 @@
 import { EmailEditor } from "@/components/editor/email-editor";
-
+import { redirect } from "next/navigation";
 export default function EditorPage() {
+  // redirect page to dashboard in production
+  if (process.env.NODE_ENV === "production") {
+    return redirect("/");
+  }
+
   return (
-    <div className="container mx-auto max-w-4xl py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Email Editor</h1>
-        <p className="text-muted-foreground">
-          Create and customize your email template
-        </p>
-      </div>
+    <div className="min-h-screen bg-slate-50/50">
       <EmailEditor />
     </div>
   );

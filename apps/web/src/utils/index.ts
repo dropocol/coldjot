@@ -1,6 +1,8 @@
 import type { MessagePartHeader } from "@coldjot/types";
 import crypto from "crypto";
 
+export * from "./readability";
+export * from "./spam";
 // Sleep utility
 export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -255,3 +257,13 @@ export function splitEmailContent(emailContent: string): {
 // -----------------------------------------
 // -----------------------------------------
 // -----------------------------------------
+
+// // Text cleaning utility
+// export const cleanText = (text: string): string => {
+//   return text
+//     .replace(/[\n\r\t]+/g, " ") // Normalize line breaks
+//     .replace(/https?:\/\/[^\s]+/g, "URL") // Replace URLs with a single word
+//     .replace(/[^\w\s.!?]/g, "") // Remove special characters except punctuation
+//     .replace(/\s+/g, " ") // Collapse whitespace
+//     .trim();
+// };

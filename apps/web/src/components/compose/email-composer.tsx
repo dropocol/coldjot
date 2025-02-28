@@ -14,7 +14,7 @@ import { Contact, Template } from "@prisma/client";
 import { toast } from "react-hot-toast";
 import { Label } from "@/components/ui/label";
 import { ContactSearch } from "../search/contact-search-dropdown";
-import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { Input } from "@/components/ui/input";
 
 interface Props {

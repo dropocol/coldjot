@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { cn } from "@/lib/utils";
 
 export default function PreviewTemplateDrawer({

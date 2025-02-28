@@ -18,7 +18,7 @@ import {
   Link2Off,
 } from "lucide-react";
 import { PlaceholderButton } from "@/components/email/placeholder-button";
-import { LinkDialog } from "./link-dialog";
+import { LinkDialog } from "../editor/components/link-dialog";
 import { cn } from "@/lib/utils";
 
 interface RichTextEditorProps {

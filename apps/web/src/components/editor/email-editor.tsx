@@ -1,294 +1,248 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { ContentEditable } from "@lexical/react/LexicalContentEditable";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
-import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
-import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Toolbar } from "./toolbar";
+import {
+  LexicalEditor,
+  $getRoot,
+  $createTextNode,
+  $createParagraphNode,
+} from "lexical";
+import { $generateHtmlFromNodes } from "@lexical/html";
 import { editorConfig } from "./editor-config";
-import { DragDropPlugin } from "./plugins/drag-drop-plugin";
-import { ImagePlugin } from "./plugins/image-plugin";
-import { ComponentPickerPlugin } from "./plugins/component-picker-plugin";
-import { Send, Save, ArrowUpRight } from "lucide-react";
-import { DragHandle } from "./drag-handle";
-import { REORDER_NODES_COMMAND } from "./plugins/drag-drop-plugin";
+import { EditorHeader } from "./components/editor-header";
+import { EmailDetails } from "./components/email-details";
+import { EditorToolbar } from "./components/editor-toolbar";
+import { EditorContent } from "./components/editor-content";
+import { EditorReference } from "./components/editor-reference";
+import { EmailAnalysis } from "./components/email-analysis";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Wand2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-function LexicalErrorBoundary({ children }: { children: React.ReactNode }) {
-  return <div>{children}</div>;
-}
+// Sample improved text for development
+const SAMPLE_IMPROVED_TEXT = `Dear [Name],
 
-function EmailEditorContent() {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [dragHandles, setDragHandles] = useState<
-    Array<{ top: number; id: string }>
-  >([]);
-  const [editor] = useLexicalComposerContext();
+I hope this email finds you well. I noticed an issue with your recent payment. The transaction from [Date] wasn't processed due to [Specific Reason].
 
-  useEffect(() => {
-    const updateDragHandles = () => {
-      if (editorRef.current) {
-        const paragraphs =
-          editorRef.current.querySelectorAll(".editor-paragraph");
-        const newDragHandles = Array.from(paragraphs).map((p, i) => ({
-          top:
-            p.getBoundingClientRect().top -
-            editorRef.current!.getBoundingClientRect().top +
-            20,
-          id: `handle-${i}`,
-        }));
-        setDragHandles(newDragHandles);
-      }
-    };
+To fix this:
+1. Log in to your account
+2. Go to Payment Settings
+3. Update your payment method
 
-    const observer = new MutationObserver(updateDragHandles);
-    if (editorRef.current) {
-      observer.observe(editorRef.current, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-      updateDragHandles();
-    }
+Please complete this by [Date] to avoid service interruption. If you need help, reply to this email or call us at [Phone].
 
-    return () => observer.disconnect();
-  }, []);
+Thank you for your prompt attention to this matter.
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    e.dataTransfer.setData("text/plain", id);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const draggedId = e.dataTransfer.getData("text/plain");
-    const dropTarget = e.target as HTMLElement;
-
-    // Find the nearest paragraph element
-    const targetParagraph = dropTarget.closest(".editor-paragraph");
-    if (!targetParagraph) return;
-
-    // Get the node keys
-    const fromKey = draggedId.replace("handle-", "");
-    const toKey = targetParagraph.getAttribute("data-lexical-node-key");
-
-    if (fromKey && toKey) {
-      editor.dispatchCommand(REORDER_NODES_COMMAND, {
-        fromKey,
-        toKey,
-      });
-    }
-  };
-
-  return (
-    <div className="min-h-[400px]" ref={editorRef}>
-      <div className="relative">
-        <div className="sticky top-0 z-30 bg-white border-b">
-          <Toolbar />
-        </div>
-        <div
-          className="relative group"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={handleDrop}
-        >
-          {dragHandles.map((handle) => (
-            <DragHandle
-              key={handle.id}
-              style={{
-                position: "absolute",
-                top: handle.top,
-                left: "-32px",
-                zIndex: 20,
-                width: "48px",
-                height: "24px",
-              }}
-              onDragStart={(e) => handleDragStart(e, handle.id)}
-              onAddClick={() => {
-                editor.dispatchCommand(REORDER_NODES_COMMAND, {
-                  fromKey: handle.id.replace("handle-", ""),
-                  toKey: handle.id.replace("handle-", ""),
-                });
-              }}
-            />
-          ))}
-          <RichTextPlugin
-            contentEditable={
-              <ContentEditable className="min-h-[300px] px-8 py-3 outline-none [&>div]:editor-paragraph [&>div]:relative [&>div]:group/block" />
-            }
-            placeholder={
-              <div className="pointer-events-none absolute left-8 top-3 text-muted-foreground">
-                Write your email...
-              </div>
-            }
-            ErrorBoundary={LexicalErrorBoundary}
-          />
-          <HistoryPlugin />
-          <ListPlugin />
-          <LinkPlugin />
-          <TablePlugin />
-          <TabIndentationPlugin />
-          <MarkdownShortcutPlugin />
-          <DragDropPlugin />
-          <ImagePlugin />
-          <ComponentPickerPlugin />
-        </div>
-      </div>
-    </div>
-  );
-}
+Best regards,
+[Your Name]`;
 
 export function EmailEditor() {
-  const [title, setTitle] = useState("Unnamed transactional");
-  const [fromName, setFromName] = useState("Freelance");
-  const [fromEmail, setFromEmail] = useState("zee");
-  const [replyTo, setReplyTo] = useState("zee@zeeshankhan.me");
-  const [subject, setSubject] = useState("");
-  const [previewText, setPreviewText] = useState("");
+  const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
+  const USE_DEEPSEEK_API = true;
+
+  // Email details state
+  const [title, setTitle] = useState("Payment issue");
+  const [editorContent, setEditorContent] = useState({ text: "", html: "" });
+
+  // Editor state
+  const [editorInstance, setEditorInstance] = useState<LexicalEditor | null>(
+    null
+  );
+  const [activeTab, setActiveTab] = useState("design");
+  const [isImproving, setIsImproving] = useState(false);
+  const { toast } = useToast();
+
+  const handleEditorReference = (editor: LexicalEditor) => {
+    setEditorInstance(editor);
+  };
+
+  // Update editor content for analysis
+  useEffect(() => {
+    if (editorInstance) {
+      editorInstance.registerUpdateListener(({ editorState }) => {
+        const stringifiedEditorState = JSON.stringify(editorState.toJSON());
+        const parsedEditorState = editorInstance.parseEditorState(
+          stringifiedEditorState
+        );
+        parsedEditorState.read(() => {
+          const textContent = $getRoot().getTextContent();
+          const htmlContent = $generateHtmlFromNodes(editorInstance);
+          setEditorContent({
+            text: textContent,
+            html: htmlContent,
+          });
+        });
+      });
+    }
+  }, [editorInstance]);
+
+  // Function to improve email readability using API
+  const improveReadability = async () => {
+    if (!editorContent.text.trim()) {
+      toast({
+        title: "Empty Content",
+        description: "Please write some content before improving readability.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsImproving(true);
+
+    try {
+      let improvedText = "";
+
+      // Use sample text in development mode
+      if (!IS_DEVELOPMENT && USE_DEEPSEEK_API) {
+        const response = await fetch("/api/improve-readability", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ text: editorContent.text }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to improve readability");
+        }
+        const data = await response.json();
+        improvedText = data.text;
+      } else {
+        improvedText = SAMPLE_IMPROVED_TEXT;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      if (editorInstance && improvedText) {
+        editorInstance.update(() => {
+          const root = $getRoot();
+          root.clear();
+
+          // Split the text into paragraphs
+          const paragraphs = improvedText.split("\n\n");
+
+          // Create paragraph nodes for each paragraph
+          paragraphs.forEach((paragraph) => {
+            if (paragraph.trim()) {
+              const paragraphNode = $createParagraphNode();
+              const textNode = $createTextNode(paragraph);
+              paragraphNode.append(textNode);
+              root.append(paragraphNode);
+            }
+          });
+        });
+
+        // Update the editor content state
+        setEditorContent((prev) => ({
+          ...prev,
+          text: improvedText,
+          html: improvedText, // This will be converted to proper HTML by the editor
+        }));
+
+        toast({
+          title: "Success",
+          description:
+            "Email content has been improved for better readability.",
+        });
+      }
+    } catch (error) {
+      console.error("Error improving readability:", error);
+      toast({
+        title: "Error",
+        description: "Failed to improve email readability. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImproving(false);
+    }
+  };
 
   return (
-    <div className="flex flex-1 flex-col">
-      {/* Sticky Header */}
-      <div
-        id="editor-status-bar"
-        className="sticky top-0 z-20 w-full border-b border-gray-100 bg-white pb-0.5"
-      >
-        <div className="mx-auto flex items-center justify-between py-1 max-w-2xl px-8">
-          <div className="mr-4 flex flex-1 items-center gap-1 pt-0.5">
-            <div className="relative mb-9 flex w-full justify-between">
-              <div className="relative grow">
-                <div className="absolute inset-0">
-                  <div className="flex items-center">
-                    <p className="mt-[4px] cursor-pointer text-lg hover:opacity-100">
-                      😔
-                    </p>
-                    <h1 className="header-text ml-2 mt-[5px] truncate border-b border-transparent hover:cursor-pointer hover:opacity-80 text-gray-900">
-                      {title}
-                    </h1>
-                  </div>
+    <div className="flex flex-1 gap-0 min-h-screen">
+      {/* Main Editor Section */}
+      <div className="flex-1">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex flex-1 flex-col"
+        >
+          {/* Header */}
+          <EditorHeader
+            title={title}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+
+          {/* Main Content */}
+          <div className="mx-auto mt-6 px-8 w-full max-w-3xl">
+            <div className="flex flex-col">
+              {/* Tab Content */}
+              <TabsContent value="design">
+                {/* Email Details */}
+                {/* <EmailDetails
+                  fromName={fromName}
+                  setFromName={setFromName}
+                  fromEmail={fromEmail}
+                  setFromEmail={setFromEmail}
+                  replyTo={replyTo}
+                  setReplyTo={setReplyTo}
+                  subject={subject}
+                  setSubject={setSubject}
+                  previewText={previewText}
+                  setPreviewText={setPreviewText}
+                /> */}
+
+                {/* Editor Toolbar */}
+                <div className="flex items-center justify-between mb-4">
+                  <EditorToolbar editorInstance={editorInstance} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={improveReadability}
+                    disabled={isImproving}
+                    className="gap-2 ml-4"
+                  >
+                    <Wand2 className="h-4 w-4" />
+                    {isImproving ? "Improving..." : "Improve Readability"}
+                  </Button>
                 </div>
-              </div>
+
+                {/* Editor */}
+                <LexicalComposer initialConfig={editorConfig}>
+                  <div className="editor-container">
+                    <EditorReference onChange={handleEditorReference} />
+                    <EditorContent />
+                  </div>
+                </LexicalComposer>
+              </TabsContent>
+
+              <TabsContent value="code">
+                <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
+                  <p className="text-gray-500">Code view coming soon...</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="preview">
+                <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
+                  <p className="text-gray-500">Preview coming soon...</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="settings">
+                <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
+                  <p className="text-gray-500">Settings coming soon...</p>
+                </div>
+              </TabsContent>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <ArrowUpRight className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Save className="h-4 w-4" />
-            </Button>
-            <Button className="gap-2">
-              <Send className="h-4 w-4" />
-              Send
-            </Button>
-          </div>
-        </div>
+        </Tabs>
       </div>
 
-      {/* Main Content */}
-      <div className="mx-auto mt-2 px-8 w-full max-w-2xl">
-        <div className="flex flex-col">
-          {/* Email Details */}
-          <div className="group/pauseLoopHoverRegion relative mt-6 text-sm font-medium transition-all">
-            <div className="pb-3">
-              <div className="flex cursor-default justify-between space-x-6 items-center">
-                <div className="w-[3.25rem] cursor-default pr-2 text-left">
-                  <span className="text-sm tracking-wide text-gray-400">
-                    Name
-                  </span>
-                </div>
-                <div className="relative flex grow overflow-hidden">
-                  <Input
-                    value={fromName}
-                    onChange={(e) => setFromName(e.target.value)}
-                    className="border-none focus:ring-0"
-                    placeholder="Sender Name"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pb-3">
-              <div className="flex cursor-default justify-between space-x-6 items-center">
-                <div className="w-[3.25rem] cursor-default pr-2 text-left">
-                  <span className="text-sm tracking-wide text-gray-400">
-                    From
-                  </span>
-                </div>
-                <div className="relative flex grow overflow-hidden">
-                  <Input
-                    value={fromEmail}
-                    onChange={(e) => setFromEmail(e.target.value)}
-                    className="border-none focus:ring-0"
-                    placeholder="From email"
-                  />
-                  <p className="z-10 ml-2 mr-4 text-sm text-gray-500">
-                    @mail.zeeshankhan.me
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pb-3">
-              <div className="flex cursor-default justify-between space-x-6 items-center">
-                <div className="w-[3.25rem] cursor-default pr-2 text-left">
-                  <span className="text-sm tracking-wide text-gray-400">
-                    Reply
-                  </span>
-                </div>
-                <div className="relative flex grow overflow-hidden">
-                  <Input
-                    value={replyTo}
-                    onChange={(e) => setReplyTo(e.target.value)}
-                    className="border-none focus:ring-0"
-                    placeholder="Optional reply email"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pb-3">
-              <div className="flex cursor-default justify-between space-x-6 items-center">
-                <div className="relative flex grow overflow-hidden">
-                  <Input
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className="border-none focus:ring-0"
-                    placeholder="Subject line"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pb-3">
-              <div className="flex cursor-default justify-between space-x-6 items-center">
-                <div className="w-[3.25rem] cursor-default pr-2 text-left">
-                  <span className="text-sm tracking-wide text-gray-400">
-                    Preview
-                  </span>
-                </div>
-                <div className="relative flex grow overflow-hidden">
-                  <Input
-                    value={previewText}
-                    onChange={(e) => setPreviewText(e.target.value)}
-                    className="border-none focus:ring-0"
-                    placeholder="Optional preview text"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Editor */}
-          <LexicalComposer initialConfig={editorConfig}>
-            <EmailEditorContent />
-          </LexicalComposer>
+      {/* Analysis Panel */}
+      <div className="w-[400px] border-l bg-white flex flex-col h-screen sticky top-0">
+        <div className="flex-1 px-6 py-4 overflow-y-auto overflow-x-hidden">
+          <EmailAnalysis content={editorContent} />
         </div>
       </div>
     </div>

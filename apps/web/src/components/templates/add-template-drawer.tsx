@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { Template } from "@coldjot/types";
 
 type FormData = {
