@@ -51,6 +51,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PaginationControls } from "@/components/pagination";
+import { addContactToSequence } from "@/lib/client-actions";
+import { useSequence } from "@/lib/sequence-context";
 
 // Add extended SequenceContact type with all required properties
 interface ExtendedSequenceContact {
@@ -92,26 +94,27 @@ export function SequenceContacts({
   const [isLoading, setIsLoading] = useState(false);
   const [totalSteps, setTotalSteps] = useState(0);
   const [total, setTotal] = useState(0);
+  const { updateReadinessField } = useSequence();
 
   const handleAddContact = async (contact: Contact) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/contacts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: contact.id }),
-      });
 
-      if (!response.ok) throw new Error("Failed to add contact");
+      // Use the client action instead of direct fetch
+      const newContact = await addContactToSequence(
+        sequenceId,
+        contact.id,
+        updateReadinessField
+      );
 
-      const newSequenceContact = await response.json();
-      setContacts((prev) => [
-        ...prev,
-        newSequenceContact as ExtendedSequenceContact,
-      ]);
+      // Update the local state with the new contact
+      setContacts((prev) => [newContact, ...prev]);
+      setTotal((prev) => prev + 1);
       setSelectedContact(null);
+
       toast.success("Contact added to sequence");
     } catch (error) {
+      console.error("Error adding contact:", error);
       toast.error("Failed to add contact");
     } finally {
       setIsLoading(false);

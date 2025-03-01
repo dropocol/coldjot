@@ -1,39 +1,27 @@
 import { Sequence, SequenceStatus } from "@coldjot/types";
 
-// Cache for sequence readiness status to avoid repeated calculations
-type ReadinessCache = {
-  [sequenceId: string]: {
-    timestamp: number;
-    result: SequenceReadinessResult;
-  };
+// Type for the sequence readiness metadata
+export type SequenceReadinessMetadata = {
+  hasSteps: boolean;
+  hasContacts: boolean;
+  hasBusinessHours: boolean;
+  hasMailbox: boolean;
+  lastUpdated?: string; // ISO date string
 };
-
-// Cache expiration time in milliseconds (5 minutes)
-const CACHE_EXPIRATION = 5 * 60 * 1000;
-
-// In-memory cache
-const readinessCache: ReadinessCache = {};
 
 // Type for the result of isSequenceReadyToLaunch
 export type SequenceReadinessResult = {
   isReady: boolean;
-  steps: {
-    hasSteps: boolean;
-    hasContacts: boolean;
-    hasBusinessHours: boolean;
-    hasMailbox: boolean;
-  };
+  steps: SequenceReadinessMetadata;
 };
 
 /**
- * Checks if a sequence has completed all setup steps and is ready to launch
- * Uses caching to avoid repeated calculations for the same sequence
+ * Checks if a sequence is ready to launch based on its metadata
+ * If metadata is not available, returns a default result
  */
 export const isSequenceReadyToLaunch = (
   sequence: Sequence | any
 ): SequenceReadinessResult => {
-  console.log("sequence", sequence);
-
   // Skip checks for active or paused sequences
   if (
     sequence.status === SequenceStatus.ACTIVE ||
@@ -50,47 +38,26 @@ export const isSequenceReadyToLaunch = (
     };
   }
 
-  // Check cache first
-  const cachedResult = readinessCache[sequence.id];
-  const now = Date.now();
+  // Get readiness from metadata if available
+  const metadata = sequence.metadata || {};
+  const readinessData = metadata.readiness || {
+    hasSteps: false,
+    hasContacts: false,
+    hasBusinessHours: false,
+    hasMailbox: false,
+  };
 
-  if (cachedResult && now - cachedResult.timestamp < CACHE_EXPIRATION) {
-    return cachedResult.result;
-  }
+  // Check if all steps are completed
+  const isReady =
+    readinessData.hasSteps &&
+    readinessData.hasContacts &&
+    readinessData.hasBusinessHours &&
+    readinessData.hasMailbox;
 
-  // Check if sequence has steps
-  const hasSteps = Array.isArray(sequence.steps) && sequence.steps.length > 0;
-
-  // Check if sequence has contacts
-  const hasContacts = sequence._count?.contacts
-    ? sequence._count.contacts > 0
-    : (sequence.contactCount || 0) > 0;
-
-  // Check if business hours are set - more robust check
-  const hasBusinessHours = !!sequence.businessHours;
-
-  // Check if mailbox is attached
-  const hasMailbox = !!sequence.mailboxId || !!sequence.sequenceMailbox;
-
-  const isReady = hasSteps && hasContacts && hasBusinessHours && hasMailbox;
-
-  // Store result in cache
-  const result = {
+  return {
     isReady,
-    steps: {
-      hasSteps,
-      hasContacts,
-      hasBusinessHours,
-      hasMailbox,
-    },
+    steps: readinessData,
   };
-
-  readinessCache[sequence.id] = {
-    timestamp: now,
-    result,
-  };
-
-  return result;
 };
 
 /**
@@ -106,7 +73,9 @@ export const getSequenceSetupProgress = (
   const { steps } = isSequenceReadyToLaunch(sequence);
 
   const totalSteps = 4; // Total number of setup steps
-  const completedSteps = Object.values(steps).filter(Boolean).length;
+  const completedSteps = Object.values(steps).filter(
+    (step) => step && step !== steps.lastUpdated
+  ).length;
   const completionPercentage = Math.round((completedSteps / totalSteps) * 100);
 
   return {
@@ -117,19 +86,66 @@ export const getSequenceSetupProgress = (
 };
 
 /**
- * Invalidates the cache for a specific sequence
- * Call this when a sequence is updated
+ * Determines if the sequence metadata needs to be updated
+ * Returns true if metadata is missing or outdated
  */
-export const invalidateSequenceCache = (sequenceId: string): void => {
-  delete readinessCache[sequenceId];
+export const shouldUpdateSequenceMetadata = (
+  sequence: Sequence | any
+): boolean => {
+  // If no metadata or no readiness data, update is needed
+  if (!sequence.metadata || !sequence.metadata.readiness) {
+    return true;
+  }
+
+  // If last update was more than 5 minutes ago, update is needed
+  const lastUpdated = sequence.metadata.readiness.lastUpdated;
+  if (!lastUpdated) {
+    return true;
+  }
+
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  return lastUpdated < fiveMinutesAgo;
 };
 
 /**
- * Invalidates the entire cache
- * Call this when multiple sequences might have been updated
+ * Updates the sequence metadata on the client side
+ * This should be called after any action that might affect sequence readiness
  */
-export const invalidateAllSequenceCache = (): void => {
-  Object.keys(readinessCache).forEach((key) => {
-    delete readinessCache[key];
-  });
+export const updateSequenceMetadata = async (
+  sequenceId: string
+): Promise<any> => {
+  try {
+    const response = await fetch(`/api/sequences/${sequenceId}/metadata`, {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update sequence metadata");
+    }
+
+    const data = await response.json();
+    return data.metadata;
+  } catch (error) {
+    console.error("Error updating sequence metadata:", error);
+    return null;
+  }
+};
+
+/**
+ * Updates a local sequence object with the latest metadata
+ * This is useful for updating the UI without a full page reload
+ */
+export const updateLocalSequenceWithMetadata = (
+  sequence: any,
+  metadata: any
+): any => {
+  if (!sequence) return sequence;
+
+  return {
+    ...sequence,
+    metadata: {
+      ...(sequence.metadata || {}),
+      ...metadata,
+    },
+  };
 };

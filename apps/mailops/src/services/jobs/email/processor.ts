@@ -376,7 +376,6 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
               workDays: sequence.businessHours.workDays,
               workHoursStart: sequence.businessHours.workHoursStart,
               workHoursEnd: sequence.businessHours.workHoursEnd,
-              holidays: sequence.businessHours.holidays,
               type: sequence.businessHours.type as BusinessScheduleEnum,
             }
           : getDefaultBusinessHours()

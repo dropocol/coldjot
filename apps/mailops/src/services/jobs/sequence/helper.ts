@@ -22,7 +22,7 @@ export function getDefaultBusinessHours(): BusinessHours {
     workDays: [1, 2, 3, 4, 5],
     workHoursStart: "09:00",
     workHoursEnd: "17:00",
-    holidays: [],
+
     type: BusinessScheduleEnum.BUSINESS,
   };
 }

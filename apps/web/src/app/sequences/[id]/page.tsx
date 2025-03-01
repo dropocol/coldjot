@@ -49,7 +49,6 @@ export default async function SequencePage({
           workDays: sequence.businessHours.workDays,
           workHoursStart: sequence.businessHours.workHoursStart,
           workHoursEnd: sequence.businessHours.workHoursEnd,
-          holidays: sequence.businessHours.holidays,
         } as BusinessHours)
       : undefined,
     steps: sequence.steps.map((step: any) => ({

@@ -71,12 +71,8 @@ export const isValidBusinessTime = (
     return true;
   }
 
-  const { workDays, holidays, timezone } = businessHours;
+  const { workDays, timezone } = businessHours;
   const localDt = dt.setZone(timezone);
-
-  const isHoliday = holidays.some((h) =>
-    localDt.hasSame(DateTime.fromJSDate(h, { zone: timezone }), "day")
-  );
 
   const isWorkDay = workDays.includes(localDt.weekday % 7);
 
@@ -109,12 +105,11 @@ export const isValidBusinessTime = (
     - Day Start: ${dayStart.toISO()}
     - Day End: ${dayEnd.toISO()}
     - Is Work Day: ${isWorkDay}
-    - Is Holiday: ${isHoliday}
     - Is Within Hours: ${isWithinHours}
     - Timezone: ${timezone}
   `);
 
-  return !isHoliday && isWorkDay && isWithinHours;
+  return isWorkDay && isWithinHours;
 };
 
 // -------------------------------------------
@@ -127,7 +122,7 @@ export const nextBusinessStart = (
 ): DateTime => {
   logAndSave("🔄 Finding next business day start");
 
-  const { workHoursStart, workDays, holidays, timezone } = businessHours;
+  const { workHoursStart, workDays, timezone } = businessHours;
   const [startHour, startMinute] = workHoursStart.split(":").map(Number);
 
   let candidate = date
@@ -138,14 +133,11 @@ export const nextBusinessStart = (
 
   while (iteration < maxIterations) {
     iteration++;
-    const isHoliday = holidays.some((h) =>
-      candidate.hasSame(DateTime.fromJSDate(h, { zone: timezone }), "day")
-    );
     const isWorkDay = workDays.includes(candidate.weekday % 7);
 
     logDebugAndSave(`📅 Checking candidate day (iteration ${iteration})`);
 
-    if (!isHoliday && isWorkDay) {
+    if (isWorkDay) {
       logDebugAndSave("✅ Valid business day found");
       return candidate;
     }

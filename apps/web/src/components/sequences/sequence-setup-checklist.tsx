@@ -22,6 +22,7 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCheck,
+  PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -33,80 +34,125 @@ import {
 } from "@/lib/sequence-utils";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useSequence } from "@/lib/sequence-context";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SequenceSetupChecklistProps {
-  sequence: Sequence;
+  sequence?: Sequence;
+  onStepComplete?: () => void;
   className?: string;
+  onLaunch?: () => void;
 }
 
 export function SequenceSetupChecklist({
-  sequence,
+  sequence: sequenceProp,
+  onStepComplete,
   className,
+  onLaunch,
 }: SequenceSetupChecklistProps) {
+  // Use context if no prop is provided
+  const context = useSequence();
+  const sequence = sequenceProp || context.sequence;
+  const handleStepComplete = onStepComplete || context.refreshSequence;
+
   const [isExpanded, setIsExpanded] = useState(true);
   const [progressValue, setProgressValue] = useState(0);
 
   // Get sequence setup status
   const { steps, isReady } = isSequenceReadyToLaunch(sequence);
-  const { completedSteps, totalSteps, completionPercentage } =
+
+  // Fix the step counting issue by explicitly defining the total steps
+  // instead of relying on metadata which might include lastUpdated
+  const totalRequiredSteps = 4; // Explicitly set to 4 required steps
+
+  const { completedSteps, completionPercentage } =
     getSequenceSetupProgress(sequence);
+
+  // Calculate the actual completed steps (capped at totalRequiredSteps)
+  const actualCompletedSteps = Math.min(completedSteps, totalRequiredSteps);
+
+  // Recalculate the completion percentage
+  const actualCompletionPercentage = Math.round(
+    (actualCompletedSteps / totalRequiredSteps) * 100
+  );
 
   // Animate progress bar
   useEffect(() => {
     const timer = setTimeout(() => {
-      setProgressValue(completionPercentage);
+      setProgressValue(actualCompletionPercentage);
     }, 100);
     return () => clearTimeout(timer);
-  }, [completionPercentage]);
+  }, [actualCompletionPercentage]);
 
   return (
     <Card
       className={cn(
-        "w-full border  shadow-sm transition-all duration-300",
+        "w-full shadow-2xl shadow-slate-900/20 border transition-all duration-300",
         className,
         {
           "border-primary/20 bg-slate-50/50": !isReady,
-          "border-green-500/30": isReady,
+          "border-emerald-500/50": isReady,
         }
       )}
     >
-      <CardHeader className="pb-3 space-y-2 pt-4 px-4">
+      <CardHeader className={cn("pt-4 px-4 pb-4")}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {isReady ? (
-              <div className="h-8 w-8 rounded-full bg-green-50 flex items-center justify-center">
-                <CheckCheck className="h-4 w-4 text-green-500" />
-              </div>
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center"
+              >
+                <CheckCheck className="h-4 w-4 text-emerald-500" />
+              </motion.div>
             ) : (
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <AlertCircle className="h-4 w-4 text-primary" />
+              <div className="h-8 w-8 rounded-full bg-amber-50 flex items-center justify-center">
+                <AlertCircle className="h-4 w-4 text-amber-500" />
               </div>
             )}
             <div>
-              <CardTitle className="text-lg">Sequence Setup</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-base">Sequence Setup</CardTitle>
+              <CardDescription className="text-xs">
                 {isReady
                   ? "All setup steps completed!"
-                  : `${completionPercentage}% complete - ${totalSteps - completedSteps} ${totalSteps - completedSteps === 1 ? "step" : "steps"} remaining`}
+                  : `${actualCompletionPercentage}% complete - ${totalRequiredSteps - actualCompletedSteps} ${
+                      totalRequiredSteps - actualCompletedSteps === 1
+                        ? "step"
+                        : "steps"
+                    } remaining`}
               </CardDescription>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {isReady && (
-              <Badge
-                variant="outline"
-                className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1 px-3 py-1"
+              <motion.div
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.3 }}
               >
-                <Sparkles className="h-3.5 w-3.5" />
-                Ready to Launch
-              </Badge>
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1 px-3 py-1"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Ready to Launch
+                </Badge>
+              </motion.div>
             )}
 
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 ml-2"
+              className="h-8 w-8 p-0"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               {isExpanded ? (
@@ -117,168 +163,171 @@ export function SequenceSetupChecklist({
             </Button>
           </div>
         </div>
-
-        {isExpanded && (
-          <div className="space-y-1 pt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                {completedSteps}/{totalSteps} steps completed
-              </span>
-              <span className="text-xs font-medium">
-                {completionPercentage}%
-              </span>
-            </div>
-            <Progress
-              value={progressValue}
-              className={cn("h-2", {
-                "bg-primary/20": !isReady,
-                "bg-green-100": isReady,
-              })}
-            />
-          </div>
-        )}
       </CardHeader>
 
-      {isExpanded && (
-        <>
-          <CardContent className="pt-0">
-            <div className="space-y-3 mt-3">
-              <ChecklistItem
-                icon={Mail}
-                title="Add Sequence Steps"
-                description="Create steps to define your sequence flow"
-                isCompleted={steps.hasSteps}
-                href={`/sequences/${sequence.id}`} // Point to overview page
-              />
-
-              <ChecklistItem
-                icon={Users}
-                title="Add Contacts"
-                description="Add contacts to your sequence"
-                isCompleted={steps.hasContacts}
-                href={`/sequences/${sequence.id}/contacts`}
-              />
-
-              <ChecklistItem
-                icon={Clock}
-                title="Set Business Hours"
-                description="Configure when your emails will be sent"
-                isCompleted={steps.hasBusinessHours}
-                href={`/sequences/${sequence.id}/settings`}
-              />
-
-              <ChecklistItem
-                icon={Calendar}
-                title="Attach Mailbox"
-                description="Connect a mailbox to send your emails"
-                isCompleted={steps.hasMailbox}
-                href={`/sequences/${sequence.id}/settings`}
-              />
-            </div>
-          </CardContent>
-
-          <CardFooter
-            className={cn("pt-0", {
-              hidden: !isReady && completedSteps === 0,
-            })}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
           >
-            {!isReady && completedSteps > 0 && (
-              <div className="w-full p-3 bg-muted rounded-md text-sm text-center mt-3">
-                <p className="text-muted-foreground">
-                  Complete all steps above to enable the Launch button
-                </p>
-              </div>
-            )}
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                <ChecklistCard
+                  icon={Mail}
+                  title="Add Sequence Steps"
+                  description="Create steps to define your sequence flow"
+                  isCompleted={steps.hasSteps}
+                  href={`/sequences/${sequence.id}`}
+                  onStepComplete={handleStepComplete}
+                />
 
-            {isReady && (
-              <Button className="w-full gap-2 mt-3" asChild>
-                <a href={`/sequences/${sequence.id}`}>
-                  Go to Overview to Launch
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              </Button>
-            )}
-          </CardFooter>
-        </>
-      )}
+                <ChecklistCard
+                  icon={Users}
+                  title="Add Contacts"
+                  description="Add contacts to your sequence"
+                  isCompleted={steps.hasContacts}
+                  href={`/sequences/${sequence.id}/contacts`}
+                  onStepComplete={handleStepComplete}
+                />
+
+                <ChecklistCard
+                  icon={Clock}
+                  title="Set Business Hours"
+                  description="Configure when your emails will be sent"
+                  isCompleted={steps.hasBusinessHours}
+                  href={`/sequences/${sequence.id}/settings`}
+                  onStepComplete={handleStepComplete}
+                />
+
+                <ChecklistCard
+                  icon={Calendar}
+                  title="Attach Mailbox"
+                  description="Connect a mailbox to send your emails"
+                  isCompleted={steps.hasMailbox}
+                  href={`/sequences/${sequence.id}/settings`}
+                  onStepComplete={handleStepComplete}
+                />
+              </div>
+            </CardContent>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Card>
   );
 }
 
-interface ChecklistItemProps {
+interface ChecklistCardProps {
   icon: React.ElementType;
   title: string;
   description: string;
   isCompleted: boolean;
   href: string;
+  onStepComplete?: () => void;
 }
 
-function ChecklistItem({
+function ChecklistCard({
   icon: Icon,
   title,
   description,
   isCompleted,
   href,
-}: ChecklistItemProps) {
+  onStepComplete,
+}: ChecklistCardProps) {
+  const handleClick = (e: React.MouseEvent) => {
+    if (onStepComplete) {
+      e.preventDefault();
+      onStepComplete();
+      // Navigate after a short delay to allow the metadata to update
+      setTimeout(() => {
+        window.location.href = href;
+      }, 100);
+    }
+  };
+
   return (
-    <div
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       className={cn(
-        "flex items-start space-x-3 p-3 rounded-md transition-all",
+        "flex flex-col p-3 rounded-md transition-all cursor-pointer",
         {
-          "bg-green-50 border border-green-100": isCompleted,
-          "hover:bg-muted/50 border border-transparent": !isCompleted,
+          "bg-emerald-50/50 border border-emerald-200": isCompleted,
+          "bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm":
+            !isCompleted,
         }
       )}
+      onClick={(e) => {
+        if (!isCompleted) {
+          handleClick(e);
+        }
+      }}
     >
-      <div
-        className={cn(
-          "flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center",
-          {
-            "bg-green-100": isCompleted,
-            "bg-muted": !isCompleted,
-          }
-        )}
-      >
-        <Icon
-          className={cn("h-5 w-5", {
-            "text-green-600": isCompleted,
-            "text-muted-foreground": !isCompleted,
-          })}
-        />
-      </div>
-
-      <div className="space-y-1 flex-1">
-        <div className="flex items-center justify-between">
-          <h4
-            className={cn("text-sm font-medium", {
-              "text-green-700": isCompleted,
+      <div className="flex items-start space-x-3">
+        <div
+          className={cn(
+            "flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center",
+            {
+              "bg-emerald-100": isCompleted,
+              "bg-slate-100": !isCompleted,
+            }
+          )}
+        >
+          <Icon
+            className={cn("h-5 w-5", {
+              "text-emerald-600": isCompleted,
+              "text-slate-500": !isCompleted,
+            })}
+          />
+        </div>
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center justify-between">
+            <h4
+              className={cn("text-sm font-medium", {
+                "text-emerald-800": isCompleted,
+              })}
+            >
+              {title}
+            </h4>
+          </div>
+          <p
+            className={cn("text-xs", {
+              "text-emerald-700": isCompleted,
+              "text-muted-foreground": !isCompleted,
             })}
           >
-            {title}
-          </h4>
-          {!isCompleted && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-3 gap-1 text-xs"
-              asChild
-            >
-              <a href={href}>
-                Setup
-                <ArrowRight className="h-3 w-3 ml-1" />
-              </a>
-            </Button>
-          )}
+            {isCompleted ? (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center"
+              >
+                <CheckCircle2 className="inline-block h-3 w-3 mr-1" />
+                {description}
+              </motion.span>
+            ) : (
+              <span className="flex items-center">
+                <Circle className="inline-block h-3 w-3 mr-1" />
+                {description}
+              </span>
+            )}
+          </p>
         </div>
-        <p
-          className={cn("text-xs", {
-            "text-green-600": isCompleted,
-            "text-muted-foreground": !isCompleted,
-          })}
-        >
-          {description}
-        </p>
       </div>
-    </div>
+
+      {!isCompleted && (
+        <div className="mt-2 self-end">
+          <Button variant="outline" className="h-7 px-3 gap-1 text-xs" asChild>
+            <a href={href} onClick={handleClick}>
+              Setup
+              <ArrowRight className="h-3 w-3 ml-1" />
+            </a>
+          </Button>
+        </div>
+      )}
+    </motion.div>
   );
 }

@@ -196,7 +196,6 @@ export class ScheduleProcessor extends BaseProcessor<any> {
                   workDays: true,
                   workHoursStart: true,
                   workHoursEnd: true,
-                  holidays: true,
                 },
               },
             },

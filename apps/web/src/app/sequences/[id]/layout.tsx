@@ -7,6 +7,7 @@ import { SequenceControls } from "@/components/sequences/sequence-controls";
 import { SequenceNav } from "@/components/sequences/sequence-nav";
 import { SequenceStatus } from "@coldjot/types";
 import { SequenceHeader } from "@/components/sequences/sequence-header";
+import { SequenceProvider } from "@/lib/sequence-context";
 
 export default async function SequenceLayout({
   children,
@@ -37,19 +38,26 @@ export default async function SequenceLayout({
     notFound();
   }
 
-  return (
-    <div className="max-w-5xl mx-auto py-8 space-y-6">
-      <SequenceHeader
-        sequence={{
-          id: sequence.id,
-          name: sequence.name,
-          status: sequence.status as SequenceStatus,
-          contactCount: sequence._count.contacts,
-          ...(sequence as any),
-        }}
-      />
+  // Prepare the sequence object with proper typing
+  const typedSequence = {
+    id: sequence.id,
+    name: sequence.name,
+    status: sequence.status as SequenceStatus,
+    contactCount: sequence._count.contacts,
+    steps: sequence.steps,
+    businessHours: sequence.businessHours,
+    sequenceMailbox: sequence.sequenceMailbox,
+    metadata: sequence.metadata,
+    _count: sequence._count,
+    ...(sequence as any),
+  };
 
-      <div className="mt-6">{children}</div>
-    </div>
+  return (
+    <SequenceProvider initialSequence={typedSequence}>
+      <div className="max-w-5xl mx-auto py-8 space-y-6">
+        <SequenceHeader />
+        <div className="mt-6">{children}</div>
+      </div>
+    </SequenceProvider>
   );
 }

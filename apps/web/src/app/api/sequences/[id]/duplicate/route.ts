@@ -77,7 +77,6 @@ export async function POST(
                     workDays: sequence.businessHours.workDays,
                     workHoursStart: sequence.businessHours.workHoursStart,
                     workHoursEnd: sequence.businessHours.workHoursEnd,
-                    holidays: sequence.businessHours.holidays,
                   },
                 }
               : undefined,

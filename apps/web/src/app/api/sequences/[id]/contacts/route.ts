@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import { NextResponse } from "next/server";
+import { updateSequenceReadinessField } from "@/lib/metadata-utils";
 
 export async function GET(
   req: Request,
@@ -123,6 +124,15 @@ export async function POST(
         id: id,
         userId: session.user.id,
       },
+      select: {
+        id: true,
+        metadata: true,
+        _count: {
+          select: {
+            contacts: true,
+          },
+        },
+      },
     });
 
     if (!sequence) {
@@ -149,6 +159,15 @@ export async function POST(
         },
       },
     });
+
+    // Update the sequence metadata only if this is the first contact
+    // or if the metadata doesn't already indicate that contacts exist
+    const metadataObj = (sequence.metadata as Record<string, any>) || {};
+    const readiness = metadataObj.readiness || {};
+
+    if (sequence._count.contacts === 0 || !readiness.hasContacts) {
+      await updateSequenceReadinessField(id, "hasContacts", true);
+    }
 
     // Return the contact with the same enriched format as GET
     const enrichedContact = {

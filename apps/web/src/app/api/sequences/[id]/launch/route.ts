@@ -3,6 +3,7 @@ import { prisma } from "@coldjot/database";
 import { queueApi } from "@/lib/queue/queue-api-client";
 import { NextResponse } from "next/server";
 import { SequenceStatus } from "@coldjot/types";
+import { updateSequenceReadinessMetadata } from "@/lib/metadata-utils";
 
 export async function POST(
   req: Request,
@@ -38,6 +39,8 @@ export async function POST(
             contact: true,
           },
         },
+        businessHours: true,
+        sequenceMailbox: true,
       },
     });
 
@@ -63,6 +66,9 @@ export async function POST(
         testMode,
       },
     });
+
+    // Update metadata to reflect the new status
+    await updateSequenceReadinessMetadata(id);
 
     // Launch the sequence using queue API
     const result = await queueApi.launchSequence(id, session.user.id, testMode);

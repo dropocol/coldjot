@@ -3,6 +3,7 @@ import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
 import { BusinessScheduleEnum } from "@coldjot/types";
+import { updateSequenceReadinessField } from "@/lib/metadata-utils";
 
 interface UpdateSettingsBody {
   name?: string;
@@ -74,6 +75,10 @@ export async function PATCH(
       );
     }
 
+    // Track if we need to update metadata
+    let mailboxUpdated = false;
+    let businessHoursUpdated = false;
+
     // Handle business hours
     if (json.businessHours) {
       if (existingSequence.businessHours) {
@@ -85,7 +90,6 @@ export async function PATCH(
             workDays: json.businessHours.workDays,
             workHoursStart: json.businessHours.workHoursStart,
             workHoursEnd: json.businessHours.workHoursEnd,
-            holidays: json.businessHours.holidays || [],
             type: json.businessHours.type,
           },
         });
@@ -99,10 +103,10 @@ export async function PATCH(
             workDays: json.businessHours.workDays,
             workHoursStart: json.businessHours.workHoursStart,
             workHoursEnd: json.businessHours.workHoursEnd,
-            holidays: json.businessHours.holidays || [],
             type: json.businessHours.type,
           },
         });
+        businessHoursUpdated = true;
       }
     }
 
@@ -127,6 +131,7 @@ export async function PATCH(
             userId: session.user.id,
           },
         });
+        mailboxUpdated = true;
       }
     }
 
@@ -139,6 +144,15 @@ export async function PATCH(
         businessHours: true,
       },
     });
+
+    // Update metadata if needed
+    if (businessHoursUpdated) {
+      await updateSequenceReadinessField(id, "hasBusinessHours", true);
+    }
+
+    if (mailboxUpdated) {
+      await updateSequenceReadinessField(id, "hasMailbox", true);
+    }
 
     return NextResponse.json(sequence);
   } catch (error) {

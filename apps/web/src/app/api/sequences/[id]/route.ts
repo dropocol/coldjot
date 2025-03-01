@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
+import { updateSequenceReadinessMetadata } from "@/lib/metadata-utils";
 
 export async function GET(
   req: Request,
@@ -25,6 +26,8 @@ export async function GET(
             order: "asc",
           },
         },
+        businessHours: true,
+        sequenceMailbox: true,
         _count: {
           select: {
             contacts: true,
@@ -35,6 +38,30 @@ export async function GET(
 
     if (!sequence) {
       return new NextResponse("Sequence not found", { status: 404 });
+    }
+
+    // Only update metadata for draft sequences if it's missing or incomplete
+    if (sequence && sequence.status === "draft") {
+      // Cast metadata to an object with proper typing
+      const metadataObj = (sequence.metadata as Record<string, any>) || {};
+      const readiness = metadataObj.readiness || {};
+
+      // Check if we need to update the metadata
+      const needsUpdate =
+        (!readiness.hasSteps && sequence.steps.length > 0) ||
+        (!readiness.hasContacts && sequence._count.contacts > 0) ||
+        (!readiness.hasBusinessHours && !!sequence.businessHours) ||
+        (!readiness.hasMailbox && !!sequence.sequenceMailbox);
+
+      if (needsUpdate) {
+        // Use the centralized function to update metadata
+        const updatedMetadata = await updateSequenceReadinessMetadata(id);
+
+        // Update the sequence object to return
+        if (updatedMetadata) {
+          sequence.metadata = updatedMetadata;
+        }
+      }
     }
 
     return NextResponse.json(sequence);

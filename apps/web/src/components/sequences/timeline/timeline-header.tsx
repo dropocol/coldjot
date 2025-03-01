@@ -33,7 +33,7 @@ export function TimelineHeader({
     <div className="space-y-4 border-b pb-4">
       <div className="flex items-center justify-between">
         <TimelineFilters />
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -54,7 +54,7 @@ export function TimelineHeader({
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

@@ -8,6 +8,8 @@ import { SequenceEmailEditor } from "../editor/sequence-email-editor";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import type { SequenceStep, StepData, EmailData } from "@coldjot/types";
+import { addStepToSequence } from "@/lib/client-actions";
+import { useSequence } from "@/lib/sequence-context";
 
 interface AddSequenceStepProps {
   sequenceId: string;
@@ -26,6 +28,7 @@ export function AddSequenceStep({
   const [stepData, setStepData] = useState<StepData | null>(null);
   const [emailData, setEmailData] = useState<EmailData | null>(null);
   const router = useRouter();
+  const { updateReadinessField } = useSequence();
 
   const handleStepSave = async (data: StepData) => {
     setStepData(data);
@@ -39,21 +42,15 @@ export function AddSequenceStep({
       const previousStepId =
         steps.length > 0 ? steps[steps.length - 1].id : undefined;
 
-      const response = await fetch(`/api/sequences/${sequenceId}/steps`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...stepData,
-          ...data,
-          order: steps.length,
-          previousStepId,
-          replyToThread: data.replyToThread,
-        }),
-      });
+      const stepDataToSave = {
+        ...stepData,
+        ...data,
+        order: steps.length,
+        previousStepId,
+        replyToThread: data.replyToThread,
+      };
 
-      if (!response.ok) throw new Error("Failed to create step");
+      await addStepToSequence(sequenceId, stepDataToSave, updateReadinessField);
 
       toast.success("Step added successfully");
       setActiveDrawer("none");
@@ -61,6 +58,7 @@ export function AddSequenceStep({
       setEmailData(null);
       onStepAdded?.();
     } catch (error) {
+      console.error("Error adding step:", error);
       toast.error("Failed to add step");
     }
   };

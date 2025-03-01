@@ -152,6 +152,7 @@ model Sequence {
     createdAt       DateTime          @default(now())
     updatedAt       DateTime          @updatedAt
     emailListId     String?
+    metadata        Json?             @default("{}")
     steps           SequenceStep[]
     user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
     sequenceMailbox SequenceMailbox?  @relation("SequenceToMailbox")
@@ -391,19 +392,18 @@ model EmailThread {
 }
 
 model BusinessHours {
-    id             String     @id @default(cuid())
+    id             String    @id @default(cuid())
     userId         String
-    sequenceId     String?    @unique
-    sequence       Sequence?  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-    user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-    timezone       String     @default("UTC")
-    workDays       Int[]      @default([1, 2, 3, 4, 5])
-    workHoursStart String     @default("09:00")
-    workHoursEnd   String     @default("17:00")
-    holidays       DateTime[]
-    createdAt      DateTime   @default(now())
-    updatedAt      DateTime   @updatedAt
-    type           String     @default("business")
+    sequenceId     String?   @unique
+    sequence       Sequence? @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+    user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    timezone       String    @default("UTC")
+    workDays       Int[]     @default([1, 2, 3, 4, 5])
+    workHoursStart String    @default("09:00")
+    workHoursEnd   String    @default("17:00")
+    createdAt      DateTime  @default(now())
+    updatedAt      DateTime  @updatedAt
+    type           String    @default("business")
 
     @@index([userId])
     @@index([sequenceId])

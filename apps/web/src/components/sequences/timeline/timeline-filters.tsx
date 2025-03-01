@@ -69,6 +69,7 @@ export function TimelineFilters() {
 
   const hasFilters = searchParams.toString().length > 0;
 
+  // TODO: Confirm if these filters are working
   return (
     <div className="flex items-center gap-2">
       <Select value={currentStatus} onValueChange={handleStatusChange}>

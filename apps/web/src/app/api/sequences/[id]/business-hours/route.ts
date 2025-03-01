@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@coldjot/database";
 import { auth } from "@/auth";
 import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
+import { updateSequenceReadinessField } from "@/lib/metadata-utils";
 
 interface UpdateBusinessHoursBody extends Omit<BusinessHours, "holidays"> {
   scheduleType: BusinessScheduleType;
-  holidays: string[];
 }
 
 export async function GET(
@@ -37,7 +37,6 @@ export async function GET(
         workDays: sequence.businessHours.workDays,
         workHoursStart: sequence.businessHours.workHoursStart,
         workHoursEnd: sequence.businessHours.workHoursEnd,
-        holidays: sequence.businessHours.holidays,
       }),
     });
   } catch (error) {
@@ -58,14 +57,8 @@ export async function PUT(
     }
 
     const body = (await request.json()) as UpdateBusinessHoursBody;
-    const {
-      timezone,
-      workDays,
-      workHoursStart,
-      workHoursEnd,
-      holidays,
-      scheduleType,
-    } = body;
+    const { timezone, workDays, workHoursStart, workHoursEnd, scheduleType } =
+      body;
 
     // Validate the sequence belongs to the user
     const sequence = await prisma.sequence.findFirst({
@@ -73,39 +66,45 @@ export async function PUT(
         id,
         userId: session.user.id,
       },
+      include: {
+        businessHours: true,
+      },
     });
 
     if (!sequence) {
       return new NextResponse("Sequence not found", { status: 404 });
     }
 
-    // Start a transaction to update both sequence and business hours
-    const result = await prisma.$transaction(async (tx) => {
-      // Update sequence schedule type
-      const updatedSequence = await tx.sequence.update({
-        where: { id },
-        data: { scheduleType },
-      });
+    // Check if business hours already exist
+    const hasExistingBusinessHours = !!sequence.businessHours;
 
-      if (scheduleType === "business") {
-        // Upsert business hours for business schedule type
+    // Start a transaction to update both sequence and business hours
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // Update sequence schedule type
+        await tx.sequence.update({
+          where: { id },
+          data: { scheduleType: scheduleType },
+        });
+
+        // Always upsert business hours regardless of schedule type
         const businessHours = await tx.businessHours.upsert({
           where: { sequenceId: id },
           create: {
             userId: session.user.id,
             sequenceId: id,
             timezone,
-            workDays,
+            workDays: workDays || [],
             workHoursStart,
             workHoursEnd,
-            holidays: holidays.map((dateStr) => new Date(dateStr)),
+            type: scheduleType,
           },
           update: {
+            type: scheduleType,
             timezone,
-            workDays,
+            workDays: workDays || [],
             workHoursStart,
             workHoursEnd,
-            holidays: holidays.map((dateStr) => new Date(dateStr)),
           },
         });
 
@@ -115,24 +114,18 @@ export async function PUT(
           workDays: businessHours.workDays,
           workHoursStart: businessHours.workHoursStart,
           workHoursEnd: businessHours.workHoursEnd,
-          holidays: businessHours.holidays,
+          type: businessHours.type,
         };
-      } else {
-        // Delete business hours for custom schedule type
-        await tx.businessHours.deleteMany({
-          where: { sequenceId: id },
-        });
-
-        return {
-          scheduleType,
-          timezone,
-          workDays,
-          workHoursStart,
-          workHoursEnd,
-          holidays,
-        };
+      },
+      {
+        timeout: 30000, // Set transaction timeout to 30 seconds
       }
-    });
+    );
+
+    if (!hasExistingBusinessHours) {
+      // Update readiness field outside of transaction
+      await updateSequenceReadinessField(id, "hasBusinessHours", true);
+    }
 
     return NextResponse.json(result);
   } catch (error) {
@@ -164,11 +157,15 @@ export async function DELETE(
       return new NextResponse("Sequence not found", { status: 404 });
     }
 
+    // Delete business hours first
     await prisma.businessHours.delete({
       where: {
         sequenceId: id,
       },
     });
+
+    // Update metadata to indicate no business hours (outside of any transaction)
+    await updateSequenceReadinessField(id, "hasBusinessHours", false);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

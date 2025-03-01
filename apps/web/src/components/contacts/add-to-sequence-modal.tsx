@@ -24,6 +24,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { addContactToSequence } from "@/lib/client-actions";
+import { useSequence } from "@/lib/sequence-context";
 
 interface Sequence {
   id: string;
@@ -46,6 +48,7 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSequence, setSelectedSequence] = useState<string | null>(null);
+  const { updateReadinessField } = useSequence();
 
   const fetchSequences = async () => {
     setIsLoading(true);
@@ -71,13 +74,7 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
   const handleAddToSequence = async (sequenceId: string) => {
     setIsAdding(true);
     try {
-      const response = await fetch(`/api/sequences/${sequenceId}/contacts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: contact.id }),
-      });
-
-      if (!response.ok) throw new Error("Failed to add contact to sequence");
+      await addContactToSequence(sequenceId, contact.id, updateReadinessField);
 
       toast.success("Contact added to sequence successfully");
       onClose();

@@ -27,6 +27,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { BusinessScheduleEnum } from "@coldjot/types";
+import { updateBusinessHours } from "@/lib/client-actions";
+import { useSequence } from "@/lib/sequence-context";
 
 interface BusinessHoursSettingsProps {
   sequenceId: string;
@@ -49,7 +51,6 @@ const DEFAULT_BUSINESS_HOURS: BusinessHours = {
   workDays: [1, 2, 3, 4, 5], // Monday to Friday
   workHoursStart: "09:00",
   workHoursEnd: "17:00",
-  holidays: [],
   type: BusinessScheduleEnum.BUSINESS,
 };
 
@@ -57,21 +58,27 @@ export function BusinessHoursSettings({
   sequenceId,
   initialSettings,
   scheduleType: initialScheduleType,
-}: //   onSettingsChange,
-BusinessHoursSettingsProps) {
-  const [settings, setSettings] = useState<BusinessHours>(
-    initialSettings || DEFAULT_BUSINESS_HOURS
-  );
+}: BusinessHoursSettingsProps) {
+  // Initialize settings with defaults and ensure workDays is always an array
+  const [settings, setSettings] = useState<BusinessHours>({
+    ...(initialSettings || DEFAULT_BUSINESS_HOURS),
+    workDays: initialSettings?.workDays || DEFAULT_BUSINESS_HOURS.workDays,
+  });
+
   const [scheduleType, setScheduleType] =
     useState<BusinessScheduleType>(initialScheduleType);
 
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const { updateReadinessField } = useSequence();
 
   const handleWorkDayToggle = (day: number) => {
-    const newWorkDays = settings.workDays.includes(day)
-      ? settings.workDays.filter((d) => d !== day)
-      : [...settings.workDays, day].sort();
+    // Ensure workDays is an array before using includes
+    const currentWorkDays = settings.workDays || [];
+
+    const newWorkDays = currentWorkDays.includes(day)
+      ? currentWorkDays.filter((d) => d !== day)
+      : [...currentWorkDays, day].sort();
 
     setSettings({ ...settings, workDays: newWorkDays });
   };
@@ -91,33 +98,51 @@ BusinessHoursSettingsProps) {
   const handleScheduleTypeChange = (value: BusinessScheduleType) => {
     console.log("handleScheduleTypeChange", value);
     setScheduleType(value);
+
+    // Ensure workDays is always an array when changing schedule type
     setSettings({
       ...(initialSettings || DEFAULT_BUSINESS_HOURS),
       type: value,
+      // Ensure workDays is always an array
+      workDays: initialSettings?.workDays || DEFAULT_BUSINESS_HOURS.workDays,
     });
   };
 
   const handleSaveSettings = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/settings`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scheduleType,
-          // Always send business hours regardless of schedule type
-          businessHours: {
-            ...settings,
-            holidays: settings.holidays || [],
-            type: scheduleType,
-          },
-        }),
-      });
 
-      if (!response.ok) throw new Error("Failed to update business hours");
+      // Prepare the data based on schedule type
+      const businessHoursData = {
+        scheduleType,
+        // Include necessary fields for both schedule types
+        timezone: settings.timezone || DEFAULT_BUSINESS_HOURS.timezone,
+        workDays: settings.workDays || DEFAULT_BUSINESS_HOURS.workDays,
+        workHoursStart:
+          settings.workHoursStart || DEFAULT_BUSINESS_HOURS.workHoursStart,
+        workHoursEnd:
+          settings.workHoursEnd || DEFAULT_BUSINESS_HOURS.workHoursEnd,
+      };
 
-      const data = await response.json();
-      setSettings(data.businessHours || DEFAULT_BUSINESS_HOURS);
+      console.log("Saving business hours:", businessHoursData);
+
+      // Use the client action instead of direct fetch
+      const result = await updateBusinessHours(
+        sequenceId,
+        businessHoursData,
+        updateReadinessField
+      );
+
+      // Update local state with the response
+      if (result) {
+        setSettings({
+          ...settings,
+          ...result,
+          // Ensure workDays is always an array
+          workDays: result.workDays || [],
+        });
+      }
+
       toast.success("Settings saved successfully");
     } catch (error) {
       console.error("Error updating business hours:", error);
@@ -173,7 +198,7 @@ BusinessHoursSettingsProps) {
                   className="w-full justify-between"
                   disabled={isLoading}
                 >
-                  {settings.timezone}
+                  {settings.timezone || DEFAULT_BUSINESS_HOURS.timezone}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -213,26 +238,28 @@ BusinessHoursSettingsProps) {
               </p>
             </div>
             <div className="flex gap-2 max-w-md">
-              {DAYS_OF_WEEK.map((day) => (
-                <Button
-                  key={day.value}
-                  type="button"
-                  variant={
-                    settings.workDays.includes(day.value)
-                      ? "default"
-                      : "outline"
-                  }
-                  onClick={() => handleWorkDayToggle(day.value)}
-                  disabled={isLoading}
-                  className={cn(
-                    "flex-1 min-w-[54px] shadow-none",
-                    settings.workDays.includes(day.value) &&
-                      "bg-foreground text-primary-foreground"
-                  )}
-                >
-                  {day.label}
-                </Button>
-              ))}
+              {DAYS_OF_WEEK.map((day) => {
+                // Ensure workDays is an array before checking includes
+                const workDays = settings.workDays || [];
+                return (
+                  <Button
+                    key={day.value}
+                    type="button"
+                    variant={
+                      workDays.includes(day.value) ? "default" : "outline"
+                    }
+                    onClick={() => handleWorkDayToggle(day.value)}
+                    disabled={isLoading}
+                    className={cn(
+                      "flex-1 min-w-[54px] shadow-none",
+                      workDays.includes(day.value) &&
+                        "bg-foreground text-primary-foreground"
+                    )}
+                  >
+                    {day.label}
+                  </Button>
+                );
+              })}
             </div>
           </div>
 
@@ -246,52 +273,39 @@ BusinessHoursSettingsProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <div className="flex flex-row items-center gap-2">
-                  <Label>End Time</Label>
+                  <Label>Start Time</Label>
                   <TimePicker
-                    value={settings.workHoursStart}
-                    onChange={(value) => handleTimeChange("start", value)}
-                    disabled={
-                      isLoading ||
-                      scheduleType === BusinessScheduleEnum.BUSINESS
+                    value={
+                      settings.workHoursStart ||
+                      DEFAULT_BUSINESS_HOURS.workHoursStart
                     }
+                    onChange={(value) => handleTimeChange("start", value)}
+                    disabled={isLoading}
                   />
                 </div>
-                {scheduleType === BusinessScheduleEnum.BUSINESS && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Fixed to business hours
-                  </p>
-                )}
-
-                {scheduleType === BusinessScheduleEnum.CUSTOM && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Custom start time
-                  </p>
-                )}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {scheduleType === "business"
+                    ? "Fixed to business hours"
+                    : "Custom start time"}
+                </p>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="flex flex-row items-center gap-2">
                   <Label>End Time</Label>
                   <TimePicker
-                    value={settings.workHoursEnd}
-                    onChange={(value) => handleTimeChange("end", value)}
-                    disabled={
-                      isLoading ||
-                      scheduleType === BusinessScheduleEnum.BUSINESS
+                    value={
+                      settings.workHoursEnd ||
+                      DEFAULT_BUSINESS_HOURS.workHoursEnd
                     }
+                    onChange={(value) => handleTimeChange("end", value)}
+                    disabled={isLoading}
                   />
                 </div>
-
-                {scheduleType === BusinessScheduleEnum.BUSINESS && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Fixed to business hours
-                  </p>
-                )}
-
-                {scheduleType === BusinessScheduleEnum.CUSTOM && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Custom end time
-                  </p>
-                )}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {scheduleType === "business"
+                    ? "Fixed to business hours"
+                    : "Custom end time"}
+                </p>
               </div>
             </div>
           </div>

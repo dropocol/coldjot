@@ -46,7 +46,6 @@ export default async function SequenceSettingsPage({
               workDays: sequence.businessHours.workDays,
               workHoursStart: sequence.businessHours.workHoursStart,
               workHoursEnd: sequence.businessHours.workHoursEnd,
-              holidays: sequence.businessHours.holidays,
             } as BusinessHours)
           : undefined,
         testMode: sequence.testMode,

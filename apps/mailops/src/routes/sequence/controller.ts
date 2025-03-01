@@ -24,7 +24,6 @@ const DEFAULT_BUSINESS_HOURS: BusinessHours = {
   workDays: [1, 2, 3, 4, 5], // Monday to Friday
   workHoursStart: "09:00",
   workHoursEnd: "17:00",
-  holidays: [],
   type: BusinessScheduleEnum.BUSINESS,
 };
 
@@ -51,7 +50,6 @@ async function getSequenceBusinessHours(
         workDays: DEFAULT_BUSINESS_HOURS.workDays,
         workHoursStart: DEFAULT_BUSINESS_HOURS.workHoursStart,
         workHoursEnd: DEFAULT_BUSINESS_HOURS.workHoursEnd,
-        holidays: DEFAULT_BUSINESS_HOURS.holidays,
         type: DEFAULT_BUSINESS_HOURS.type,
       },
     });
@@ -61,7 +59,6 @@ async function getSequenceBusinessHours(
       workDays: defaultSettings.workDays,
       workHoursStart: defaultSettings.workHoursStart,
       workHoursEnd: defaultSettings.workHoursEnd,
-      holidays: defaultSettings.holidays,
       type: defaultSettings.type as BusinessScheduleEnum,
     };
   }
@@ -71,7 +68,6 @@ async function getSequenceBusinessHours(
     workDays: settings.workDays,
     workHoursStart: settings.workHoursStart,
     workHoursEnd: settings.workHoursEnd,
-    holidays: settings.holidays,
     type: settings.type as BusinessScheduleEnum,
   };
 }

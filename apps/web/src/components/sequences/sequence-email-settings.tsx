@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { EmailAlias } from "@coldjot/types";
+import { attachMailbox, updateSequenceSettings } from "@/lib/client-actions";
+import { useSequence } from "@/lib/sequence-context";
 
 // Use a more specific type for our needs
 export interface MailboxWithRequired {
@@ -66,6 +68,7 @@ export function SequenceEmailSettings({
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { updateReadinessField, updateSequence } = useSequence();
 
   // Find the selected mailbox and alias
   const selectedMailbox = mailboxes.find(
@@ -78,38 +81,31 @@ export function SequenceEmailSettings({
   const handleMailboxChange = async (mailboxId: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/settings`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+
+      // Use the client action instead of direct fetch
+      const data = await attachMailbox(
+        sequenceId,
+        {
           mailboxId,
           aliasId: null, // Reset alias when mailbox changes
-          clearDeprecatedMailboxId: true, // Signal to clear the deprecated mailboxId
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update sequence mailbox");
-      }
-
-      const data = await response.json();
+        },
+        updateReadinessField
+      );
 
       setSettings((prev) => ({
         ...prev,
         sequenceMailbox: data.sequenceMailbox,
       }));
-      router.refresh();
 
       toast({
-        title: "Success",
-        description: "Mailbox updated successfully",
+        title: "Mailbox updated",
+        description: "The sequence mailbox has been updated",
       });
     } catch (error) {
+      console.error("Error updating mailbox:", error);
       toast({
         title: "Error",
-        description: "Failed to update mailbox",
+        description: "Failed to update sequence mailbox",
         variant: "destructive",
       });
     } finally {
@@ -120,33 +116,28 @@ export function SequenceEmailSettings({
   const handleAliasChange = async (value: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/settings`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+
+      // Use the client action instead of direct fetch
+      const data = await attachMailbox(
+        sequenceId,
+        {
+          mailboxId: settings.sequenceMailbox?.mailboxId || "",
           aliasId: value === "default" ? null : value,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update sequence alias");
-      }
-
-      const data = await response.json();
+        },
+        updateReadinessField
+      );
 
       setSettings((prev) => ({
         ...prev,
         sequenceMailbox: data.sequenceMailbox,
       }));
-      router.refresh();
 
       toast({
-        title: "Success",
-        description: "Email alias updated successfully",
+        title: "Alias updated",
+        description: "The email alias has been updated",
       });
     } catch (error) {
+      console.error("Error updating alias:", error);
       toast({
         title: "Error",
         description: "Failed to update email alias",
@@ -160,28 +151,23 @@ export function SequenceEmailSettings({
   const handleTestModeChange = async (checked: boolean) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/settings`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          testMode: checked,
-        }),
-      });
 
-      if (!response.ok) {
-        throw new Error("Failed to update sequence test mode");
-      }
+      // Use the client action instead of direct fetch
+      await updateSequenceSettings(
+        sequenceId,
+        { testMode: checked },
+        updateSequence
+      );
 
+      // Update local state
       setSettings((prev) => ({ ...prev, testMode: checked }));
-      router.refresh();
 
       toast({
         title: "Success",
         description: "Test mode updated successfully",
       });
     } catch (error) {
+      console.error("Error updating test mode:", error);
       toast({
         title: "Error",
         description: "Failed to update test mode",
@@ -195,22 +181,23 @@ export function SequenceEmailSettings({
   const handleDisableSendingChange = async (checked: boolean) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/settings`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          disableSending: checked,
-        }),
-      });
 
-      if (!response.ok) throw new Error("Failed to update sending settings");
+      // Use the client action instead of direct fetch
+      await updateSequenceSettings(
+        sequenceId,
+        { disableSending: checked },
+        updateSequence
+      );
 
+      // Update local state
       setSettings((prev) => ({ ...prev, disableSending: checked }));
+
       toast({
         title: "Success",
         description: "Email sending settings updated successfully",
       });
     } catch (error) {
+      console.error("Error updating sending settings:", error);
       toast({
         title: "Error",
         description: "Failed to update email sending settings",
@@ -224,15 +211,13 @@ export function SequenceEmailSettings({
   const saveTestEmails = async (emails: string[]) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/settings`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          testEmails: emails,
-        }),
-      });
 
-      if (!response.ok) throw new Error("Failed to save test emails");
+      // Use the client action instead of direct fetch
+      await updateSequenceSettings(
+        sequenceId,
+        { testEmails: emails },
+        updateSequence
+      );
 
       toast({
         title: "Success",
@@ -241,6 +226,7 @@ export function SequenceEmailSettings({
 
       return true;
     } catch (error) {
+      console.error("Error saving test emails:", error);
       toast({
         title: "Error",
         description: "Failed to save test emails",
