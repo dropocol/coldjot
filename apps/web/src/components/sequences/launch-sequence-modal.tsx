@@ -73,7 +73,17 @@ export function LaunchSequenceModal({
         }
       );
 
-      if (!response.ok) throw new Error("Failed to launch sequence");
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("Error launching sequence:", errorData.error);
+
+        toast({
+          title: "An Error Occurred",
+          description: errorData.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Call the onStatusChange callback if provided
       onStatusChange?.(SequenceStatus.ACTIVE);
@@ -228,7 +238,7 @@ export function LaunchSequenceModal({
             </Button>
             <Button
               onClick={handleLaunch}
-              disabled={isLoading || !isReady}
+              // disabled={isLoading || !isReady}
               className="gap-2"
             >
               {isLoading ? (

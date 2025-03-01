@@ -232,22 +232,6 @@ export const extractPossibleMessageIds = (
 // -----------------------------------------
 // -----------------------------------------
 
-// Helper functions for POST handler
-// TODO : FIX IT
-export const validateAuthorization = async (req: {
-  headers: { get: (name: string) => string | null };
-}): Promise<string | null> => {
-  const authorization = req.headers.get("Authorization");
-  if (!authorization?.startsWith("Bearer ")) {
-    return null;
-  }
-  return authorization.replace("Bearer ", "");
-};
-
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
-
 /**
  * Generate a unique MIME boundary
  */

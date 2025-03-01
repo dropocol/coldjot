@@ -17,7 +17,7 @@ export const getBaseUrl = () => {
     }
     return process.env.NODE_ENV === "development"
       ? "http://localhost:3000"
-      : "https://app.zkmail.io";
+      : "https://app.coldjot.com";
   }
   return url;
 };
@@ -141,22 +141,6 @@ export const extractPossibleMessageIds = (
   return [inReplyTo, ...(references || [])].filter(
     (id): id is string => typeof id === "string" && id.length > 0
   );
-};
-
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
-
-// Helper functions for POST handler
-// TODO : FIX IT
-export const validateAuthorization = async (req: {
-  headers: { get: (name: string) => string | null };
-}): Promise<string | null> => {
-  const authorization = req.headers.get("Authorization");
-  if (!authorization?.startsWith("Bearer ")) {
-    return null;
-  }
-  return authorization.replace("Bearer ", "");
 };
 
 // -----------------------------------------

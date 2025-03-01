@@ -4,6 +4,7 @@ import { queueApi } from "@/lib/queue/queue-api-client";
 import { NextResponse } from "next/server";
 import { SequenceStatus } from "@coldjot/types";
 import { updateSequenceReadinessMetadata } from "@/lib/metadata-utils";
+import { error } from "console";
 
 export async function POST(
   req: Request,
@@ -45,17 +46,38 @@ export async function POST(
     });
 
     if (!sequence) {
-      return new NextResponse("Sequence not found", { status: 404 });
+      return NextResponse.json(
+        { error: true, message: "Sequence not found" },
+        { status: 404 }
+      );
     }
 
     if (sequence.steps.length === 0) {
-      return new NextResponse("Sequence has no steps", { status: 400 });
+      return NextResponse.json(
+        { error: true, message: "Sequence has no steps" },
+        { status: 400 }
+      );
     }
 
     if (sequence.contacts.length === 0) {
-      return new NextResponse("Sequence has no active contacts", {
-        status: 400,
-      });
+      return NextResponse.json(
+        { error: true, message: "Sequence has no active contacts" },
+        { status: 400 }
+      );
+    }
+
+    if (!sequence.sequenceMailbox?.mailboxId) {
+      return NextResponse.json(
+        { error: true, message: "Sequence has no mailbox assigned" },
+        { status: 400 }
+      );
+    }
+
+    if (!sequence.businessHours) {
+      return NextResponse.json(
+        { error: true, message: "Sequence has no business hours assigned" },
+        { status: 400 }
+      );
     }
 
     // Update sequence status
