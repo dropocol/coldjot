@@ -21,10 +21,39 @@ export async function POST(
         id: id,
         userId: session.user.id,
       },
+      include: {
+        contacts: {
+          where: {
+            id: contactId,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
     });
 
     if (!list) {
       return NextResponse.json({ error: "List not found" }, { status: 404 });
+    }
+
+    // Check if contact is already in the list
+    if (list.contacts.length > 0) {
+      console.log(`Contact ${contactId} is already in list ${id}`);
+      return NextResponse.json(
+        {
+          message: "Contact is already in the list",
+          alreadyInList: true,
+          list: {
+            id: list.id,
+            name: list.name,
+            _count: {
+              contacts: list.contacts.length,
+            },
+          },
+        },
+        { status: 409 }
+      ); // Use 409 Conflict for already existing resources
     }
 
     // Add contact to list
@@ -49,7 +78,11 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(updatedList);
+    return NextResponse.json({
+      ...updatedList,
+      message: "Contact added to list successfully",
+      alreadyInList: false,
+    });
   } catch (error) {
     console.error("Failed to add contact to list:", error);
     return NextResponse.json(
@@ -110,6 +143,129 @@ export async function GET(
     console.error("Failed to fetch list contacts:", error);
     return NextResponse.json(
       { error: "Failed to fetch list contacts" },
+      { status: 500 }
+    );
+  }
+}
+
+// Add a new endpoint for bulk adding contacts to a list
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    const { contactIds } = await request.json();
+
+    if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
+      console.log("No valid contact IDs provided in request");
+      return NextResponse.json(
+        { error: "No contact IDs provided" },
+        { status: 400 }
+      );
+    }
+
+    console.log(
+      `Attempting to add ${contactIds.length} contacts to list ${id}`
+    );
+    console.log(`Contact IDs: ${contactIds.join(", ")}`);
+
+    // Verify list ownership
+    const list = await prisma.emailList.findUnique({
+      where: {
+        id: id,
+        userId: session.user.id,
+      },
+      include: {
+        contacts: {
+          where: {
+            id: { in: contactIds },
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!list) {
+      console.log(
+        `List ${id} not found or does not belong to user ${session.user.id}`
+      );
+      return NextResponse.json({ error: "List not found" }, { status: 404 });
+    }
+
+    // Check which contacts are already in the list
+    const existingContactIds = list.contacts.map((contact) => contact.id);
+    console.log(
+      `Found ${existingContactIds.length} contacts already in the list: ${existingContactIds.join(", ")}`
+    );
+
+    // Filter out contacts that are already in the list
+    const contactsToAdd = contactIds.filter(
+      (id) => !existingContactIds.includes(id)
+    );
+    console.log(
+      `Adding ${contactsToAdd.length} new contacts to the list: ${contactsToAdd.join(", ")}`
+    );
+
+    if (contactsToAdd.length === 0) {
+      console.log("All contacts are already in the list, no action needed");
+      return NextResponse.json({
+        message: "All contacts are already in the list",
+        added: 0,
+        skipped: contactIds.length,
+        total: existingContactIds.length,
+        list: {
+          id: list.id,
+          name: list.name,
+        },
+      });
+    }
+
+    // Add new contacts to the list
+    const updatedList = await prisma.emailList.update({
+      where: {
+        id: id,
+      },
+      data: {
+        contacts: {
+          connect: contactsToAdd.map((contactId) => ({ id: contactId })),
+        },
+      },
+      include: {
+        _count: {
+          select: {
+            contacts: true,
+          },
+        },
+      },
+    });
+
+    console.log(
+      `Successfully added ${contactsToAdd.length} contacts to list ${id}`
+    );
+    console.log(`List now has ${updatedList._count.contacts} total contacts`);
+
+    return NextResponse.json({
+      message: "Contacts added to list successfully",
+      added: contactsToAdd.length,
+      skipped: existingContactIds.length,
+      total: updatedList._count.contacts,
+      list: {
+        id: updatedList.id,
+        name: list.name,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to add contacts to list:", error);
+    return NextResponse.json(
+      { error: "Failed to add contacts to list" },
       { status: 500 }
     );
   }

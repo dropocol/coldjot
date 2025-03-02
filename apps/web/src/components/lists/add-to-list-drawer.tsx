@@ -71,6 +71,7 @@ export default function AddToListDrawer({
   const [lists, setLists] = useState<EmailListWithCount[]>([]);
   const [selectedLists, setSelectedLists] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [processingStatus, setProcessingStatus] = useState<string>("");
 
   const filteredLists = lists.filter((list) =>
     list.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -106,39 +107,115 @@ export default function AddToListDrawer({
     }
 
     setIsLoading(true);
+    const contactIds = isMultiple ? contactId.split(",") : [contactId];
+    setProcessingStatus(
+      `Processing ${contactIds.length} contacts for ${selectedLists.length} lists...`
+    );
+
     try {
-      const contactIds = isMultiple ? contactId.split(",") : [contactId];
-      const promises = selectedLists.map((listId) =>
-        Promise.all(
-          contactIds.map((id) =>
-            fetch(`/api/lists/${listId}/contacts`, {
-              method: "POST",
+      // Use the bulk endpoint for each selected list
+      const results = await Promise.all(
+        selectedLists.map(async (listId, index) => {
+          try {
+            setProcessingStatus(
+              `Processing list ${index + 1} of ${selectedLists.length}...`
+            );
+            const response = await fetch(`/api/lists/${listId}/contacts`, {
+              method: "PUT", // Use PUT for bulk operations
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({ contactId: id }),
-            }).then(async (response) => {
-              if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || "Failed to add contact to list");
-              }
-              return response.json();
-            })
-          )
-        )
+              body: JSON.stringify({ contactIds }),
+            });
+
+            const data = await response.json();
+
+            // Handle 409 Conflict (already exists) as a partial success
+            if (response.status === 409) {
+              console.log(`Some contacts already in list ${listId}:`, data);
+              return {
+                listId,
+                result: {
+                  added: 0,
+                  skipped: contactIds.length,
+                  total: data.list?._count?.contacts || 0,
+                },
+                success: true,
+              };
+            }
+
+            if (!response.ok) {
+              console.error(`Error adding contacts to list ${listId}:`, data);
+              return {
+                listId,
+                error: data.error || "Failed to add contacts to list",
+                success: false,
+              };
+            }
+
+            return {
+              listId,
+              result: data,
+              success: true,
+            };
+          } catch (error) {
+            console.error(`Error processing list ${listId}:`, error);
+            return {
+              listId,
+              error: "Network error",
+              success: false,
+            };
+          }
+        })
       );
 
-      await Promise.all(promises);
-      toast.success(
-        `Contact${isMultiple ? "s" : ""} added to ${
-          selectedLists.length
-        } list${selectedLists.length > 1 ? "s" : ""}`
+      setProcessingStatus("Finalizing...");
+
+      // Check if any operations failed
+      const failures = results.filter((r) => !r.success);
+      if (failures.length > 0) {
+        // Show errors for failed operations
+        failures.forEach((failure) => {
+          toast.error(`Failed to add to list: ${failure.error}`);
+        });
+      }
+
+      // Count successful operations and skipped contacts
+      const successResults = results.filter((r) => r.success);
+      const successCount = successResults.length;
+
+      if (successCount === 0) {
+        // All operations failed
+        toast.error("Failed to add contacts to any lists");
+        return;
+      }
+
+      const totalAdded = successResults.reduce(
+        (sum, r) => sum + (r.result.added || 0),
+        0
       );
+      const totalSkipped = successResults.reduce(
+        (sum, r) => sum + (r.result.skipped || 0),
+        0
+      );
+
+      // Show appropriate success message
+      if (totalSkipped > 0) {
+        toast.success(
+          `Added ${totalAdded} contact${totalAdded !== 1 ? "s" : ""} to ${successCount} list${successCount !== 1 ? "s" : ""} (${totalSkipped} already in lists)`
+        );
+      } else {
+        toast.success(
+          `Added ${totalAdded} contact${totalAdded !== 1 ? "s" : ""} to ${successCount} list${successCount !== 1 ? "s" : ""}`
+        );
+      }
+
       onClose();
     } catch (error) {
-      console.error("Error adding contacts to lists:", error);
+      console.error("Failed to add contacts to lists:", error);
       toast.error("Failed to add contacts to lists");
     } finally {
+      setProcessingStatus("");
       setIsLoading(false);
     }
   };
@@ -249,7 +326,7 @@ export default function AddToListDrawer({
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Adding...
+                {processingStatus || "Adding..."}
               </>
             ) : (
               `Add to ${selectedLists.length} List${selectedLists.length !== 1 ? "s" : ""}`

@@ -66,6 +66,8 @@ interface ContactListProps {
   limit: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  onSelectedContactsChange?: (contactIds: string[]) => void;
+  onContactsToAddChange?: (contacts: Contact[]) => void;
 }
 
 // Helper function to format LinkedIn URL
@@ -86,7 +88,7 @@ interface ContactToList {
   isMultiple?: boolean;
 }
 
-export default function ContactList({
+export function ContactList({
   searchQuery = "",
   onSearchStart,
   onSearchEnd,
@@ -96,6 +98,8 @@ export default function ContactList({
   limit,
   onPageChange,
   onPageSizeChange,
+  onSelectedContactsChange,
+  onContactsToAddChange,
 }: ContactListProps) {
   const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>(initialContacts);
@@ -121,7 +125,7 @@ export default function ContactList({
       }
 
       setIsLoading(true);
-      onSearchStart?.();
+      if (onSearchStart) onSearchStart();
       try {
         const queryParams = new URLSearchParams();
         queryParams.set("page", page.toString());
@@ -140,14 +144,22 @@ export default function ContactList({
       } finally {
         setIsLoading(false);
         setIsInitialLoad(false);
-        onSearchEnd?.();
+        if (onSearchEnd) onSearchEnd();
       }
     };
 
     if (searchQuery.length === 0 || searchQuery.length >= 2) {
       fetchContacts();
     }
-  }, [searchQuery, onSearchStart, onSearchEnd, isInitialLoad, page, limit]);
+  }, [searchQuery, page, limit]);
+
+  // Notify parent component when selected contacts change
+  useEffect(() => {
+    if (onSelectedContactsChange) {
+      const contactIds = Array.from(selectedContacts);
+      onSelectedContactsChange(contactIds);
+    }
+  }, [selectedContacts]);
 
   const showLoading = isLoading || isInitialLoad;
   const showEmptyState = !showLoading && contacts.length === 0;
@@ -193,6 +205,19 @@ export default function ContactList({
     });
   };
 
+  const handleAddToSequence = (contact: Contact) => {
+    console.log("handleAddToSequence called with contact:", contact.email);
+    console.log("onContactsToAddChange exists:", !!onContactsToAddChange);
+
+    if (onContactsToAddChange) {
+      console.log("Calling parent's onContactsToAddChange with contact ID");
+      onContactsToAddChange([{ id: contact.id } as Contact]);
+    } else {
+      console.log("Setting contactToAddToSequence and showing modal directly");
+      setContactToAddToSequence(contact);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {showLoading ? (
@@ -221,21 +246,6 @@ export default function ContactList({
         </div>
       ) : (
         <>
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              {selectedContacts.size > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkAddToList}
-                >
-                  <ListPlus className="h-4 w-4 mr-2" />
-                  Add {selectedContacts.size} to List
-                </Button>
-              )}
-            </div>
-          </div>
-
           <div className="p-0">
             <Table>
               <TableHeader>
@@ -303,7 +313,7 @@ export default function ContactList({
                           size="icon"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setContactToAddToSequence(contact);
+                            handleAddToSequence(contact);
                           }}
                         >
                           <SendHorizonal className="h-4 w-4" />
@@ -429,7 +439,8 @@ export default function ContactList({
         isMultiple={contactToAddToList?.isMultiple}
       />
 
-      {contactToAddToSequence && (
+      {/* Only show if parent doesn't handle it */}
+      {contactToAddToSequence && !onContactsToAddChange && (
         <AddToSequenceModal
           open={!!contactToAddToSequence}
           onClose={() => setContactToAddToSequence(null)}

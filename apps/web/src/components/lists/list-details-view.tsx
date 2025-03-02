@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   User,
@@ -55,7 +61,19 @@ type EmailListWithContacts = Omit<EmailList, "contacts"> & {
   };
 };
 
-export default function ListDetailsView() {
+interface ListDetailsViewProps {
+  onSelectedContactsChange?: (contactIds: string[]) => void;
+  onContactsToAddChange?: (contacts: Contact[]) => void;
+  showHeader?: boolean;
+}
+
+export const ListDetailsView = forwardRef<
+  { fetchList: () => Promise<void>; getContacts: () => Contact[] },
+  ListDetailsViewProps
+>(function ListDetailsView(
+  { onSelectedContactsChange, onContactsToAddChange, showHeader = true },
+  ref
+) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [list, setList] = useState<EmailListWithContacts | null>(null);
@@ -67,22 +85,17 @@ export default function ListDetailsView() {
   const [selectedContactForDetails, setSelectedContactForDetails] =
     useState<Contact | null>(null);
   const [total, setTotal] = useState(0);
-  const [contactToAddToSequence, setContactToAddToSequence] =
-    useState<Contact | null>(null);
   const [contactsToAddToSequence, setContactsToAddToSequence] = useState<
     Contact[]
   >([]);
   const [showSequenceModal, setShowSequenceModal] = useState(false);
   const [showAddAllToSequenceModal, setShowAddAllToSequenceModal] =
     useState(false);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   // Get pagination values from URL or use defaults
   const page = Number(searchParams.get("page") || "1");
   const limit = Number(searchParams.get("limit") || "10");
-
-  useEffect(() => {
-    fetchList();
-  }, [page, limit]);
 
   const fetchList = async () => {
     try {
@@ -109,6 +122,25 @@ export default function ListDetailsView() {
       setLoading(false);
     }
   };
+
+  // Expose the fetchList method to parent components
+  useImperativeHandle(ref, () => ({
+    fetchList,
+    getContacts: () => list?.contacts || [],
+  }));
+
+  useEffect(() => {
+    fetchList();
+  }, [page, limit]);
+
+  // Notify parent component when selected contacts change
+  useEffect(() => {
+    if (onSelectedContactsChange) {
+      const contactIds = Array.from(selectedContacts);
+      // Only update if the values are different to prevent infinite loops
+      onSelectedContactsChange(contactIds);
+    }
+  }, [selectedContacts]);
 
   const handleCheckboxChange = (contactId: string, checked: boolean) => {
     setSelectedContacts((prev) => {
@@ -157,7 +189,6 @@ export default function ListDetailsView() {
     }
   };
 
-  // TODO :  check if this is correct and needed
   // Helper function to get all contact IDs for a list
   const getAllContactIds = async (listId: string): Promise<string[]> => {
     try {
@@ -173,21 +204,59 @@ export default function ListDetailsView() {
     }
   };
 
-  const handleBulkAddToSequence = () => {
-    if (!list || selectedContacts.size === 0) return;
+  const handleBulkAddToSequence = useCallback(() => {
+    // Filter selected contacts from the list
+    const selectedContactsList =
+      list?.contacts.filter((c) => selectedContacts.has(c.id)) || [];
 
-    // Get all selected contacts
-    const selectedContactsList = list.contacts.filter((c) =>
-      selectedContacts.has(c.id)
-    );
-
+    // Set the contacts to add to sequence
     setContactsToAddToSequence(selectedContactsList);
-    setShowSequenceModal(true);
-  };
 
-  const handleSingleAddToSequence = (contact: Contact) => {
-    setContactToAddToSequence(contact);
-  };
+    // Show the sequence modal
+    setShowSequenceModal(true);
+  }, [list, selectedContacts]);
+
+  const handleSingleAddToSequence = useCallback(
+    (contact: Contact) => {
+      console.log(
+        "handleSingleAddToSequence called with contact:",
+        contact.email,
+        contact.id
+      );
+      console.log("Full contact object:", contact);
+      console.log("onContactsToAddChange exists:", !!onContactsToAddChange);
+
+      if (onContactsToAddChange) {
+        // Pass the contact ID instead of the full contact object
+        console.log("Calling parent's onContactsToAddChange with contact ID");
+        onContactsToAddChange([{ id: contact.id } as Contact]);
+      } else {
+        console.log("Setting contactsToAddToSequence and showSequenceModal");
+        // Use the same approach as bulk add to sequence
+        // Ensure we're passing the full contact object
+        setContactsToAddToSequence([
+          {
+            id: contact.id,
+            firstName: contact.firstName,
+            lastName: contact.lastName,
+            email: contact.email,
+            name: contact.name || `${contact.firstName} ${contact.lastName}`,
+          } as Contact,
+        ]);
+        console.log("Contact added to contactsToAddToSequence:", contact.id);
+        setShowSequenceModal(true);
+      }
+    },
+    [onContactsToAddChange]
+  );
+
+  const handleCloseSequenceModal = useCallback(() => {
+    console.log("Closing sequence modal");
+    console.log("Current contactsToAddToSequence:", contactsToAddToSequence);
+    setShowSequenceModal(false);
+    setContactsToAddToSequence([]);
+    console.log("Reset contactsToAddToSequence to empty array");
+  }, [contactsToAddToSequence]);
 
   const handleRemoveContact = async (contactId: string) => {
     if (!list) return;
@@ -236,18 +305,13 @@ export default function ListDetailsView() {
     router.push(`/lists/${listId}?${params.toString()}`);
   };
 
-  const handleCloseSequenceModal = () => {
-    setContactToAddToSequence(null);
-    setContactsToAddToSequence([]);
-    setShowSequenceModal(false);
-  };
-
   const handleAddAllToSequence = () => {
     if (!list) return;
     setShowAddAllToSequenceModal(true);
   };
 
   const handleCloseAddAllToSequenceModal = () => {
+    console.log("Closing add all to sequence modal");
     setShowAddAllToSequenceModal(false);
   };
 
@@ -270,31 +334,33 @@ export default function ListDetailsView() {
   }
 
   return (
-    <>
-      <PageHeader
-        title={list.name}
-        description={list.description || "No description"}
-        action={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleAddAllToSequence}>
-              <SendHorizonal className="h-4 w-4 mr-2" />
-              Add All to Sequence
-            </Button>
-            {selectedContacts.size > 0 && (
-              <>
-                <Button variant="default" onClick={handleBulkAddToSequence}>
-                  <SendHorizonal className="h-4 w-4 mr-2" />
-                  Send {selectedContacts.size} to Sequence
-                </Button>
-                <Button variant="destructive" onClick={handleBulkRemove}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Remove {selectedContacts.size} Selected
-                </Button>
-              </>
-            )}
-          </div>
-        }
-      />
+    <div className="flex flex-col h-full">
+      {showHeader && (
+        <PageHeader
+          title={list.name}
+          description={list.description || "No description"}
+          action={
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleAddAllToSequence}>
+                <SendHorizonal className="h-4 w-4 mr-2" />
+                Add All to Sequence
+              </Button>
+              {selectedContacts.size > 0 && (
+                <>
+                  <Button variant="default" onClick={handleBulkAddToSequence}>
+                    <SendHorizonal className="h-4 w-4 mr-2" />
+                    Send {selectedContacts.size} to Sequence
+                  </Button>
+                  <Button variant="destructive" onClick={handleBulkRemove}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove {selectedContacts.size} Selected
+                  </Button>
+                </>
+              )}
+            </div>
+          }
+        />
+      )}
 
       <div className="space-y-4">
         <div className="p-0">
@@ -460,17 +526,8 @@ export default function ListDetailsView() {
         />
       )}
 
-      {/* Modal for single contact */}
-      {contactToAddToSequence && (
-        <AddToSequenceModal
-          open={!!contactToAddToSequence}
-          onClose={() => setContactToAddToSequence(null)}
-          contact={contactToAddToSequence}
-        />
-      )}
-
-      {/* Modal for multiple contacts */}
-      {contactsToAddToSequence.length > 0 && (
+      {/* Modal for contacts - only show if parent doesn't handle it */}
+      {!onContactsToAddChange && (
         <AddToSequenceModal
           open={showSequenceModal}
           onClose={handleCloseSequenceModal}
@@ -478,8 +535,8 @@ export default function ListDetailsView() {
         />
       )}
 
-      {/* Modal for adding all contacts from the list */}
-      {list && (
+      {/* Modal for adding all contacts from the list - only show if parent doesn't handle it */}
+      {list && !onContactsToAddChange && (
         <AddToSequenceModal
           open={showAddAllToSequenceModal}
           onClose={handleCloseAddAllToSequenceModal}
@@ -488,6 +545,6 @@ export default function ListDetailsView() {
           contactCount={total}
         />
       )}
-    </>
+    </div>
   );
-}
+});

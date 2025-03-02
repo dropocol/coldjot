@@ -1,40 +1,52 @@
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
+import { z } from "zod";
 import { SequenceContactStatusEnum } from "@coldjot/types";
-import { NextResponse } from "next/server";
 import { updateSequenceReadinessField } from "@/lib/metadata-utils";
 
+// Schema for validating the request body
+const bulkAddContactsSchema = z.object({
+  contactIds: z.array(z.string()).min(1, "At least one contact ID is required"),
+});
+
 export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
+    // Check if user is authenticated
     const session = await auth();
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { contactIds } = await req.json();
-    const { id } = await params;
+    // Get sequence ID from params
+    const sequenceId = params.id;
 
-    if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
+    // Parse and validate request body
+    const body = await request.json();
+    const validation = bulkAddContactsSchema.safeParse(body);
+
+    if (!validation.success) {
       return NextResponse.json(
-        { error: true, message: "No contact IDs provided" },
+        { message: "Invalid request body", errors: validation.error.format() },
         { status: 400 }
       );
     }
 
+    const { contactIds } = validation.data;
+
+    // Get the sequence
     const sequence = await prisma.sequence.findUnique({
       where: {
-        id: id,
+        id: sequenceId,
         userId: session.user.id,
       },
-      select: {
-        id: true,
-        metadata: true,
-        _count: {
+      include: {
+        contacts: {
           select: {
-            contacts: true,
+            contactId: true,
           },
         },
       },
@@ -45,62 +57,58 @@ export async function POST(
     }
 
     // Check which contacts are already in the sequence
-    const existingContacts = await prisma.sequenceContact.findMany({
-      where: {
-        sequenceId: id,
-        contactId: {
-          in: contactIds,
-        },
-      },
-      select: {
-        contactId: true,
-      },
-    });
-
-    const existingContactIds = new Set(
-      existingContacts.map((c) => c.contactId)
+    const existingContactIds = sequence.contacts.map(
+      (contact) => contact.contactId
     );
+
+    // Filter out contacts that are already in the sequence
     const newContactIds = contactIds.filter(
-      (id) => !existingContactIds.has(id)
+      (id) => !existingContactIds.includes(id)
     );
 
+    // If all contacts are already in the sequence, return early
     if (newContactIds.length === 0) {
       return NextResponse.json(
-        { error: true, message: "All contacts are already in the sequence" },
+        {
+          message: "All contacts are already in the sequence",
+          added: 0,
+          skipped: contactIds.length,
+          total: contactIds.length,
+        },
         { status: 409 }
       );
     }
 
-    // Add new contacts to the sequence
-    const sequenceContacts = await prisma.$transaction(
-      newContactIds.map((contactId) =>
-        prisma.sequenceContact.create({
-          data: {
-            sequenceId: id,
-            contactId,
-            status: SequenceContactStatusEnum.NOT_STARTED,
-            currentStep: 0,
-          },
-        })
-      )
-    );
+    // Add contacts to the sequence in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create sequence contacts
+      await tx.sequenceContact.createMany({
+        data: newContactIds.map((contactId) => ({
+          sequenceId,
+          contactId,
+          status: SequenceContactStatusEnum.NOT_STARTED,
+          currentStep: 0,
+        })),
+      });
 
-    // Update the sequence metadata if this is the first contact
-    const metadataObj = (sequence.metadata as Record<string, any>) || {};
-    const readiness = metadataObj.readiness || {};
+      // If this is the first contact being added, update the sequence's hasContacts field
+      if (sequence.contacts.length === 0 && newContactIds.length > 0) {
+        await updateSequenceReadinessField(sequenceId, "hasContacts", true);
+      }
 
-    if (sequence._count.contacts === 0 || !readiness.hasContacts) {
-      await updateSequenceReadinessField(id, "hasContacts", true);
-    }
+      return {
+        added: newContactIds.length,
+        skipped: contactIds.length - newContactIds.length,
+        total: contactIds.length,
+      };
+    });
 
     return NextResponse.json({
-      success: true,
-      added: sequenceContacts.length,
-      skipped: existingContactIds.size,
-      total: contactIds.length,
+      message: "Contacts added to sequence successfully",
+      ...result,
     });
   } catch (error) {
-    console.error("[SEQUENCE_CONTACTS_BULK_POST]", error);
+    console.error("Error adding contacts to sequence:", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

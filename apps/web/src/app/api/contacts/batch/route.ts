@@ -3,6 +3,7 @@ import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { sleep } from "@/utils";
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -79,6 +80,53 @@ export async function POST(req: Request) {
     console.error("Failed to import contacts:", error);
     return NextResponse.json(
       { error: "Failed to import contacts" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const ids = searchParams.get("ids");
+
+    if (!ids) {
+      return NextResponse.json(
+        { error: "No contact IDs provided" },
+        { status: 400 }
+      );
+    }
+
+    const contactIds = ids.split(",");
+
+    if (contactIds.length === 0) {
+      return NextResponse.json(
+        { error: "No valid contact IDs provided" },
+        { status: 400 }
+      );
+    }
+
+    const contacts = await prisma.contact.findMany({
+      where: {
+        userId: session.user.id,
+        id: {
+          in: contactIds,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      contacts,
+    });
+  } catch (error) {
+    console.error("Failed to fetch contacts:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch contacts" },
       { status: 500 }
     );
   }
