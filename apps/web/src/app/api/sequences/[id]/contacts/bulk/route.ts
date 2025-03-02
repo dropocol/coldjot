@@ -12,7 +12,7 @@ const bulkAddContactsSchema = z.object({
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check if user is authenticated
@@ -22,7 +22,7 @@ export async function POST(
     }
 
     // Get sequence ID from params
-    const sequenceId = params.id;
+    const { id: sequenceId } = await params;
 
     // Parse and validate request body
     const body = await request.json();

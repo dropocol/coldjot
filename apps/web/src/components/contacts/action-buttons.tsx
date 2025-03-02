@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import AddToListDrawer from "@/components/lists/add-to-list-drawer";
+import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
 
 interface ActionButtonsProps {
   contact: Contact;
@@ -178,7 +178,8 @@ export default function ActionButtons({
       </AlertDialog>
 
       <AddToListDrawer
-        open={showAddToList}
+        isVisible={showAddToList}
+        setIsVisible={setShowAddToList}
         onClose={() => setShowAddToList(false)}
         contactId={contact.id}
       />

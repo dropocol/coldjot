@@ -11,7 +11,7 @@ import AddContactModal from "@/components/contacts/add-contact-drawer";
 import { Contact } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";
 import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal";
-import AddToListDrawer from "@/components/lists/add-to-list-drawer";
+import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
 import { toast } from "react-hot-toast";
 
 export default function ContactsPage() {
@@ -164,7 +164,8 @@ export default function ContactsPage() {
       {/* Drawer for adding contacts to list */}
       {selectedContacts.length > 0 && (
         <AddToListDrawer
-          open={showAddToListDrawer}
+          isVisible={showAddToListDrawer}
+          setIsVisible={setShowAddToListDrawer}
           onClose={handleCloseAddToListDrawer}
           contactId={selectedContacts.join(",")}
           isMultiple={true}

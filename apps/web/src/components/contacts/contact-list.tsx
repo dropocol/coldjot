@@ -44,7 +44,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import AddToListDrawer from "@/components/lists/add-to-list-drawer";
+import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -433,7 +433,10 @@ export function ContactList({
       )}
 
       <AddToListDrawer
-        open={!!contactToAddToList}
+        isVisible={!!contactToAddToList}
+        setIsVisible={(isVisible) => {
+          if (!isVisible) setContactToAddToList(null);
+        }}
         onClose={() => setContactToAddToList(null)}
         contactId={contactToAddToList?.id || ""}
         isMultiple={contactToAddToList?.isMultiple}

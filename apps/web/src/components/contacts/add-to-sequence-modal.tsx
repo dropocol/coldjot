@@ -10,7 +10,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Loader2, SendHorizonal, Search, Users } from "lucide-react";
+import { Loader2, SendHorizonal, Search, Users, Check } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Contact, Sequence } from "@prisma/client";
 import {
@@ -26,6 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { addContactToSequence } from "@/lib/client-actions";
 import { useSequence } from "@/lib/sequence-context";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   open: boolean;
@@ -54,6 +56,9 @@ export function AddToSequenceModal({
   const [adding, setAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isVisible, setIsVisible] = useState(false);
+  const [lastAddedSequenceId, setLastAddedSequenceId] = useState<string | null>(
+    null
+  );
 
   // Add debugging
   useEffect(() => {
@@ -218,110 +223,59 @@ export function AddToSequenceModal({
     }
   }, [isVisible]);
 
-  const handleAddToSequence = async (sequenceId: string) => {
+  const handleAddToSequence = async () => {
     console.log("=== handleAddToSequence START ===");
-    console.log("sequenceId:", sequenceId);
-    console.log("isSingleContactInArray:", isSingleContactInArray);
-    console.log("isFromList:", isFromList);
-    console.log("isMultiple:", isMultiple);
-    console.log("contacts:", contacts);
-    console.log("contacts length:", contacts?.length || 0);
-    console.log("contactIds:", contactIds);
-    console.log("contactIds length:", contactIds?.length || 0);
-    console.log("contact:", contact);
-    console.log("allContactIds:", allContactIds);
-    console.log("allContactIds length:", allContactIds?.length || 0);
+    console.log("Selected sequence ID:", selectedSequenceId);
 
-    if (!sequenceId) {
-      console.log("No sequenceId provided, showing error");
+    if (!selectedSequenceId) {
       toast.error("Please select a sequence");
       return;
     }
 
     setAdding(true);
-    setSelectedSequenceId(sequenceId);
 
     try {
-      console.log("Checking which condition to use");
+      // Special case for contact IDs in URL format
+      if (
+        contactIds &&
+        contactIds.length === 1 &&
+        contactIds[0].includes(",")
+      ) {
+        console.log("Special case: comma-separated IDs in URL");
+        const extractedIds = contactIds[0].split(",").map((id) => id.trim());
+        console.log("Extracted IDs:", extractedIds);
 
-      // Special case: Check if we have contacts with only IDs
-      if (contacts && contacts.length > 0) {
-        const hasOnlyIds = contacts.some(
-          (c) => Object.keys(c).length === 1 && (c.id || (c as any).id)
-        );
-
-        if (hasOnlyIds) {
-          console.log(
-            "Detected contacts with only IDs, extracting IDs for API call"
-          );
-          const extractedIds = contacts
-            .map((c) => c.id || (c as any).id)
-            .filter(Boolean);
-
-          if (extractedIds.length > 0) {
-            console.log("Using extracted IDs:", extractedIds);
-
-            if (extractedIds.length === 1) {
-              // Single contact
-              console.log("Using single extracted ID:", extractedIds[0]);
-              const response = await fetch(
-                `/api/sequences/${sequenceId}/contacts`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    contactId: extractedIds[0],
-                  }),
-                }
-              );
-
-              if (!response.ok) {
-                const errorData = await response.json();
-                toast.error(errorData.message);
-                return;
-              }
-
-              toast.success("Contact added to sequence");
-              console.log("Successfully added to sequence, calling onClose");
-              onClose();
-              return;
-            } else {
-              // Multiple contacts
-              console.log("Using multiple extracted IDs:", extractedIds);
-              const response = await fetch(
-                `/api/sequences/${sequenceId}/contacts/bulk`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    contactIds: extractedIds,
-                  }),
-                }
-              );
-
-              if (!response.ok) {
-                const errorData = await response.json();
-                toast.error(errorData.message);
-                return;
-              }
-
-              const data = await response.json();
-              toast.success(
-                `Added ${data.added} contacts to sequence${
-                  data.skipped > 0
-                    ? ` (${data.skipped} already in sequence)`
-                    : ""
-                }`
-              );
-              console.log("Successfully added to sequence, calling onClose");
-              onClose();
-              return;
+        if (extractedIds.length > 0) {
+          console.log("Using bulk endpoint with extracted IDs");
+          const response = await fetch(
+            `/api/sequences/${selectedSequenceId}/contacts/bulk`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                contactIds: extractedIds,
+              }),
             }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            toast.error(errorData.message);
+            return;
           }
+
+          const data = await response.json();
+          toast.success(
+            `Added ${data.added} contacts to sequence${
+              data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
+            }`
+          );
+          // Store the last added sequence ID
+          setLastAddedSequenceId(selectedSequenceId);
+          // Don't close the modal
+          return;
         }
       }
 
@@ -329,7 +283,7 @@ export function AddToSequenceModal({
         console.log("Using isFromList condition with listId:", listId);
         // Add all contacts from a list
         const response = await fetch(
-          `/api/sequences/${sequenceId}/contacts/from-list`,
+          `/api/sequences/${selectedSequenceId}/contacts/from-list`,
           {
             method: "POST",
             headers: {
@@ -352,6 +306,9 @@ export function AddToSequenceModal({
         toast.success(
           `Added ${data.added} contacts from ${listName} to sequence`
         );
+        // Store the last added sequence ID
+        setLastAddedSequenceId(selectedSequenceId);
+        // Don't close the modal
       } else if (isMultiple) {
         console.log(
           "Using isMultiple condition with allContactIds:",
@@ -370,7 +327,7 @@ export function AddToSequenceModal({
         }
 
         const response = await fetch(
-          `/api/sequences/${sequenceId}/contacts/bulk`,
+          `/api/sequences/${selectedSequenceId}/contacts/bulk`,
           {
             method: "POST",
             headers: {
@@ -396,6 +353,9 @@ export function AddToSequenceModal({
             data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
           }`
         );
+        // Store the last added sequence ID
+        setLastAddedSequenceId(selectedSequenceId);
+        // Don't close the modal
       } else if (isSingleContactInArray && contacts.length > 0) {
         // Handle single contact from contacts array
         console.log("Using single contact from contacts array:", contacts[0]);
@@ -416,15 +376,18 @@ export function AddToSequenceModal({
           "Using direct API call for single contact from array with ID:",
           contactId
         );
-        const response = await fetch(`/api/sequences/${sequenceId}/contacts`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contactId: contactId,
-          }),
-        });
+        const response = await fetch(
+          `/api/sequences/${selectedSequenceId}/contacts`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contactId: contactId,
+            }),
+          }
+        );
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -436,6 +399,9 @@ export function AddToSequenceModal({
         console.log("API response data:", data);
 
         toast.success("Contact added to sequence");
+        // Store the last added sequence ID
+        setLastAddedSequenceId(selectedSequenceId);
+        // Don't close the modal
       } else if (contact) {
         console.log("Using contact condition with contact ID:", contact.id);
         // Add a single contact
@@ -443,7 +409,7 @@ export function AddToSequenceModal({
           console.log("Using client action with updateReadinessField");
           // Use the client action if sequence context is available
           await addContactToSequence(
-            sequenceId,
+            selectedSequenceId,
             contact.id,
             updateReadinessField
           );
@@ -451,7 +417,7 @@ export function AddToSequenceModal({
           console.log("Using direct API call for single contact");
           // Use direct API call if sequence context is not available
           const response = await fetch(
-            `/api/sequences/${sequenceId}/contacts`,
+            `/api/sequences/${selectedSequenceId}/contacts`,
             {
               method: "POST",
               headers: {
@@ -474,6 +440,9 @@ export function AddToSequenceModal({
         }
 
         toast.success("Contact added to sequence");
+        // Store the last added sequence ID
+        setLastAddedSequenceId(selectedSequenceId);
+        // Don't close the modal
       } else if (allContactIds.length > 0) {
         // Fallback: Use allContactIds if we have them but none of the above conditions matched
         console.log("Using fallback with allContactIds:", allContactIds);
@@ -486,7 +455,7 @@ export function AddToSequenceModal({
             allContactIds[0]
           );
           const response = await fetch(
-            `/api/sequences/${sequenceId}/contacts`,
+            `/api/sequences/${selectedSequenceId}/contacts`,
             {
               method: "POST",
               headers: {
@@ -508,11 +477,14 @@ export function AddToSequenceModal({
           console.log("API response data:", data);
 
           toast.success("Contact added to sequence");
+          // Store the last added sequence ID
+          setLastAddedSequenceId(selectedSequenceId);
+          // Don't close the modal
         } else {
           // Multiple contacts
           console.log("Using bulk endpoint with contactIds:", allContactIds);
           const response = await fetch(
-            `/api/sequences/${sequenceId}/contacts/bulk`,
+            `/api/sequences/${selectedSequenceId}/contacts/bulk`,
             {
               method: "POST",
               headers: {
@@ -538,6 +510,9 @@ export function AddToSequenceModal({
               data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
             }`
           );
+          // Store the last added sequence ID
+          setLastAddedSequenceId(selectedSequenceId);
+          // Don't close the modal
         }
       } else {
         // Last resort fallback - try to extract any contact IDs we can find
@@ -578,7 +553,7 @@ export function AddToSequenceModal({
               lastResortContactIds[0]
             );
             const response = await fetch(
-              `/api/sequences/${sequenceId}/contacts`,
+              `/api/sequences/${selectedSequenceId}/contacts`,
               {
                 method: "POST",
                 headers: {
@@ -597,6 +572,9 @@ export function AddToSequenceModal({
             }
 
             toast.success("Contact added to sequence");
+            // Store the last added sequence ID
+            setLastAddedSequenceId(selectedSequenceId);
+            // Don't close the modal
           } else {
             // Multiple contacts
             console.log(
@@ -604,7 +582,7 @@ export function AddToSequenceModal({
               lastResortContactIds
             );
             const response = await fetch(
-              `/api/sequences/${sequenceId}/contacts/bulk`,
+              `/api/sequences/${selectedSequenceId}/contacts/bulk`,
               {
                 method: "POST",
                 headers: {
@@ -628,6 +606,9 @@ export function AddToSequenceModal({
                 data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
               }`
             );
+            // Store the last added sequence ID
+            setLastAddedSequenceId(selectedSequenceId);
+            // Don't close the modal
           }
         } else {
           console.error(
@@ -646,8 +627,8 @@ export function AddToSequenceModal({
         }
       }
 
-      console.log("Successfully added to sequence, calling onClose");
-      onClose();
+      console.log("Successfully added to sequence");
+      // Don't call onClose() to keep the modal open
     } catch (error) {
       console.error("Failed to add to sequence:", error);
       toast.error("Failed to add to sequence");
@@ -704,7 +685,10 @@ export function AddToSequenceModal({
         }
       }}
     >
-      <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+      <SheetContent
+        side="right"
+        className="w-[600px] sm:max-w-[600px] flex flex-col gap-0"
+      >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <SendHorizonal className="h-5 w-5" />
@@ -723,13 +707,13 @@ export function AddToSequenceModal({
           />
         </div>
 
-        <div className="relative min-h-[300px] max-h-[400px] overflow-auto rounded-md border mt-4">
+        <div className="relative flex-grow overflow-auto rounded-md border mt-4 mb-4">
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : filteredSequences.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-8 text-center">
+            <div className="flex flex-col items-center justify-center p-8 text-center h-[400px]">
               <p className="text-muted-foreground mb-4">No sequences found</p>
               <Button
                 variant="outline"
@@ -742,104 +726,103 @@ export function AddToSequenceModal({
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Contacts</TableHead>
-                  <TableHead className="w-[100px]">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSequences.map((sequence) => (
-                  <TableRow
-                    key={sequence.id}
-                    className={cn(
-                      "cursor-pointer",
-                      selectedSequenceId === sequence.id && "bg-muted/50"
-                    )}
-                    onClick={() => setSelectedSequenceId(sequence.id)}
-                  >
-                    <TableCell className="font-medium">
-                      {sequence.name}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          sequence.status === "active" ? "default" : "outline"
-                        }
-                        className="capitalize"
-                      >
-                        {sequence.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm">
-                          {typeof sequence === "object" &&
-                          "_count" in sequence &&
-                          sequence._count &&
-                          typeof sequence._count === "object" &&
-                          "contacts" in sequence._count
-                            ? String(sequence._count.contacts)
-                            : "0"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToSequence(sequence.id);
-                        }}
-                        disabled={adding}
-                      >
-                        {adding && selectedSequenceId === sequence.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <SendHorizonal className="h-4 w-4 mr-2" />
-                        )}
-                        Add
-                      </Button>
-                    </TableCell>
+            <RadioGroup
+              value={selectedSequenceId}
+              onValueChange={setSelectedSequenceId}
+              className="w-full"
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Contacts</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredSequences.map((sequence) => (
+                    <TableRow
+                      key={sequence.id}
+                      className={cn(
+                        "cursor-pointer",
+                        selectedSequenceId === sequence.id && "bg-muted/50"
+                      )}
+                      onClick={() => setSelectedSequenceId(sequence.id)}
+                    >
+                      <TableCell className="p-2">
+                        <RadioGroupItem
+                          value={sequence.id}
+                          id={sequence.id}
+                          className="data-[state=checked]:border-primary"
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <Label
+                          htmlFor={sequence.id}
+                          className="cursor-pointer flex items-center gap-2"
+                        >
+                          {sequence.name}
+                          {lastAddedSequenceId === sequence.id && (
+                            <span className="text-xs text-green-600 font-normal flex items-center gap-1">
+                              <Check className="h-3 w-3" />
+                              Added
+                            </span>
+                          )}
+                        </Label>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            sequence.status === "active" ? "default" : "outline"
+                          }
+                          className="capitalize"
+                        >
+                          {sequence.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm">
+                            {typeof sequence === "object" &&
+                            "_count" in sequence &&
+                            sequence._count &&
+                            typeof sequence._count === "object" &&
+                            "contacts" in sequence._count
+                              ? String(sequence._count.contacts)
+                              : "0"}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </RadioGroup>
           )}
         </div>
 
-        <SheetFooter className="mt-4">
+        <SheetFooter className="mt-auto pt-4 border-t">
           <Button
             variant="default"
             className="w-full"
             disabled={!selectedSequenceId || adding}
-            onClick={() => {
-              if (selectedSequenceId) {
-                handleAddToSequence(selectedSequenceId);
-              }
-            }}
+            onClick={handleAddToSequence}
           >
             {adding ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Adding...
+                Adding to Sequence...
               </>
             ) : (
               <>
                 <SendHorizonal className="h-4 w-4 mr-2" />
                 {isFromList
-                  ? "Add List to Sequence"
+                  ? "Add List to Selected Sequence"
                   : isMultiple
-                    ? `Add ${contactsCount} Contacts`
-                    : isSingleContactInArray
-                      ? "Add Contact"
-                      : "Add Contact"}
+                    ? `Add ${contactsCount} Contacts to Sequence`
+                    : "Add to Selected Sequence"}
               </>
             )}
           </Button>

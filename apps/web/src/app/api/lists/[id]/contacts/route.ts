@@ -216,16 +216,19 @@ export async function PUT(
 
     if (contactsToAdd.length === 0) {
       console.log("All contacts are already in the list, no action needed");
-      return NextResponse.json({
-        message: "All contacts are already in the list",
-        added: 0,
-        skipped: contactIds.length,
-        total: existingContactIds.length,
-        list: {
-          id: list.id,
-          name: list.name,
+      return NextResponse.json(
+        {
+          message: "All contacts are already in the list",
+          added: 0,
+          skipped: contactIds.length,
+          total: existingContactIds.length,
+          list: {
+            id: list.id,
+            name: list.name,
+          },
         },
-      });
+        { status: 409 }
+      );
     }
 
     // Add new contacts to the list
