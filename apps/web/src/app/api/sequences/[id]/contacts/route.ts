@@ -139,6 +139,21 @@ export async function POST(
       return new NextResponse("Not found", { status: 404 });
     }
 
+    // check contact is already in the sequence
+    const existingContact = await prisma.sequenceContact.findFirst({
+      where: {
+        sequenceId: id,
+        contactId,
+      },
+    });
+
+    if (existingContact) {
+      return NextResponse.json(
+        { error: true, message: "Contact already in sequence" },
+        { status: 409 }
+      );
+    }
+
     const sequenceContact = await prisma.sequenceContact.create({
       data: {
         sequenceId: id,

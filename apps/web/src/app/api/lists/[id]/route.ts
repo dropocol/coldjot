@@ -13,13 +13,16 @@ export async function GET(
 
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") ?? "1");
+    const limit = parseInt(searchParams.get("limit") ?? "10");
+    const skip = (page - 1) * limit;
+
+    // First get the list without contacts to get basic info
     const list = await prisma.emailList.findUnique({
       where: {
         id: id,
         userId: session.user.id,
-      },
-      include: {
-        contacts: true,
       },
     });
 
@@ -27,7 +30,46 @@ export async function GET(
       return NextResponse.json({ error: "List not found" }, { status: 404 });
     }
 
-    return NextResponse.json(list);
+    // Then get paginated contacts and total count
+    const [contacts, totalContacts] = await Promise.all([
+      prisma.contact.findMany({
+        where: {
+          emailLists: {
+            some: {
+              id: id,
+              userId: session.user.id,
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          firstName: "asc",
+        },
+      }),
+      prisma.contact.count({
+        where: {
+          emailLists: {
+            some: {
+              id: id,
+              userId: session.user.id,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return NextResponse.json({
+      ...list,
+      contacts,
+      _pagination: {
+        total: totalContacts,
+        page,
+        limit,
+        hasMore: skip + contacts.length < totalContacts,
+        nextPage: skip + contacts.length < totalContacts ? page + 1 : undefined,
+      },
+    });
   } catch (error) {
     console.error("Failed to fetch list:", error);
     return NextResponse.json(

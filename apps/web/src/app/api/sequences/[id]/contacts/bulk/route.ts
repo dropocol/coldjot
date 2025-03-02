@@ -14,10 +14,16 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { listId } = await req.json();
+    const { contactIds } = await req.json();
     const { id } = await params;
 
-    // Verify sequence ownership
+    if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
+      return NextResponse.json(
+        { error: true, message: "No contact IDs provided" },
+        { status: 400 }
+      );
+    }
+
     const sequence = await prisma.sequence.findUnique({
       where: {
         id: id,
@@ -35,33 +41,10 @@ export async function POST(
     });
 
     if (!sequence) {
-      return new NextResponse("Not found", { status: 404 });
-    }
-
-    // Get contacts from the list
-    const list = await prisma.emailList.findUnique({
-      where: {
-        id: listId,
-        userId: session.user.id,
-      },
-      include: {
-        contacts: true,
-      },
-    });
-
-    if (!list) {
-      return new NextResponse("List not found", { status: 404 });
-    }
-
-    if (list.contacts.length === 0) {
-      return NextResponse.json(
-        { error: true, message: "List has no contacts" },
-        { status: 400 }
-      );
+      return new NextResponse("Sequence not found", { status: 404 });
     }
 
     // Check which contacts are already in the sequence
-    const contactIds = list.contacts.map((contact) => contact.id);
     const existingContacts = await prisma.sequenceContact.findMany({
       where: {
         sequenceId: id,
@@ -78,7 +61,7 @@ export async function POST(
       existingContacts.map((c) => c.contactId)
     );
     const newContactIds = contactIds.filter(
-      (contactId) => !existingContactIds.has(contactId)
+      (id) => !existingContactIds.has(id)
     );
 
     if (newContactIds.length === 0) {
@@ -88,8 +71,8 @@ export async function POST(
       );
     }
 
-    // Add contacts to sequence
-    const results = await prisma.$transaction(
+    // Add new contacts to the sequence
+    const sequenceContacts = await prisma.$transaction(
       newContactIds.map((contactId) =>
         prisma.sequenceContact.create({
           data: {
@@ -112,12 +95,12 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      added: results.length,
+      added: sequenceContacts.length,
       skipped: existingContactIds.size,
       total: contactIds.length,
     });
   } catch (error) {
-    console.error("[SEQUENCE_CONTACTS_LIST_POST]", error);
+    console.error("[SEQUENCE_CONTACTS_BULK_POST]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

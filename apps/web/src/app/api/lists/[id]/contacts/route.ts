@@ -58,3 +58,59 @@ export async function POST(
     );
   }
 }
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+
+    // Verify the list exists and belongs to the user
+    const list = await prisma.emailList.findUnique({
+      where: {
+        id: id,
+        userId: session.user.id,
+      },
+      select: { id: true },
+    });
+
+    if (!list) {
+      return NextResponse.json({ error: "List not found" }, { status: 404 });
+    }
+
+    // Get all contacts for this list (without pagination)
+    const contacts = await prisma.contact.findMany({
+      where: {
+        emailLists: {
+          some: {
+            id: id,
+            userId: session.user.id,
+          },
+        },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
+    });
+
+    return NextResponse.json({
+      contacts,
+      total: contacts.length,
+    });
+  } catch (error) {
+    console.error("Failed to fetch list contacts:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch list contacts" },
+      { status: 500 }
+    );
+  }
+}

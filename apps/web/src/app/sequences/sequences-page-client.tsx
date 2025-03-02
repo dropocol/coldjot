@@ -17,7 +17,6 @@ interface Sequence {
   accessLevel: string;
   scheduleType: string;
   steps: any[];
-  contacts: any[];
   _count: {
     contacts: number;
   };
@@ -86,8 +85,26 @@ export function SequencesPageClient({
   };
 
   const handleAddSequence = (newSequence: Sequence) => {
-    setSequences((prev) => [newSequence, ...prev]);
-    setTotal((prev) => prev + 1);
+    // Check if the sequence already exists in the list
+    const exists = sequences.some((seq) => seq.id === newSequence.id);
+
+    // Update the sequences list with the new sequence
+    setSequences((prev) => {
+      if (exists) {
+        // Replace the existing sequence
+        return prev.map((seq) =>
+          seq.id === newSequence.id ? newSequence : seq
+        );
+      } else {
+        // Add the new sequence to the beginning of the list
+        return [newSequence, ...prev];
+      }
+    });
+
+    // Update the total count only if it's a new sequence
+    if (!exists) {
+      setTotal((prev) => prev + 1);
+    }
   };
 
   return (
@@ -118,8 +135,7 @@ export function SequencesPageClient({
         sequences={sequences}
         showCreateModal={showCreateModal}
         onCloseCreateModal={() => setShowCreateModal(false)}
-        // onAddSequence={handleAddSequence}
-        onAddSequence={() => setShowCreateModal(true)}
+        onAddSequence={handleAddSequence}
         isLoading={isLoading}
         page={pagination.page}
         limit={pagination.limit}

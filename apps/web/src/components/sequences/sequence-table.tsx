@@ -105,8 +105,13 @@ export function SequenceTable({
       if (!response.ok) throw new Error("Failed to duplicate sequence");
 
       const duplicatedSequence = await response.json();
+
+      // Add the duplicated sequence to the list
       onAddSequence(duplicatedSequence);
+
       toast.success("Sequence duplicated successfully");
+
+      // Refresh the page to show the updated list
       router.refresh();
     } catch (error) {
       toast.error("Failed to duplicate sequence");

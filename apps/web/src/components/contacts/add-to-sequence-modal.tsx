@@ -10,7 +10,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Loader2, SendHorizonal, Search } from "lucide-react";
+import { Loader2, SendHorizonal, Search, Users } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Contact } from "@prisma/client";
 import {
@@ -39,16 +39,54 @@ interface Sequence {
 interface Props {
   open: boolean;
   onClose: () => void;
-  contact: Contact;
+  contact?: Contact;
+  contacts?: Contact[];
+  listId?: string;
+  listName?: string;
+  contactCount?: number;
 }
 
-export function AddToSequenceModal({ open, onClose, contact }: Props) {
+export function AddToSequenceModal({
+  open,
+  onClose,
+  contact,
+  contacts = [],
+  listId,
+  listName,
+  contactCount,
+}: Props) {
   const [sequences, setSequences] = useState<Sequence[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSequence, setSelectedSequence] = useState<string | null>(null);
-  const { updateReadinessField } = useSequence();
+
+  // Determine the mode we're operating in
+  const isListMode = !!listId;
+  const isMultipleMode = !isListMode && contacts && contacts.length > 0;
+  const isSingleMode = !isListMode && !isMultipleMode && !!contact;
+
+  // Get contacts to add based on the mode
+  const contactsToAdd = isMultipleMode ? contacts : contact ? [contact] : [];
+
+  // Safely use the sequence context, handling the case when it's not available
+  const sequenceContext = (() => {
+    try {
+      return useSequence();
+    } catch (error) {
+      // Return a mock implementation if not in a SequenceProvider
+      return {
+        updateReadinessField: (field: string, value: boolean) => {
+          // This is a no-op function when not in a sequence context
+          console.log(
+            "Sequence context not available, skipping readiness update"
+          );
+        },
+      };
+    }
+  })();
+
+  const { updateReadinessField } = sequenceContext;
 
   const fetchSequences = async () => {
     setIsLoading(true);
@@ -72,15 +110,75 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
   }, [open]);
 
   const handleAddToSequence = async (sequenceId: string) => {
+    if (!isListMode && contactsToAdd.length === 0) {
+      toast.error("No contacts selected");
+      return;
+    }
+
     setIsAdding(true);
     try {
-      await addContactToSequence(sequenceId, contact.id, updateReadinessField);
+      let response;
 
-      toast.success("Contact added to sequence successfully");
+      // Handle different modes
+      if (isListMode) {
+        // Add all contacts from a list
+        response = await fetch(`/api/sequences/${sequenceId}/contacts/list`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ listId }),
+        });
+      } else if (isMultipleMode) {
+        // Add multiple selected contacts
+        response = await fetch(`/api/sequences/${sequenceId}/contacts/bulk`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contactIds: contactsToAdd.map((c) => c.id),
+          }),
+        });
+      } else {
+        // Add a single contact
+        response = await fetch(`/api/sequences/${sequenceId}/contacts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ contactId: contactsToAdd[0].id }),
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to add contacts to sequence");
+        return;
+      }
+
+      // Try to update readiness field, but don't fail if it's not available
+      try {
+        updateReadinessField("hasContacts", true);
+      } catch (error) {
+        console.log("Could not update sequence readiness field", error);
+      }
+
+      // Generate success message based on the mode
+      let successMessage;
+      if (isListMode) {
+        successMessage = `Added contacts from ${listName || "list"} to sequence successfully`;
+      } else if (isMultipleMode) {
+        successMessage = `${contactsToAdd.length} contacts added to sequence successfully`;
+      } else {
+        successMessage = "Contact added to sequence successfully";
+      }
+
+      toast.success(successMessage);
       onClose();
     } catch (error) {
-      console.error("Error adding contact to sequence:", error);
-      toast.error("Failed to add contact to sequence");
+      console.error("Error adding contacts to sequence:", error);
+      toast.error("Failed to add contacts to sequence");
     } finally {
       setIsAdding(false);
     }
@@ -90,17 +188,33 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
     sequence.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Generate description text based on the mode
+  const getDescriptionText = () => {
+    if (isListMode) {
+      return `Add ${contactCount || "all"} contacts from ${listName || "list"} to an email sequence`;
+    } else if (contactsToAdd.length === 0) {
+      return "No contacts selected";
+    } else if (contactsToAdd.length === 1) {
+      const singleContact = contactsToAdd[0];
+      return `Add ${singleContact.firstName} ${singleContact.lastName} to an email sequence`;
+    } else {
+      return `Add ${contactsToAdd.length} contacts to an email sequence`;
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <SendHorizonal className="h-5 w-5" />
-            Add Contact to Sequence
+            {isListMode
+              ? "Add List to Sequence"
+              : isMultipleMode
+                ? "Add Contacts to Sequence"
+                : "Add Contact to Sequence"}
           </SheetTitle>
-          <SheetDescription>
-            Add {contact.firstName} {contact.lastName} to an email sequence
-          </SheetDescription>
+          <SheetDescription>{getDescriptionText()}</SheetDescription>
         </SheetHeader>
 
         <div className="relative mt-4">
@@ -157,22 +271,31 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
                         {sequence.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{sequence._count.contacts} contacts</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-sm">
+                          {sequence._count.contacts}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Button
+                        variant="ghost"
                         size="sm"
+                        className="w-full"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleAddToSequence(sequence.id);
                         }}
                         disabled={isAdding}
-                        className="w-full"
                       >
                         {isAdding && selectedSequence === sequence.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         ) : (
-                          "Add"
+                          <SendHorizonal className="h-4 w-4 mr-2" />
                         )}
+                        Add
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -181,6 +304,35 @@ export function AddToSequenceModal({ open, onClose, contact }: Props) {
             </Table>
           )}
         </div>
+
+        <SheetFooter className="mt-4">
+          <Button
+            variant="default"
+            className="w-full"
+            disabled={!selectedSequence || isAdding}
+            onClick={() => {
+              if (selectedSequence) {
+                handleAddToSequence(selectedSequence);
+              }
+            }}
+          >
+            {isAdding ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <SendHorizonal className="h-4 w-4 mr-2" />
+                {isListMode
+                  ? "Add List to Sequence"
+                  : isMultipleMode
+                    ? `Add ${contactsToAdd.length} Contacts`
+                    : "Add Contact"}
+              </>
+            )}
+          </Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

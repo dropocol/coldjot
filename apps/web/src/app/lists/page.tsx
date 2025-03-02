@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { LocalSearch } from "@/components/ui/local-search";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import EmailListsView from "../../components/lists/email-list";
+import EmailListsView from "@/components/lists/email-list";
 import { usePagination } from "@/hooks/use-pagination";
 
 export default function ListsPage() {

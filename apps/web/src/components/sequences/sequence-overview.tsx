@@ -249,15 +249,23 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
   const handleStepDuplicate = async (step: SequenceStep) => {
     try {
       setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${sequence.id}/steps/${step.id}/duplicate`,
-        {
-          method: "POST",
-        }
-      );
+
+      // Extract step data excluding the ID
+      const { id, ...stepData } = step;
+
+      // Create a new step with the same data
+      const response = await fetch(`/api/sequences/${sequence.id}/steps`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...stepData,
+          order: steps.length, // Place at the end of the sequence
+        }),
+      });
 
       if (!response.ok) throw new Error("Failed to duplicate step");
 
+      // Refresh steps after duplication
       const updatedSteps = await fetch(
         `/api/sequences/${sequence.id}/steps`
       ).then((res) => res.json());

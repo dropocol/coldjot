@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Mail, User, Trash2, ArrowLeft, MoreHorizontal } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  User,
+  Trash2,
+  ArrowLeft,
+  MoreHorizontal,
+  SendHorizonal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmailList } from "@coldjot/types";
 import { toast } from "react-hot-toast";
@@ -29,16 +35,29 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { Contact } from "@prisma/client";
 import ContactDetailsDrawer from "@/components/contacts/contact-details-drawer";
+import { PaginationControls } from "@/components/pagination";
+import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type EmailListWithContacts = Omit<EmailList, "contacts"> & {
   contacts: Contact[];
+  _pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+    nextPage?: number;
+  };
 };
-
-const RECENT_CONTACTS_KEY = "recentContacts";
-const MAX_RECENT_CONTACTS = 5;
 
 export default function ListDetailsView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [list, setList] = useState<EmailListWithContacts | null>(null);
   const [loading, setLoading] = useState(true);
   const [contactToRemove, setContactToRemove] = useState<string | null>(null);
@@ -47,19 +66,42 @@ export default function ListDetailsView() {
   );
   const [selectedContactForDetails, setSelectedContactForDetails] =
     useState<Contact | null>(null);
+  const [total, setTotal] = useState(0);
+  const [contactToAddToSequence, setContactToAddToSequence] =
+    useState<Contact | null>(null);
+  const [contactsToAddToSequence, setContactsToAddToSequence] = useState<
+    Contact[]
+  >([]);
+  const [showSequenceModal, setShowSequenceModal] = useState(false);
+  const [showAddAllToSequenceModal, setShowAddAllToSequenceModal] =
+    useState(false);
+
+  // Get pagination values from URL or use defaults
+  const page = Number(searchParams.get("page") || "1");
+  const limit = Number(searchParams.get("limit") || "10");
 
   useEffect(() => {
     fetchList();
-  }, []);
+  }, [page, limit]);
 
   const fetchList = async () => {
     try {
       // Get list ID from URL
       const listId = window.location.pathname.split("/").pop();
-      const response = await fetch(`/api/lists/${listId}`);
+      const queryParams = new URLSearchParams();
+      queryParams.set("page", page.toString());
+      queryParams.set("limit", limit.toString());
+
+      const response = await fetch(
+        `/api/lists/${listId}?${queryParams.toString()}`
+      );
       if (!response.ok) throw new Error("Failed to fetch list");
       const data = await response.json();
       setList(data);
+      setTotal(data._pagination?.total || 0);
+
+      // Clear selection when page changes
+      setSelectedContacts(new Set());
     } catch (error) {
       console.error("Failed to fetch list:", error);
       toast.error("Failed to load list details");
@@ -84,10 +126,11 @@ export default function ListDetailsView() {
     if (!list) return;
 
     try {
-      // Filter out the selected contacts
-      const updatedContacts = list.contacts
-        .filter((c) => !selectedContacts.has(c.id))
-        .map((c) => c.id);
+      // Get all contacts to exclude the selected ones
+      const allContactIds = await getAllContactIds(list.id);
+      const updatedContacts = allContactIds.filter(
+        (id) => !selectedContacts.has(id)
+      );
 
       const response = await fetch(`/api/lists/${list.id}`, {
         method: "PATCH",
@@ -101,17 +144,8 @@ export default function ListDetailsView() {
 
       if (!response.ok) throw new Error("Failed to remove contacts from list");
 
-      // Update local state
-      setList((prev) =>
-        prev
-          ? {
-              ...prev,
-              contacts: prev.contacts.filter(
-                (c) => !selectedContacts.has(c.id)
-              ),
-            }
-          : null
-      );
+      // Refresh the list to get updated data
+      fetchList();
 
       // Clear selection
       setSelectedContacts(new Set());
@@ -123,45 +157,45 @@ export default function ListDetailsView() {
     }
   };
 
-  const handleComposeToSelected = () => {
+  // TODO :  check if this is correct and needed
+  // Helper function to get all contact IDs for a list
+  const getAllContactIds = async (listId: string): Promise<string[]> => {
+    try {
+      // Fetch all contacts (without pagination) to get their IDs
+      const response = await fetch(`/api/lists/${listId}/contacts`);
+      if (!response.ok) throw new Error("Failed to fetch all contacts");
+      const data = await response.json();
+      return data.contacts.map((c: Contact) => c.id);
+    } catch (error) {
+      console.error("Failed to fetch all contact IDs:", error);
+      // Fallback to current page contacts if we can't get all
+      return list?.contacts.map((c) => c.id) || [];
+    }
+  };
+
+  const handleBulkAddToSequence = () => {
     if (!list || selectedContacts.size === 0) return;
 
+    // Get all selected contacts
     const selectedContactsList = list.contacts.filter((c) =>
       selectedContacts.has(c.id)
     );
 
-    localStorage.setItem(
-      "selectedList",
-      JSON.stringify({
-        id: list.id,
-        name: `${list.name} (Selected)`,
-        contacts: selectedContactsList,
-      })
-    );
-    router.push("/compose");
+    setContactsToAddToSequence(selectedContactsList);
+    setShowSequenceModal(true);
   };
 
-  const handleComposeToList = () => {
-    if (!list) return;
-
-    localStorage.setItem(
-      "selectedList",
-      JSON.stringify({
-        id: list.id,
-        name: list.name,
-        contacts: list.contacts,
-      })
-    );
-    router.push("/compose");
+  const handleSingleAddToSequence = (contact: Contact) => {
+    setContactToAddToSequence(contact);
   };
 
   const handleRemoveContact = async (contactId: string) => {
     if (!list) return;
 
     try {
-      const updatedContacts = list.contacts
-        .filter((c) => c.id !== contactId)
-        .map((c) => c.id);
+      // Get all contacts to exclude the one to remove
+      const allContactIds = await getAllContactIds(list.id);
+      const updatedContacts = allContactIds.filter((id) => id !== contactId);
 
       const response = await fetch(`/api/lists/${list.id}`, {
         method: "PATCH",
@@ -175,14 +209,8 @@ export default function ListDetailsView() {
 
       if (!response.ok) throw new Error("Failed to update list");
 
-      setList((prev) =>
-        prev
-          ? {
-              ...prev,
-              contacts: prev.contacts.filter((c) => c.id !== contactId),
-            }
-          : null
-      );
+      // Refresh the list to get updated data
+      fetchList();
 
       toast.success("Contact removed from list");
     } catch (error) {
@@ -193,36 +221,48 @@ export default function ListDetailsView() {
     }
   };
 
-  const handleComposeEmail = (contact: Contact) => {
-    localStorage.setItem(
-      "selectedContact",
-      JSON.stringify({
-        id: contact.id,
-        name: contact.name,
-        email: contact.email,
-      })
-    );
+  const handlePageChange = (newPage: number) => {
+    const listId = window.location.pathname.split("/").pop();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", newPage.toString());
+    router.push(`/lists/${listId}?${params.toString()}`);
+  };
 
-    // Add to recent contacts
-    try {
-      const recentContacts = JSON.parse(
-        localStorage.getItem(RECENT_CONTACTS_KEY) || "[]"
-      );
-      const updatedRecents = [
-        contact.id,
-        ...recentContacts.filter((id: string) => id !== contact.id),
-      ].slice(0, MAX_RECENT_CONTACTS);
+  const handlePageSizeChange = (newLimit: number) => {
+    const listId = window.location.pathname.split("/").pop();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("limit", newLimit.toString());
+    params.set("page", "1"); // Reset to first page when changing page size
+    router.push(`/lists/${listId}?${params.toString()}`);
+  };
 
-      localStorage.setItem(RECENT_CONTACTS_KEY, JSON.stringify(updatedRecents));
-    } catch (error) {
-      console.error("Error updating recent contacts:", error);
-    }
+  const handleCloseSequenceModal = () => {
+    setContactToAddToSequence(null);
+    setContactsToAddToSequence([]);
+    setShowSequenceModal(false);
+  };
 
-    router.push("/compose");
+  const handleAddAllToSequence = () => {
+    if (!list) return;
+    setShowAddAllToSequenceModal(true);
+  };
+
+  const handleCloseAddAllToSequenceModal = () => {
+    setShowAddAllToSequenceModal(false);
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="space-y-4 text-center">
+          <div className="animate-pulse flex flex-col items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-muted" />
+            <div className="h-4 w-48 rounded bg-muted" />
+            <div className="h-3 w-96 rounded bg-muted" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!list) {
@@ -230,134 +270,159 @@ export default function ListDetailsView() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <Button
-        variant="ghost"
-        className="mb-4"
-        onClick={() => router.push("/lists")}
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Lists
-      </Button>
-
+    <>
       <PageHeader
         title={list.name}
         description={list.description || "No description"}
         action={
           <div className="flex items-center gap-2">
-            {selectedContacts.size > 0 ? (
+            <Button variant="outline" onClick={handleAddAllToSequence}>
+              <SendHorizonal className="h-4 w-4 mr-2" />
+              Add All to Sequence
+            </Button>
+            {selectedContacts.size > 0 && (
               <>
-                <Button variant="outline" onClick={handleComposeToSelected}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Compose to {selectedContacts.size} Selected
+                <Button variant="default" onClick={handleBulkAddToSequence}>
+                  <SendHorizonal className="h-4 w-4 mr-2" />
+                  Send {selectedContacts.size} to Sequence
                 </Button>
                 <Button variant="destructive" onClick={handleBulkRemove}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Remove {selectedContacts.size} Selected
                 </Button>
               </>
-            ) : (
-              <Button onClick={handleComposeToList}>
-                <Mail className="h-4 w-4 mr-2" />
-                Compose to All
-              </Button>
             )}
           </div>
         }
       />
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]">
-                <Checkbox
-                  checked={selectedContacts.size === list.contacts.length}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedContacts(
-                        new Set(list.contacts.map((c) => c.id))
-                      );
-                    } else {
-                      setSelectedContacts(new Set());
-                    }
-                  }}
-                />
-              </TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.contacts.map((contact) => (
-              <TableRow
-                key={contact.id}
-                className="hover:bg-muted/50 cursor-pointer"
-                onClick={(e) => {
-                  if (
-                    !(e.target as HTMLElement).closest(
-                      ".checkbox-cell, .action-cell, a"
-                    )
-                  ) {
-                    setSelectedContactForDetails(contact);
-                  }
-                }}
-              >
-                <TableCell
-                  className="checkbox-cell"
-                  onClick={(e) => e.stopPropagation()}
-                >
+      <div className="space-y-4">
+        <div className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]">
                   <Checkbox
-                    checked={selectedContacts.has(contact.id)}
-                    onCheckedChange={(checked) =>
-                      handleCheckboxChange(contact.id, checked as boolean)
+                    checked={
+                      list.contacts.length > 0 &&
+                      selectedContacts.size === list.contacts.length
                     }
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedContacts(
+                          new Set(list.contacts.map((c) => c.id))
+                        );
+                      } else {
+                        setSelectedContacts(new Set());
+                      }
+                    }}
                   />
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground/70" />
-                    <Link
-                      href={`/contacts/${contact.id}`}
-                      className="hover:underline"
+                </TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {list.contacts.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center py-6 text-muted-foreground"
+                  >
+                    No contacts in this list
+                  </TableCell>
+                </TableRow>
+              ) : (
+                list.contacts.map((contact) => (
+                  <TableRow
+                    key={contact.id}
+                    className="hover:bg-muted/50 cursor-pointer"
+                    onClick={(e) => {
+                      if (
+                        !(e.target as HTMLElement).closest(
+                          ".checkbox-cell, .action-cell, a"
+                        )
+                      ) {
+                        setSelectedContactForDetails(contact);
+                      }
+                    }}
+                  >
+                    <TableCell
+                      className="checkbox-cell"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {contact.firstName} {contact.lastName}
-                    </Link>
-                  </div>
-                </TableCell>
-                <TableCell>{contact.email}</TableCell>
+                      <Checkbox
+                        checked={selectedContacts.has(contact.id)}
+                        onCheckedChange={(checked) =>
+                          handleCheckboxChange(contact.id, checked as boolean)
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground/70" />
+                        <Link
+                          href={`/contacts/${contact.id}`}
+                          className="hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {contact.firstName} {contact.lastName}
+                        </Link>
+                      </div>
+                    </TableCell>
+                    <TableCell>{contact.email}</TableCell>
+                    <TableCell className="action-cell">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSingleAddToSequence(contact);
+                          }}
+                        >
+                          <SendHorizonal className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            asChild
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setContactToRemove(contact.id);
+                              }}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove from List
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-                <TableCell className="action-cell">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleComposeEmail(contact);
-                      }}
-                    >
-                      <Mail className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setContactToRemove(contact.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <PaginationControls
+          currentPage={page}
+          totalPages={Math.ceil(total / limit)}
+          pageSize={limit}
+          totalItems={total}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
       </div>
 
       <AlertDialog
@@ -394,6 +459,35 @@ export default function ListDetailsView() {
           onClose={() => setSelectedContactForDetails(null)}
         />
       )}
-    </div>
+
+      {/* Modal for single contact */}
+      {contactToAddToSequence && (
+        <AddToSequenceModal
+          open={!!contactToAddToSequence}
+          onClose={() => setContactToAddToSequence(null)}
+          contact={contactToAddToSequence}
+        />
+      )}
+
+      {/* Modal for multiple contacts */}
+      {contactsToAddToSequence.length > 0 && (
+        <AddToSequenceModal
+          open={showSequenceModal}
+          onClose={handleCloseSequenceModal}
+          contacts={contactsToAddToSequence}
+        />
+      )}
+
+      {/* Modal for adding all contacts from the list */}
+      {list && (
+        <AddToSequenceModal
+          open={showAddAllToSequenceModal}
+          onClose={handleCloseAddAllToSequenceModal}
+          listId={list.id}
+          listName={list.name}
+          contactCount={total}
+        />
+      )}
+    </>
   );
 }

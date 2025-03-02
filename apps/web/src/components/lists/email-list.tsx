@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Plus,
-  AlertCircle,
-  Mail,
-  Users,
-  Tag,
-  MoreHorizontal,
-} from "lucide-react";
+import { Plus, AlertCircle, MoreHorizontal, Users, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmailList } from "@coldjot/types";
 import { CreateListModal } from "./create-list-modal";
@@ -163,18 +156,6 @@ const EmailListsView = ({
     onPageChange(1);
   };
 
-  const handleComposeToList = (list: EmailList) => {
-    localStorage.setItem(
-      "selectedList",
-      JSON.stringify({
-        id: list.id,
-        name: list.name,
-        contacts: list.contacts,
-      })
-    );
-    router.push("/compose");
-  };
-
   return (
     <div className="space-y-4">
       {error && (
@@ -208,12 +189,12 @@ const EmailListsView = ({
         </div>
       ) : (
         <div className="p-0">
-          <Table>
+          <Table className="border-collapse">
             <TableHeader>
-              <TableRow>
+              <TableRow className="border-b hover:bg-transparent">
                 <TableHead>Name</TableHead>
                 <TableHead>Contacts</TableHead>
-                <TableHead>Tags</TableHead>
+                {/* <TableHead>Tags</TableHead> */}
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -221,7 +202,7 @@ const EmailListsView = ({
               {lists.map((list) => (
                 <TableRow
                   key={list.id}
-                  className="hover:bg-muted/50 cursor-pointer"
+                  className="hover:bg-muted/50 cursor-pointer border-b border-muted/20"
                   onClick={() => router.push(`/lists/${list.id}`)}
                 >
                   <TableCell>
@@ -238,7 +219,7 @@ const EmailListsView = ({
                       <span>{list._count?.contacts ?? 0} contacts</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* <TableCell>
                     {list.tags && list.tags.length > 0 ? (
                       <div className="flex items-center gap-2">
                         <Tag className="h-4 w-4 text-muted-foreground" />
@@ -247,19 +228,9 @@ const EmailListsView = ({
                     ) : (
                       "—"
                     )}
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleComposeToList(list);
-                        }}
-                      >
-                        <Mail className="h-4 w-4" />
-                      </Button>
+                    <div className="flex items-center justify-end gap-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           asChild
