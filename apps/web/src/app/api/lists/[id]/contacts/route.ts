@@ -273,3 +273,65 @@ export async function PUT(
     );
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    const { contactIds } = await req.json();
+    if (!Array.isArray(contactIds)) {
+      return new Response("Invalid contact IDs", { status: 400 });
+    }
+
+    // Get the list and verify ownership
+    const list = await prisma.emailList.findUnique({
+      where: {
+        id: params.id,
+        userId: session.user.id,
+      },
+      include: {
+        contacts: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!list) {
+      return new Response("List not found", { status: 404 });
+    }
+
+    // Get current contact IDs and filter out the ones to remove
+    const currentContactIds = list.contacts.map((c) => c.id);
+    const updatedContactIds = currentContactIds.filter(
+      (id) => !contactIds.includes(id)
+    );
+
+    // Update the list with the filtered contacts
+    await prisma.emailList.update({
+      where: {
+        id: params.id,
+      },
+      data: {
+        contacts: {
+          set: updatedContactIds.map((id) => ({ id })),
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      removed: contactIds.length,
+    });
+  } catch (error) {
+    console.error("Failed to remove contacts from list:", error);
+    return new Response("Failed to remove contacts", { status: 500 });
+  }
+}

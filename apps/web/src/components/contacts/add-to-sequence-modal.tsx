@@ -55,48 +55,9 @@ export function AddToSequenceModal({
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isVisible, setIsVisible] = useState(false);
   const [lastAddedSequenceId, setLastAddedSequenceId] = useState<string | null>(
     null
   );
-
-  // Add debugging
-  useEffect(() => {
-    console.log("AddToSequenceModal props:", {
-      open,
-      contactsLength: contacts?.length || 0,
-      contactIdsLength: contactIds?.length || 0,
-      hasContact: !!contact,
-      listId,
-      listName,
-      contactToAddToSequence: contact
-        ? `${contact.firstName} ${contact.lastName} (${contact.id})`
-        : null,
-    });
-
-    // Log detailed contacts information
-    if (contacts && contacts.length > 0) {
-      console.log("Detailed contacts information:");
-      contacts.forEach((c, index) => {
-        console.log(`Contact ${index}:`, {
-          id: c.id || (c as any).id,
-          firstName: c.firstName,
-          lastName: c.lastName,
-          email: c.email,
-          keys: Object.keys(c),
-        });
-      });
-
-      // Check if contacts have only ID property
-      const hasOnlyIds = contacts.some(
-        (c) => Object.keys(c).length === 1 && (c.id || (c as any).id)
-      );
-      console.log("Contacts have only IDs:", hasOnlyIds);
-    }
-
-    // Set visibility state based on open prop
-    setIsVisible(open);
-  }, [open, contacts, contactIds, contact, listId, listName]);
 
   // Try to use the sequence context, but handle the case where it's not available
   let updateReadinessField: any = null;
@@ -109,65 +70,19 @@ export function AddToSequenceModal({
   }
 
   // Determine if we're adding multiple contacts
-  const isMultiple =
-    (!!contacts && contacts.length > 1) ||
-    (!!contactIds && contactIds.length > 1);
-  const isSingleContactInArray = !!contacts && contacts.length === 1;
+  const isMultiple = contacts.length > 1 || contactIds.length > 1;
+  const isSingleContactInArray = contacts.length === 1;
   const isFromList = !!listId;
-  const allContacts = contacts.length > 0 ? contacts : contact ? [contact] : [];
-
-  // Debug log for contacts
-  if (contacts && contacts.length > 0) {
-    console.log("Contacts array:", contacts);
-    console.log("First contact:", contacts[0]);
-    console.log(
-      "Contact IDs from contacts:",
-      contacts.map((c) => c.id || (c as any).id).join(", ")
-    );
-  }
-
-  // Extract contact IDs, handling the case where contacts might only have IDs
-  let allContactIds: string[] = [];
-
-  if (contactIds.length > 0) {
-    allContactIds = contactIds;
-    console.log("Using contactIds prop:", contactIds);
-  } else if (contacts.length > 0) {
-    // Handle contacts that might only have an id property
-    allContactIds = contacts
-      .map((c) => {
-        const id = c.id || (c as any).id;
-        if (!id) {
-          console.warn("Contact without ID:", c);
-        }
-        return id;
-      })
-      .filter(Boolean);
-    console.log("Extracted IDs from contacts:", allContactIds);
-  } else if (contact) {
-    allContactIds = [contact.id];
-    console.log("Using single contact ID:", contact.id);
-  }
-
-  console.log("Final allContactIds:", allContactIds);
-
-  const contactsCount =
-    contactIds.length || contacts.length || (contact ? 1 : 0);
 
   useEffect(() => {
     const fetchSequences = async () => {
       try {
         setLoading(true);
-        console.log("Fetching sequences...");
-
         const response = await fetch("/api/sequences", {
-          credentials: "include", // Include cookies for authentication
+          credentials: "include",
         });
 
-        console.log("Sequences API response status:", response.status);
-
         if (response.status === 401) {
-          console.error("Authentication error when fetching sequences");
           toast.error(
             "Authentication error. Please refresh the page and try again."
           );
@@ -176,41 +91,19 @@ export function AddToSequenceModal({
         }
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error(
-            `Failed to fetch sequences: ${response.status}`,
-            errorText
-          );
           toast.error(`Failed to fetch sequences: ${response.statusText}`);
           setSequences([]);
           return;
         }
 
         const data = await response.json();
-        console.log("Sequences API response data:", data);
+        const sequencesData = Array.isArray(data) ? data : data.sequences || [];
+        setSequences(sequencesData);
 
-        // Check if data is in the expected format
-        if (data && typeof data === "object") {
-          // Handle both array response and paginated response with sequences property
-          const sequencesData = Array.isArray(data)
-            ? data
-            : data.sequences || [];
-
-          console.log("Processed sequences data:", sequencesData);
-
-          setSequences(sequencesData);
-          if (sequencesData.length > 0) {
-            setSelectedSequenceId(sequencesData[0].id);
-          } else {
-            console.log("No sequences found in the response");
-          }
-        } else {
-          console.error("Unexpected data format:", data);
-          toast.error("Received unexpected data format from server");
-          setSequences([]);
+        if (sequencesData.length > 0) {
+          setSelectedSequenceId(sequencesData[0].id);
         }
       } catch (error) {
-        console.error("Failed to fetch sequences:", error);
         toast.error("Failed to load sequences. Please try again.");
         setSequences([]);
       } finally {
@@ -218,15 +111,12 @@ export function AddToSequenceModal({
       }
     };
 
-    if (isVisible) {
+    if (open) {
       fetchSequences();
     }
-  }, [isVisible]);
+  }, [open]);
 
   const handleAddToSequence = async () => {
-    console.log("=== handleAddToSequence START ===");
-    console.log("Selected sequence ID:", selectedSequenceId);
-
     if (!selectedSequenceId) {
       toast.error("Please select a sequence");
       return;
@@ -235,63 +125,14 @@ export function AddToSequenceModal({
     setAdding(true);
 
     try {
-      // Special case for contact IDs in URL format
-      if (
-        contactIds &&
-        contactIds.length === 1 &&
-        contactIds[0].includes(",")
-      ) {
-        console.log("Special case: comma-separated IDs in URL");
-        const extractedIds = contactIds[0].split(",").map((id) => id.trim());
-        console.log("Extracted IDs:", extractedIds);
-
-        if (extractedIds.length > 0) {
-          console.log("Using bulk endpoint with extracted IDs");
-          const response = await fetch(
-            `/api/sequences/${selectedSequenceId}/contacts/bulk`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                contactIds: extractedIds,
-              }),
-            }
-          );
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            toast.error(errorData.message);
-            return;
-          }
-
-          const data = await response.json();
-          toast.success(
-            `Added ${data.added} contacts to sequence${
-              data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
-            }`
-          );
-          // Store the last added sequence ID
-          setLastAddedSequenceId(selectedSequenceId);
-          // Don't close the modal
-          return;
-        }
-      }
-
-      if (isFromList) {
-        console.log("Using isFromList condition with listId:", listId);
-        // Add all contacts from a list
+      // Case 1: Adding all contacts from a list
+      if (isFromList && listId) {
         const response = await fetch(
-          `/api/sequences/${selectedSequenceId}/contacts/from-list`,
+          `/api/sequences/${selectedSequenceId}/contacts/list`,
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              listId,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ listId }),
           }
         );
 
@@ -302,27 +143,25 @@ export function AddToSequenceModal({
         }
 
         const data = await response.json();
-        console.log("API response data:", data);
         toast.success(
-          `Added ${data.added} contacts from ${listName} to sequence`
+          `Added ${data.added} contacts from ${listName} to sequence${
+            data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
+          }`
         );
-        // Store the last added sequence ID
-        setLastAddedSequenceId(selectedSequenceId);
-        // Don't close the modal
-      } else if (isMultiple) {
-        console.log(
-          "Using isMultiple condition with allContactIds:",
-          allContactIds
-        );
-        // Add multiple contacts using their IDs
-        // Use the bulk endpoint
-        console.log("Using bulk endpoint with contactIds:", allContactIds);
 
-        // Ensure we have valid contact IDs
-        if (!allContactIds.length) {
-          console.error("No valid contact IDs found");
+        setLastAddedSequenceId(selectedSequenceId);
+        return;
+      }
+
+      // Case 2: Adding multiple selected contacts
+      if (isMultiple) {
+        const idsToAdd =
+          contactIds.length > 0
+            ? contactIds
+            : contacts.map((c) => c.id).filter(Boolean);
+
+        if (idsToAdd.length === 0) {
           toast.error("No valid contact IDs found");
-          setAdding(false);
           return;
         }
 
@@ -330,12 +169,8 @@ export function AddToSequenceModal({
           `/api/sequences/${selectedSequenceId}/contacts/bulk`,
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contactIds: allContactIds,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contactIds: idsToAdd }),
           }
         );
 
@@ -346,294 +181,43 @@ export function AddToSequenceModal({
         }
 
         const data = await response.json();
-        console.log("API response data:", data);
-
         toast.success(
           `Added ${data.added} contacts to sequence${
             data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
           }`
         );
-        // Store the last added sequence ID
+
         setLastAddedSequenceId(selectedSequenceId);
-        // Don't close the modal
-      } else if (isSingleContactInArray && contacts.length > 0) {
-        // Handle single contact from contacts array
-        console.log("Using single contact from contacts array:", contacts[0]);
-
-        // Get the contact ID, handling the case where it might only have an id property
-        const contactId = contacts[0].id || (contacts[0] as any).id;
-
-        if (!contactId) {
-          console.error("No valid contact ID found in contacts array");
-          console.log("Contact data:", contacts[0]);
-          toast.error("No valid contact ID found");
-          setAdding(false);
-          return;
-        }
-
-        // Use direct API call for single contact
-        console.log(
-          "Using direct API call for single contact from array with ID:",
-          contactId
-        );
-        const response = await fetch(
-          `/api/sequences/${selectedSequenceId}/contacts`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contactId: contactId,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          toast.error(errorData.message);
-          return;
-        }
-
-        const data = await response.json();
-        console.log("API response data:", data);
-
-        toast.success("Contact added to sequence");
-        // Store the last added sequence ID
-        setLastAddedSequenceId(selectedSequenceId);
-        // Don't close the modal
-      } else if (contact) {
-        console.log("Using contact condition with contact ID:", contact.id);
-        // Add a single contact
-        if (updateReadinessField) {
-          console.log("Using client action with updateReadinessField");
-          // Use the client action if sequence context is available
-          await addContactToSequence(
-            selectedSequenceId,
-            contact.id,
-            updateReadinessField
-          );
-        } else {
-          console.log("Using direct API call for single contact");
-          // Use direct API call if sequence context is not available
-          const response = await fetch(
-            `/api/sequences/${selectedSequenceId}/contacts`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                contactId: contact.id,
-              }),
-            }
-          );
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            toast.error(errorData.message);
-            return;
-          }
-
-          const data = await response.json();
-          console.log("API response data:", data);
-        }
-
-        toast.success("Contact added to sequence");
-        // Store the last added sequence ID
-        setLastAddedSequenceId(selectedSequenceId);
-        // Don't close the modal
-      } else if (allContactIds.length > 0) {
-        // Fallback: Use allContactIds if we have them but none of the above conditions matched
-        console.log("Using fallback with allContactIds:", allContactIds);
-
-        // Use the appropriate endpoint based on the number of contact IDs
-        if (allContactIds.length === 1) {
-          // Single contact
-          console.log(
-            "Using direct API call for single contact ID:",
-            allContactIds[0]
-          );
-          const response = await fetch(
-            `/api/sequences/${selectedSequenceId}/contacts`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                contactId: allContactIds[0],
-              }),
-            }
-          );
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            toast.error(errorData.message);
-            return;
-          }
-
-          const data = await response.json();
-          console.log("API response data:", data);
-
-          toast.success("Contact added to sequence");
-          // Store the last added sequence ID
-          setLastAddedSequenceId(selectedSequenceId);
-          // Don't close the modal
-        } else {
-          // Multiple contacts
-          console.log("Using bulk endpoint with contactIds:", allContactIds);
-          const response = await fetch(
-            `/api/sequences/${selectedSequenceId}/contacts/bulk`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                contactIds: allContactIds,
-              }),
-            }
-          );
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            toast.error(errorData.message);
-            return;
-          }
-
-          const data = await response.json();
-          console.log("API response data:", data);
-
-          toast.success(
-            `Added ${data.added} contacts to sequence${
-              data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
-            }`
-          );
-          // Store the last added sequence ID
-          setLastAddedSequenceId(selectedSequenceId);
-          // Don't close the modal
-        }
-      } else {
-        // Last resort fallback - try to extract any contact IDs we can find
-        console.log(
-          "No standard condition matched, trying to extract any valid contact IDs"
-        );
-
-        let lastResortContactIds: string[] = [];
-
-        // Try to extract from contacts array
-        if (contacts && contacts.length > 0) {
-          const extractedIds = contacts
-            .map((c) => {
-              // Try different ways to access the ID
-              const possibleId = c.id || (c as any).id;
-              if (possibleId) return possibleId;
-
-              // Log the contact object for debugging
-              console.log("Contact without clear ID:", c);
-              return null;
-            })
-            .filter(Boolean);
-
-          if (extractedIds.length > 0) {
-            lastResortContactIds = extractedIds;
-            console.log("Extracted IDs from contacts:", lastResortContactIds);
-          }
-        }
-
-        // If we found any IDs, use them
-        if (lastResortContactIds.length > 0) {
-          console.log("Using last resort contact IDs:", lastResortContactIds);
-
-          if (lastResortContactIds.length === 1) {
-            // Single contact
-            console.log(
-              "Using single contact ID as last resort:",
-              lastResortContactIds[0]
-            );
-            const response = await fetch(
-              `/api/sequences/${selectedSequenceId}/contacts`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  contactId: lastResortContactIds[0],
-                }),
-              }
-            );
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              toast.error(errorData.message);
-              return;
-            }
-
-            toast.success("Contact added to sequence");
-            // Store the last added sequence ID
-            setLastAddedSequenceId(selectedSequenceId);
-            // Don't close the modal
-          } else {
-            // Multiple contacts
-            console.log(
-              "Using multiple contact IDs as last resort:",
-              lastResortContactIds
-            );
-            const response = await fetch(
-              `/api/sequences/${selectedSequenceId}/contacts/bulk`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  contactIds: lastResortContactIds,
-                }),
-              }
-            );
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              toast.error(errorData.message);
-              return;
-            }
-
-            const data = await response.json();
-            toast.success(
-              `Added ${data.added} contacts to sequence${
-                data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
-              }`
-            );
-            // Store the last added sequence ID
-            setLastAddedSequenceId(selectedSequenceId);
-            // Don't close the modal
-          }
-        } else {
-          console.error(
-            "No condition matched and no valid contact IDs could be found!"
-          );
-          console.log("isFromList:", isFromList);
-          console.log("isMultiple:", isMultiple);
-          console.log("isSingleContactInArray:", isSingleContactInArray);
-          console.log("contact:", contact);
-          console.log("contacts:", contacts);
-          console.log("contactIds:", contactIds);
-          console.log("allContactIds:", allContactIds);
-          toast.error("Failed to determine how to add contact(s) to sequence");
-          setAdding(false);
-          return;
-        }
+        return;
       }
 
-      console.log("Successfully added to sequence");
-      // Don't call onClose() to keep the modal open
+      // Case 3: Adding a single contact
+      const contactId = contacts[0]?.id || contact?.id;
+      if (!contactId) {
+        toast.error("No valid contact ID found");
+        return;
+      }
+
+      const response = await fetch(
+        `/api/sequences/${selectedSequenceId}/contacts`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contactId }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.message);
+        return;
+      }
+
+      toast.success("Contact added to sequence");
+      setLastAddedSequenceId(selectedSequenceId);
     } catch (error) {
-      console.error("Failed to add to sequence:", error);
       toast.error("Failed to add to sequence");
     } finally {
-      console.log("=== handleAddToSequence END ===");
       setAdding(false);
     }
   };
@@ -653,7 +237,7 @@ export function AddToSequenceModal({
     title = `Add Contacts from ${listName} to Sequence`;
     description = `Add all ${contactCount} contacts from ${listName} to a sequence.`;
   } else if (isMultiple) {
-    title = `Add ${contactsCount} Contacts to Sequence`;
+    title = `Add ${contacts.length} Contacts to Sequence`;
     description = `Select a sequence to add the selected contacts to.`;
   } else if (isSingleContactInArray) {
     // Handle single contact from contacts array
@@ -670,17 +254,9 @@ export function AddToSequenceModal({
 
   return (
     <Sheet
-      open={isVisible}
+      open={open}
       onOpenChange={(isOpen) => {
-        console.log(
-          "Sheet onOpenChange:",
-          isOpen,
-          "Previous open state:",
-          isVisible
-        );
         if (!isOpen) {
-          // Simply call onClose directly when the sheet is closed
-          setIsVisible(false);
           onClose();
         }
       }}
@@ -821,7 +397,7 @@ export function AddToSequenceModal({
                 {isFromList
                   ? "Add List to Selected Sequence"
                   : isMultiple
-                    ? `Add ${contactsCount} Contacts to Sequence`
+                    ? `Add ${contacts.length} Contacts to Sequence`
                     : "Add to Selected Sequence"}
               </>
             )}

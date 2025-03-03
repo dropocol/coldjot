@@ -157,27 +157,24 @@ export const ListDetailsView = memo(
     };
 
     const handleBulkRemove = async () => {
-      if (!list) return;
+      if (!list || selectedContacts.size === 0) return;
 
       try {
-        // Get all contacts to exclude the selected ones
-        const allContactIds = await getAllContactIds(list.id);
-        const updatedContacts = allContactIds.filter(
-          (id) => !selectedContacts.has(id)
-        );
-
-        const response = await fetch(`/api/lists/${list.id}`, {
-          method: "PATCH",
+        const response = await fetch(`/api/lists/${list.id}/contacts`, {
+          method: "DELETE",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            contacts: updatedContacts,
+            contactIds: Array.from(selectedContacts),
           }),
         });
 
-        if (!response.ok)
+        if (!response.ok) {
           throw new Error("Failed to remove contacts from list");
+        }
+
+        const data = await response.json();
 
         // Refresh the list to get updated data
         fetchList();
@@ -185,25 +182,10 @@ export const ListDetailsView = memo(
         // Clear selection
         setSelectedContacts(new Set());
 
-        toast.success(`${selectedContacts.size} contacts removed from list`);
+        toast.success(`${data.removed} contacts removed from list`);
       } catch (error) {
         console.error("Failed to remove contacts:", error);
         toast.error("Failed to remove contacts from list");
-      }
-    };
-
-    // Helper function to get all contact IDs for a list
-    const getAllContactIds = async (listId: string): Promise<string[]> => {
-      try {
-        // Fetch all contacts (without pagination) to get their IDs
-        const response = await fetch(`/api/lists/${listId}/contacts`);
-        if (!response.ok) throw new Error("Failed to fetch all contacts");
-        const data = await response.json();
-        return data.contacts.map((c: Contact) => c.id);
-      } catch (error) {
-        console.error("Failed to fetch all contact IDs:", error);
-        // Fallback to current page contacts if we can't get all
-        return list?.contacts.map((c) => c.id) || [];
       }
     };
 
@@ -265,21 +247,18 @@ export const ListDetailsView = memo(
       if (!list) return;
 
       try {
-        // Get all contacts to exclude the one to remove
-        const allContactIds = await getAllContactIds(list.id);
-        const updatedContacts = allContactIds.filter((id) => id !== contactId);
-
-        const response = await fetch(`/api/lists/${list.id}`, {
-          method: "PATCH",
+        // Use the DELETE endpoint directly with a single contact ID
+        const response = await fetch(`/api/lists/${list.id}/contacts`, {
+          method: "DELETE",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            contacts: updatedContacts,
+            contactIds: [contactId],
           }),
         });
 
-        if (!response.ok) throw new Error("Failed to update list");
+        if (!response.ok) throw new Error("Failed to remove contact from list");
 
         // Refresh the list to get updated data
         fetchList();

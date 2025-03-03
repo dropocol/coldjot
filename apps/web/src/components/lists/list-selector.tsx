@@ -74,7 +74,11 @@ export function ListSelector({
         }
       );
 
-      if (!response.ok) throw new Error("Failed to add contacts");
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.message);
+        return;
+      }
 
       toast.success(`Added ${list.contacts.length} contacts from ${list.name}`);
       setOpen(false);

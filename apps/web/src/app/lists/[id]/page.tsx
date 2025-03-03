@@ -135,46 +135,31 @@ export default function ListDetailsPage() {
     if (selectedContacts.length === 0) return;
 
     try {
-      // Get all contacts to exclude the selected ones
-      const response = await fetch(`/api/lists/${listId}/contacts`);
-      if (!response.ok) throw new Error("Failed to fetch all contacts");
-      const data = await response.json();
-      const allContactIds = data.contacts.map((c: Contact) => c.id);
-
-      // Filter out the selected contacts
-      const updatedContacts = allContactIds.filter(
-        (id: string) => !selectedContacts.includes(id)
-      );
-
-      // Update the list with the filtered contacts
-      const updateResponse = await fetch(`/api/lists/${listId}`, {
-        method: "PATCH",
+      const response = await fetch(`/api/lists/${listId}/contacts`, {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contacts: updatedContacts,
+          contactIds: Array.from(selectedContacts),
         }),
       });
 
-      if (!updateResponse.ok)
+      if (!response.ok) {
         throw new Error("Failed to remove contacts from list");
+      }
+
+      const data = await response.json();
 
       // Refresh the list view
-      if (
-        listDetailsViewRef.current &&
-        typeof listDetailsViewRef.current.fetchList === "function"
-      ) {
+      if (listDetailsViewRef.current?.fetchList) {
         listDetailsViewRef.current.fetchList();
-      } else {
-        // Fallback to page reload if the ref method isn't available
-        window.location.reload();
       }
 
       // Clear selection
       setSelectedContacts([]);
 
-      toast.success(`${selectedContacts.length} contacts removed from list`);
+      toast.success(`${data.removed} contacts removed from list`);
     } catch (error) {
       console.error("Failed to remove contacts:", error);
       toast.error("Failed to remove contacts from list");
