@@ -11,6 +11,7 @@ export const QUEUE_NAMES = {
   THREAD_WATCHER: "thread-watcher",
   CONTACT: "contact-processing",
   EMAIL_SCHEDULE: "email-schedule",
+  LIST_SYNC: "list-sync",
 } as const;
 
 export type QueueName = keyof typeof QUEUE_NAMES;
@@ -22,6 +23,7 @@ export const JOB_ATTEMPTS = {
   THREAD: 3,
   CONTACT: 3,
   EMAIL_SCHEDULE: 2,
+  LIST_SYNC: 3,
 } as const;
 
 // Retry delays in milliseconds
@@ -31,6 +33,7 @@ export const RETRY_DELAYS = {
   THREAD: 1000, // 1 second
   CONTACT: 1000, // 1 second
   EMAIL_SCHEDULE: 1000, // 1 second
+  LIST_SYNC: 5000, // 5 seconds
 } as const;
 
 // Retry configurations with backoff strategies
@@ -68,6 +71,13 @@ export const RETRY_OPTIONS = {
     backoff: {
       type: "exponential" as const,
       delay: RETRY_DELAYS.EMAIL_SCHEDULE,
+    },
+  },
+  LIST_SYNC: {
+    attempts: JOB_ATTEMPTS.LIST_SYNC,
+    backoff: {
+      type: "exponential" as const,
+      delay: RETRY_DELAYS.LIST_SYNC,
     },
   },
 } as const;
@@ -133,6 +143,12 @@ export const QUEUE_OPTIONS: Partial<Record<QueueName, QueueConfig>> = {
       ...RETRY_OPTIONS.EMAIL_SCHEDULE,
     },
   },
+  LIST_SYNC: {
+    defaultJobOptions: {
+      ...DEFAULT_QUEUE_OPTIONS.defaultJobOptions,
+      ...RETRY_OPTIONS.LIST_SYNC,
+    },
+  },
 };
 
 // Processor concurrency settings
@@ -142,6 +158,7 @@ export const PROCESSOR_CONCURRENCY = {
   THREAD_WATCHER: 2,
   CONTACT: 5,
   EMAIL_SCHEDULE: 3,
+  LIST_SYNC: 5,
 } as const;
 
 export const PROCESSOR_CONFIG = {
@@ -277,6 +294,35 @@ export const PROCESSOR_CONFIG = {
     rateLimits: {
       maxPerSecond: 100,
       maxPerMinute: 1000,
+    },
+    queueOptions: {
+      prefix: QUEUE_PREFIX.slice(0, -1),
+      removeOnComplete: {
+        count: 1000,
+        age: 24 * 60 * 60,
+      },
+      removeOnFail: {
+        count: 5000,
+        age: 7 * 24 * 60 * 60,
+      },
+    },
+  },
+  [QUEUE_NAMES.LIST_SYNC]: {
+    worker: {
+      prefix: QUEUE_PREFIX.slice(0, -1),
+      concurrency: 5,
+      limiter: {
+        max: 50,
+        duration: 1000,
+      },
+      connection: {
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+      },
+    },
+    rateLimits: {
+      maxPerSecond: 50,
+      maxPerMinute: 500,
     },
     queueOptions: {
       prefix: QUEUE_PREFIX.slice(0, -1),

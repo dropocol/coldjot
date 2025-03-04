@@ -27,6 +27,9 @@ export const SequenceTabs = ({
           <TabsTrigger value="contacts" className={tabStyle}>
             Contacts
           </TabsTrigger>
+          <TabsTrigger value="lists" className={tabStyle}>
+            Lists
+          </TabsTrigger>
           <TabsTrigger value="timeline" className={tabStyle}>
             Timeline
           </TabsTrigger>

@@ -20,6 +20,7 @@ import { SequenceProcessor } from "./jobs/sequence/processor";
 import { EmailProcessor } from "./jobs/email/processor";
 import { ContactProcessor } from "./jobs/contact/processor";
 import { ScheduleProcessor } from "./jobs/schedule/processor";
+import { ListSyncWatcher } from "./jobs/list/watcher";
 // import { ThreadProcessor } from "./jobs/thread-watch/processor";
 import { WatchCleanupService } from "./watch/cleanup";
 import { PubSubService } from "./pubsub/client";
@@ -92,6 +93,11 @@ export class ServiceManager {
       await this.pubSubService.initialize();
       await this.pubSubService.startListening();
       logger.info("📨 PubSub service initialized and listening");
+
+      // Start list sync watcher
+      const listSyncWatcher = ListSyncWatcher.getInstance();
+      listSyncWatcher.start();
+      logger.info("📋 List sync watcher started");
     } catch (error) {
       logger.error("❌ Error initializing core services:", error);
       throw error;
@@ -148,6 +154,7 @@ export class ServiceManager {
         [QUEUE_NAMES.CONTACT]: (queue: Queue) => new ContactProcessor(queue),
         [QUEUE_NAMES.EMAIL_SCHEDULE]: (queue: Queue) =>
           new ScheduleProcessor(queue),
+        [QUEUE_NAMES.LIST_SYNC]: (queue: Queue) => new ListSyncProcessor(queue),
       };
 
       for (const [queueName, createProcessor] of Object.entries(processorMap)) {
@@ -194,6 +201,11 @@ export class ServiceManager {
       // Stop PubSub service
       await this.pubSubService.stopListening();
       logger.info("📨 PubSub service stopped");
+
+      // Stop list sync watcher
+      const listSyncWatcher = ListSyncWatcher.getInstance();
+      listSyncWatcher.stop();
+      logger.info("📋 List sync watcher stopped");
 
       // Stop memory monitor
       if (this.memoryMonitor) {

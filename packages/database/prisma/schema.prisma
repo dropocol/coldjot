@@ -121,16 +121,17 @@ model Draft {
 }
 
 model EmailList {
-    id          String     @id @default(cuid())
-    name        String
-    description String?
-    tags        String[]
-    userId      String
-    user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-    contacts    Contact[]  @relation("EmailListContacts")
-    sequences   Sequence[]
-    createdAt   DateTime   @default(now())
-    updatedAt   DateTime   @updatedAt
+    id             String           @id @default(cuid())
+    name           String
+    description    String?
+    tags           String[]
+    userId         String
+    user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+    contacts       Contact[]        @relation("EmailListContacts")
+    sequences      Sequence[]       @relation("SequenceToLists") // For the single list relation
+    createdAt      DateTime         @default(now())
+    updatedAt      DateTime         @updatedAt
+    ListSyncRecord ListSyncRecord[]
 
     @@index([userId])
 }
@@ -151,12 +152,11 @@ model Sequence {
     userId          String
     createdAt       DateTime          @default(now())
     updatedAt       DateTime          @updatedAt
-    emailListId     String?
     metadata        Json?             @default("{}")
     steps           SequenceStep[]
     user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
     sequenceMailbox SequenceMailbox?  @relation("SequenceToMailbox")
-    EmailList       EmailList?        @relation(fields: [emailListId], references: [id])
+    lists           EmailList[]       @relation("SequenceToLists")
     stats           SequenceStats[]
     contacts        SequenceContact[] @relation("SequenceToContact")
     EmailEvent      EmailEvent[]
@@ -164,6 +164,7 @@ model Sequence {
     businessHours   BusinessHours?
     SequenceHealth  SequenceHealth?
     EmailTracking   EmailTracking[]
+    ListSyncRecord  ListSyncRecord[]
 
     @@index([userId])
 }
@@ -517,4 +518,24 @@ model ProcessedMessage {
     @@index([messageId])
     @@index([threadId])
     @@index([type])
+}
+
+// Model to track list sync operations
+model ListSyncRecord {
+    id            String   @id @default(cuid())
+    listId        String
+    sequenceId    String
+    status        String // 'pending', 'processing', 'completed', 'failed'
+    contactsAdded Int      @default(0)
+    error         String?
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+
+    list     EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
+    sequence Sequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+    @@index([listId])
+    @@index([sequenceId])
+    @@index([status])
+    @@index([createdAt])
 }

@@ -6,6 +6,7 @@ import routes from "./routes";
 import { createServiceManager } from "@/services/service-manager";
 import pubsubRouter from "./routes/pubsub";
 import mailboxRouter from "./routes/mailbox";
+import listsRouter from "./routes/lists";
 
 const app = express();
 const port = 3001;
@@ -45,6 +46,7 @@ app.use("/api", routes);
 app.use("/pubsub", pubsubRouter); // Keep the /pubsub route for Gmail notifications
 app.use("/api/pubsub", pubsubRouter); // Also mount under /api for consistency
 app.use("/api/mailbox", mailboxRouter);
+app.use("/api/lists", listsRouter);
 
 // Add specific error handling for PubSub routes
 app.use(
