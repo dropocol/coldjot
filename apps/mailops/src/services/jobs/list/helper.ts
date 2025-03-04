@@ -44,18 +44,75 @@ export async function syncListToSequences(listId: string) {
 
     // Process each sequence
     for (const sequence of list.sequences) {
-      const contactsAdded = await syncContactsToSequence(
-        sequence.id,
-        list.contacts
-      );
+      // Update sync record status to processing
+      await updateSyncRecordStatus(listId, sequence.id, "processing");
 
-      // Update any existing sync records for this list and sequence
-      await updateSyncRecords(listId, sequence.id, contactsAdded);
+      try {
+        const contactsAdded = await syncContactsToSequence(
+          sequence.id,
+          list.contacts
+        );
+
+        // Update sync record with success status and contacts added
+        await updateSyncRecordStatus(
+          listId,
+          sequence.id,
+          "completed",
+          contactsAdded
+        );
+      } catch (error) {
+        // Update sync record with error status
+        await updateSyncRecordStatus(
+          listId,
+          sequence.id,
+          "failed",
+          0,
+          error instanceof Error ? error.message : "Unknown error"
+        );
+        logger.error(
+          { listId, sequenceId: sequence.id, error },
+          "Error syncing contacts to sequence"
+        );
+      }
     }
 
     logger.info({ listId }, "List sync job completed");
   } catch (error) {
     logger.error({ listId, error }, "Error in list sync job");
+  }
+}
+
+/**
+ * Updates the status of a sync record
+ */
+async function updateSyncRecordStatus(
+  listId: string,
+  sequenceId: string,
+  status: string,
+  contactsAdded: number = 0,
+  error: string | null = null
+): Promise<void> {
+  try {
+    await prisma.listSyncRecord.updateMany({
+      where: {
+        listId,
+        sequenceId,
+        status: {
+          in: ["pending", "processing"],
+        },
+      },
+      data: {
+        status,
+        contactsAdded,
+        error,
+        updatedAt: new Date(),
+      },
+    });
+  } catch (err) {
+    logger.error(
+      { listId, sequenceId, error: err },
+      "Error updating sync record status"
+    );
   }
 }
 
@@ -112,52 +169,5 @@ async function syncContactsToSequence(
   } catch (error) {
     logger.error({ sequenceId, error }, "Error syncing contacts to sequence");
     return 0;
-  }
-}
-
-/**
- * Updates any existing sync records for this list and sequence
- */
-async function updateSyncRecords(
-  listId: string,
-  sequenceId: string,
-  contactsAdded: number
-): Promise<void> {
-  try {
-    // Find any pending or processing sync records for this list and sequence
-    const syncRecords = await prisma.listSyncRecord.findMany({
-      where: {
-        listId,
-        sequenceId,
-        status: {
-          in: ["completed", "processing"],
-        },
-      },
-    });
-
-    if (syncRecords.length === 0) {
-      logger.info({ listId, sequenceId }, "No sync records to update");
-      return;
-    }
-
-    // Update each sync record
-    for (const record of syncRecords) {
-      await prisma.listSyncRecord.update({
-        where: {
-          id: record.id,
-        },
-        data: {
-          status: "processed",
-          contactsAdded,
-        },
-      });
-
-      logger.info(
-        { recordId: record.id, contactsAdded },
-        "Updated sync record"
-      );
-    }
-  } catch (error) {
-    logger.error({ listId, sequenceId, error }, "Error updating sync records");
   }
 }

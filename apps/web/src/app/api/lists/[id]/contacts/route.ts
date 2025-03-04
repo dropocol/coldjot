@@ -2,6 +2,56 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 
+// Helper function to trigger list sync via mailops
+async function triggerListSync(listId: string) {
+  try {
+    // Find all sequences that have this list
+    const sequences = await prisma.sequence.findMany({
+      where: {
+        lists: {
+          some: {
+            id: listId,
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    // Call mailops sync endpoint for each sequence
+    await Promise.all(
+      sequences.map(async (sequence) => {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_MAILOPS_API_URL}/lists/${listId}/sync`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              sequenceId: sequence.id,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to sync list ${listId} with sequence ${sequence.id}`
+          );
+        }
+
+        return response.json();
+      })
+    );
+
+    return true;
+  } catch (error) {
+    console.error("Failed to trigger list sync:", error);
+    return false;
+  }
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -78,10 +128,14 @@ export async function POST(
       },
     });
 
+    // After successfully adding the contact, trigger sync
+    const syncResult = await triggerListSync(id);
+
     return NextResponse.json({
       ...updatedList,
       message: "Contact added to list successfully",
       alreadyInList: false,
+      syncStatus: syncResult ? "syncing" : "failed",
     });
   } catch (error) {
     console.error("Failed to add contact to list:", error);
@@ -255,6 +309,9 @@ export async function PUT(
     );
     console.log(`List now has ${updatedList._count.contacts} total contacts`);
 
+    // After successfully adding contacts, trigger sync
+    const syncResult = await triggerListSync(id);
+
     return NextResponse.json({
       message: "Contacts added to list successfully",
       added: contactsToAdd.length,
@@ -264,6 +321,7 @@ export async function PUT(
         id: updatedList.id,
         name: list.name,
       },
+      syncStatus: syncResult ? "syncing" : "failed",
     });
   } catch (error) {
     console.error("Failed to add contacts to list:", error);

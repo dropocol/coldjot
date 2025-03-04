@@ -105,8 +105,6 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
 
       // Process each contact
       for (const contact of newContacts) {
-        console.log(contact);
-
         try {
           await this.processContact(contact);
         } catch (error) {

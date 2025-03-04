@@ -23,8 +23,8 @@ router.post("/:listId/sync", async (req, res) => {
       data: {
         listId,
         sequenceId,
-        status: "completed",
-        contactsAdded: 0, // This will be updated during processing
+        status: "pending",
+        contactsAdded: 0,
       },
     });
 
