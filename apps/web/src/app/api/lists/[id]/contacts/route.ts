@@ -334,7 +334,7 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -347,10 +347,11 @@ export async function DELETE(
       return new Response("Invalid contact IDs", { status: 400 });
     }
 
+    const { id } = await params;
     // Get the list and verify ownership
     const list = await prisma.emailList.findUnique({
       where: {
-        id: params.id,
+        id: id,
         userId: session.user.id,
       },
       include: {
@@ -375,7 +376,7 @@ export async function DELETE(
     // Update the list with the filtered contacts
     await prisma.emailList.update({
       where: {
-        id: params.id,
+        id: id,
       },
       data: {
         contacts: {

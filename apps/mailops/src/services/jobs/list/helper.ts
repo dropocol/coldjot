@@ -1,6 +1,8 @@
 import { prisma } from "@coldjot/database";
 import { logger } from "@/lib/log";
 
+const BATCH_SIZE = 1000; // Process contacts in chunks of 1000
+
 /**
  * Syncs contacts from a list to all sequences that have that list attached
  */
@@ -8,17 +10,12 @@ export async function syncListToSequences(listId: string) {
   try {
     logger.info({ listId }, "Starting list sync job");
 
-    // Get the list with its contacts
+    // Get the list with its sequences first (without contacts)
     const list = await prisma.emailList.findUnique({
-      where: {
-        id: listId,
-      },
+      where: { id: listId },
       include: {
-        contacts: true,
         sequences: {
-          select: {
-            id: true,
-          },
+          select: { id: true },
         },
       },
     });
@@ -33,13 +30,24 @@ export async function syncListToSequences(listId: string) {
       return;
     }
 
+    // Get total contact count
+    const totalContacts = await prisma.emailList.findUnique({
+      where: { id: listId },
+      include: {
+        _count: {
+          select: { contacts: true },
+        },
+      },
+    });
+
+    const totalContactCount = totalContacts?._count.contacts || 0;
     logger.info(
       {
         listId,
-        contactCount: list.contacts.length,
+        totalContacts: totalContactCount,
         sequenceCount: list.sequences.length,
       },
-      "Syncing contacts from list to sequences"
+      "Starting batch sync process"
     );
 
     // Process each sequence
@@ -48,20 +56,59 @@ export async function syncListToSequences(listId: string) {
       await updateSyncRecordStatus(listId, sequence.id, "processing");
 
       try {
-        const contactsAdded = await syncContactsToSequence(
-          sequence.id,
-          list.contacts
-        );
+        let processedCount = 0;
+        let totalAdded = 0;
+
+        // Process contacts in batches
+        while (processedCount < totalContactCount) {
+          const contacts = await prisma.emailList.findUnique({
+            where: { id: listId },
+            include: {
+              contacts: {
+                take: BATCH_SIZE,
+                skip: processedCount,
+              },
+            },
+          });
+
+          if (!contacts?.contacts.length) break;
+
+          const added = await syncContactsToSequence(
+            sequence.id,
+            contacts.contacts
+          );
+
+          totalAdded += added;
+          processedCount += contacts.contacts.length;
+
+          logger.info(
+            {
+              listId,
+              sequenceId: sequence.id,
+              progress: `${processedCount}/${totalContactCount}`,
+              batchAdded: added,
+            },
+            "Batch processed"
+          );
+        }
 
         // Update sync record with success status and contacts added
         await updateSyncRecordStatus(
           listId,
           sequence.id,
           "completed",
-          contactsAdded
+          totalAdded
+        );
+
+        logger.info(
+          {
+            listId,
+            sequenceId: sequence.id,
+            totalAdded,
+          },
+          "Sequence sync completed"
         );
       } catch (error) {
-        // Update sync record with error status
         await updateSyncRecordStatus(
           listId,
           sequence.id,
@@ -125,23 +172,19 @@ async function syncContactsToSequence(
   contacts: any[]
 ): Promise<number> {
   try {
-    // Get existing sequence contacts
+    // Get existing sequence contacts efficiently using a Set
     const existingContacts = await prisma.sequenceContact.findMany({
-      where: {
-        sequenceId,
-      },
-      select: {
-        contactId: true,
-      },
+      where: { sequenceId },
+      select: { contactId: true },
     });
 
-    const existingContactIds = existingContacts.map(
-      (contact) => contact.contactId
+    const existingContactIds = new Set(
+      existingContacts.map((contact) => contact.contactId)
     );
 
     // Filter out contacts that are already in the sequence
     const newContacts = contacts.filter(
-      (contact) => !existingContactIds.includes(contact.id)
+      (contact) => !existingContactIds.has(contact.id)
     );
 
     if (newContacts.length === 0) {
@@ -149,16 +192,20 @@ async function syncContactsToSequence(
       return 0;
     }
 
-    // Add new contacts to the sequence
-    await prisma.sequenceContact.createMany({
-      data: newContacts.map((contact) => ({
-        sequenceId,
-        contactId: contact.id,
-        status: "not_sent",
-        currentStep: 0,
-      })),
-      skipDuplicates: true,
-    });
+    // Process in smaller chunks for better memory management
+    const chunkSize = 100;
+    for (let i = 0; i < newContacts.length; i += chunkSize) {
+      const chunk = newContacts.slice(i, i + chunkSize);
+      await prisma.sequenceContact.createMany({
+        data: chunk.map((contact) => ({
+          sequenceId,
+          contactId: contact.id,
+          status: "not_sent",
+          currentStep: 0,
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     logger.info(
       { sequenceId, addedCount: newContacts.length },
