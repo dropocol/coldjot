@@ -29,13 +29,11 @@
             "cache": false,
             "env": [
                 "NEXT_PUBLIC_*",
-                "AUTH_TRUST_HOST",
-                "NEXTAUTH_URL",
-                "NEXTAUTH_SECRET",
-                "APOLLO_API_KEY",
-                "DATABASE_URL",
+                "NEXTAUTH_*",
                 "GOOGLE_*",
-                "ENCRYPTION_KEY"
+                "DATABASE_URL",
+                "ENCRYPTION_KEY",
+                "AUTH_TRUST_HOST"
             ],
             "inputs": [
                 "$TURBO_DEFAULT$",
@@ -51,13 +49,11 @@
             "cache": true,
             "env": [
                 "NEXT_PUBLIC_*",
-                "AUTH_TRUST_HOST",
-                "NEXTAUTH_URL",
-                "NEXTAUTH_SECRET",
-                "APOLLO_API_KEY",
-                "DATABASE_URL",
+                "NEXTAUTH_*",
                 "GOOGLE_*",
-                "ENCRYPTION_KEY"
+                "DATABASE_URL",
+                "ENCRYPTION_KEY",
+                "AUTH_TRUST_HOST"
             ],
             "inputs": [
                 "$TURBO_DEFAULT$",
@@ -68,13 +64,11 @@
         "start:prod": {
             "env": [
                 "NEXT_PUBLIC_*",
-                "AUTH_TRUST_HOST",
-                "NEXTAUTH_URL",
-                "NEXTAUTH_SECRET",
-                "APOLLO_API_KEY",
-                "DATABASE_URL",
+                "NEXTAUTH_*",
                 "GOOGLE_*",
-                "ENCRYPTION_KEY"
+                "DATABASE_URL",
+                "ENCRYPTION_KEY",
+                "AUTH_TRUST_HOST"
             ],
             "inputs": [
                 "$TURBO_DEFAULT$",

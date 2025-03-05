@@ -27,7 +27,8 @@
                 "REDIS_*",
                 "GOOGLE_*",
                 "QUEUE_PREFIX",
-                "PUBSUB_*"
+                "PUBSUB_*",
+                "BYPASS_BUSINESS_HOURS"
             ],
             "outputs": [
                 "dist/**"
