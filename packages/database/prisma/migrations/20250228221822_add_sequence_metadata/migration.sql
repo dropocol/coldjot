@@ -5,7 +5,7 @@
 
 */
 -- DropIndex
-DROP INDEX "Contact_email_key";
+DROP INDEX IF EXISTS "Contact_email_key";
 
 -- AlterTable
 ALTER TABLE "Sequence" ADD COLUMN     "metadata" JSONB DEFAULT '{}';
