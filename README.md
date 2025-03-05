@@ -230,20 +230,20 @@ Before running the application, you'll need to set up several services and envir
 
 2. **Google OAuth Setup**
 
-- We have to setup 2 different clients in a google console project
+- Set up two separate clients in the Google Cloud Console project: One for logging into the platform and another for attaching multiple mailboxes. Each client will have different scopes.
 - Go to [Google Cloud Console](https://console.cloud.google.com)
 - Create a new project
 - Add the following APIs in your Google Cloud Project:
   - [Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com)
-  - Enable the Google OAuth2 API
-- Create OAuth 2.0 credentials (Web application type)
+  - [Cloud Pub/Sub API](https://console.cloud.google.com/apis/library/pubsub.googleapis.com)
+- Create two OAuth 2.0 credentials (Web application type):
+  - One for login with the basic scopes for user authentication.
+  - Another for mailboxes with the required scopes for accessing mailbox data.
 - Add authorized redirect URIs:
-  - Development:
+  - Login:
     - `http://localhost:3000/api/auth/callback/google`
-    - `http://localhost:3000/api/v1/mail/auth/google/callback`
-  - Production:
-    - `https://your-production-url/api/auth/callback/google`
-    - `https://your-production-url/api/v1/mail/auth/google/callback`
+  - Mailboxes:
+    - `http://localhost:3000/api/mailboxes/gmail/callback`
 
 > [!WARNING] The redirect URIs must match **exactly** what you configure in the Google Cloud Console, including the protocol (http/https), domain, and path.
 
@@ -252,15 +252,15 @@ Before running the application, you'll need to set up several services and envir
 1. Copy the example env files:
 
 ```bash
-# Copy example env files for all applications
+# Copy example env files
 cp apps/web/env/.env.example apps/web/env/.env.development
 cp apps/mailops/env/.env.example apps/mailops/env/.env.development
-cp apps/packages/env/.env.example apps/packages/env/.env.development
+cp packages/database/env/.env.example packages/database/env/.env.development
 ```
 
-2. Configure the environment variables in each `.env` file:
+2. Configure the environment variables in each `.env` or `.env.development` file:
 
-#### Web Application (apps/web/.env)
+#### Web Application (apps/web/env/.env.development)
 
 ```env
 # General
@@ -293,7 +293,7 @@ GOOGLE_CLIENT_SECRET_EMAIL=                             # Google client secret f
 GOOGLE_REDIRECT_URI_EMAIL=http://localhost:3000/api/mailboxes/gmail/callback
 ```
 
-#### Mail Operations Service (apps/mailops/.env)
+#### Mail Operations Service (apps/mailops/env/.env.development)
 
 ```env
 # General Configuration
@@ -352,6 +352,7 @@ database_name = coldjot_dev
 
 # Run database migrations
 cd packages/database
+npm run db:generate
 npm run db:migrate
 ```
 
@@ -367,7 +368,7 @@ npm run db:studio
 
 ```bash
 # Start Redis and PostgreSQL if not running
-docker-compose up -d redis postgres
+docker-compose up -d
 ```
 
 2. Run the development server:
