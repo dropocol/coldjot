@@ -1,9 +1,7 @@
 <h1 align="left">ColdJot</h3>
 <a href="https://coldjot.com">
-  <img alt="ColdJot - Modern email automation platform for businesses" src="https://app.coldjot.com/images/screenshot/github.png">
+  <img alt="ColdJot - Modern email automation platform for businesses" src="./github.png" />
 </a>
-
-<!-- [![Deploy with Vercel](https://vercel.com/button)](https://coldjot.com) -->
 
 The modern email automation platform for managing and streamlining your email operations.
 
@@ -17,7 +15,7 @@ The modern email automation platform for managing and streamlining your email op
 >
 > <code><span style="background-color: #FFECB3; color: #FF8F00; padding: 0.1em 0.2em; border-radius: 3px; font-size: 0.80em; font-weight: 600;">IN PROGRESS</span></code>
 >
-> We're actively working on comprehensive development documentation to help you get started with ColdJot. In the meantime, please refer to the [Getting Started](#getting-started) and [Self-Hosting](#self-hosting) sections below. If you have any questions, feel free to [open an issue](https://github.com/dropocol/coldjot/issues) or join our community!
+> We're actively working on comprehensive development documentation to help you get started with ColdJot. In the meantime, please refer to the [Getting Started](#getting-started) section below. If you have any questions, feel free to [open an issue](https://github.com/dropocol/coldjot/issues) or join our community!
 
 ## Table of Contents
 
@@ -166,7 +164,7 @@ Visualize your email sequence timeline and monitor outgoing communications in re
 - **Forever Free**: The core ColdJot platform will always be available as open source software
 - **No Vendor Lock-in**: You own your data and can self-host without restrictions
 - **Transparent Development**: Our development process is open and community-driven
-- **MIT License**: Freedom to use, modify, and distribute the software for any purpose
+- **AGPLv3 License**: Freedom to use, modify, and distribute the software while ensuring contributions remain open source
 
 While we may offer premium hosted services in the future, the core platform will remain open source, ensuring you always have the freedom to run ColdJot on your own terms.
 
@@ -213,6 +211,9 @@ ColdJot is built with modern and reliable technologies:
 
 - Node.js >= 20.0.0
 - npm >= 8.0.0 (or yarn)
+- Docker >= 20.10.0 (for local services)
+- PostgreSQL >= 14.0.0 (if not using Docker)
+- Redis >= 6.0.0 (if not using Docker)
 
 Before running the application, you'll need to set up several services and environment variables:
 
@@ -524,7 +525,7 @@ When you're finished with the changes, create a pull request, also known as a PR
 
 ## License
 
-ColdJot is open-source under the GNU Affero General Public License Version 3 (AGPLv3) or any later version. You can [find it here](https://github.com/dropocol/coldjot/blob/main/LICENSE.md).
+ColdJot is open-source under the GNU Affero General Public License Version 3 (AGPLv3) or any later version. You can [find it here](https://github.com/dropocol/coldjot/blob/master/LICENSE).
 
 ---
 
