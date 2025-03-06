@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 
 const openai = new OpenAI({
   baseURL: "https://api.deepseek.com",
-  apiKey: process.env.DEEPSEEK_API_KEY_DEV,
+  apiKey:
+    process.env.NODE_ENV === "development"
+      ? process.env.DEEPSEEK_API_KEY_DEV
+      : "process.env.DEEPSEEK_API_KEY",
 });
 
 export async function POST(request: Request) {
