@@ -67,7 +67,6 @@ export async function POST(
             testMode: sequence.testMode ?? false,
             disableSending: sequence.disableSending ?? false,
             testEmails: sequence.testEmails || [],
-            emailListId: sequence.emailListId,
             userId: session.user.id,
             businessHours: sequence.businessHours
               ? {

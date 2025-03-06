@@ -86,7 +86,6 @@ export interface Sequence {
   testMode: boolean;
   disableSending: boolean;
   testEmails: string[];
-  emailListId?: string | null;
   businessHours?: BusinessHours;
   sequenceMailbox?: SequenceMailbox;
 }
