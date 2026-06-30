@@ -36,16 +36,12 @@ export async function POST(request: Request) {
       }),
     });
 
-    console.log("Apollo API Response:", response);
-
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error("Apollo API Error:", errorData);
+      console.error("Apollo API request failed:", response.status);
       throw new Error("Apollo API request failed");
     }
 
     const data = await response.json();
-    console.log("Apollo API Data:", data);
     return NextResponse.json(data);
   } catch (error) {
     console.error("Apollo search failed:", error);

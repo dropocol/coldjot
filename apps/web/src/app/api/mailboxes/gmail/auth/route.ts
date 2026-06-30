@@ -4,13 +4,13 @@ import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { auth } from "@/auth";
 import { encrypt } from "@/lib/crypto";
+import { logger } from "@/lib/logger";
 
 // Verify credentials are loaded
 if (
   !process.env.GOOGLE_CLIENT_ID_EMAIL ||
   !process.env.GOOGLE_CLIENT_SECRET_EMAIL
 ) {
-  console.error("Missing Gmail OAuth credentials for email accounts");
   throw new Error("Missing Gmail OAuth credentials for email accounts");
 }
 
@@ -27,17 +27,10 @@ export async function POST(request: Request) {
     process.env.GOOGLE_REDIRECT_URI_EMAIL
   );
 
-  console.log("oauth2Client", {
-    clientId: process.env.GOOGLE_CLIENT_ID_EMAIL,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET_EMAIL,
-    redirectUri: process.env.GOOGLE_REDIRECT_URI_EMAIL,
-  });
-
   try {
     // Check authentication
     const session = await auth();
     if (!session?.user?.id) {
-      console.error("[GMAIL_AUTH] No authenticated user");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -46,18 +39,9 @@ export async function POST(request: Request) {
     try {
       const body = await request.json();
       returnPath = body.returnPath || returnPath;
-    } catch (e) {
-      console.log(
-        "[GMAIL_AUTH] No body provided or invalid JSON, using default returnPath"
-      );
+    } catch {
+      // No body provided or invalid JSON — use default returnPath.
     }
-
-    // Log OAuth configuration
-    console.log("OAuth Configuration:", {
-      clientId: process.env.GOOGLE_CLIENT_ID_EMAIL?.slice(0, 30) + "...",
-      redirectUri: process.env.GOOGLE_REDIRECT_URI_EMAIL,
-      scopes: SCOPES,
-    });
 
     // Generate OAuth URL
     const url = oauth2Client.generateAuthUrl({
@@ -67,14 +51,9 @@ export async function POST(request: Request) {
       state: encrypt(JSON.stringify({ userId: session.user.id, returnPath })),
     });
 
-    console.log("[GMAIL_AUTH] Generated OAuth URL:", url.slice(0, 100) + "...");
-
     return NextResponse.json({ url });
-  } catch (error: any) {
-    console.error("[GMAIL_AUTH] Error:", {
-      message: error.message,
-      stack: error.stack,
-    });
+  } catch (error) {
+    logger.error("[GMAIL_AUTH] Error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -30,7 +30,6 @@ export async function PATCH(
 
     const { id } = await params;
     const json: UpdateSettingsBody = await request.json();
-    console.log("json.businessHours", json);
 
     // Validate the request
     if (

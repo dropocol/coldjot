@@ -70,7 +70,6 @@ export async function POST(request: Request) {
     } catch (error: any) {
       if (error.message === "TOKEN_EXPIRED") {
         // Refresh the token
-        console.log(`1️⃣ Refreshing access token point`);
         const newAccessToken = await refreshAccessToken(
           account.userId,
           account.refresh_token
@@ -78,7 +77,6 @@ export async function POST(request: Request) {
 
         // Update the token in the database
         // TODO :  save the expiration date
-        console.log("newAccessToken", newAccessToken);
         // await prisma.account.update({
         //   where: {
         //     provider_providerAccountId: {

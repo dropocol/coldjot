@@ -118,10 +118,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
         );
         // Continue with deletion even if watch stop fails
       } else {
-        console.log(
-          "[EMAIL_ACCOUNT_DELETE] Successfully stopped watch for:",
-          mailbox.email
-        );
+        // Watch successfully stopped.
       }
 
       // Wait a moment to ensure watch is stopped

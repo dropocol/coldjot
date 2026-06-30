@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
-import { Prisma } from "@prisma/client";
+import { logger } from "@/lib/logger";
+import { isNotFound, notFound } from "@/lib/auth/access";
 
-// TODO :  improve the codebase
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("[SEQUENCE_DUPLICATE] Starting sequence duplication process");
-
     const session = await auth();
-    if (!session?.user) {
-      console.log("[SEQUENCE_DUPLICATE] Unauthorized - No session user");
+    if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -21,49 +18,39 @@ export async function POST(
 
     // Validate input
     if (!id) {
-      console.log("[SEQUENCE_DUPLICATE] Missing sequence ID");
       return new NextResponse("Missing sequence ID", { status: 400 });
     }
 
     // Use a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
-      try {
-        console.log("[SEQUENCE_DUPLICATE] Starting transaction");
-
-        // First, fetch the original sequence
-        const sequence = await tx.sequence.findUnique({
-          where: {
-            id: id,
-            userId: session.user.id,
-          },
-          include: {
-            steps: {
-              orderBy: {
-                order: "asc",
-              },
+      // First, fetch the original sequence
+      const sequence = await tx.sequence.findUnique({
+        where: {
+          id: id,
+          userId: session.user.id,
+        },
+        include: {
+          steps: {
+            orderBy: {
+              order: "asc",
             },
-            businessHours: true,
-            sequenceMailbox: true,
           },
-        });
+          businessHours: true,
+          sequenceMailbox: true,
+        },
+      });
 
-        if (!sequence) {
-          throw new Error("Sequence not found");
-        }
-
-        console.log("[SEQUENCE_DUPLICATE] Found original sequence:", {
-          id: sequence.id,
-          name: sequence.name,
-          stepsCount: sequence.steps.length,
-        });
+      if (!sequence) {
+        throw new Error("Sequence not found");
+      }
 
         // Create the new sequence with all required fields
         const newSequence = await tx.sequence.create({
           data: {
             name: `${sequence.name} (Copy)`,
             status: "draft",
-            scheduleType: sequence.scheduleType || "business", // Ensure default value
-            accessLevel: sequence.accessLevel || "team", // Ensure default value
+            scheduleType: sequence.scheduleType || "business",
+            accessLevel: sequence.accessLevel || "team",
             testMode: sequence.testMode ?? false,
             disableSending: sequence.disableSending ?? false,
             testEmails: sequence.testEmails || [],
@@ -95,16 +82,12 @@ export async function POST(
           throw new Error("Failed to create new sequence");
         }
 
-        console.log("[SEQUENCE_DUPLICATE] Created new sequence:", {
-          id: newSequence.id,
-          name: newSequence.name,
-        });
-
-        // Create steps with proper error handling
+        // Create steps, mapping old ids → new ids so previousStepId can be
+        // re-linked in a second pass.
         const stepIdMap = new Map<string, string>();
         const newSteps: Array<{ id: string; oldId: string }> = [];
 
-        // First pass: Create all steps without previousStepId
+        // First pass: create all steps without previousStepId
         for (const step of sequence.steps) {
           const newStep = await tx.sequenceStep.create({
             data: {
@@ -133,7 +116,7 @@ export async function POST(
           newSteps.push({ id: newStep.id, oldId: step.id });
         }
 
-        // Second pass: Update previousStepId references
+        // Second pass: update previousStepId references
         for (const { id, oldId } of newSteps) {
           const originalStep = sequence.steps.find((s) => s.id === oldId);
           if (originalStep?.previousStepId) {
@@ -151,22 +134,12 @@ export async function POST(
 
         // Fetch the final sequence with all its relations
         const duplicated = await tx.sequence.findUnique({
-          where: {
-            id: newSequence.id,
-          },
+          where: { id: newSequence.id },
           include: {
-            steps: {
-              orderBy: {
-                order: "asc",
-              },
-            },
+            steps: { orderBy: { order: "asc" } },
             businessHours: true,
             sequenceMailbox: true,
-            _count: {
-              select: {
-                contacts: true,
-              },
-            },
+            _count: { select: { contacts: true } },
           },
         });
 
@@ -175,17 +148,7 @@ export async function POST(
         }
 
         return { success: true, data: duplicated };
-      } catch (txError) {
-        console.error("[SEQUENCE_DUPLICATE] Transaction error:", {
-          error:
-            txError instanceof Error
-              ? txError.message
-              : "Unknown transaction error",
-          stack: txError instanceof Error ? txError.stack : undefined,
-        });
-        throw txError; // Re-throw to trigger rollback
-      }
-    });
+      });
 
     if (!result?.success || !result.data) {
       throw new Error("Transaction failed to return valid data");
@@ -193,27 +156,17 @@ export async function POST(
 
     return NextResponse.json(result.data);
   } catch (error) {
-    console.error("[SEQUENCE_DUPLICATE] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      code:
-        error instanceof Prisma.PrismaClientKnownRequestError
-          ? error.code
-          : undefined,
-      meta:
-        error instanceof Prisma.PrismaClientKnownRequestError
-          ? error.meta
-          : undefined,
-    });
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return new NextResponse(`Database Error: ${error.message}`, {
-        status: 400,
-      });
+    // "Sequence not found" is thrown inside the transaction for both the
+    // missing-row and wrong-tenant cases.
+    if (error instanceof Error && error.message === "Sequence not found") {
+      return notFound("Sequence not found");
     }
-
-    return new NextResponse(
-      `Internal Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+    if (isNotFound(error)) {
+      return notFound("Sequence not found");
+    }
+    logger.error("[SEQUENCE_DUPLICATE]", error);
+    return NextResponse.json(
+      { error: "Failed to duplicate sequence" },
       { status: 500 }
     );
   }

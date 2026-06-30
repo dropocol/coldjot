@@ -261,9 +261,6 @@ export async function PUT(
     });
 
     if (!list) {
-      console.log(
-        `List ${id} not found or does not belong to user ${session.user.id}`
-      );
       return NextResponse.json({ error: "List not found" }, { status: 404 });
     }
 

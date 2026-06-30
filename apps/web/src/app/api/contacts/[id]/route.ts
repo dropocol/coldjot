@@ -1,6 +1,10 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { isNotFound, notFound } from "@/lib/auth/access";
+import { parseBody } from "@/lib/http/validation";
+import { updateContactSchema } from "@/lib/schemas";
 
 export async function GET(
   request: Request,
@@ -12,23 +16,22 @@ export async function GET(
   }
 
   const { id } = await params;
-  const contactId = id;
 
   try {
     const contact = await prisma.contact.findFirst({
       where: {
-        id: contactId,
+        id,
         userId: session.user.id,
       },
     });
 
     if (!contact) {
-      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+      return notFound("Contact not found");
     }
 
     return NextResponse.json(contact);
   } catch (error) {
-    console.error("Error fetching contact:", error);
+    logger.error("Error fetching contact:", error);
     return NextResponse.json(
       { error: "Failed to fetch contact" },
       { status: 500 }
@@ -46,25 +49,28 @@ export async function PUT(
   }
 
   const { id } = await params;
-  const contactId = id;
-  const data = await request.json();
+  const body = await parseBody(request, updateContactSchema);
+  if (!body.ok) return body.response;
+  const { firstName, lastName, email } = body.data;
 
   try {
     const updatedContact = await prisma.contact.update({
       where: {
-        id: contactId,
+        id,
         userId: session.user.id,
       },
       data: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`,
+        email,
       },
     });
 
     return NextResponse.json(updatedContact);
   } catch (error) {
-    console.error("Error updating contact:", error);
+    if (isNotFound(error)) return notFound("Contact not found");
+    logger.error("Error updating contact:", error);
     return NextResponse.json(
       { error: "Failed to update contact" },
       { status: 500 }
@@ -82,26 +88,27 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const contactId = id;
-  const data = await request.json();
+  const body = await parseBody(request, updateContactSchema);
+  if (!body.ok) return body.response;
+  const data = body.data;
 
   try {
     // First fetch the existing contact to get current values
     const existingContact = await prisma.contact.findFirst({
       where: {
-        id: contactId,
+        id,
         userId: session.user.id,
       },
     });
 
     if (!existingContact) {
-      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+      return notFound("Contact not found");
     }
 
     // Then update with new values
     const updatedContact = await prisma.contact.update({
       where: {
-        id: contactId,
+        id,
         userId: session.user.id,
       },
       data: {
@@ -118,7 +125,8 @@ export async function PATCH(
 
     return NextResponse.json(updatedContact);
   } catch (error) {
-    console.error("Error patching contact:", error);
+    if (isNotFound(error)) return notFound("Contact not found");
+    logger.error("Error patching contact:", error);
     return NextResponse.json(
       { error: "Failed to patch contact" },
       { status: 500 }
@@ -136,28 +144,21 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const contactId = id;
 
   try {
-    console.log("contactId", contactId);
-    console.log("session.user.id", session.user.id);
-
+    // Prisma throws P2025 if the row doesn't exist (or belongs to another user,
+    // since the where-clause is scoped by userId). Translate that to 404.
     const deletedContact = await prisma.contact.delete({
       where: {
-        id: contactId,
+        id,
         userId: session.user.id,
       },
     });
 
-    console.log("deletedContact", deletedContact);
-
-    if (!deletedContact) {
-      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
-    }
-
     return NextResponse.json({ success: true, data: deletedContact });
   } catch (error) {
-    console.error("Error deleting contact:", error);
+    if (isNotFound(error)) return notFound("Contact not found");
+    logger.error("Error deleting contact:", error);
     return NextResponse.json(
       { error: "Failed to delete contact" },
       { status: 500 }
