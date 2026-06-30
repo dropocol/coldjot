@@ -1,6 +1,11 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
+import {
+  findForeignContactIds,
+  forbidden,
+  notFound,
+} from "@/lib/auth/access";
 
 // Helper function to trigger list sync via mailops
 async function triggerListSync(listId: string) {
@@ -89,7 +94,6 @@ export async function POST(
 
     // Check if contact is already in the list
     if (list.contacts.length > 0) {
-      console.log(`Contact ${contactId} is already in list ${id}`);
       return NextResponse.json(
         {
           message: "Contact is already in the list",
@@ -104,6 +108,12 @@ export async function POST(
         },
         { status: 409 }
       ); // Use 409 Conflict for already existing resources
+    }
+
+    // IDOR guard: verify the contact belongs to the caller before connecting.
+    const foreign = await findForeignContactIds(session.user.id, [contactId]);
+    if (foreign.size > 0) {
+      return notFound("Contact not found");
     }
 
     // Add contact to list
@@ -217,17 +227,18 @@ export async function PUT(
     const { contactIds } = await request.json();
 
     if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
-      console.log("No valid contact IDs provided in request");
       return NextResponse.json(
         { error: "No contact IDs provided" },
         { status: 400 }
       );
     }
 
-    console.log(
-      `Attempting to add ${contactIds.length} contacts to list ${id}`
-    );
-    console.log(`Contact IDs: ${contactIds.join(", ")}`);
+    // IDOR guard: verify ALL referenced contacts belong to the caller before
+    // connecting them. Prevents attaching another tenant's contacts in bulk.
+    const foreign = await findForeignContactIds(session.user.id, contactIds);
+    if (foreign.size > 0) {
+      return forbidden("Some contacts do not belong to this account");
+    }
 
     // Verify list ownership
     const list = await prisma.emailList.findUnique({
@@ -256,20 +267,13 @@ export async function PUT(
 
     // Check which contacts are already in the list
     const existingContactIds = list.contacts.map((contact) => contact.id);
-    console.log(
-      `Found ${existingContactIds.length} contacts already in the list: ${existingContactIds.join(", ")}`
-    );
 
     // Filter out contacts that are already in the list
     const contactsToAdd = contactIds.filter(
       (id) => !existingContactIds.includes(id)
     );
-    console.log(
-      `Adding ${contactsToAdd.length} new contacts to the list: ${contactsToAdd.join(", ")}`
-    );
 
     if (contactsToAdd.length === 0) {
-      console.log("All contacts are already in the list, no action needed");
       return NextResponse.json(
         {
           message: "All contacts are already in the list",
@@ -304,11 +308,6 @@ export async function PUT(
       },
     });
 
-    console.log(
-      `Successfully added ${contactsToAdd.length} contacts to list ${id}`
-    );
-    console.log(`List now has ${updatedList._count.contacts} total contacts`);
-
     // After successfully adding contacts, trigger sync
     const syncResult = await triggerListSync(id);
 
@@ -338,7 +337,7 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session?.user?.id) {
       return new Response("Unauthorized", { status: 401 });
     }
 

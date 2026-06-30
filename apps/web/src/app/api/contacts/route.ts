@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 export async function GET(req: Request) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session?.user?.id) {
       return new Response("Unauthorized", { status: 401 });
     }
 
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session?.user?.id) {
       return new Response("Unauthorized", { status: 401 });
     }
 

@@ -1,6 +1,10 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
+import {
+  findForeignContactIds,
+  forbidden,
+} from "@/lib/auth/access";
 
 export async function GET(
   request: Request,
@@ -93,6 +97,18 @@ export async function PATCH(
     const json = await request.json();
     const { name, description, contacts, tags } = json;
 
+    // IDOR guard: verify ALL referenced contacts belong to the caller before
+    // re-pointing the list. Without this, a user could attach another tenant's
+    // contacts to their own list by passing arbitrary ids.
+    if (Array.isArray(contacts) && contacts.length > 0) {
+      const foreign = await findForeignContactIds(session.user.id, contacts);
+      if (foreign.size > 0) {
+        return forbidden(
+          "Some contacts do not belong to this account"
+        );
+      }
+    }
+
     const list = await prisma.emailList.update({
       where: {
         id: id,
@@ -102,9 +118,9 @@ export async function PATCH(
         name,
         description,
         tags,
-        contacts: {
-          set: contacts.map((id: string) => ({ id })),
-        },
+        contacts: Array.isArray(contacts)
+          ? { set: contacts.map((id: string) => ({ id })) }
+          : undefined,
       },
       include: {
         contacts: true,

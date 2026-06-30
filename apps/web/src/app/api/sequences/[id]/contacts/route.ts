@@ -3,6 +3,7 @@ import { prisma } from "@coldjot/database";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import { NextResponse } from "next/server";
 import { updateSequenceReadinessField } from "@/lib/metadata-utils";
+import { findOwnedContact, notFound } from "@/lib/auth/access";
 
 export async function GET(
   req: Request,
@@ -139,6 +140,16 @@ export async function POST(
       return new NextResponse("Not found", { status: 404 });
     }
 
+    // IDOR guard: verify the contact belongs to the caller before enrolling
+    // it in the sequence. Without this, a user could enroll another tenant's
+    // contact by passing an arbitrary contactId.
+    const ownsContact = await findOwnedContact(session.user.id, contactId, {
+      id: true,
+    });
+    if (!ownsContact) {
+      return notFound("Contact not found");
+    }
+
     // check contact is already in the sequence
     const existingContact = await prisma.sequenceContact.findFirst({
       where: {
@@ -177,8 +188,10 @@ export async function POST(
 
     // Update the sequence metadata only if this is the first contact
     // or if the metadata doesn't already indicate that contacts exist
-    const metadataObj = (sequence.metadata as Record<string, any>) || {};
-    const readiness = metadataObj.readiness || {};
+    const metadataObj =
+      (sequence.metadata as Record<string, unknown> | null) ?? {};
+    const readiness =
+      (metadataObj.readiness as Record<string, unknown> | undefined) ?? {};
 
     if (sequence._count.contacts === 0 || !readiness.hasContacts) {
       await updateSequenceReadinessField(id, "hasContacts", true);

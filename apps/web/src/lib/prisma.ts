@@ -1,9 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Re-export the singleton Prisma client from the shared database package so
+// every consumer uses the same connection pool. Previously this file created a
+// second PrismaClient instance, fragmenting connection management.
+export { prisma } from "@coldjot/database";
