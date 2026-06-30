@@ -1,12 +1,27 @@
 import { Request, Response } from "express";
 import { logger } from "@/lib/log";
 import { trackingService } from "@/lib/tracking";
+import { EmailEventEnum } from "@coldjot/types";
 
 // Transparent pixel for email tracking
 const TRANSPARENT_PIXEL = Buffer.from(
   "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
   "base64"
 );
+
+/**
+ * Defense-in-depth: validate that a redirect target uses a safe scheme.
+ * Blocks `javascript:`, `data:`, `vbscript:`, etc. — these could be used for
+ * XSS if a tracked link's destination were ever malformed or user-controlled.
+ */
+function isSafeRedirect(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 export async function handleEmailOpen(req: Request, res: Response) {
   try {
@@ -87,6 +102,17 @@ export async function handleLinkClick(req: Request, res: Response) {
       hash,
       linkId as string
     );
+
+    // Validate the redirect target scheme before redirecting. Prevents
+    // javascript:/data: redirects if a tracked link's destination is malformed.
+    if (!isSafeRedirect(redirectUrl)) {
+      logger.error(
+        { hash, linkId },
+        "Refusing unsafe redirect target from tracked link"
+      );
+      return res.status(400).json({ error: "Invalid redirect target" });
+    }
+
     return res.redirect(redirectUrl);
   } catch (error) {
     logger.error("Error handling link click:", error);
@@ -104,7 +130,19 @@ export async function trackEmailEvent(req: Request, res: Response) {
         .json({ error: "Email ID and event type are required" });
     }
 
-    await trackingService.trackEmailEvent({ trackingId, eventType, metadata });
+    // Validate eventType against the enum — prevents arbitrary event types
+    // from being written to the analytics tables.
+    const normalized = String(eventType).toLowerCase();
+    const validEvents = Object.values(EmailEventEnum) as string[];
+    if (!validEvents.includes(normalized)) {
+      return res.status(400).json({ error: "Invalid event type" });
+    }
+
+    await trackingService.trackEmailEvent({
+      trackingId,
+      eventType: normalized as EmailEventEnum,
+      metadata,
+    });
     res.json({ success: true });
   } catch (error) {
     logger.error("Error tracking email event:", error);

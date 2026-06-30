@@ -4,7 +4,9 @@ import { auth } from "./auth";
 import { prisma } from "@coldjot/database";
 
 // Add paths that should be accessible without onboarding
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/api/auth"];
+// NOTE: /api/track is the email-open/click tracking endpoint and must be
+// reachable by unauthenticated email clients (recipients).
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/api/auth", "/api/track"];
 const ONBOARDING_PATH = "/onboarding";
 
 export async function middleware(request: NextRequest) {
