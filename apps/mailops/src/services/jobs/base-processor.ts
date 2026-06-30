@@ -65,18 +65,21 @@ export abstract class BaseProcessor<T = any> {
   protected abstract process(job: Job<T>): Promise<void>;
 
   protected async onCompleted(job: Job<T>): Promise<void> {
+    // Log job identity only — job.data may contain recipient/subject PII
+    // (EmailJob) or other tenant data. The full payload is retrievable from
+    // the BullMQ job store when debugging a specific failure.
     logger.info(`🚧 ✅ Job completed: ${job.id}`, {
       queue: job.queueName,
-      data: job.data,
+      name: job.name,
     });
   }
 
   protected async onFailed(job: Job<T>, error: Error): Promise<void> {
     logger.error(`🚧 ❌ Job failed: ${job.id}`, {
       queue: job.queueName,
-      data: job.data,
+      name: job.name,
+      attemptsMade: job.attemptsMade,
       error: error.message,
-      stack: error.stack,
     });
   }
 

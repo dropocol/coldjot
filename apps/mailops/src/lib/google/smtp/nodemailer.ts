@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { google } from "googleapis";
 import { createTransport, TransportOptions } from "nodemailer";
+import { logger } from "@/lib/log";
 
 export async function createGmailTransport(
   accessToken: string,
@@ -34,10 +35,11 @@ export async function createGmailTransport(
               refresh_token: refreshToken,
             });
             const { token } = await oauth2Client.getAccessToken();
-            console.log("Refreshed access token:", token);
+            // NOTE: do not log the token value here — it's a live credential.
+            logger.debug("Refreshed SMTP access token");
             return token;
           } catch (error) {
-            console.error("Error refreshing access token:", error);
+            logger.error("Error refreshing access token:", error);
             throw error;
           }
         },
@@ -55,16 +57,16 @@ export async function createGmailTransport(
     await new Promise((resolve, reject) => {
       transport.verify((error) => {
         if (error) {
-          console.error("SMTP Connection Error:", error);
+          logger.error("SMTP Connection Error:", error);
           reject(error);
         } else {
-          console.log("SMTP Connection Successful");
+          logger.debug("SMTP Connection Successful");
           resolve(true);
         }
       });
     });
   } catch (error) {
-    console.error("Failed to verify SMTP connection:", error);
+    logger.error("Failed to verify SMTP connection:", error);
     throw error;
   }
 

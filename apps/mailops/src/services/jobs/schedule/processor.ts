@@ -419,9 +419,12 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         throw new Error("Could not calculate next send time");
       }
 
-      logger.info(sequence.businessHours, "🕒 Business hours");
-      logger.info(currentStep, "🕒 Current step");
-      logger.info(nextSendTime, "🕒 Next send time");
+      // Log compact identifiers only — businessHours/currentStep may be verbose
+      // and currentStep carries subject/content (PII).
+      logger.info(
+        { hasBusinessHours: !!sequence.businessHours, stepOrder: currentStep.order, nextSendTime },
+        "🕒 Schedule decision"
+      );
 
       logger.debug("⏰ Next send time calculated", {
         nextSendTime: nextSendTime.toISOString(),

@@ -19,10 +19,8 @@ const MailboxWatchSchema = z.object({
  */
 router.post("/watch", async (req, res) => {
   try {
-    logger.info(
-      { body: req.body, headers: req.headers },
-      "Received mailbox watch setup request"
-    );
+    // NOTE: never log req.headers here — it contains Authorization/cookies.
+    logger.info("Received mailbox watch setup request");
 
     if (!req.body || Object.keys(req.body).length === 0) {
       logger.error("Empty request body received");

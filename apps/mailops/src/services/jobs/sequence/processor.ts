@@ -107,7 +107,8 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
 
       // Get sequence and validate
       const dbSequence = await getSequenceWithDetails(data.sequenceId);
-      logger.info(dbSequence, "🎮 Sequence");
+      // Don't dump the full sequence row — it includes step content (PII).
+      logger.info({ sequenceId: data.sequenceId }, "🎮 Sequence");
 
       if (!dbSequence) {
         throw new Error("Sequence not found");
@@ -156,9 +157,10 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
         try {
           await this.processContact(sequenceContact, sequence, data);
         } catch (error) {
+          // Log contact id only — the email address is PII.
           logger.error(
             error,
-            `❌ Error processing contact ${sequenceContact.contact.email}:`
+            `❌ Error processing contact ${sequenceContact.contactId}:`
           );
           // Continue with next contact even if one fails
           continue;

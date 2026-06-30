@@ -55,7 +55,10 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
   private async processEmail(
     data: EmailJob
   ): Promise<{ success: boolean; error?: string }> {
-    logger.info(data, `📨 Starting to process email job`);
+    logger.info(
+      { sequenceId: data.sequenceId, contactId: data.contactId, stepId: data.stepId },
+      "📨 Starting to process email job"
+    );
 
     try {
       // Check if thread has already received a reply or bounce
@@ -250,10 +253,13 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
       return { success: true };
     } catch (error) {
+      // Log job identity only — `data` is an EmailJob with recipient PII.
       logger.error(
         {
           error: error instanceof Error ? error.message : "Unknown error",
-          ...data,
+          sequenceId: data.sequenceId,
+          contactId: data.contactId,
+          stepId: data.stepId,
         },
         "❌ Error processing email - 1"
       );

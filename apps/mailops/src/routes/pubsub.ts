@@ -33,9 +33,8 @@ router.get("/health", (req, res) => {
 // Push notification endpoint
 router.post("/", async (req, res) => {
   try {
-    logger.info({ body: req.body }, "Received PubSub push notification");
-
-    // Verify JWT from Authorization header
+    // Verify JWT from Authorization header BEFORE logging anything about the
+    // request body — the body is untrusted until the signature is checked.
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       logger.error("Missing or invalid Authorization header");
@@ -49,7 +48,7 @@ router.post("/", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    logger.info(req.body, "Received PubSub notification body");
+    logger.debug("Received verified PubSub push notification");
 
     // Validate request body
     const result = PubSubMessageSchema.safeParse(req.body);

@@ -86,10 +86,53 @@ if (env.LOG_TO_FILE) {
   destinations.push({ stream: fs.createWriteStream(logFile, { flags: "a" }) });
 }
 
+// Sensitive paths redacted from every log line. Covers tokens/credentials
+// (wherever they appear in the object graph) plus email PII on EmailJob
+// payloads. Without this, onFailed/enqueue logs dump access tokens,
+// recipient addresses, and subject lines to stdout/log files.
+const REDACT_PATHS = [
+  // OAuth / credentials — any depth
+  "*.access_token",
+  "*.refresh_token",
+  "*.id_token",
+  "*.token",
+  "*.accessToken",
+  "*.refreshToken",
+  "*.password",
+  "*.secret",
+  "*.apiKey",
+  "*.api_key",
+  "access_token",
+  "refresh_token",
+  "id_token",
+  "token",
+  "password",
+  "secret",
+  "authorization",
+  "headers.authorization",
+  "headers.cookie",
+  "req.headers.authorization",
+  "req.headers.cookie",
+  // EmailJob / outbound PII
+  "*.to",
+  "*.subject",
+  "*.email",
+  "to",
+  "subject",
+  "email",
+  "data.to",
+  "data.subject",
+  "data.email",
+];
+
 // Create the logger instance
 export const logger = pino(
   {
     level: env.LOG_LEVEL || "debug",
+    redact: {
+      paths: REDACT_PATHS,
+      censor: "[REDACTED]",
+    },
     formatters: {
       level: (label) => ({ level: label.toUpperCase() }),
       bindings: () => ({}),
