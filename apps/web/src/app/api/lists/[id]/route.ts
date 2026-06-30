@@ -4,7 +4,11 @@ import { NextResponse } from "next/server";
 import {
   findForeignContactIds,
   forbidden,
+  isNotFound,
+  notFound,
 } from "@/lib/auth/access";
+import { parseBody } from "@/lib/http/validation";
+import { updateListSchema } from "@/lib/schemas";
 
 export async function GET(
   request: Request,
@@ -94,18 +98,17 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const json = await request.json();
-    const { name, description, contacts, tags } = json;
+    const body = await parseBody(request, updateListSchema);
+    if (!body.ok) return body.response;
+    const { name, description, contacts, tags } = body.data;
 
     // IDOR guard: verify ALL referenced contacts belong to the caller before
     // re-pointing the list. Without this, a user could attach another tenant's
     // contacts to their own list by passing arbitrary ids.
-    if (Array.isArray(contacts) && contacts.length > 0) {
+    if (contacts && contacts.length > 0) {
       const foreign = await findForeignContactIds(session.user.id, contacts);
       if (foreign.size > 0) {
-        return forbidden(
-          "Some contacts do not belong to this account"
-        );
+        return forbidden("Some contacts do not belong to this account");
       }
     }
 
@@ -118,7 +121,7 @@ export async function PATCH(
         name,
         description,
         tags,
-        contacts: Array.isArray(contacts)
+        contacts: contacts
           ? { set: contacts.map((id: string) => ({ id })) }
           : undefined,
       },
@@ -129,6 +132,7 @@ export async function PATCH(
 
     return NextResponse.json(list);
   } catch (error) {
+    if (isNotFound(error)) return notFound("List not found");
     console.error("Failed to update list:", error);
     return NextResponse.json(
       { error: "Failed to update list" },
@@ -157,6 +161,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (isNotFound(error)) return notFound("List not found");
     console.error("Failed to delete list:", error);
     return NextResponse.json(
       { error: "Failed to delete list" },

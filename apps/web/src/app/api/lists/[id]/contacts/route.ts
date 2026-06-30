@@ -6,6 +6,11 @@ import {
   forbidden,
   notFound,
 } from "@/lib/auth/access";
+import { parseBody } from "@/lib/http/validation";
+import {
+  addContactToListSchema,
+  setListContactsSchema,
+} from "@/lib/schemas";
 
 // Helper function to trigger list sync via mailops
 async function triggerListSync(listId: string) {
@@ -68,7 +73,9 @@ export async function POST(
 
   try {
     const { id } = await params;
-    const { contactId } = await request.json();
+    const body = await parseBody(request, addContactToListSchema);
+    if (!body.ok) return body.response;
+    const { contactId } = body.data;
 
     // Verify list ownership
     const list = await prisma.emailList.findUnique({
@@ -224,14 +231,9 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { contactIds } = await request.json();
-
-    if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
-      return NextResponse.json(
-        { error: "No contact IDs provided" },
-        { status: 400 }
-      );
-    }
+    const body = await parseBody(request, setListContactsSchema);
+    if (!body.ok) return body.response;
+    const { contactIds } = body.data;
 
     // IDOR guard: verify ALL referenced contacts belong to the caller before
     // connecting them. Prevents attaching another tenant's contacts in bulk.
@@ -341,10 +343,9 @@ export async function DELETE(
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const { contactIds } = await req.json();
-    if (!Array.isArray(contactIds)) {
-      return new Response("Invalid contact IDs", { status: 400 });
-    }
+    const body = await parseBody(req, setListContactsSchema);
+    if (!body.ok) return body.response;
+    const { contactIds } = body.data;
 
     const { id } = await params;
     // Get the list and verify ownership

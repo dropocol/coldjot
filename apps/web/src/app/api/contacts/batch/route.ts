@@ -2,6 +2,8 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { parseBody } from "@/lib/http/validation";
+import { batchCreateContactsSchema } from "@/lib/schemas";
 
 export async function POST(req: Request) {
   try {
@@ -10,20 +12,9 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const contacts = await req.json();
-    if (!Array.isArray(contacts) || contacts.length === 0) {
-      return NextResponse.json(
-        { error: "Invalid contacts data" },
-        { status: 400 }
-      );
-    }
-
-    if (contacts.length > 1000) {
-      return NextResponse.json(
-        { error: "Maximum 1000 contacts allowed per batch" },
-        { status: 400 }
-      );
-    }
+    const body = await parseBody(req, batchCreateContactsSchema);
+    if (!body.ok) return body.response;
+    const { contacts } = body.data;
 
     // First, check for duplicates within the current user's contacts
     const existingContacts = await prisma.contact.findMany({

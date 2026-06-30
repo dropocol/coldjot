@@ -2,6 +2,8 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { parseBody, parseQuery } from "@/lib/http/validation";
+import { createContactSchema, paginationSchema } from "@/lib/schemas";
 
 export async function GET(req: Request) {
   try {
@@ -11,9 +13,9 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") ?? "1");
-    const limit = parseInt(searchParams.get("limit") ?? "20");
-    const query = searchParams.get("q");
+    const queryResult = parseQuery(searchParams, paginationSchema);
+    if (!queryResult.ok) return queryResult.response;
+    const { page, limit, q: query } = queryResult.data;
 
     const skip = (page - 1) * limit;
 
@@ -69,8 +71,9 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const json = await req.json();
-    const { firstName, lastName, email } = json;
+    const body = await parseBody(req, createContactSchema);
+    if (!body.ok) return body.response;
+    const { firstName, lastName, email } = body.data;
 
     // Before creating, check if the contact already exists
     const existingContact = await prisma.contact.findUnique({
@@ -83,7 +86,6 @@ export async function POST(req: Request) {
     });
 
     if (existingContact) {
-      // return NextResponse.json(existingContact);
       return NextResponse.json(
         {
           error: "Email already exists in your contacts",

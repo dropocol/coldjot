@@ -4,6 +4,8 @@ import { SequenceContactStatusEnum } from "@coldjot/types";
 import { NextResponse } from "next/server";
 import { updateSequenceReadinessField } from "@/lib/metadata-utils";
 import { findOwnedContact, notFound } from "@/lib/auth/access";
+import { parseBody } from "@/lib/http/validation";
+import { addContactToSequenceSchema } from "@/lib/schemas";
 
 export async function GET(
   req: Request,
@@ -117,7 +119,9 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { contactId } = await req.json();
+    const body = await parseBody(req, addContactToSequenceSchema);
+    if (!body.ok) return body.response;
+    const { contactId } = body.data;
     const { id } = await params;
 
     const sequence = await prisma.sequence.findUnique({

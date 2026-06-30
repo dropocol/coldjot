@@ -3,6 +3,8 @@ import { prisma } from "@coldjot/database";
 import { refreshAccessToken } from "@/lib/google/google-account";
 import { sendGmailDraft } from "@/lib/google/gmail";
 import { NextResponse } from "next/server";
+import { parseBody } from "@/lib/http/validation";
+import { sendDraftSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -11,8 +13,9 @@ export async function POST(request: Request) {
   }
 
   const userId = session.user.id;
-  const json = await request.json();
-  const { draftId } = json;
+  const body = await parseBody(request, sendDraftSchema);
+  if (!body.ok) return body.response;
+  const { draftId } = body.data;
 
   try {
     const account = await prisma.account.findFirst({
@@ -58,31 +61,21 @@ export async function POST(request: Request) {
         accessToken: account.access_token,
         draftId: draft.gmailDraftId,
       });
-    } catch (error: any) {
-      if (error.message === "TOKEN_EXPIRED") {
+    } catch (error) {
+      if (error instanceof Error && error.message === "TOKEN_EXPIRED") {
         // Refresh token and retry
-        // const newAccessToken = await refreshAccessToken(account.refresh_token);
-        console.log(`2️⃣ Refreshing access token point`);
         const newAccessToken = await refreshAccessToken(
           userId,
           account.refresh_token
         );
 
-        // await prisma.account.update({
-        //   where: {
-        //     provider_providerAccountId: {
-        //       provider: "google",
-        //       providerAccountId: account.providerAccountId,
-        //     },
-        //   },
-        //   data: {
-        //     access_token: newAccessToken,
-        //   },
-        // });
+        if (typeof newAccessToken !== "string") {
+          throw new Error("Failed to refresh access token");
+        }
 
         // Retry with new token
         await sendGmailDraft({
-          accessToken: newAccessToken as string,
+          accessToken: newAccessToken,
           draftId: draft.gmailDraftId,
         });
       } else {

@@ -4,7 +4,8 @@ import { queueApi } from "@/lib/queue/queue-api-client";
 import { NextResponse } from "next/server";
 import { SequenceStatus } from "@coldjot/types";
 import { updateSequenceReadinessMetadata } from "@/lib/metadata-utils";
-import { error } from "console";
+import { parseBody } from "@/lib/http/validation";
+import { launchSequenceSchema } from "@/lib/schemas";
 
 export async function POST(
   req: Request,
@@ -16,7 +17,9 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { testMode = false } = await req.json();
+    const body = await parseBody(req, launchSequenceSchema);
+    if (!body.ok) return body.response;
+    const { testMode } = body.data;
     const { id } = await params;
 
     // Get sequence and validate

@@ -1,28 +1,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
-
-// Allowlist of fields a client may set on a step. Prevents mass-assignment —
-// previously the raw JSON body was spread into prisma.update, letting a client
-// overwrite arbitrary columns (order, sequenceId, etc.).
-const STEP_WRITABLE_FIELDS = [
-  "subject",
-  "content",
-  "body",
-  "waitDays",
-  "waitHours",
-  "delayAmount",
-  "delayUnit",
-  "timing",
-  "priority",
-  "stepType",
-  "includeSignature",
-  "note",
-  "replyToThread",
-  "previousStepId",
-  "templateId",
-  "order",
-] as const;
+import { parseBody } from "@/lib/http/validation";
+import { updateSequenceStepSchema } from "@/lib/schemas";
 
 export async function PUT(
   req: Request,
@@ -60,14 +40,13 @@ export async function PUT(
       return new NextResponse("Step not found", { status: 404 });
     }
 
-    const json = await req.json();
+    const body = await parseBody(req, updateSequenceStepSchema);
+    if (!body.ok) return body.response;
+    const json = body.data;
 
-    // Build an allowlisted update payload. Only known fields are copied;
-    // everything else (id, sequenceId, createdAt, etc.) is rejected.
-    const updateData: Record<string, unknown> = {};
-    for (const key of STEP_WRITABLE_FIELDS) {
-      if (key in json) updateData[key] = json[key];
-    }
+    // Build the update payload from the validated, allowlisted fields.
+    // The schema's .strict() already rejects unknown keys (mass-assignment fix).
+    const updateData: Record<string, unknown> = { ...json };
 
     // If templateId is explicitly set to null (unlinking), remove it and keep content/subject
     if (json.templateId === null) {

@@ -1,8 +1,13 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { parseBody } from "@/lib/http/validation";
+import { z } from "zod";
 
-const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
 const APOLLO_API_URL = "https://api.apollo.io/api/v1";
+
+const apolloSearchSchema = z.object({
+  domain: z.string().trim().min(1).max(253),
+});
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -10,6 +15,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
   if (!APOLLO_API_KEY) {
     return NextResponse.json(
       { error: "Apollo API key not configured" },
@@ -18,7 +24,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { domain } = await request.json();
+    const body = await parseBody(request, apolloSearchSchema);
+    if (!body.ok) return body.response;
+    const { domain } = body.data;
     const sanitizedDomain = domain.replace(/^(https?:\/\/)?(www\.)?/, "");
 
     const response = await fetch(`${APOLLO_API_URL}/mixed_people/search`, {
@@ -60,12 +68,12 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("Apollo API Error:", errorData);
+      console.error("Apollo API request failed:", response.status);
+      // Don't log the raw error body — it may contain PII from Apollo.
       throw new Error("Apollo API request failed");
     }
 
     const data = await response.json();
-    console.log("Apollo API Data:", data);
     return NextResponse.json(data);
   } catch (error) {
     console.error("Apollo search failed:", error);
