@@ -33,11 +33,7 @@ export const isDevelopment =
 export const BYPASS_BUSINESS_HOURS =
   process.env.BYPASS_BUSINESS_HOURS === "true" ? true : false;
 
-export const env = {
-  LOG_PATH_DEPTH: process.env.LOG_PATH_DEPTH,
-  LOG_SHOW_TIME: process.env.LOG_SHOW_TIME,
-  LOG_LEVEL: process.env.LOG_LEVEL,
-  LOG_TO_FILE: process.env.LOG_TO_FILE === "true" ? true : false,
-  LOG_DIR: process.env.LOG_DIR || "logs",
-  APP_ENV: process.env.APP_ENV || "development",
-} as const;
+// NOTE: a previous `export const env = { ... }` here shadowed the zod-validated
+// `env` re-exported from ./env above. It was removed so consumers receive the
+// fully-typed, boot-validated env (including WEB_APP_URL, SERVICE_INTERNAL_TOKEN,
+// DATABASE_URL, REDIS_*, etc.) instead of this partial, unvalidated subset.

@@ -181,6 +181,7 @@ export async function GET(request: Request) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Service-Token": process.env.MAILOPS_SERVICE_TOKEN || "",
           },
           body: JSON.stringify({ userId, email: userInfo.email }),
         }

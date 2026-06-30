@@ -7,6 +7,8 @@ import { createServiceManager } from "@/services/service-manager";
 import pubsubRouter from "./routes/pubsub";
 import mailboxRouter from "./routes/mailbox";
 import listsRouter from "./routes/lists";
+import { requireServiceToken } from "@/lib/auth/service-auth";
+import { env } from "@/config";
 
 const app = express();
 const port = 3001;
@@ -19,7 +21,21 @@ serviceManager.initialize().catch((error) => {
 });
 
 // Middleware
-app.use(cors());
+// Restrict CORS to the known web origin(s) instead of reflecting any origin.
+const allowedOrigins = env.WEB_APP_URL
+  ? env.WEB_APP_URL.split(",").map((o) => o.trim()).filter(Boolean)
+  : [];
+app.use(
+  cors({
+    origin(origin, cb) {
+      // Allow same-origin / server-to-server calls (no Origin header) and
+      // any explicitly allowlisted origin.
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Add request logging
@@ -41,14 +57,20 @@ const httpLogger = pinoHttp({
 
 app.use(httpLogger);
 
-// Mount all routes
-app.use("/api", routes);
-app.use("/pubsub", pubsubRouter); // Keep the /pubsub route for Gmail notifications
-app.use("/api/pubsub", pubsubRouter); // Also mount under /api for consistency
-app.use("/api/mailbox", mailboxRouter);
-app.use("/api/lists", listsRouter);
+// Internal routes — require the shared service token. The web app must send
+// X-Service-Token on every call. Public/webhook routes below are exempt.
+app.use("/api", requireServiceToken, routes);
+app.use("/api/mailbox", requireServiceToken, mailboxRouter);
+app.use("/api/lists", requireServiceToken, listsRouter);
 
-// Add specific error handling for PubSub routes
+// Public/webhook routes — no service token; they have their own protections.
+// PubSub verifies Google's signed JWT inside the route handler.
+app.use("/pubsub", pubsubRouter); // Keep the /pubsub route for Gmail notifications
+app.use("/api/pubsub", pubsubRouter); // Also mounted under /api for consistency
+
+// Add specific error handling for PubSub routes.
+// NOTE: do not always return 200 — that defeats PubSub retry semantics and
+// masks auth failures. Let real errors return non-200 so PubSub retries.
 app.use(
   "/pubsub",
   (
@@ -57,15 +79,9 @@ app.use(
     res: express.Response,
     next: express.NextFunction
   ) => {
-    logger.error(
-      {
-        error: err,
-        body: req.body,
-        headers: req.headers,
-      },
-      "PubSub notification error"
-    );
-    res.status(200).json({ message: "Notification received" }); // Always return 200 to acknowledge
+    logger.error({ error: err.message }, "PubSub notification error");
+    const status = res.statusCode >= 400 ? res.statusCode : 500;
+    res.status(status).json({ error: "Notification processing failed" });
   }
 );
 

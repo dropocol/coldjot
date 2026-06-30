@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-
-const MAILOPS_URL = process.env.NEXT_PUBLIC_MAILOPS_API_URL;
+import { MAILOPS_BASE_URL, mailopsAuthHeaders } from "@/lib/http/mailops";
 
 export async function DELETE(
   req: NextRequest,
@@ -9,7 +8,7 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -19,9 +18,10 @@ export async function DELETE(
     }
 
     const response = await fetch(
-      `${MAILOPS_URL}/mailbox/watch/${encodeURIComponent(email)}`,
+      `${MAILOPS_BASE_URL}/api/mailbox/watch/${encodeURIComponent(email)}`,
       {
         method: "DELETE",
+        headers: { ...mailopsAuthHeaders() },
       }
     );
 

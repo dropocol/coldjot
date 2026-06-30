@@ -34,6 +34,10 @@ const envSchema = z.object({
   LOG_TO_FILE: z.boolean().default(false),
   LOG_DIR: z.string().default("logs"),
   APP_ENV: z.string().default("development"),
+
+  // Service auth — shared secret with the web app. Required: if unset, the
+  // service-auth middleware fails closed (rejects all internal requests).
+  SERVICE_INTERNAL_TOKEN: z.string().min(16),
 });
 
 // Parse and validate environment variables

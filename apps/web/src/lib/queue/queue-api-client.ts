@@ -1,26 +1,24 @@
 import { env } from "@/env";
-import type { BusinessHours } from "@coldjot/types";
-
-const MAILOPS_API_URL =
-  env.NEXT_PUBLIC_MAILOPS_API_URL || "http://localhost:3001/api";
 
 export class QueueApiClient {
   private baseUrl: string;
+  private serviceToken: string;
 
   constructor(
-    baseUrl: string = process.env.NEXT_PUBLIC_MAILOPS_API_URL ||
-      "http://localhost:3001"
+    baseUrl: string = env.NEXT_PUBLIC_MAILOPS_API_URL || "http://localhost:3001"
   ) {
     this.baseUrl = baseUrl.endsWith("/api") ? baseUrl.slice(0, -4) : baseUrl;
+    this.serviceToken = env.MAILOPS_SERVICE_TOKEN;
   }
 
   private async fetchApi(endpoint: string, options: RequestInit = {}) {
     const url = `${this.baseUrl}/api${endpoint}`;
-    console.log("Fetching URL:", url);
     const response = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        // Authenticate to mailops via the shared service token (plan 03).
+        "X-Service-Token": this.serviceToken,
         ...options.headers,
       },
     });
@@ -36,7 +34,6 @@ export class QueueApiClient {
   }
 
   async launchSequence(sequenceId: string, userId: string, testMode = false) {
-    console.log("launchSequence", sequenceId, userId, testMode);
     return this.fetchApi(`/sequences/${sequenceId}/launch`, {
       method: "POST",
       body: JSON.stringify({ userId, testMode }),
@@ -70,7 +67,7 @@ export class QueueApiClient {
     return this.fetchApi("/metrics");
   }
 
-  async resetSequence(sequenceId: string, userId: string): Promise<any> {
+  async resetSequence(sequenceId: string, userId: string) {
     return this.fetchApi(`/sequences/${sequenceId}/reset`, {
       method: "POST",
       body: JSON.stringify({ userId }),

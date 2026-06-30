@@ -1,14 +1,13 @@
 import { ProcessingJobEnum } from "@coldjot/types";
-
-const MAILOPS_API_URL =
-  process.env.NEXT_PUBLIC_MAILOPS_API_URL || "http://localhost:3001";
+import { MAILOPS_BASE_URL, mailopsAuthHeaders } from "@/lib/http/mailops";
 
 export async function addSequenceToQueue(sequenceId: string, userId: string) {
   const response = await fetch(
-    `${MAILOPS_API_URL}/api/sequences/${sequenceId}/process`,
+    `${MAILOPS_BASE_URL}/api/sequences/${sequenceId}/process`,
     {
       method: "POST",
       headers: {
+        ...mailopsAuthHeaders(),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ userId }),
@@ -28,9 +27,10 @@ export async function addEmailToQueue(data: {
   contactId: string;
   userId: string;
 }) {
-  const response = await fetch(`${MAILOPS_API_URL}/api/emails/send`, {
+  const response = await fetch(`${MAILOPS_BASE_URL}/api/emails/send`, {
     method: "POST",
     headers: {
+      ...mailopsAuthHeaders(),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
@@ -45,10 +45,11 @@ export async function addEmailToQueue(data: {
 
 export async function getJobStatus(jobId: string, type: ProcessingJobEnum) {
   const response = await fetch(
-    `${MAILOPS_API_URL}/api/jobs/${jobId}?type=${type}`,
+    `${MAILOPS_BASE_URL}/api/jobs/${jobId}?type=${type}`,
     {
       method: "GET",
       headers: {
+        ...mailopsAuthHeaders(),
         "Content-Type": "application/json",
       },
     }

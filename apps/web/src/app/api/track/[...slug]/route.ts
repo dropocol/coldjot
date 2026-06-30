@@ -4,6 +4,10 @@ import { getUserAgent } from "@/lib/user-agent";
 import { getIpLocation } from "@/lib/ip-location";
 import { getClientIp } from "@/lib/http/ip";
 import { parseBody } from "@/lib/http/validation";
+import {
+  MAILOPS_BASE_URL,
+  mailopsAuthHeaders,
+} from "@/lib/http/mailops";
 import { z } from "zod";
 
 // Transparent 1x1 pixel for email-open tracking.
@@ -45,7 +49,7 @@ export async function POST(
     if (!body.ok) return body.response;
     const { emailId } = body.data;
 
-    const mailopsUrl = process.env.NEXT_PUBLIC_MAILOPS_API_URL;
+    const mailopsUrl = MAILOPS_BASE_URL;
     if (!mailopsUrl) {
       console.error("[EMAIL_TRACK] NEXT_PUBLIC_MAILOPS_API_URL is not set");
       return NextResponse.json(
@@ -65,7 +69,10 @@ export async function POST(
     // Proxy the event to the mailops tracking service.
     const response = await fetch(`${mailopsUrl}/api/track/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        ...mailopsAuthHeaders(),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         trackingId: emailId,
         eventType: normalized,
@@ -125,7 +132,7 @@ export async function GET(
       });
     }
 
-    const mailopsUrl = process.env.NEXT_PUBLIC_MAILOPS_API_URL;
+    const mailopsUrl = MAILOPS_BASE_URL;
     if (mailopsUrl) {
       const ip = getClientIp(req);
       const userAgent = getUserAgent(req);
@@ -135,7 +142,10 @@ export async function GET(
 
       await fetch(`${mailopsUrl}/api/track/events`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          ...mailopsAuthHeaders(),
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           trackingId: emailId,
           eventType: normalized,

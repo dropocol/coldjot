@@ -108,6 +108,9 @@ export async function DELETE(req: Request, { params }: RouteParams) {
         `${process.env.NEXT_PUBLIC_MAILOPS_API_URL}/mailbox/watch/${encodeURIComponent(mailbox.email)}`,
         {
           method: "DELETE",
+          headers: {
+            "X-Service-Token": process.env.MAILOPS_SERVICE_TOKEN || "",
+          },
         }
       );
 
