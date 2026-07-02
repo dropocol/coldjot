@@ -10,7 +10,7 @@ const watchService = new WatchService();
 // Schema for mailbox watch setup
 const MailboxWatchSchema = z.object({
   userId: z.string(),
-  email: z.string().email(),
+  email: z.email(),
 });
 
 /**

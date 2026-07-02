@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const WatchSetupSchema = z.object({
   userId: z.string(),
-  email: z.string().email(),
+  email: z.email(),
 });
 
 export type WatchSetupParams = z.infer<typeof WatchSetupSchema>;

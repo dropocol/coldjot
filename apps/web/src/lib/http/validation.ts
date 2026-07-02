@@ -19,7 +19,7 @@ export type ParseResult<T> =
  */
 export async function parseBody<Output>(
   req: Request,
-  schema: ZodType<Output, z.ZodTypeDef, unknown>
+  schema: ZodType<Output, unknown>
 ): Promise<ParseResult<Output>> {
   let json: unknown;
   try {
@@ -57,7 +57,7 @@ export async function parseBody<Output>(
  */
 export function parseQuery<Output>(
   searchParams: URLSearchParams,
-  schema: ZodType<Output, z.ZodTypeDef, unknown>
+  schema: ZodType<Output, unknown>
 ): ParseResult<Output> {
   // zod's coerce handles string→number/etc.; pass the raw string record.
   const obj: Record<string, string> = {};
