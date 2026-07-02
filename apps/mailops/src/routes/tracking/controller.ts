@@ -23,7 +23,7 @@ function isSafeRedirect(url: string): boolean {
   }
 }
 
-export async function handleEmailOpen(req: Request, res: Response) {
+export async function handleEmailOpen(req: Request<{ hash: string }>, res: Response) {
   try {
     const { hash } = req.params;
 
@@ -89,7 +89,7 @@ export async function handleEmailOpen(req: Request, res: Response) {
   }
 }
 
-export async function handleLinkClick(req: Request, res: Response) {
+export async function handleLinkClick(req: Request<{ hash: string }>, res: Response) {
   try {
     const { hash } = req.params;
     const { lid: linkId } = req.query;

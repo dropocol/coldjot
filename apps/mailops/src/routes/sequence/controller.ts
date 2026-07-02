@@ -72,7 +72,7 @@ async function getSequenceBusinessHours(
   };
 }
 
-export async function launchSequence(req: Request, res: Response) {
+export async function launchSequence(req: Request<{ id: string }>, res: Response) {
   try {
     const { id } = req.params;
     const { userId } = req.body;
@@ -157,7 +157,7 @@ export async function launchSequence(req: Request, res: Response) {
   }
 }
 
-export async function pauseSequence(req: Request, res: Response) {
+export async function pauseSequence(req: Request<{ id: string }>, res: Response) {
   try {
     const { id } = req.params;
     const { userId } = req.body;
@@ -190,7 +190,7 @@ export async function pauseSequence(req: Request, res: Response) {
   }
 }
 
-export async function resumeSequence(req: Request, res: Response) {
+export async function resumeSequence(req: Request<{ id: string }>, res: Response) {
   try {
     const { id } = req.params;
     const { userId } = req.body;
@@ -223,7 +223,7 @@ export async function resumeSequence(req: Request, res: Response) {
   }
 }
 
-export async function resetSequenceHandler(req: Request, res: Response) {
+export async function resetSequenceHandler(req: Request<{ id: string }>, res: Response) {
   try {
     const { id } = req.params;
     const { userId } = req.body;

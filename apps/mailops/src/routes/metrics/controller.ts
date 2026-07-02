@@ -17,7 +17,7 @@ export async function getSystemMetrics(req: Request, res: Response) {
   }
 }
 
-export async function getSequenceHealth(req: Request, res: Response) {
+export async function getSequenceHealth(req: Request<{ id: string }>, res: Response) {
   try {
     const { id } = req.params;
     const health = await monitoringService.checkSequenceHealth(id, {
