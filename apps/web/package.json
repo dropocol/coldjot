@@ -9,7 +9,7 @@
     "build:dev": "export APP_ENV=development && next build",
     "build:prod": "export APP_ENV=production && next build",
     "start:prod": "export APP_ENV=production && next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "clean": "rimraf .turbo node_modules .next"
   },
   "engines": {
@@ -80,8 +80,8 @@
     "lexical": "^0.25.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.456.0",
-    "next": "^15.1.6",
-    "next-auth": "^5.0.0-beta.25",
+    "next": "^16.2.10",
+    "next-auth": "^5.0.0-beta.31",
     "nodemailer": "^6.9.16",
     "openai": "^4.86.0",
     "papaparse": "^5.5.2",
@@ -117,7 +117,7 @@
     "@types/react-dom": "^19.0.0",
     "@types/ua-parser-js": "^0.7.39",
     "eslint": "^10.6.0",
-    "eslint-config-next": "^15.1.6",
+    "eslint-config-next": "^16.2.10",
     "fs-extra": "^11.2.0",
     "postcss": "^8",
     "tailwindcss": "^4.3.2",

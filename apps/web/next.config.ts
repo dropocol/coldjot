@@ -1,12 +1,8 @@
 /** @type {import('next').NextConfig} */
 
-import path from "path";
-import { existsSync } from "fs";
-import dotenv from "dotenv";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const path = require("path");
+const { existsSync } = require("fs");
+const dotenv = require("dotenv");
 
 const envFile = process.env.APP_ENV
   ? `.env.${process.env.APP_ENV}`
@@ -60,4 +56,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

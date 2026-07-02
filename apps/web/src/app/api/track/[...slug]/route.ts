@@ -30,10 +30,11 @@ const trackEventSchema = z.object({
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ eventType: string }> }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
   try {
-    const { eventType } = await params;
+    const { slug } = await params;
+    const eventType = slug[0];
     const normalized = eventType.toLowerCase();
 
     // Validate eventType against the enum — previously accepted any string,
@@ -107,10 +108,11 @@ export async function POST(
 /** Serve the transparent tracking pixel (GET), for <img>-based open tracking. */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ eventType: string }> }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
   try {
-    const { eventType } = await params;
+    const { slug } = await params;
+    const eventType = slug[0];
     const normalized = eventType.toLowerCase();
 
     // Only the "opened" event makes sense for an <img> pixel GET.
