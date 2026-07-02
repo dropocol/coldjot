@@ -13,7 +13,7 @@
     "clean": "rimraf .turbo node_modules .next"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
@@ -59,7 +59,6 @@
     "@types/papaparse": "^5.3.15",
     "@types/quoted-printable": "^1.0.2",
     "axios": "^1.8.1",
-    "bull": "^4.12.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -105,7 +104,7 @@
     "@tailwindcss/typography": "^0.5.15",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash": "^4.17.13",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/nodemailer": "^6.4.17",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -117,6 +116,6 @@
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^6.0.3"
   }
 }

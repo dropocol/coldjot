@@ -29,7 +29,7 @@
         "clean": "turbo run clean && rm -rf node_modules"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=24"
     },
     "workspaces": [
         "apps/*",
@@ -39,5 +39,10 @@
         "dotenv-cli": "^7.4.4",
         "prettier": "^3.1.0",
         "turbo": "^2.3.3"
+    },
+    "allowScripts": {
+        "@prisma/client@6.4.1": true,
+        "@prisma/engines@6.4.1": true,
+        "prisma@6.4.1": true
     }
 }

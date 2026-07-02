@@ -1,10 +1,10 @@
 {
     "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "target": "es2017",
-        "module": "commonjs",
+        "target": "es2023",
+        "module": "esnext",
         "lib": [
-            "es2017"
+            "es2023"
         ],
         "declaration": true,
         "declarationMap": true,
@@ -12,10 +12,11 @@
         "outDir": "./dist",
         "rootDir": "./src",
         "strict": true,
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
+        "types": ["node"],
         "noEmit": false,
         "incremental": false
     },
