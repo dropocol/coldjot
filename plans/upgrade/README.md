@@ -36,6 +36,7 @@
 | 6 | `upgrade/prisma-7` | packages/database + consumers; prisma 6 → 7 | [`06-prisma-7.md`](./06-prisma-7.md) |
 | 7 | `upgrade/smtp-ai-minors` | align googleapis/pino/date-fns; nodemailer/openai minors | [`07-smtp-ai-minors.md`](./07-smtp-ai-minors.md) |
 | 8 | `upgrade/lib-majors` | react-day-picker 8→9 + other peer-conflict/library majors | [`08-lib-majors.md`](./08-lib-majors.md) |
+| 9 | `upgrade/pino-logging-refactor` | fix 94 pre-existing pino call-site type errors + bump pino 9→10 | [`09-pino-logging-refactor.md`](./09-pino-logging-refactor.md) |
 
 > Step 5 (Next 16) is highest-risk → done late. Step 6 (Prisma 7) requires a DB client regen + is isolated to the database package, so it can slot after Next.
 
