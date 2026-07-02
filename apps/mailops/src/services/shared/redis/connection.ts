@@ -21,7 +21,7 @@ export class RedisConnection {
     this.client = new Redis(options);
 
     this.client.on("error", (error) => {
-      logger.error("Redis connection error:", error);
+      logger.error({ err: error }, "Redis connection error");
     });
 
     this.client.on("connect", () => {

@@ -76,7 +76,7 @@ export class MemoryMonitor {
       // Check thresholds and handle alerts
       await this.handleMemoryAlerts(metrics.heapUsed);
     } catch (error) {
-      logger.error("Failed to process memory metrics:", error);
+      logger.error({ err: error }, "Failed to process memory metrics");
     }
   }
 
@@ -90,7 +90,7 @@ export class MemoryMonitor {
         timestamp: metrics.timestamp,
       });
     } catch (error) {
-      logger.error("Failed to store memory metrics:", error);
+      logger.error({ err: error }, "Failed to store memory metrics");
     }
   }
 
@@ -158,7 +158,7 @@ export class MemoryMonitor {
         timestamp: Date.now(),
       });
     } catch (error) {
-      logger.error("Failed to store memory alert:", error);
+      logger.error({ err: error }, "Failed to store memory alert");
     }
   }
 
@@ -177,7 +177,7 @@ export class MemoryMonitor {
         timestamp: parseInt(metrics.timestamp),
       };
     } catch (error) {
-      logger.error("Failed to get memory metrics:", error);
+      logger.error({ err: error }, "Failed to get memory metrics");
       return null;
     }
   }
@@ -199,7 +199,7 @@ export class MemoryMonitor {
         timestamp: parseInt(alert.timestamp),
       };
     } catch (error) {
-      logger.error("Failed to get latest memory alert:", error);
+      logger.error({ err: error }, "Failed to get latest memory alert");
       return null;
     }
   }

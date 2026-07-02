@@ -47,7 +47,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         throw new Error(result.error || "Failed to process email");
       }
     } catch (error) {
-      logger.error(`Failed to process email job ${job.id}:`, error);
+      logger.error({ err: error }, `Failed to process email job ${job.id}`);
       throw error;
     }
   }
@@ -145,13 +145,10 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         contact,
       });
       if (missingPlaceholders.length > 0) {
-        logger.warn(
-          `⚠️ Missing values for placeholders: ${missingPlaceholders.join(", ")}`,
-          {
+        logger.warn({
             contactId: data.contactId,
             stepId: data.stepId,
-          }
-        );
+          }, `⚠️ Missing values for placeholders: ${missingPlaceholders.join(", ")}`);
       }
 
       // Create tracking metadata
@@ -462,15 +459,12 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
     if (existingEvents.length > 0) {
       const eventTypes = existingEvents.map((event) => event.type).join(", ");
-      logger.warn(
-        `⚠️ Thread already has ${eventTypes} event(s). Skipping email send.`,
-        {
+      logger.warn({
           threadId: data.threadId,
           sequenceId: data.sequenceId,
           contactId: data.contactId,
           events: existingEvents,
-        }
-      );
+        }, `⚠️ Thread already has ${eventTypes} event(s). Skipping email send.`);
       return false;
     }
 

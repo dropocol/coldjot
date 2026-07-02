@@ -55,7 +55,7 @@ export async function checkHealth(req: Request, res: Response) {
       metrics,
     });
   } catch (error) {
-    logger.error("Health check failed:", error);
+    logger.error({ err: error }, "Health check failed");
     res.status(500).json({
       status: "error",
       error: error instanceof Error ? error.message : "Unknown error",
@@ -105,7 +105,7 @@ export async function getQueueStatus(req: Request, res: Response) {
       total: jobCounts,
     });
   } catch (error) {
-    logger.error("Error getting queue status:", error);
+    logger.error({ err: error }, "Error getting queue status");
     res.status(500).json({ error: "Failed to get queue status" });
   }
 }

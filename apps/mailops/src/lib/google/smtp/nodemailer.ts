@@ -39,7 +39,7 @@ export async function createGmailTransport(
             logger.debug("Refreshed SMTP access token");
             return token;
           } catch (error) {
-            logger.error("Error refreshing access token:", error);
+            logger.error({ err: error }, "Error refreshing access token");
             throw error;
           }
         },
@@ -57,7 +57,7 @@ export async function createGmailTransport(
     await new Promise((resolve, reject) => {
       transport.verify((error) => {
         if (error) {
-          logger.error("SMTP Connection Error:", error);
+          logger.error({ err: error }, "SMTP Connection Error");
           reject(error);
         } else {
           logger.debug("SMTP Connection Successful");
@@ -66,7 +66,7 @@ export async function createGmailTransport(
       });
     });
   } catch (error) {
-    logger.error("Failed to verify SMTP connection:", error);
+    logger.error({ err: error }, "Failed to verify SMTP connection");
     throw error;
   }
 

@@ -78,7 +78,7 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
         throw new Error(result.error || "Failed to process sequence");
       }
     } catch (error) {
-      logger.error(`Failed to process sequence job ${job.id}:`, error);
+      logger.error({ err: error }, `Failed to process sequence job ${job.id}`);
       throw error;
     }
   }
@@ -89,9 +89,9 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
   private async processSequence(
     data: ProcessingJobData
   ): Promise<{ success: boolean; error?: string }> {
-    logger.info(`🚀 Starting sequence: ${data.sequenceId}`, {
+    logger.info({
       testMode: data.testMode ? "✨ Test Mode" : "🔥 Production Mode",
-    });
+    }, `🚀 Starting sequence: ${data.sequenceId}`);
 
     try {
       // Check rate limits first
@@ -139,18 +139,18 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
           : null,
       };
 
-      logger.info(`📋 Sequence details for ${sequence.name}:`, {
+      logger.info({
         steps: sequence.steps.length,
         businessHours: sequence.businessHours ? "✓" : "✗",
-      });
+      }, `📋 Sequence details for ${sequence.name}`);
 
       // TODO :  Make this a separate job in batch
       // Get active contacts
       const contacts = await getActiveSequenceContacts(data.sequenceId);
-      logger.info(`👥 Processing contacts:`, {
+      logger.info({
         total: contacts.length,
         sequence: sequence.name,
-      });
+      }, `👥 Processing contacts`);
 
       // Process each contact
       for (const sequenceContact of contacts) {
@@ -167,14 +167,14 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
         }
       }
 
-      logger.info(`✨ Sequence processing completed: ${sequence.name}`, {
+      logger.info({
         totalContacts: contacts.length,
         totalSteps: sequence.steps.length,
-      });
+      }, `✨ Sequence processing completed: ${sequence.name}`);
 
       return { success: true };
     } catch (error) {
-      logger.error("❌ Error processing sequence:", error);
+      logger.error({ err: error }, "❌ Error processing sequence");
       throw error;
     }
   }

@@ -55,11 +55,11 @@ export const decodeNotification = (
   message: PubSubMessage
 ): DecodedNotification => {
   try {
-    logger.info(message, "Decoded notification");
+    logger.info({ message }, "Decoded notification");
     const decodedData = Buffer.from(message.data, "base64").toString();
-    logger.info(decodedData, "Decoded data");
+    logger.info({ data: decodedData }, "Decoded data");
     const parsedData = JSON.parse(decodedData);
-    logger.info(parsedData, "Parsed data");
+    logger.info({ data: parsedData }, "Parsed data");
     logger.info(
       `Parsed historyId: ${parsedData.historyId} && type: ${typeof parsedData.historyId}`
     );

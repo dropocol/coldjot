@@ -72,10 +72,10 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       getWorkerOptions(QUEUE_NAMES.EMAIL_SCHEDULE)
     );
 
-    logger.info("📧 Email Scheduling Processor initialized", {
+    logger.info({
       checkInterval: this.checkInterval,
       retryDelay: this.retryDelay,
-    });
+    }, "📧 Email Scheduling Processor initialized");
 
     this.setupEmailSendingScheduler();
   }
@@ -101,7 +101,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         `📅 Email scheduling scheduler initialized with ${this.checkInterval}ms interval`
       );
     } catch (error) {
-      logger.error("❌ Failed to setup email scheduling scheduler:", error);
+      logger.error({ err: error }, "❌ Failed to setup email scheduling scheduler");
       throw error;
     }
   }
@@ -110,7 +110,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
     try {
       await this.processScheduledEmails();
     } catch (error) {
-      logger.error(`Failed to process schedule job ${job.id}:`, error);
+      logger.error({ err: error }, `Failed to process schedule job ${job.id}`);
       throw error;
     }
   }
@@ -120,9 +120,9 @@ export class ScheduleProcessor extends BaseProcessor<any> {
    */
   private async processScheduledEmails(): Promise<void> {
     try {
-      logger.info("🔍 Checking for scheduled emails to process", {
+      logger.info({
         timestamp: new Date().toISOString(),
-      });
+      }, "🔍 Checking for scheduled emails to process");
       //
       // Find emails that are due to be sent with the correct structure
       const dueEmails = await prisma.sequenceContact.findMany({
@@ -272,16 +272,16 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         }
       }
 
-      logger.info("✅ Completed processing batch of scheduled emails", {
+      logger.info({
         processedCount: dueEmails.length,
         timestamp: new Date().toISOString(),
-      });
+      }, "✅ Completed processing batch of scheduled emails");
     } catch (error) {
-      logger.error("❌ Error in processScheduledEmails:", {
+      logger.error({
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString(),
-      });
+      }, "❌ Error in processScheduledEmails");
       throw error;
     }
   }
@@ -319,11 +319,11 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       );
 
       if (!allowed) {
-        logger.warn("⚠️ Rate limit exceeded", {
+        logger.warn({
           userId: sequence.userId,
           sequenceId: sequence.id,
           contactId: contact.id,
-        });
+        }, "⚠️ Rate limit exceeded");
         return;
       }
 
@@ -390,19 +390,19 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         throw new Error("Step not found");
       }
 
-      logger.debug("📋 Current step details", {
+      logger.debug({
         stepId: currentStep.id,
         stepType: currentStep.stepType,
         timing: currentStep.timing,
         order: currentStep.order,
-      });
+      }, "📋 Current step details");
 
       // 3. Calculate next send time using scheduling service
-      logger.debug("🕒 Calculating next send time", {
+      logger.debug({
         currentTime: new Date().toISOString(),
         hasBusinessHours: !!sequence.businessHours,
         businessHours: sequence.businessHours,
-      });
+      }, "🕒 Calculating next send time");
 
       const nextSendTime = await scheduleGenerator.calculateNextRun(
         new Date(),
@@ -411,11 +411,11 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       );
 
       if (!nextSendTime) {
-        logger.error("❌ Could not calculate next send time", {
+        logger.error({
           stepId: currentStep.id,
           timing: currentStep.timing,
           businessHours: sequence.businessHours,
-        });
+        }, "❌ Could not calculate next send time");
         throw new Error("Could not calculate next send time");
       }
 
@@ -426,10 +426,10 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         "🕒 Schedule decision"
       );
 
-      logger.debug("⏰ Next send time calculated", {
+      logger.debug({
         nextSendTime: nextSendTime.toISOString(),
         delay: nextSendTime.getTime() - Date.now(),
-      });
+      }, "⏰ Next send time calculated");
 
       const previousStepIndex = currentStep.order - 1;
       const previousSubject = sequence.steps[previousStepIndex]?.subject || "";
@@ -656,7 +656,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       return { currentTime: new Date() };
     }
 
-    logger.info("📧 Next scheduled email:", {
+    logger.info({
       id: nextEmail.id,
       scheduledTime: nextEmail.nextScheduledAt?.toISOString(),
       contact: nextEmail.contact.email,
@@ -666,7 +666,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
             (nextEmail.nextScheduledAt.getTime() - Date.now()) / 1000 / 60
           )} minutes`
         : "unknown",
-    });
+    }, "📧 Next scheduled email");
 
     return {
       nextEmail: nextEmail
@@ -695,12 +695,12 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       // Add 1 second to ensure we're past the scheduled time
       const targetTime = new Date(nextEmail.scheduledTime.getTime() + 1000);
 
-      logger.info("⏰ Advancing time to process next email", {
+      logger.info({
         from: new Date().toISOString(),
         to: targetTime.toISOString(),
         emailId: nextEmail.id,
         contact: nextEmail.contact,
-      });
+      }, "⏰ Advancing time to process next email");
 
       // Use scheduling service to advance time
       // TODO : implement this

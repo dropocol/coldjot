@@ -673,7 +673,7 @@ export class TrackingService {
         `Recorded email open for hash: ${hash}, isFirstOpen: ${isFirstOpen}`
       );
     } catch (error) {
-      logger.error("Error handling email open:", error);
+      logger.error({ err: error }, "Error handling email open");
       throw error;
     }
   }
@@ -757,7 +757,7 @@ export class TrackingService {
       logger.info(`Recorded link click for hash: ${hash}, linkId: ${linkId}`);
       return link.originalUrl;
     } catch (error) {
-      logger.error("Error handling link click:", error);
+      logger.error({ err: error }, "Error handling link click");
       throw error;
     }
   }
@@ -807,7 +807,7 @@ export class TrackingService {
 
       logger.info(`Tracked email event: ${eventType} for email: ${trackingId}`);
     } catch (error) {
-      logger.error("Error tracking email event:", error);
+      logger.error({ err: error }, "Error tracking email event");
       throw error;
     }
   }

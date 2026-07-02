@@ -12,7 +12,7 @@ export async function getSystemMetrics(req: Request, res: Response) {
     const metrics = await monitoringService.getSystemMetrics();
     res.json(metrics);
   } catch (error) {
-    logger.error("Error getting system metrics:", error);
+    logger.error({ err: error }, "Error getting system metrics");
     res.status(500).json({ error: "Failed to get system metrics" });
   }
 }
@@ -35,7 +35,7 @@ export async function getSequenceHealth(req: Request<{ id: string }>, res: Respo
 
     res.json(health);
   } catch (error) {
-    logger.error("Error getting sequence health:", error);
+    logger.error({ err: error }, "Error getting sequence health");
     res.status(500).json({ error: "Failed to get sequence health" });
   }
 }

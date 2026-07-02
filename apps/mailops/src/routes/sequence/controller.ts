@@ -152,7 +152,7 @@ export async function launchSequence(req: Request<{ id: string }>, res: Response
       stepCount: sequence.steps.length,
     });
   } catch (error) {
-    logger.error("Error launching sequence:", error);
+    logger.error({ err: error }, "Error launching sequence");
     res.status(500).json({ error: "Failed to launch sequence" });
   }
 }
@@ -185,7 +185,7 @@ export async function pauseSequence(req: Request<{ id: string }>, res: Response)
 
     res.json({ success: true });
   } catch (error) {
-    logger.error("Error pausing sequence:", error);
+    logger.error({ err: error }, "Error pausing sequence");
     res.status(500).json({ error: "Failed to pause sequence" });
   }
 }
@@ -218,7 +218,7 @@ export async function resumeSequence(req: Request<{ id: string }>, res: Response
 
     res.json({ success: true });
   } catch (error) {
-    logger.error("Error resuming sequence:", error);
+    logger.error({ err: error }, "Error resuming sequence");
     res.status(500).json({ error: "Failed to resume sequence" });
   }
 }
@@ -268,7 +268,7 @@ export async function resetSequenceHandler(req: Request<{ id: string }>, res: Re
       message: "Sequence reset successfully",
     });
   } catch (error) {
-    logger.error("Error resetting sequence:", error);
+    logger.error({ err: error }, "Error resetting sequence");
     res.status(500).json({ error: "Failed to reset sequence" });
   }
 }

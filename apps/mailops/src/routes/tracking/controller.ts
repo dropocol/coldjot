@@ -84,7 +84,7 @@ export async function handleEmailOpen(req: Request<{ hash: string }>, res: Respo
       })
       .send(TRANSPARENT_PIXEL);
   } catch (error) {
-    logger.error("Error handling email open:", error);
+    logger.error({ err: error }, "Error handling email open");
     res.status(500).json({ error: "Failed to track email open" });
   }
 }
@@ -115,7 +115,7 @@ export async function handleLinkClick(req: Request<{ hash: string }>, res: Respo
 
     return res.redirect(redirectUrl);
   } catch (error) {
-    logger.error("Error handling link click:", error);
+    logger.error({ err: error }, "Error handling link click");
     res.status(500).json({ error: "Failed to track link click" });
   }
 }
@@ -145,7 +145,7 @@ export async function trackEmailEvent(req: Request, res: Response) {
     });
     res.json({ success: true });
   } catch (error) {
-    logger.error("Error tracking email event:", error);
+    logger.error({ err: error }, "Error tracking email event");
     res.status(500).json({ error: "Failed to track email event" });
   }
 }

@@ -166,7 +166,7 @@ export class EmailService {
 
             logger.info("✅ Original tracked message deleted from sent folder");
           } catch (err) {
-            logger.error("Error deleting original tracked message:", err);
+            logger.error({ err: err }, "Error deleting original tracked message");
           }
         }
 

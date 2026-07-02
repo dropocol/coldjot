@@ -51,10 +51,7 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
         `👳‍♂️ Contact processing scheduler initialized with ${this.checkInterval}ms interval`
       );
     } catch (error) {
-      logger.error(
-        "👳‍♂️ ❌ Failed to setup contact processing scheduler:",
-        error
-      );
+      logger.error({ err: error }, "👳‍♂️ ❌ Failed to setup contact processing scheduler");
       throw error;
     }
   }
@@ -66,7 +63,7 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
       await this.processNewContacts();
       // }
     } catch (error) {
-      logger.error(`Failed to process contact job ${job.id}:`, error);
+      logger.error({ err: error }, `Failed to process contact job ${job.id}`);
       throw error;
     }
   }
@@ -108,10 +105,7 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
         try {
           await this.processContact(contact);
         } catch (error) {
-          logger.error(
-            `❌ Error processing contact ${contact.contact.email}:`,
-            error
-          );
+          logger.error({ err: error }, `❌ Error processing contact ${contact.contact.email}`);
           // Continue with next contact even if one fails
           continue;
         }
@@ -119,7 +113,7 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
 
       logger.info("👳‍♂️ ✅ Completed processing batch of new contacts");
     } catch (error) {
-      logger.error("👳‍♂️ ❌ Error in processNewContacts:", error);
+      logger.error({ err: error }, "👳‍♂️ ❌ Error in processNewContacts");
       throw error;
     }
   }

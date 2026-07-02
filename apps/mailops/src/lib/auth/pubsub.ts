@@ -11,7 +11,7 @@ function validateAudience(audience: string | undefined): string | undefined {
     const url = new URL(audience);
     return url.toString();
   } catch (e) {
-    logger.warn("Invalid audience URL:", e);
+    logger.warn({ err: e }, "Invalid audience URL");
     return undefined;
   }
 }
@@ -71,7 +71,7 @@ export async function verifyPubSubJwt(token: string): Promise<boolean> {
 
     // Additional validation if needed
     if (!verified.email || !verified.email_verified) {
-      logger.warn("JWT missing required claims", { verified });
+      logger.warn({ verified }, "JWT missing required claims");
       return false;
     }
 

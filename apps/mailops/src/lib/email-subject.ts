@@ -18,7 +18,7 @@ export async function determineEmailSubject(
   gmail?: gmail_v1.Gmail,
   contact?: Contact
 ): Promise<SubjectInfo> {
-  logger.info("Starting determineEmailSubject", {
+  logger.info({
     stepId: step.id,
     threadId,
     hasGmail: !!gmail,
@@ -27,7 +27,7 @@ export async function determineEmailSubject(
     replyToThread: step.replyToThread,
     order: step.order,
     templateId: step.templateId,
-  });
+  }, "Starting determineEmailSubject");
 
   // Process subject with placeholders
   const processSubject = (subject: string) => {
@@ -37,11 +37,11 @@ export async function determineEmailSubject(
           fallbacks: {},
         })
       : subject;
-    logger.debug("Processed subject with placeholders", {
+    logger.debug({
       original: subject,
       processed,
       hasContact: !!contact,
-    });
+    }, "Processed subject with placeholders");
     return processed;
   };
 
@@ -59,13 +59,13 @@ export async function determineEmailSubject(
       // 2. There are no existing emails in the thread
       isNewThread = !step.replyToThread || existingEmails === 0;
 
-      logger.debug("Checked thread status", {
+      logger.debug({
         threadId,
         existingEmails,
         isNewThread,
         replyToThread: step.replyToThread,
         order: step.order,
-      });
+      }, "Checked thread status");
     }
 
     // Case 1: New Thread - Get subject from template or step
@@ -79,10 +79,10 @@ export async function determineEmailSubject(
           select: { subject: true },
         });
 
-        logger.debug("Fetched template subject", {
+        logger.debug({
           templateId: step.templateId,
           templateSubject: template?.subject,
-        });
+        }, "Fetched template subject");
 
         if (template?.subject) {
           newThreadSubject = template.subject;
@@ -93,12 +93,12 @@ export async function determineEmailSubject(
       const baseSubject = newThreadSubject || step.subject || "No Subject";
       const processedSubject = processSubject(baseSubject);
 
-      logger.info("Using new thread subject", {
+      logger.info({
         templateId: step.templateId,
         hasTemplateSubject: !!newThreadSubject,
         baseSubject,
         processedSubject,
-      });
+      }, "Using new thread subject");
 
       return {
         subject: processedSubject,
@@ -109,7 +109,7 @@ export async function determineEmailSubject(
 
     // Case 2: Reply to Thread - Try to get original subject from various sources
     if (threadId) {
-      logger.debug("Handling reply to thread", { threadId });
+      logger.debug({ threadId }, "Handling reply to thread");
       try {
         // First try to get from emailThreads
         const emailThread = await prisma.emailThread.findUnique({
@@ -117,10 +117,10 @@ export async function determineEmailSubject(
           select: { subject: true },
         });
 
-        logger.debug("Fetched subject from emailThread", {
+        logger.debug({
           threadId,
           foundSubject: emailThread?.subject,
-        });
+        }, "Fetched subject from emailThread");
 
         if (emailThread?.subject) {
           // For replies, always use the original thread subject
@@ -129,11 +129,11 @@ export async function determineEmailSubject(
             ? processedSubject
             : `Re: ${processedSubject}`;
 
-          logger.info("Using emailThread subject for reply", {
+          logger.info({
             originalSubject: emailThread.subject,
             processedSubject,
             finalSubject: subject,
-          });
+          }, "Using emailThread subject for reply");
 
           return {
             subject,
@@ -152,10 +152,10 @@ export async function determineEmailSubject(
           select: { subject: true },
         });
 
-        logger.debug("Fetched subject from emailTracking", {
+        logger.debug({
           threadId,
           foundSubject: emailTracking?.subject,
-        });
+        }, "Fetched subject from emailTracking");
 
         if (emailTracking?.subject) {
           // For replies, always use the original thread subject
@@ -164,11 +164,11 @@ export async function determineEmailSubject(
             ? processedSubject
             : `Re: ${processedSubject}`;
 
-          logger.info("Using emailTracking subject for reply", {
+          logger.info({
             originalSubject: emailTracking.subject,
             processedSubject,
             finalSubject: subject,
-          });
+          }, "Using emailTracking subject for reply");
 
           return {
             subject,
@@ -186,10 +186,10 @@ export async function determineEmailSubject(
         }
 
         const threadSubject = await getGmailSubject(gmail, threadId);
-        logger.debug("Fetched subject from Gmail API", {
+        logger.debug({
           threadId,
           foundSubject: threadSubject,
-        });
+        }, "Fetched subject from Gmail API");
 
         if (!threadSubject) {
           logger.warn(
@@ -219,11 +219,11 @@ export async function determineEmailSubject(
           ? processedSubject
           : `Re: ${processedSubject}`;
 
-        logger.info("Using Gmail API subject for reply", {
+        logger.info({
           originalSubject: threadSubject,
           processedSubject,
           finalSubject: subject,
-        });
+        }, "Using Gmail API subject for reply");
 
         return {
           subject,
@@ -231,14 +231,11 @@ export async function determineEmailSubject(
           originalSubject: threadSubject,
         };
       } catch (error) {
-        logger.warn(
-          "Failed to fetch thread subject, falling back to template/step subject",
-          {
+        logger.warn({
             error,
             templateId: step.templateId,
             stepSubject: step.subject,
-          }
-        );
+          }, "Failed to fetch thread subject, falling back to template/step subject");
 
         // Try template subject first, then fall back to step subject
         let fallbackSubject: string | null = null;
@@ -274,23 +271,23 @@ export async function determineEmailSubject(
     const baseSubject = fallbackSubject || step.subject || "No Subject";
     const processedSubject = processSubject(baseSubject);
 
-    logger.info("Using fallback subject", {
+    logger.info({
       templateId: step.templateId,
       hasTemplateSubject: !!fallbackSubject,
       stepSubject: step.subject,
       finalSubject: processedSubject,
-    });
+    }, "Using fallback subject");
 
     return {
       subject: processedSubject,
       isReply: false,
     };
   } catch (error) {
-    logger.error("Error determining email subject:", {
+    logger.error({
       error,
       templateId: step.templateId,
       stepSubject: step.subject,
-    });
+    }, "Error determining email subject");
 
     // Final fallback - Try template subject first, then step subject
     try {
@@ -310,7 +307,7 @@ export async function determineEmailSubject(
         isReply: false,
       };
     } catch (innerError) {
-      logger.error("Failed even in final fallback:", innerError);
+      logger.error({ ctx: innerError }, "Failed even in final fallback");
       return {
         subject: "No Subject",
         isReply: false,

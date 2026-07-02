@@ -71,7 +71,7 @@ export class ServiceManager {
 
       logger.info("✨ Service Manager initialized successfully");
     } catch (error) {
-      logger.error("❌ Error initializing Service Manager:", error);
+      logger.error({ err: error }, "❌ Error initializing Service Manager");
       throw error;
     }
   }
@@ -93,7 +93,7 @@ export class ServiceManager {
       await this.pubSubService.startListening();
       logger.info("📨 PubSub service initialized and listening");
     } catch (error) {
-      logger.error("❌ Error initializing core services:", error);
+      logger.error({ err: error }, "❌ Error initializing core services");
       throw error;
     }
   }
@@ -113,7 +113,7 @@ export class ServiceManager {
 
       logger.info(`✅ Initialized ${queueEntries.length} queues`);
     } catch (error) {
-      logger.error("❌ Error initializing queues:", error);
+      logger.error({ err: error }, "❌ Error initializing queues");
       throw error;
     }
   }
@@ -175,7 +175,7 @@ export class ServiceManager {
         `✅ Initialized ${successCount}/${Object.keys(processorMap).length} processors successfully`
       );
     } catch (error) {
-      logger.error("❌ Error initializing processors:", error);
+      logger.error({ err: error }, "❌ Error initializing processors");
       throw error;
     }
   }
@@ -224,7 +224,7 @@ export class ServiceManager {
 
       logger.info("✨ Service Manager shutdown complete");
     } catch (error) {
-      logger.error("❌ Error during shutdown:", error);
+      logger.error({ err: error }, "❌ Error during shutdown");
       throw error;
     }
   }

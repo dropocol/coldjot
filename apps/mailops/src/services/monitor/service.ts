@@ -154,7 +154,7 @@ export class MonitoringService {
       await this.storeHealthCheck(health);
       return health;
     } catch (error) {
-      logger.error(`Health check failed for sequence ${sequenceId}:`, error);
+      logger.error({ err: error }, `Health check failed for sequence ${sequenceId}`);
       throw error;
     }
   }

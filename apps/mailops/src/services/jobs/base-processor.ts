@@ -28,7 +28,7 @@ export abstract class BaseProcessor<T = any> {
     this.worker.on("completed", (job) => {
       if (job) {
         this.onCompleted(job as Job<T>).catch((error) => {
-          logger.error("Error in onCompleted handler:", error);
+          logger.error({ err: error }, "Error in onCompleted handler");
         });
       }
     });
@@ -36,28 +36,28 @@ export abstract class BaseProcessor<T = any> {
     this.worker.on("failed", (job, error) => {
       if (job) {
         this.onFailed(job as Job<T>, error).catch((error) => {
-          logger.error("Error in onFailed handler:", error);
+          logger.error({ err: error }, "Error in onFailed handler");
         });
       }
     });
 
     this.worker.on("error", (error) => {
       this.onError(error).catch((error) => {
-        logger.error("Error in onError handler:", error);
+        logger.error({ err: error }, "Error in onError handler");
       });
     });
 
     this.worker.on("active", (job) => {
       if (job) {
         this.onActive(job as Job<T>).catch((error) => {
-          logger.error("Error in onActive handler:", error);
+          logger.error({ err: error }, "Error in onActive handler");
         });
       }
     });
 
     this.worker.on("stalled", (jobId) => {
       this.onStalled(jobId).catch((error) => {
-        logger.error("Error in onStalled handler:", error);
+        logger.error({ err: error }, "Error in onStalled handler");
       });
     });
   }
@@ -68,19 +68,19 @@ export abstract class BaseProcessor<T = any> {
     // Log job identity only — job.data may contain recipient/subject PII
     // (EmailJob) or other tenant data. The full payload is retrievable from
     // the BullMQ job store when debugging a specific failure.
-    logger.info(`🚧 ✅ Job completed: ${job.id}`, {
+    logger.info({
       queue: job.queueName,
       name: job.name,
-    });
+    }, `🚧 ✅ Job completed: ${job.id}`);
   }
 
   protected async onFailed(job: Job<T>, error: Error): Promise<void> {
-    logger.error(`🚧 ❌ Job failed: ${job.id}`, {
+    logger.error({
       queue: job.queueName,
       name: job.name,
       attemptsMade: job.attemptsMade,
       error: error.message,
-    });
+    }, `🚧 ❌ Job failed: ${job.id}`);
   }
 
   protected async onError(error: Error): Promise<void> {
@@ -141,9 +141,9 @@ export abstract class BaseProcessor<T = any> {
     const job = await this.queue.getJob(jobId);
     if (job) {
       await job.remove();
-      logger.info(`🚧 🗑️ Job removed: ${jobId}`, {
+      logger.info({
         queue: this.queue.name,
-      });
+      }, `🚧 🗑️ Job removed: ${jobId}`);
     }
   }
 
@@ -151,9 +151,9 @@ export abstract class BaseProcessor<T = any> {
     const job = await this.queue.getJob(jobId);
     if (job) {
       await job.retry();
-      logger.info(`🚧 🔄 Job retried: ${jobId}`, {
+      logger.info({
         queue: this.queue.name,
-      });
+      }, `🚧 🔄 Job retried: ${jobId}`);
     }
   }
 
@@ -163,8 +163,8 @@ export abstract class BaseProcessor<T = any> {
     const periodInSeconds = Math.floor(gracePeriod / 1000);
     await this.queue.clean(periodInSeconds, 100, "completed");
     await this.queue.clean(periodInSeconds, 100, "failed");
-    logger.info(`🚧 🧹 Cleaned old jobs from queue: ${this.queue.name}`, {
+    logger.info({
       gracePeriod: periodInSeconds,
-    });
+    }, `🚧 🧹 Cleaned old jobs from queue: ${this.queue.name}`);
   }
 }

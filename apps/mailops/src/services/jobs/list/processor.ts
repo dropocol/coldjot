@@ -27,10 +27,10 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
     // Initialize concurrency limiter
     this.concurrencyLimit = pLimit(this.MAX_CONCURRENT_SYNCS);
 
-    logger.info("📋 List Sync Processor initialized", {
+    logger.info({
       checkInterval: this.CHECK_INTERVAL,
       maxConcurrentSyncs: this.MAX_CONCURRENT_SYNCS,
-    });
+    }, "📋 List Sync Processor initialized");
 
     this.setupListSyncScheduler();
   }
@@ -53,7 +53,7 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
         `📋 List sync scheduler initialized with ${this.CHECK_INTERVAL}ms interval`
       );
     } catch (error) {
-      logger.error("📋 ❌ Failed to setup list sync scheduler:", error);
+      logger.error({ err: error }, "📋 ❌ Failed to setup list sync scheduler");
       throw error;
     }
   }
@@ -62,7 +62,7 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
     try {
       await this.processSyncRecords();
     } catch (error) {
-      logger.error(`📋 ❌ Failed to process list sync job ${job.id}:`, error);
+      logger.error({ err: error }, `📋 ❌ Failed to process list sync job ${job.id}`);
       throw error;
     }
   }
@@ -113,10 +113,7 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
 
               logger.info(`📋 Processed list sync record ${record.id}`);
             } catch (error) {
-              logger.error(
-                `📋 ❌ Error processing sync record ${record.id}:`,
-                error
-              );
+              logger.error({ err: error }, `📋 ❌ Error processing sync record ${record.id}`);
               await prisma.listSyncRecord.update({
                 where: { id: record.id },
                 data: {

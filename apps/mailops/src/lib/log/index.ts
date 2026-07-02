@@ -84,7 +84,9 @@ if (env.LOG_TO_FILE) {
     env.LOG_DIR,
     `${env.APP_ENV}-${new Date().toISOString().split("T")[0]}.log`
   );
-  destinations.push({ stream: fs.createWriteStream(logFile, { flags: "a" }) });
+  // pino 10 requires a pino destination (ThreadStream-compatible) rather
+  // than a raw fs.WriteStream. pino.destination() returns one bound to the fd.
+  destinations.push({ stream: pino.destination(logFile) });
 }
 
 // Sensitive paths redacted from every log line. Covers tokens/credentials

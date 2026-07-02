@@ -72,12 +72,12 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
     // Initialize concurrency limiter
     this.concurrencyLimiter = pLimit(BATCH.CONCURRENCY);
 
-    logger.info("🧶 Thread Monitoring Processor initialized", {
+    logger.info({
       batchConfig: BATCH,
       retryConfig: RETRY,
       rateLimits,
       environment: CURRENT_ENV,
-    });
+    }, "🧶 Thread Monitoring Processor initialized");
 
     this.setupThreadMonitoringScheduler();
   }
@@ -109,7 +109,7 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
         `🧶 Thread monitoring scheduler initialized with ${checkInterval}ms interval`
       );
     } catch (error) {
-      logger.error("🧶 ❌ Failed to setup thread monitoring scheduler:", error);
+      logger.error({ err: error }, "🧶 ❌ Failed to setup thread monitoring scheduler");
       throw error;
     }
   }
@@ -119,10 +119,7 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
       const batchSize = this.calculateDynamicBatchSize(job.data.batchSize);
       await this.processThreadBatch(batchSize, job.data);
     } catch (error) {
-      logger.error(
-        `🧶 ❌ Failed to process thread monitoring job ${job.id}:`,
-        error
-      );
+      logger.error({ err: error }, `🧶 ❌ Failed to process thread monitoring job ${job.id}`);
       throw error;
     }
   }
@@ -144,12 +141,12 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
     jobData: ThreadCheckJob
   ): Promise<void> {
     try {
-      logger.info("🧶 Starting thread batch processing", {
+      logger.info({
         batchSize,
         priority: jobData.priority,
         threadAge: jobData.threadAge,
         timestamp: new Date().toISOString(),
-      });
+      }, "🧶 Starting thread batch processing");
 
       // Find threads that need checking
       const threadsToCheck = await this.findThreadsToCheck(batchSize, jobData);
@@ -167,10 +164,7 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
               if (this.shouldRetryAfterError(error)) {
                 await this.scheduleRetry(thread, error);
               } else {
-                logger.error(
-                  `🧶 ❌ Permanent error checking thread ${thread.threadId}:`,
-                  error
-                );
+                logger.error({ err: error }, `🧶 ❌ Permanent error checking thread ${thread.threadId}`);
               }
             } finally {
               this.rateLimiter.release();
@@ -187,12 +181,12 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
         (r) => r.status === "rejected"
       ).length;
 
-      logger.info("🧶 ✅ Completed thread monitoring batch", {
+      logger.info({
         total: threadsToCheck.length,
         success: successCount,
         failures: failureCount,
         timestamp: new Date().toISOString(),
-      });
+      }, "🧶 ✅ Completed thread monitoring batch");
     } catch (error) {
       logger.error(error, "🧶 ❌ Error in processThreadBatch:");
       throw error;
@@ -533,12 +527,12 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
       // Update thread metadata
       await this.updateThreadMetadata(thread, threadAge, hasNewEvents);
 
-      logger.info(`🧶 ✅ Checked thread ${thread.threadId}`, {
+      logger.info({
         hasNewEvents,
         threadAge,
-      });
+      }, `🧶 ✅ Checked thread ${thread.threadId}`);
     } catch (error) {
-      logger.error(error, `🧶 ❌ Error checking thread ${thread.threadId}:`);
+      logger.error({ err: error }, `🧶 ❌ Error checking thread ${thread.threadId}`);
       throw error;
     }
   }

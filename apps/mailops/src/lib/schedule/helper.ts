@@ -36,7 +36,7 @@ export const saveToLogFile = (message: string) => {
       logger.info(`LOG-MESSAGE: ${logPath}`);
       fs.appendFileSync(logPath, `@coldjot/mailops:dev: ${message}\n`);
     } catch (error) {
-      logger.error("Error writing to log file:", error);
+      logger.error({ err: error }, "Error writing to log file");
     }
   }
 };

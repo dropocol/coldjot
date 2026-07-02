@@ -28,7 +28,7 @@ export async function initializeServices(): Promise<void> {
 
     logger.info("✨ Services initialization complete");
   } catch (error) {
-    logger.error("❌ Error during services initialization:", error);
+    logger.error({ err: error }, "❌ Error during services initialization");
     throw error;
   }
 }
@@ -42,7 +42,7 @@ export async function shutdownServices(): Promise<void> {
       logger.info("✨ Services shutdown complete");
     }
   } catch (error) {
-    logger.error("❌ Error during services shutdown:", error);
+    logger.error({ err: error }, "❌ Error during services shutdown");
     throw error;
   }
 }
