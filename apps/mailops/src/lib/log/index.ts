@@ -16,9 +16,10 @@ if (env.LOG_TO_FILE && !fs.existsSync(env.LOG_DIR)) {
 // Get the caller file name
 const getCallerFile = () => {
   const err = new Error();
+  const originalPrepareStackTrace = Error.prepareStackTrace ?? (() => undefined);
   Error.prepareStackTrace = (_, stack) => stack;
   const stack = err.stack as unknown as NodeJS.CallSite[];
-  Error.prepareStackTrace = undefined;
+  Error.prepareStackTrace = originalPrepareStackTrace;
 
   // Find the first caller that isn't this file or pino
   const caller = stack.find((call) => {
