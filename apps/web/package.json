@@ -97,7 +97,7 @@
     "react-markdown": "^9.0.3",
     "react-resizable-panels": "^2.1.6",
     "recharts": "^2.15.0",
-    "tailwind-merge": "^2.6.0",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
     "typescript-eslint": "^8.62.1",
     "ua-parser-js": "^2.0.0",
@@ -107,6 +107,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.2",
     "@tailwindcss/typography": "^0.5.15",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash": "^4.17.13",
@@ -119,7 +120,7 @@
     "eslint-config-next": "^15.1.6",
     "fs-extra": "^11.2.0",
     "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "tailwindcss": "^4.3.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
     "typescript": "^6.0.3"

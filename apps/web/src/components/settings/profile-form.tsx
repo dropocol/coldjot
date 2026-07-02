@@ -2,7 +2,7 @@
 
 import { User } from "next-auth";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +32,7 @@ interface ProfileFormProps {
 export function ProfileForm({ user }: ProfileFormProps) {
   const { toast } = useToast();
   const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+    resolver: standardSchemaResolver(profileFormSchema),
     defaultValues: {
       name: user.name || "",
     },
