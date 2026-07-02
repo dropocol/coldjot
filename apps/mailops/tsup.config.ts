@@ -5,6 +5,7 @@ export default defineConfig({
   dts: {
     compilerOptions: {
       incremental: false,
+      ignoreDeprecations: "6.0",
     },
   },
   entry: ["src/server.ts"],
@@ -49,7 +50,6 @@ export default defineConfig({
     "cors",
     "pino",
     "pino-http",
-    "bull",
     "bullmq",
     "ioredis",
     "nodemailer",

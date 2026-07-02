@@ -8,6 +8,7 @@ import {
   refreshGoogleToken,
 } from "@/lib/db/user";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 declare module "next-auth" {
   interface Session {
@@ -21,7 +22,9 @@ declare module "next-auth" {
   }
 }
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+});
 
 export const authConfig: NextAuthConfig = {
   providers: [

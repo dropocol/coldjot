@@ -262,7 +262,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
 
     const { workHoursStart, timezone } = businessHours;
     const [startHour, startMinute] = workHoursStart.split(":").map(Number);
-    let result = date.setZone(timezone);
+    let result: DateTime<boolean> = date.setZone(timezone);
 
     // First check if the current time is already valid
     if (isValidBusinessTime(result, businessHours)) {

@@ -41,11 +41,12 @@
         "turbo": "^2.3.3"
     },
     "overrides": {
-        "next": "^16.2.10"
+        "next": "^16.2.10",
+        "ioredis": "^5.11.1"
     },
     "allowScripts": {
-        "@prisma/client@6.4.1": true,
-        "@prisma/engines@6.4.1": true,
-        "prisma@6.4.1": true
+        "@prisma/client@7.8.0": true,
+        "@prisma/engines@7.8.0": true,
+        "prisma@7.8.0": true
     }
 }
