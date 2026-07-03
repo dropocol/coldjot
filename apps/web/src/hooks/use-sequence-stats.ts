@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Prisma } from "@prisma/client";
 
 // `{}` here is the idiomatic Prisma "no includes/select" payload args shape.
@@ -35,7 +35,7 @@ export function useSequenceStats(sequenceId: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -53,13 +53,13 @@ export function useSequenceStats(sequenceId: string) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sequenceId]);
 
   useEffect(() => {
     if (sequenceId) {
       fetchStats();
     }
-  }, [sequenceId]);
+  }, [sequenceId, fetchStats]);
 
   return {
     stats,

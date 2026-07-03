@@ -83,6 +83,9 @@ export function OnboardingContainer() {
         duration: 3000,
       });
     }
+    // handleNext is a component-body closure; deliberately excluded (one-shot
+    // redirect effect keyed on the oauth result params).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Redirect to dashboard if onboarding is already completed

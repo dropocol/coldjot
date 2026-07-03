@@ -41,11 +41,10 @@ export default tseslint.config(
       ],
 
       // Correctness / bug-catching rules — now at zero violations, enforced.
-      // rules-of-hooks is unconditional correctness; exhaustive-deps stays at
-      // warn (plan 08 phase 1) — 10 pre-existing useEffect dep cases remain and
-      // need careful useCallback fixes before promoting to error.
+      // rules-of-hooks is unconditional correctness; exhaustive-deps is now at
+      // zero violations (one-shot/mount effects suppressed inline with rationale).
       "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/exhaustive-deps": "error",
       "@typescript-eslint/no-require-imports": "error",
       "no-useless-catch": "error",
       "no-empty": "error",

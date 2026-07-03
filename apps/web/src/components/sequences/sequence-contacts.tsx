@@ -217,6 +217,9 @@ export function SequenceContacts({
     return () => {
       if (interval) clearInterval(interval);
     };
+    // refreshContacts is a component-body closure; deliberately excluded (the
+    // interval should reset only when these inputs change).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sequenceId, isActive, page, limit]);
 
   const getStatusDetails = (contact: ExtendedSequenceContact) => {

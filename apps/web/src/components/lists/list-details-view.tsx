@@ -132,6 +132,9 @@ export const ListDetailsView = memo(
 
     useEffect(() => {
       fetchList();
+      // fetchList is a component-body closure; deliberately excluded to keep
+      // this as a "refetch on page/limit change" effect.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, limit]);
 
     // Notify parent component when selected contacts change
@@ -141,6 +144,9 @@ export const ListDetailsView = memo(
         // Only update if the values are different to prevent infinite loops
         onSelectedContactsChange(contactIds);
       }
+      // Intentionally only re-runs when the selection changes; parent callback
+      // is treated as stable to avoid notification loops.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedContacts]);
 
     const handleCheckboxChange = (contactId: string, checked: boolean) => {

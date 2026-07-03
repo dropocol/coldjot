@@ -143,6 +143,9 @@ export function ContactList({
     if (searchQuery.length === 0 || searchQuery.length >= 2) {
       fetchContacts();
     }
+    // Fetch deliberately keyed on these inputs; parent callbacks (onSearchStart/End,
+    // isInitialLoad) are stable and intentionally excluded to avoid refetch loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, page, limit]);
 
   // Notify parent component when selected contacts change
@@ -151,6 +154,9 @@ export function ContactList({
       const contactIds = Array.from(selectedContacts);
       onSelectedContactsChange(contactIds);
     }
+    // Intentionally only re-runs when the selection changes; the parent callback
+    // is treated as stable to avoid notification loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContacts]);
 
   const showLoading = isLoading || isInitialLoad;

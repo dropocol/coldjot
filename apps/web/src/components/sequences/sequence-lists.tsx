@@ -94,6 +94,8 @@ export function SequenceLists() {
     if (sequence?.id) {
       fetchSequenceLists();
     }
+    // fetchSequenceLists is a component-body closure; deliberately excluded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, sequence?.id]);
 
   // Add list to sequence
