@@ -224,13 +224,13 @@ Before running the application, you'll need to set up several services and envir
 
      ```bash
      npm install
-     docker-compose up -d
+     docker compose up -d
      ```
 
    - If you encounter any issues, try cleaning up:
 
      ```bash
-     docker-compose down
+     docker compose down
      rm -rf node_modules
      rm package-lock.json
      ```
@@ -374,7 +374,7 @@ npm run db:studio
 
 ```bash
 # Start Redis and PostgreSQL if not running
-docker-compose up -d
+docker compose up -d
 ```
 
 2. Run the development server:

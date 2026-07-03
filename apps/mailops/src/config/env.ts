@@ -38,6 +38,13 @@ const envSchema = z.object({
   // Service auth — shared secret with the web app. Required: if unset, the
   // service-auth middleware fails closed (rejects all internal requests).
   SERVICE_INTERNAL_TOKEN: z.string().min(16),
+
+  // PubSub — set to "false" to disable the Google PubSub service entirely
+  // (e.g. for local dev without GCP service-account credentials). When false,
+  // PubSubService becomes a no-op stub: no client is constructed and no gRPC
+  // calls are made, so mailops boots without GCP identity. Defaults to true
+  // so production behavior is unchanged.
+  MAILOPS_PUBSUB_ENABLED: z.coerce.boolean().default(true),
 });
 
 // Parse and validate environment variables

@@ -6,6 +6,7 @@ import {
   CreateSubscriptionOptions,
 } from "@google-cloud/pubsub";
 import { logger } from "@/lib/log";
+import { env } from "@/config/env";
 import { PUBSUB_CONFIG } from "@/config/pubsub/constants";
 import { PubSubHandler } from "./handler";
 import path from "path";
@@ -24,12 +25,23 @@ interface PubSubServiceConfig {
 
 export class PubSubService {
   private static instance: PubSubService;
-  private pubSubClient: PubSub;
+  private pubSubClient: PubSub | null = null;
   private subscription!: Subscription;
-  private messageHandler: PubSubHandler;
+  private messageHandler: PubSubHandler | null = null;
   private isListening: boolean = false;
+  private readonly enabled: boolean;
 
   private constructor() {
+    this.enabled = env.MAILOPS_PUBSUB_ENABLED;
+    if (!this.enabled) {
+      logger.warn(
+        "PubSub service is DISABLED (MAILOPS_PUBSUB_ENABLED=false). " +
+          "No client will be constructed and no GRPC calls will be made. " +
+          "Gmail push notifications will not be received."
+      );
+      return;
+    }
+
     try {
       const config = this.initializeConfig();
       this.pubSubClient = new PubSub(config);
@@ -128,6 +140,10 @@ export class PubSubService {
   }
 
   public async initialize(): Promise<void> {
+    if (!this.enabled) {
+      logger.info("PubSub service disabled — skipping initialization");
+      return;
+    }
     try {
       logger.info("Initializing PubSub service...");
 
@@ -138,7 +154,10 @@ export class PubSubService {
         "Checking PubSub configuration"
       );
 
-      const topic = this.pubSubClient.topic(topicName);
+      const client = this.pubSubClient;
+      if (!client) throw new Error("PubSub client not initialized");
+
+      const topic = client.topic(topicName);
       const [topicExists] = await topic.exists();
 
       if (!topicExists) {
