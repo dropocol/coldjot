@@ -9,7 +9,7 @@ import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
 import { SequenceControls } from "@/components/sequences/sequence-controls";
-import { SequenceStatus } from "@coldjot/types";
+import { SequenceStatus, SequenceStep } from "@coldjot/types";
 
 interface Sequence {
   id: string;
@@ -17,7 +17,7 @@ interface Sequence {
   status: SequenceStatus;
   accessLevel: string;
   scheduleType: string;
-  steps: any[];
+  steps: SequenceStep[];
   _count: {
     contacts: number;
   };
@@ -57,7 +57,7 @@ export function SequenceList({
     }
   };
 
-  const _handleStepSave = (_stepData: any) => {
+  const _handleStepSave = (_stepData: unknown) => {
     setShowStepEditor(false);
     // Handle step save logic here
   };

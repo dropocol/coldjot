@@ -1,7 +1,7 @@
 import { prisma } from "@coldjot/database";
 import { notFound } from "next/navigation";
 
-import { SequenceStatus } from "@coldjot/types";
+import { SequenceStatus, type Sequence } from "@coldjot/types";
 import { SequenceHeader } from "@/components/sequences/sequence-header";
 import { SequenceProvider } from "@/lib/sequence-context";
 
@@ -34,19 +34,15 @@ export default async function SequenceLayout({
     notFound();
   }
 
-  // Prepare the sequence object with proper typing
+  // Prepare the sequence object for the provider. The Prisma row satisfies the
+  // runtime shape; we cast at this boundary because @coldjot/types uses enums
+  // and optional fields (?:) where Prisma yields string literals and `| null`.
   const typedSequence = {
-    id: sequence.id,
-    name: sequence.name,
+    ...sequence,
     status: sequence.status as SequenceStatus,
     contactCount: sequence._count.contacts,
-    steps: sequence.steps,
-    businessHours: sequence.businessHours,
-    sequenceMailbox: sequence.sequenceMailbox,
-    metadata: sequence.metadata,
-    _count: sequence._count,
-    ...(sequence as any),
-  };
+    contacts: [],
+  } as unknown as Sequence;
 
   return (
     <SequenceProvider initialSequence={typedSequence}>

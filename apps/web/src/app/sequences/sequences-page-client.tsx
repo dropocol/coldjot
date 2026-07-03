@@ -7,7 +7,7 @@ import { LocalSearch } from "@/components/ui/local-search";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SequenceTable } from "@/components/sequences/sequence-table";
-import { SequenceStatus } from "@coldjot/types";
+import { SequenceStatus, SequenceStep } from "@coldjot/types";
 import { usePagination } from "@/hooks/use-pagination";
 
 interface Sequence {
@@ -16,7 +16,7 @@ interface Sequence {
   status: SequenceStatus;
   accessLevel: string;
   scheduleType: string;
-  steps: any[];
+  steps: SequenceStep[];
   _count: {
     contacts: number;
   };

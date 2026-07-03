@@ -27,7 +27,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
-import { SequenceStatus } from "@coldjot/types";
+import { SequenceStatus, SequenceStep } from "@coldjot/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +48,7 @@ interface Sequence {
   status: SequenceStatus;
   accessLevel: string;
   scheduleType: string;
-  steps: any[];
+  steps: SequenceStep[];
   _count: {
     contacts: number;
   };

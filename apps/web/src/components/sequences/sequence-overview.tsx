@@ -13,6 +13,8 @@ import {
   type SequenceStep,
   type SequenceStatus,
   type BusinessHours,
+  type StepData,
+  type EmailData,
   StepPriority as StepPriorityEnum,
 } from "@coldjot/types";
 
@@ -169,7 +171,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
     }
   };
 
-  const handleEmailSave = async (emailData: any) => {
+  const handleEmailSave = async (emailData: EmailData) => {
     if (!editingStep) return;
 
     try {
@@ -183,10 +185,9 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
             ...editingStep,
             ...emailData,
             // Clear content and subject if using template
-            ...(emailData.templateId && {
-              content: null,
-              subject: null,
-            }),
+            ...(emailData.templateId
+              ? { content: null, subject: null }
+              : {}),
           }),
         }
       );
@@ -208,7 +209,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
     }
   };
 
-  const handleStepSave = async (stepData: any) => {
+  const handleStepSave = async (stepData: StepData) => {
     if (!editingStep) return;
 
     try {

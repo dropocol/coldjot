@@ -230,5 +230,6 @@ export interface EmailData {
   content: string;
   includeSignature: boolean;
   replyToThread?: boolean;
-  templateId?: string;
+  /** A template id, or null to explicitly clear the link. */
+  templateId?: string | null;
 }

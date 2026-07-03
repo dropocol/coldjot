@@ -2,6 +2,7 @@ import {
   EditorConfig,
   ElementNode,
   LexicalNode,
+  RangeSelection,
   SerializedLexicalNode,
   SerializedElementNode,
 } from "lexical";
@@ -48,7 +49,10 @@ export class DraggableBlockNode extends ElementNode {
     };
   }
 
-  insertNewAfter(selection: any, restoreSelection = true): null | LexicalNode {
+  insertNewAfter(
+    selection: RangeSelection,
+    restoreSelection = true
+  ): null | LexicalNode {
     const newBlock = $createDraggableBlockNode();
     const direction = this.getDirection();
     newBlock.setDirection(direction);

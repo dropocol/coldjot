@@ -136,7 +136,7 @@ export function SequenceHeader() {
       {isDraft && (
         <div className="mt-6 mb-6 max-w-5xl mx-auto">
           <SequenceSetupChecklist
-            sequence={sequence as any}
+            sequence={sequence}
             onStepComplete={refreshSequence}
           />
         </div>

@@ -51,27 +51,33 @@ export default async function SequencePage({
           workHoursEnd: sequence.businessHours.workHoursEnd,
         } as BusinessHours)
       : undefined,
-    steps: sequence.steps.map((step: any) => ({
-      id: step.id,
-      sequenceId: step.sequenceId,
-      stepType: step.stepType as StepType,
-      status: step.status as StepStatus,
-      priority: step.priority as StepPriority,
-      timing: step.timing as StepTiming,
-      delayAmount: step.delayAmount ?? undefined,
-      delayUnit: step.delayUnit ?? undefined,
-      subject: step.subject ?? undefined,
-      content: step.content ?? undefined,
-      includeSignature: step.includeSignature,
-      note: step.note ?? undefined,
-      order: step.order,
-      previousStepId: step.previousStepId ?? undefined,
-      replyToThread: step.replyToThread ?? undefined,
-      threadId: step.threadId ?? undefined,
-      createdAt: step.createdAt,
-      updatedAt: step.updatedAt,
-      templateId: step.templateId ?? undefined,
-    })),
+    steps: sequence.steps.map((step) => {
+      // `status` and `threadId` are legacy fields no longer on the SequenceStep
+      // model (see plan 08 §4). Access via a loose record so the mapped output
+      // keeps the keys (undefined) for any consumer still expecting them.
+      const legacy = step as unknown as Record<string, unknown>;
+      return {
+        id: step.id,
+        sequenceId: step.sequenceId,
+        stepType: step.stepType as StepType,
+        status: legacy.status as StepStatus | undefined,
+        priority: step.priority as StepPriority,
+        timing: step.timing as StepTiming,
+        delayAmount: step.delayAmount ?? undefined,
+        delayUnit: step.delayUnit ?? undefined,
+        subject: step.subject ?? undefined,
+        content: step.content ?? undefined,
+        includeSignature: step.includeSignature,
+        note: step.note ?? undefined,
+        order: step.order,
+        previousStepId: step.previousStepId ?? undefined,
+        replyToThread: step.replyToThread ?? undefined,
+        threadId: legacy.threadId as string | null | undefined,
+        createdAt: step.createdAt,
+        updatedAt: step.updatedAt,
+        templateId: step.templateId ?? undefined,
+      };
+    }),
     testMode: sequence.testMode,
     disableSending: sequence.disableSending,
   };

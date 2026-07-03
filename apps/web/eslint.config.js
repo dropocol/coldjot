@@ -28,11 +28,10 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Hygiene rules with remaining backlog — kept at warn until the cleanup
-      // (plan 08) drives them to zero, at which point they move to error.
-      "@typescript-eslint/no-explicit-any": "warn",
+      // Hygiene rules — backlog driven to zero; now enforced.
+      "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",

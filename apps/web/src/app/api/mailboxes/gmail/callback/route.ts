@@ -1,5 +1,6 @@
 
 import { google } from "googleapis";
+import type { gmail_v1 } from "googleapis";
 import { prisma } from "@coldjot/database";
 import { decrypt } from "@/lib/crypto";
 import { logger } from "@/lib/logger";
@@ -13,20 +14,12 @@ if (
   throw new Error("Missing Gmail OAuth credentials for email accounts");
 }
 
-interface GmailSendAs {
-  sendAsEmail: string;
-  displayName?: string;
-  isPrimary?: boolean;
-  verificationStatus?: string;
-  isDefault?: boolean;
-}
-
 interface StateData {
   userId: string;
   returnPath: string;
 }
 
-async function fetchAndSaveAliases(gmail: any, mailboxId: string) {
+async function fetchAndSaveAliases(gmail: gmail_v1.Gmail, mailboxId: string) {
   try {
     // Fetch Gmail settings including send-as aliases
     const { data: settings } = await gmail.users.settings.sendAs.list({
@@ -44,11 +37,11 @@ async function fetchAndSaveAliases(gmail: any, mailboxId: string) {
     const aliasesToCreate =
       settings.sendAs
         ?.filter(
-          (sendAs: GmailSendAs) =>
-            !sendAs.isPrimary && !existingAliasEmails.has(sendAs.sendAsEmail)
+          (sendAs) =>
+            !sendAs.isPrimary && !existingAliasEmails.has(sendAs.sendAsEmail ?? "")
         )
-        .map((sendAs: GmailSendAs) => ({
-          alias: sendAs.sendAsEmail,
+        .map((sendAs) => ({
+          alias: sendAs.sendAsEmail ?? "",
           name: sendAs.displayName || null,
           mailboxId: mailboxId,
         })) || [];
@@ -197,8 +190,11 @@ export async function GET(request: Request) {
       return Response.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}${returnPath}?success=gmail_connected`
       );
-    } catch (tokenError: any) {
-      logger.error("[GMAIL_CALLBACK] Token Error:", tokenError.message);
+    } catch (tokenError: unknown) {
+      logger.error(
+        "[GMAIL_CALLBACK] Token Error:",
+        tokenError instanceof Error ? tokenError.message : String(tokenError)
+      );
       return Response.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/settings?error=gmail_auth_failed&reason=token_error`
       );

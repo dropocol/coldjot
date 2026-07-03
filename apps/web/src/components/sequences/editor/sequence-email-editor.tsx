@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Info } from "lucide-react";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { TemplateCommand } from "@/components/templates/template-command";
+import type { EmailData } from "@coldjot/types";
 import { toast } from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -37,7 +38,7 @@ import { cn } from "@/lib/utils";
 interface SequenceEmailEditorProps {
   open: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: EmailData) => void;
   initialData?: {
     subject?: string;
     content?: string;

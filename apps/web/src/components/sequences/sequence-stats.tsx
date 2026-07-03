@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Users,
   Eye,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,7 @@ interface SequenceStatsProps {
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon: any;
+  icon: LucideIcon;
   color: string;
   showProgress?: boolean;
   subValue?: string;

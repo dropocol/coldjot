@@ -90,12 +90,14 @@ export default function AddContactModal({
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          const contacts = results.data
+          const contacts = (results.data as Record<string, unknown>[])
             .slice(0, 1000)
-            .map((row: any) => ({
-              firstName: row["First Name"] || row.firstName || "",
-              lastName: row["Last Name"] || row.lastName || "",
-              email: row.Email || row.email || "",
+            .map((row) => ({
+              firstName:
+                (row["First Name"] as string) || (row.firstName as string) || "",
+              lastName:
+                (row["Last Name"] as string) || (row.lastName as string) || "",
+              email: (row.Email as string) || (row.email as string) || "",
             }))
             .filter(
               (contact) =>

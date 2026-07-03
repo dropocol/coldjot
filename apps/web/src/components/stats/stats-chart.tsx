@@ -37,7 +37,19 @@ const COLORS = {
   // },
 };
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface TooltipEntry {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border bg-background p-2 shadow-none">
@@ -47,10 +59,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               Date
             </span>
             <span className="font-bold text-muted-foreground">
-              {format(new Date(label), "MMM d, yyyy")}
+              {format(new Date(label ?? ""), "MMM d, yyyy")}
             </span>
           </div>
-          {payload.map((entry: any) => (
+          {payload.map((entry) => (
             <div key={entry.name} className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
                 {entry.name}

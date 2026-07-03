@@ -84,7 +84,13 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
         if (!active) return;
 
         const searchResults: SearchResult[] = [
-          ...contacts.map((contact: any) => ({
+          ...contacts.map(
+            (contact: {
+              id: string;
+              firstName: string;
+              lastName: string;
+              email: string;
+            }) => ({
             id: contact.id,
             type: "contact",
             title: `${contact.firstName} ${contact.lastName}`,

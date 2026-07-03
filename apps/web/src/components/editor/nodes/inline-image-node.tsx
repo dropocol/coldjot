@@ -1,6 +1,11 @@
 "use client";
 
-import type { DOMConversionMap, DOMConversionOutput, NodeKey } from "lexical";
+import type {
+  DOMConversionMap,
+  DOMConversionOutput,
+  LexicalNode,
+  NodeKey,
+} from "lexical";
 import { DecoratorNode } from "lexical";
 import type { JSX } from "react";
 import * as React from "react";
@@ -169,6 +174,8 @@ export function $createInlineImageNode({
   );
 }
 
-export function $isInlineImageNode(node: any): node is InlineImageNode {
+export function $isInlineImageNode(
+  node: LexicalNode | undefined | null
+): node is InlineImageNode {
   return node instanceof InlineImageNode;
 }

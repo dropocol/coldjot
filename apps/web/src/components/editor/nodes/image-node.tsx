@@ -1,7 +1,12 @@
 "use client";
 
 import type { JSX } from "react";
-import { DecoratorNode, SerializedLexicalNode, Spread } from "lexical";
+import {
+  DecoratorNode,
+  LexicalNode,
+  SerializedLexicalNode,
+  Spread,
+} from "lexical";
 import * as React from "react";
 import Image from "next/image";
 
@@ -177,6 +182,8 @@ export function $createImageNode({
   );
 }
 
-export function $isImageNode(node: any): node is ImageNode {
+export function $isImageNode(
+  node: LexicalNode | undefined | null
+): node is ImageNode {
   return node instanceof ImageNode;
 }

@@ -28,7 +28,10 @@ interface TemplateVariable {
   path?: string;
 }
 
-function flattenObject(obj: any, _prefix = ""): Record<string, string> {
+function flattenObject(
+  obj: Record<string, unknown>,
+  _prefix = ""
+): Record<string, string> {
   const flattened: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(obj)) {
@@ -48,7 +51,7 @@ function flattenObject(obj: any, _prefix = ""): Record<string, string> {
 
     if (value && typeof value === "object" && !Array.isArray(value)) {
       // For other nested objects
-      const nested = flattenObject(value, key);
+      const nested = flattenObject(value as Record<string, unknown>, key);
       Object.entries(nested).forEach(([nestedKey, nestedValue]) => {
         flattened[nestedKey] = nestedValue;
       });

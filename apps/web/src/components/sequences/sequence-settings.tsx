@@ -49,12 +49,19 @@ export function SequenceSettings({ sequence }: SequenceSettingsProps) {
         if (!response.ok) throw new Error("Failed to fetch mailboxes");
         const data = await response.json();
         // Ensure required fields are present
-        const mailboxesWithRequired = data.map((m: any) => ({
-          id: m.id,
-          email: m.email,
-          name: m.name || null,
-          aliases: m.aliases,
-        }));
+        const mailboxesWithRequired = data.map(
+          (m: {
+            id: string;
+            email: string;
+            name?: string | null;
+            aliases?: unknown;
+          }) => ({
+            id: m.id,
+            email: m.email,
+            name: m.name || null,
+            aliases: m.aliases,
+          })
+        );
         setMailboxes(mailboxesWithRequired);
       } catch (error) {
         console.error("Failed to fetch mailboxes:", error);

@@ -14,7 +14,9 @@ type Result<T> =
   | { success: true; data: T; error: null }
   | { success: false; data: null; error: string };
 
-export async function addContact(contact: Contact): Promise<Result<any>> {
+export async function addContact(
+  contact: Contact
+): Promise<Result<Awaited<ReturnType<typeof prisma.contact.create>>>> {
   const session = await auth();
   if (!session?.user?.id) {
     return {

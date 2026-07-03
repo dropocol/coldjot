@@ -28,7 +28,10 @@ export default function ListDetailsPage() {
   const [showAddAllToSequenceModal, setShowAddAllToSequenceModal] =
     useState(false);
   const [totalContacts, setTotalContacts] = useState(0);
-  const listDetailsViewRef = useRef<any>(null);
+  const listDetailsViewRef = useRef<{
+    fetchList: () => Promise<void>;
+    getContacts: () => Contact[];
+  }>(null);
 
   // Get list ID from URL
   useEffect(() => {

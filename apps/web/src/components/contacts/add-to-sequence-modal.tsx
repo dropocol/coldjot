@@ -60,7 +60,7 @@ export function AddToSequenceModal({
   );
 
   // Try to use the sequence context, but handle the case where it's not available
-  let _updateReadinessField: any = null;
+  let _updateReadinessField: unknown = null;
   try {
     const sequenceContext = useSequence();
     _updateReadinessField = sequenceContext?.updateReadinessField || null;

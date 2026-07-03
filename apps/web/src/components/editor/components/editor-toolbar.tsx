@@ -35,6 +35,7 @@ import { $setBlocksType } from "@lexical/selection";
 import {
   INSERT_IMAGE_COMMAND,
   INSERT_INLINE_IMAGE_COMMAND,
+  InsertImagePayload,
   InsertImageUriDialog,
 } from "../plugins/images-plugin";
 import { INSERT_HORIZONTAL_RULE_COMMAND } from "../plugins/horizontal-line-plugin";
@@ -47,7 +48,7 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInlineImage, setIsInlineImage] = useState(false);
 
-  const handleInsertImage = (payload: any) => {
+  const handleInsertImage = (payload: InsertImagePayload) => {
     if (editorInstance) {
       editorInstance.dispatchCommand(
         isInlineImage ? INSERT_INLINE_IMAGE_COMMAND : INSERT_IMAGE_COMMAND,

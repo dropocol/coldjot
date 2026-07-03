@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { StepData } from "@coldjot/types";
 import {
   Select,
   SelectContent,
@@ -36,7 +37,7 @@ interface StepFormData {
 interface SequenceStepEditorProps {
   open: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: StepData) => void;
   initialData?: {
     timing?: "immediate" | "delay";
     priority?: "high" | "medium" | "low";
@@ -86,10 +87,10 @@ export function SequenceStepEditor({
   const onSubmit = async (data: StepFormData) => {
     setIsSubmitting(true);
     try {
-      const formattedData = {
-        type: "manual_email",
+      const formattedData: StepData = {
+        stepType: "manual_email" as StepData["stepType"],
         timing: data.timing,
-        priority: data.priority,
+        priority: data.priority as StepData["priority"],
         ...(data.timing === "delay" && {
           delayAmount: Number(data.delayAmount),
           delayUnit: data.delayUnit,
