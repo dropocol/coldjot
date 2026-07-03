@@ -1,4 +1,5 @@
-import { useState } from "react";
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Mail, AlertCircle, Loader2, CheckCircle } from "lucide-react";
@@ -7,6 +8,8 @@ import { toast } from "react-hot-toast";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/http/api-client";
 
 interface EmailSetupStepProps {
   onNext: () => void;
@@ -19,9 +22,15 @@ export function EmailSetupStep({
   onBack: _onBack,
   hasConnectedEmail = false,
 }: EmailSetupStepProps) {
-  const [isConnecting, setIsConnecting] = useState(false);
   const pathname = usePathname();
   const { data: _session } = useSession();
+  const gmailAuth = useMutation({
+    mutationFn: () =>
+      api.post<{ url: string }>("/api/mailboxes/gmail/auth", {
+        returnPath: pathname,
+      }),
+  });
+  const isConnecting = gmailAuth.isPending;
 
   const emailProviders = [
     {
@@ -34,26 +43,10 @@ export function EmailSetupStep({
 
   const handleConnectGmail = async () => {
     try {
-      setIsConnecting(true);
-      const response = await fetch("/api/mailboxes/gmail/auth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ returnPath: pathname }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to initiate Gmail connection");
-      }
-
-      const { url } = await response.json();
+      const { url } = await gmailAuth.mutateAsync();
       window.location.href = url;
-    } catch (error) {
-      console.error("Gmail connection error:", error);
+    } catch (_error) {
       toast.error("Failed to connect Gmail account");
-    } finally {
-      setIsConnecting(false);
     }
   };
 

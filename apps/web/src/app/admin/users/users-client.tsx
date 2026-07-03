@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -22,6 +22,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/http/api-client";
+import { qk } from "@/lib/query/keys";
 
 interface User {
   id: string;
@@ -32,42 +35,25 @@ interface User {
 }
 
 export function UsersClient() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const { toast } = useToast();
+  const qc = useQueryClient();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("/api/admin/users");
-        if (!response.ok) throw new Error("Failed to fetch users");
-        const data = await response.json();
-        setUsers(data);
-      } catch (_error) {
-        toast({
-          title: "Error",
-          description: "Failed to load users",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUsers();
-  }, [toast]);
+  // GET /api/admin/users returns a bare array.
+  const { data: users = [], isLoading: loading } = useQuery({
+    queryKey: qk.users.all,
+    queryFn: () => api.get<User[]>("/api/admin/users"),
+  });
+  const deleteUser = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/admin/users/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.users.all }),
+  });
 
   const handleDeleteUser = async () => {
     if (!deleteUserId) return;
 
     try {
-      const response = await fetch(`/api/admin/users/${deleteUserId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) throw new Error("Failed to delete user");
-
-      setUsers((prev) => prev.filter((user) => user.id !== deleteUserId));
+      await deleteUser.mutateAsync(deleteUserId);
       toast({
         title: "Success",
         description: "User deleted successfully",

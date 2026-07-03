@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -17,6 +19,8 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
 import { toast } from "react-hot-toast";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/http/api-client";
 
 interface BusinessHoursStepProps {
   onNext: () => void;
@@ -42,7 +46,11 @@ export function BusinessHoursStep({ onNext, onBack: _onBack }: BusinessHoursStep
   });
 
   const [open, setOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const save = useMutation({
+    mutationFn: (input: Record<string, unknown>) =>
+      api.post("/api/business-hours", input),
+  });
+  const isSaving = save.isPending;
 
   const handleWorkDayToggle = (day: number) => {
     const newWorkDays = settings.workDays.includes(day)
@@ -66,32 +74,17 @@ export function BusinessHoursStep({ onNext, onBack: _onBack }: BusinessHoursStep
 
   const handleSave = async () => {
     try {
-      setIsSaving(true);
-      const response = await fetch("/api/business-hours", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          timezone: settings.timezone,
-          workDays: settings.workDays,
-          workHoursStart: settings.workHoursStart,
-          workHoursEnd: settings.workHoursEnd,
-          type: "default",
-        }),
+      await save.mutateAsync({
+        timezone: settings.timezone,
+        workDays: settings.workDays,
+        workHoursStart: settings.workHoursStart,
+        workHoursEnd: settings.workHoursEnd,
+        type: "default",
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save business hours");
-      }
-
       toast.success("Business hours saved successfully");
       onNext();
-    } catch (error) {
-      console.error("Failed to save business hours:", error);
+    } catch (_error) {
       toast.error("Failed to save business hours");
-    } finally {
-      setIsSaving(false);
     }
   };
 

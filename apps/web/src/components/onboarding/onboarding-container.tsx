@@ -14,6 +14,7 @@ import {
 } from "@/app/actions/onboarding";
 import { toast } from "react-hot-toast";
 import { ONBOARDING_STEPS } from "@/lib/constants";
+import { useMailboxCount } from "@/hooks/queries/use-mailboxes";
 
 export function OnboardingContainer() {
   const { data: session } = useSession();
@@ -24,6 +25,7 @@ export function OnboardingContainer() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const { data: mailboxCountData } = useMailboxCount();
 
   // Synchronize URL with current step
   useEffect(() => {
@@ -44,24 +46,12 @@ export function OnboardingContainer() {
     }
   }, [pathname, session, router]);
 
-  // Check for connected mailboxes
+  // Check for connected mailboxes (react-query backed).
   useEffect(() => {
-    const checkMailboxes = async () => {
-      try {
-        const response = await fetch("/api/mailboxes/count");
-        if (response.ok) {
-          const { count } = await response.json();
-          setHasConnectedEmail(count > 0);
-        }
-      } catch (error) {
-        console.error("Failed to fetch mailboxes:", error);
-      }
-    };
-
-    if (session?.user?.id) {
-      checkMailboxes();
+    if (session?.user?.id && mailboxCountData !== undefined) {
+      setHasConnectedEmail(mailboxCountData.count > 0);
     }
-  }, [session]);
+  }, [session, mailboxCountData]);
 
   // Handle success/error states from Gmail connection
   useEffect(() => {

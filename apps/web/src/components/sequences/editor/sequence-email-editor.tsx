@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/http/api-client";
 
 interface SequenceEmailEditorProps {
   open: boolean;
@@ -84,7 +85,6 @@ export function SequenceEmailEditor({
   // Fetch template content when templateId changes or on initial load
   useEffect(() => {
     let isMounted = true;
-    const controller = new AbortController();
 
     const fetchTemplate = async () => {
       if (!currentTemplateId || isTemplateUnlinked) {
@@ -94,22 +94,16 @@ export function SequenceEmailEditor({
 
       setIsLoadingTemplate(true);
       try {
-        const response = await fetch(`/api/templates/${currentTemplateId}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const template = await response.json();
+        const template = await api.get<{
+          subject: string;
+          content: string;
+        }>(`/api/templates/${currentTemplateId}`);
 
         if (isMounted) {
           setSubject(template.subject);
           setContent(template.content);
         }
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-
-        console.error("Error fetching template:", error);
+      } catch (_error) {
         if (isMounted) {
           toast.error(
             "Failed to load template content. Unlinking from template."
@@ -131,7 +125,6 @@ export function SequenceEmailEditor({
     fetchTemplate();
     return () => {
       isMounted = false;
-      controller.abort();
     };
   }, [currentTemplateId, isTemplateUnlinked, initialData]);
 
@@ -165,8 +158,7 @@ export function SequenceEmailEditor({
       setIsTemplateUnlinked(false);
       setSubject(template.subject);
       setContent(template.content);
-    } catch (error) {
-      console.error("Error selecting template:", error);
+    } catch (_error) {
       toast.error("Failed to apply template");
       setIsTemplateUnlinked(true);
       setCurrentTemplateId(undefined);
@@ -202,15 +194,12 @@ export function SequenceEmailEditor({
 
     setIsLoadingTemplate(true);
     try {
-      const response = await fetch(`/api/templates/${currentTemplateId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const template = await response.json();
+      const template = await api.get<{ subject: string; content: string }>(
+        `/api/templates/${currentTemplateId}`
+      );
       setSubject(template.subject);
       setContent(template.content);
-    } catch (error) {
-      console.error("Error fetching template:", error);
+    } catch (_error) {
       toast.error("Failed to load template content. Unlinking from template.");
       setIsTemplateUnlinked(true);
       setCurrentTemplateId(undefined);
@@ -240,20 +229,11 @@ export function SequenceEmailEditor({
 
     setIsSendingTest(true);
     try {
-      const response = await fetch(
-        `/api/sequences/${sequenceId}/steps/${stepId}/test`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            subject,
-            content,
-            includeSignature,
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to send test email");
+      await api.post(`/api/sequences/${sequenceId}/steps/${stepId}/test`, {
+        subject,
+        content,
+        includeSignature,
+      });
       toast.success("Test email sent successfully");
     } catch (_error) {
       toast.error("Failed to send test email");

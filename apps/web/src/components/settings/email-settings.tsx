@@ -8,50 +8,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/http/api-client";
+
+interface EmailSettingsData {
+  defaultSubject?: string;
+  defaultSignature?: string;
+}
 
 export default function EmailSettings() {
   const [defaultSubject, setDefaultSubject] = useState("");
   const [defaultSignature, setDefaultSignature] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const qc = useQueryClient();
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["settings", "email"],
+    queryFn: () => api.get<EmailSettingsData>("/api/settings/email"),
+  });
+  const save = useMutation({
+    mutationFn: (input: EmailSettingsData) =>
+      api.post("/api/settings/email", input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["settings", "email"] }),
+  });
+
+  // Hydrate local form state once the settings load.
   useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    try {
-      const response = await fetch("/api/settings/email");
-      if (response.ok) {
-        const settings = await response.json();
-        setDefaultSubject(settings?.defaultSubject || "");
-        setDefaultSignature(settings?.defaultSignature || "");
-      }
-    } catch (_error) {
-      toast.error("Failed to load settings");
-    } finally {
-      setIsLoading(false);
+    if (data) {
+      setDefaultSubject(data.defaultSubject || "");
+      setDefaultSignature(data.defaultSignature || "");
     }
-  };
+  }, [data]);
 
   const handleSave = async () => {
     try {
-      setIsSaving(true);
-      const response = await fetch("/api/settings/email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          defaultSubject,
-          defaultSignature,
-        }),
-      });
-
-      if (!response.ok) throw new Error();
+      await save.mutateAsync({ defaultSubject, defaultSignature });
       toast.success("Settings saved successfully");
     } catch (_error) {
       toast.error("Failed to save settings");
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -95,9 +88,9 @@ export default function EmailSettings() {
             />
           </div>
 
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSaving ? "Saving..." : "Save Preferences"}
+          <Button onClick={handleSave} disabled={save.isPending}>
+            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {save.isPending ? "Saving..." : "Save Preferences"}
           </Button>
         </CardContent>
       </Card>

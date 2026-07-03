@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/http/api-client";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -31,6 +33,10 @@ interface ProfileFormProps {
 
 export function ProfileForm({ user }: ProfileFormProps) {
   const { toast } = useToast();
+  const updateUser = useMutation({
+    mutationFn: (input: ProfileFormValues) =>
+      api.patch("/api/user", input),
+  });
   const form = useForm<ProfileFormValues>({
     resolver: standardSchemaResolver(profileFormSchema),
     defaultValues: {
@@ -40,18 +46,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
   async function onSubmit(data: ProfileFormValues) {
     try {
-      const response = await fetch("/api/user", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
-
+      await updateUser.mutateAsync(data);
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",

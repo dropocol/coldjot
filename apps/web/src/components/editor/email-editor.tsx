@@ -20,6 +20,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/http/api-client";
 
 // Sample improved text for development
 const SAMPLE_IMPROVED_TEXT = `Dear [Name],
@@ -96,18 +97,9 @@ export function EmailEditor() {
 
       // Use sample text in development mode
       if (!IS_DEVELOPMENT && USE_DEEPSEEK_API) {
-        const response = await fetch("/api/improve-readability", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ text: editorContent.text }),
+        const data = await api.post<{ text: string }>("/api/improve-readability", {
+          text: editorContent.text,
         });
-
-        if (!response.ok) {
-          throw new Error("Failed to improve readability");
-        }
-        const data = await response.json();
         improvedText = data.text;
       } else {
         improvedText = SAMPLE_IMPROVED_TEXT;
@@ -146,8 +138,7 @@ export function EmailEditor() {
             "Email content has been improved for better readability.",
         });
       }
-    } catch (error) {
-      console.error("Error improving readability:", error);
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to improve email readability. Please try again.",

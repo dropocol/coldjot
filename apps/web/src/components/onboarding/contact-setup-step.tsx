@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +17,11 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "react-hot-toast";
 import Papa from "papaparse";
+import {
+  useCreateContact,
+  useBatchCreateContacts,
+} from "@/hooks/queries/use-contacts";
+import type { CreateContactInput } from "@/lib/schemas";
 
 interface ContactSetupStepProps {
   onNext: () => void;
@@ -34,7 +41,9 @@ interface ParsedContacts {
 
 export function ContactSetupStep({ onNext, onBack: _onBack }: ContactSetupStepProps) {
   const [selectedMethod, setSelectedMethod] = useState<string>("manual");
-  const [isLoading, setIsLoading] = useState(false);
+  const createContact = useCreateContact();
+  const batchCreate = useBatchCreateContacts();
+  const isLoading = createContact.isPending || batchCreate.isPending;
   const [formData, setFormData] = useState<ContactForm>({
     firstName: "",
     lastName: "",
@@ -94,13 +103,11 @@ export function ContactSetupStep({ onNext, onBack: _onBack }: ContactSetupStepPr
           setParsedContacts({ contacts, file });
           setUploadSuccess(false);
         },
-        error: (error) => {
-          console.error("CSV parsing error:", error);
+        error: () => {
           toast.error("Failed to parse CSV file");
         },
       });
-    } catch (error) {
-      console.error("File reading error:", error);
+    } catch {
       toast.error("Failed to read CSV file");
     }
   };
@@ -115,37 +122,22 @@ export function ContactSetupStep({ onNext, onBack: _onBack }: ContactSetupStepPr
   const handleUpload = async () => {
     if (!parsedContacts) return;
 
-    setIsLoading(true);
     try {
-      const response = await fetch("/api/contacts/batch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(parsedContacts.contacts),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error || "Failed to import contacts");
-      } else {
-        toast.success(
-          `Successfully imported ${data.imported} contacts${
-            data.skipped ? ` (${data.skipped} skipped)` : ""
-          }`
-        );
-        setUploadSuccess(true);
-        setParsedContacts(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+      const data = await batchCreate.mutateAsync(
+        parsedContacts.contacts as CreateContactInput[]
+      );
+      toast.success(
+        `Successfully imported ${data.imported} contacts${
+          data.skipped ? ` (${data.skipped} skipped)` : ""
+        }`
+      );
+      setUploadSuccess(true);
+      setParsedContacts(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
-    } catch (error) {
-      console.error("Failed to import contacts:", error);
+    } catch {
       toast.error("Failed to import contacts");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -157,34 +149,16 @@ export function ContactSetupStep({ onNext, onBack: _onBack }: ContactSetupStepPr
       return;
     }
 
-    setIsLoading(true);
     try {
-      const response = await fetch("/api/contacts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+      await createContact.mutateAsync({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
       });
-
-      const { error, data } = await response.json();
-
-      if (error) {
-        toast.error(error);
-        return;
-      }
-
-      if (!response.ok) {
-        toast.error(data.error || "Failed to add contact");
-      } else {
-        toast.success("Contact added successfully");
-        onNext();
-      }
-    } catch (error) {
-      console.error("Failed to add contact:", error);
+      toast.success("Contact added successfully");
+      onNext();
+    } catch {
       toast.error("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
     }
   };
 

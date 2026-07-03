@@ -12,6 +12,7 @@ import {
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import testData from "./data.json";
+import { api } from "@/lib/http/api-client";
 
 interface Contact {
   firstName: string;
@@ -77,83 +78,50 @@ export default function TestDataManager({ userId }: TestDataManagerProps) {
       // 1. Add contacts
       const contacts = generateContacts(testData.contactGenerator.count);
       const createdContacts = await Promise.all(
-        contacts.map(async (contact) => {
-          const response = await fetch("/api/contacts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(contact),
-          });
-          return response.json();
-        })
+        contacts.map((contact) => api.post("/api/contacts", contact))
       );
 
       // 2. Add email lists with contact assignments
-      const _createdLists = await Promise.all(
+      await Promise.all(
         testData.emailLists.map(async (list) => {
           // Assign contacts based on the percentage
           const contactIds = assignContactsToList(
-            createdContacts,
+            createdContacts as Contact[],
             list.contactsPercentage
           );
 
-          const response = await fetch("/api/lists", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: list.name,
-              description: list.description,
-              tags: list.tags,
-              userId,
-              contacts: contactIds, // Send the contact IDs to connect
-            }),
+          return api.post("/api/lists", {
+            name: list.name,
+            description: list.description,
+            tags: list.tags,
+            userId,
+            contacts: contactIds, // Send the contact IDs to connect
           });
-          return response.json();
         })
       );
 
       // 3. Add templates
-      const _createdTemplates = await Promise.all(
-        testData.templates.map(async (template) => {
-          const response = await fetch("/api/templates", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...template,
-              userId,
-            }),
-          });
-          return response.json();
-        })
+      await Promise.all(
+        testData.templates.map((template) =>
+          api.post("/api/templates", { ...template, userId })
+        )
       );
 
       // 4. Add sequences with steps
-      const _createdSequences = await Promise.all(
-        testData.sequences.map(async (sequence) => {
-          const response = await fetch("/api/sequences", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...sequence,
-              userId,
-            }),
-          });
-          return response.json();
-        })
+      await Promise.all(
+        testData.sequences.map((sequence) =>
+          api.post("/api/sequences", { ...sequence, userId })
+        )
       );
 
       // 5. Add business hours
-      await fetch("/api/business-hours", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...testData.businessHours,
-          userId,
-        }),
+      await api.post("/api/business-hours", {
+        ...testData.businessHours,
+        userId,
       });
 
       toast.success("Test data added successfully");
-    } catch (error) {
-      console.error("Error adding test data:", error);
+    } catch (_error) {
       toast.error("Failed to add test data");
     } finally {
       setIsLoading(false);
@@ -163,14 +131,9 @@ export default function TestDataManager({ userId }: TestDataManagerProps) {
   const clearTestData = async () => {
     setIsLoading(true);
     try {
-      await fetch("/api/dev/clear-data", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
+      await api.delete("/api/dev/clear-data");
       toast.success("Test data cleared successfully");
-    } catch (error) {
-      console.error("Error clearing test data:", error);
+    } catch (_error) {
       toast.error("Failed to clear test data");
     } finally {
       setIsLoading(false);
