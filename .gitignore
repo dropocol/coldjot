@@ -31,8 +31,18 @@ yarn-error.log*
 **/*log.txt
 **/*.log
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — never commit real environment files; only examples.
+# (Consolidated: covers root, apps/*, packages/*, and **/env/ subtrees.)
+.env
+.env.*
+**/.env
+**/.env.*
+**/env/.env
+**/env/.env.*
+!**/.env.example
+!**/env/.env.example
+# NOTE: do NOT add a blanket `!.env.development` allow — dev env files often
+# reuse prod secrets. Keep them gitignored.
 
 # vercel
 .vercel
@@ -51,19 +61,7 @@ next-env.d.ts
 .turbo
 .next
 
-# Environment variables
-.env.local
-.env.*.local
-.env.production
-**/env/.env.*
-!**/env/.env.*.example
-
-# Keep env examples
-!.env.example
-!apps/*/.env.example
-!packages/*/.env.example
-!apps/*/.env.development
-!packages/*/.env.development
+# Environment variables (consolidated above — see "env files" block)
 
 
 links/*
