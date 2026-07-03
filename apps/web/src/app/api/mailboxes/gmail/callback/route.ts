@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+
 import { google } from "googleapis";
 import { prisma } from "@coldjot/database";
 import { decrypt } from "@/lib/crypto";

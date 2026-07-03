@@ -16,13 +16,10 @@ import { Button } from "@/components/ui/button";
 import {
   Edit2,
   Trash2,
-  Mail,
-  ExternalLink,
   User,
   ListPlus,
   MoreHorizontal,
   SendHorizonal,
-  UserPlus,
   Plus,
   User2,
 } from "lucide-react";
@@ -38,12 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import Link from "next/link";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
 import {
   DropdownMenu,
@@ -71,7 +63,7 @@ interface ContactListProps {
 }
 
 // Helper function to format LinkedIn URL
-const formatLinkedInUrl = (url: string | null) => {
+const _formatLinkedInUrl = (url: string | null) => {
   if (!url) return null;
   try {
     const urlObj = new URL(url);
@@ -174,7 +166,7 @@ export function ContactList({
     }
   };
 
-  const handleComposeEmail = (contact: Contact) => {
+  const _handleComposeEmail = (contact: Contact) => {
     localStorage.setItem(
       "selectedContact",
       JSON.stringify({
@@ -198,7 +190,7 @@ export function ContactList({
     });
   };
 
-  const handleBulkAddToList = () => {
+  const _handleBulkAddToList = () => {
     setContactToAddToList({
       id: Array.from(selectedContacts).join(","),
       isMultiple: true,

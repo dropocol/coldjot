@@ -15,14 +15,11 @@ import {
   MousePointerClick,
   Mail,
   AlertCircle,
-  Clock,
-  Globe,
-  User,
   Send,
   ExternalLink,
 } from "lucide-react";
 import type { EmailTracking } from "@/types/email";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 
 interface EmailDetailsDrawerProps {

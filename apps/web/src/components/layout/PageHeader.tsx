@@ -1,4 +1,4 @@
-import { GlobalSearch } from "./GlobalSearch";
+
 
 interface PageHeaderProps {
   title: string;

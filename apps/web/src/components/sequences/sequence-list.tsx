@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 import { CreateSequenceModal } from "./create-sequence-modal";
@@ -37,8 +37,8 @@ export function SequenceList({
   onAddSequence,
 }: SequenceListProps) {
   const [sequences, setSequences] = useState<Sequence[]>(initialSequences);
-  const [showStepEditor, setShowStepEditor] = useState(false);
-  const [selectedSequence, setSelectedSequence] = useState<Sequence | null>(
+  const [_showStepEditor, setShowStepEditor] = useState(false);
+  const [_selectedSequence, _setSelectedSequence] = useState<Sequence | null>(
     null
   );
   const router = useRouter();
@@ -52,12 +52,12 @@ export function SequenceList({
       onCloseCreateModal();
       toast.success("Sequence created successfully");
       router.refresh();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to refresh sequences");
     }
   };
 
-  const handleStepSave = (stepData: any) => {
+  const _handleStepSave = (_stepData: any) => {
     setShowStepEditor(false);
     // Handle step save logic here
   };

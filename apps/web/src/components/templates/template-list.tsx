@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Template } from "@prisma/client";
-import { useRouter } from "next/navigation";
+
 import EditTemplateDrawer from "./edit-template-drawer";
 import {
   Table,
@@ -17,7 +17,6 @@ import {
   Edit2,
   Trash2,
   FileText,
-  Plus,
   Eye,
   ScrollText,
   MoreVertical,

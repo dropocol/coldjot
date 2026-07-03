@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ZodType, z } from "zod";
+import { ZodType } from "zod";
 
 export type ParseResult<T> =
   | { ok: true; data: T }

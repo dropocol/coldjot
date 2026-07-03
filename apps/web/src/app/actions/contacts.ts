@@ -3,7 +3,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { Prisma } from "@prisma/client";
-import { tryCatch } from "@/utils/try-catch";
 
 interface Contact {
   firstName: string;

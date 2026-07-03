@@ -2,10 +2,8 @@ import {
   EditorConfig,
   ElementNode,
   LexicalNode,
-  NodeKey,
   SerializedLexicalNode,
   SerializedElementNode,
-  Spread,
 } from "lexical";
 
 export interface SerializedDraggableBlockNode extends SerializedElementNode {
@@ -35,8 +33,9 @@ export class DraggableBlockNode extends ElementNode {
     return false;
   }
 
+
   static importJSON(
-    serializedNode: SerializedLexicalNode & Record<string, unknown>
+    _serializedNode: SerializedLexicalNode & Record<string, unknown>
   ): DraggableBlockNode {
     return $createDraggableBlockNode();
   }

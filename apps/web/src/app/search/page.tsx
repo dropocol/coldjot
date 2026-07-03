@@ -238,7 +238,7 @@ function SearchContent() {
                                       toast.success(
                                         "Contact deleted successfully"
                                       );
-                                    } catch (error) {
+                                    } catch (_error) {
                                       toast.error("Failed to delete contact");
                                     }
                                   }}

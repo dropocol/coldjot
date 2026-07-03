@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, AlertCircle, MoreHorizontal, Users, Tag } from "lucide-react";
+import { AlertCircle, MoreHorizontal, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmailList } from "@coldjot/types";
 import { CreateListModal } from "./create-list-modal";

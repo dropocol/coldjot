@@ -48,7 +48,7 @@ export function TimelineItem({ email, onSelect }: TimelineItemProps) {
   const latestClickTime = sortedClickEvents[0]?.timestamp;
 
   // Format message ID to be shorter
-  const shortMessageId = email.messageId.slice(0, 8);
+  const _shortMessageId = email.messageId.slice(0, 8);
 
   return (
     <div

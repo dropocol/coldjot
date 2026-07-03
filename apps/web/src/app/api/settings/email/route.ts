@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { prisma } from "@coldjot/database";
+
 import { NextResponse } from "next/server";
 
 // export async function GET() {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   }
 
   const json = await request.json();
-  const { defaultSubject, defaultSignature } = json;
+  const { _defaultSubject, _defaultSignature } = json;
 
   // const settings = await prisma.emailSettings.upsert({
   //   where: { userId: session.user.id },

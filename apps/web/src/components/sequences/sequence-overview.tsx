@@ -13,11 +13,6 @@ import {
   type SequenceStep,
   type SequenceStatus,
   type BusinessHours,
-  type StepPriority,
-  type StepTiming,
-  type StepTypeEnum,
-  type StepData,
-  type StepType,
   StepPriority as StepPriorityEnum,
 } from "@coldjot/types";
 
@@ -115,7 +110,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
       // Update local state
       setSteps(updatedSteps);
       toast.success("Steps reordered successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to reorder steps");
     } finally {
       setIsLoading(false);
@@ -167,7 +162,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
       if (!response.ok) throw new Error("Failed to fetch steps");
       const updatedSteps = await response.json();
       setSteps(updatedSteps);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to refresh steps");
     } finally {
       setIsLoading(false);
@@ -206,7 +201,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
       setEditingStep(null);
       setEmailEditorData(undefined);
       toast.success("Step updated successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to update step");
     } finally {
       setIsLoading(false);
@@ -239,7 +234,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
       setShowStepEditor(false);
       setEditingStep(null);
       toast.success("Step settings updated successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to update step settings");
     } finally {
       setIsLoading(false);
@@ -251,7 +246,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
       setIsLoading(true);
 
       // Extract step data excluding the ID
-      const { id, ...stepData } = step;
+      const { id: _id, ...stepData } = step;
 
       // Create a new step with the same data
       const response = await fetch(`/api/sequences/${sequence.id}/steps`, {
@@ -271,7 +266,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
       ).then((res) => res.json());
       setSteps(updatedSteps);
       toast.success("Step duplicated successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to duplicate step");
     } finally {
       setIsLoading(false);
@@ -295,7 +290,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
       ).then((res) => res.json());
       setSteps(updatedSteps);
       toast.success("Step deleted successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to delete step");
     } finally {
       setIsLoading(false);

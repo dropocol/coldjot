@@ -5,24 +5,16 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from "@/components/ui/card";
+
 import { BusinessHoursSettings } from "@/components/sequences/business-hours-settings";
 import { SequenceEmailSettings } from "@/components/sequences/sequence-email-settings";
 import type { MailboxWithRequired } from "@/components/sequences/sequence-email-settings";
 import { toast } from "react-hot-toast";
 import type {
   BusinessHours,
-  BusinessScheduleEnum,
   BusinessScheduleType,
 } from "@coldjot/types";
 import { SequenceDangerZone } from "@/components/sequences/sequence-danger-zone";
-import { Separator } from "@radix-ui/react-separator";
 
 interface SequenceSettingsProps {
   sequence: {
@@ -48,7 +40,7 @@ export function SequenceSettings({ sequence }: SequenceSettingsProps) {
   const [name, setName] = useState(sequence.name);
   const [isSaving, setIsSaving] = useState(false);
   const [mailboxes, setMailboxes] = useState<MailboxWithRequired[]>([]);
-  const [isLoadingMailboxes, setIsLoadingMailboxes] = useState(true);
+  const [_isLoadingMailboxes, setIsLoadingMailboxes] = useState(true);
 
   useEffect(() => {
     const fetchMailboxes = async () => {
@@ -90,7 +82,7 @@ export function SequenceSettings({ sequence }: SequenceSettingsProps) {
 
       toast.success("Settings updated successfully");
       router.refresh();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to update settings");
     } finally {
       setIsSaving(false);

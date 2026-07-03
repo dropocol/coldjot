@@ -1,7 +1,7 @@
 import { prisma } from "@coldjot/database";
 import type { Account } from "@prisma/client";
 
-interface GoogleTokens {
+interface _GoogleTokens {
   access_token: string;
   expires_at: number;
   refresh_token: string;

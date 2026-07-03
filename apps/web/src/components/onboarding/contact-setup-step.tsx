@@ -32,7 +32,7 @@ interface ParsedContacts {
   file: File;
 }
 
-export function ContactSetupStep({ onNext, onBack }: ContactSetupStepProps) {
+export function ContactSetupStep({ onNext, onBack: _onBack }: ContactSetupStepProps) {
   const [selectedMethod, setSelectedMethod] = useState<string>("manual");
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<ContactForm>({

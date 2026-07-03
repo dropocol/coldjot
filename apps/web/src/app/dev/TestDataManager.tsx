@@ -88,7 +88,7 @@ export default function TestDataManager({ userId }: TestDataManagerProps) {
       );
 
       // 2. Add email lists with contact assignments
-      const createdLists = await Promise.all(
+      const _createdLists = await Promise.all(
         testData.emailLists.map(async (list) => {
           // Assign contacts based on the percentage
           const contactIds = assignContactsToList(
@@ -112,7 +112,7 @@ export default function TestDataManager({ userId }: TestDataManagerProps) {
       );
 
       // 3. Add templates
-      const createdTemplates = await Promise.all(
+      const _createdTemplates = await Promise.all(
         testData.templates.map(async (template) => {
           const response = await fetch("/api/templates", {
             method: "POST",
@@ -127,7 +127,7 @@ export default function TestDataManager({ userId }: TestDataManagerProps) {
       );
 
       // 4. Add sequences with steps
-      const createdSequences = await Promise.all(
+      const _createdSequences = await Promise.all(
         testData.sequences.map(async (sequence) => {
           const response = await fetch("/api/sequences", {
             method: "POST",

@@ -39,7 +39,7 @@ export async function GET(
       return new NextResponse("Sequence not found", { status: 404 });
     }
 
-    const totalSteps = sequence.steps.length;
+    const _totalSteps = sequence.steps.length;
 
     // Get total count
     const total = await prisma.sequenceContact.count({
@@ -71,7 +71,7 @@ export async function GET(
 
     // Format contacts with their latest status and activity
     const enrichedContacts = sequenceContacts.map((contact) => {
-      const currentStep = sequence.steps[contact.currentStep];
+      const _currentStep = sequence.steps[contact.currentStep];
       // const latestEvent = latestEventsByContact.get(contact.contactId);
 
       // Determine status based on contact record and latest event

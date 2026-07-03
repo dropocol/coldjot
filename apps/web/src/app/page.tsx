@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
+
 import { StatsGrid } from "@/components/stats/stats-grid";
 import { StatsChartSection } from "@/components/stats/stats-chart-section";
 import { prisma } from "@/lib/prisma";

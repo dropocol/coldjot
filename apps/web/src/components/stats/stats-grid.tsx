@@ -7,8 +7,6 @@ import {
   AlertTriangle,
   Users,
   Eye,
-  ThumbsUp,
-  Ban,
 } from "lucide-react";
 
 interface StatsGridProps {

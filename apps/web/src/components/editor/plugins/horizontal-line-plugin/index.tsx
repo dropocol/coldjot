@@ -8,7 +8,6 @@ import {
   COMMAND_PRIORITY_EDITOR,
   createCommand,
   $createParagraphNode,
-  $insertNodes,
 } from "lexical";
 import { $createHorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { useEffect } from "react";

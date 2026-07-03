@@ -10,7 +10,7 @@ interface RouteParams {
   }>;
 }
 
-type Schema$SendAs = gmail_v1.Schema$SendAs;
+type _Schema$SendAs = gmail_v1.Schema$SendAs;
 
 export async function POST(req: Request, { params }: RouteParams) {
   try {

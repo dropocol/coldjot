@@ -11,12 +11,12 @@ import {
 import { $generateHtmlFromNodes } from "@lexical/html";
 import { editorConfig } from "./editor-config";
 import { EditorHeader } from "./components/editor-header";
-import { EmailDetails } from "./components/email-details";
+
 import { EditorToolbar } from "./components/editor-toolbar";
 import { EditorContent } from "./components/editor-content";
 import { EditorReference } from "./components/editor-reference";
 import { EmailAnalysis } from "./components/email-analysis";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -43,7 +43,7 @@ export function EmailEditor() {
   const USE_DEEPSEEK_API = true;
 
   // Email details state
-  const [title, setTitle] = useState("Payment issue");
+  const [title, _setTitle] = useState("Payment issue");
   const [editorContent, setEditorContent] = useState({ text: "", html: "" });
 
   // Editor state

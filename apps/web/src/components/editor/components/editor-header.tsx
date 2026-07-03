@@ -8,7 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Clock, Eye, Save, Send, Pencil } from "lucide-react";
+import { Clock, Eye, Save, Send, Pencil } from "lucide-react";
 import { useState } from "react";
 
 interface EditorHeaderProps {

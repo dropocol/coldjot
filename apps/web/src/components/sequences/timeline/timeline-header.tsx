@@ -1,8 +1,7 @@
 "use client";
 
-import { Download, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+
 import { TimelineFilters } from "./timeline-filters";
 
 interface TimelineHeaderProps {
@@ -21,13 +20,13 @@ interface TimelineHeaderProps {
 }
 
 export function TimelineHeader({
-  sequence,
-  isLoading,
-  onRefresh,
-  onExport,
-  isUserTimeline = false,
+  sequence: _sequence,
+  isLoading: _isLoading,
+  onRefresh: _onRefresh,
+  onExport: _onExport,
+  isUserTimeline: _isUserTimeline = false,
 }: TimelineHeaderProps) {
-  const router = useRouter();
+  const _router = useRouter();
 
   return (
     <div className="space-y-4 border-b pb-4">

@@ -67,7 +67,7 @@ export function MailboxList({
         title: "Aliases refreshed",
         description: "Your email aliases have been updated.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to refresh aliases. Please try again.",
@@ -91,7 +91,7 @@ export function MailboxList({
         title: action === "start" ? "Watch Started" : "Watch Stopped",
         description: `Email watch has been ${action === "start" ? "started" : "stopped"} for ${email}`,
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: `Failed to ${action} watch. Please try again.`,

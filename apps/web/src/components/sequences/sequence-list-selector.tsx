@@ -14,7 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { List, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { EmailList as BaseEmailList } from "@coldjot/types";
 

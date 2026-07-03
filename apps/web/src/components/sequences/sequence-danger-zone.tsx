@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Separator } from "@/components/ui/separator";
+
 import { useRouter } from "next/navigation";
 import { SequenceStatus } from "@coldjot/types";
 import {
@@ -51,7 +51,7 @@ export function SequenceDangerZone({
       });
 
       router.refresh();
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to reset sequence",
@@ -79,7 +79,7 @@ export function SequenceDangerZone({
       });
 
       router.push("/sequences");
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete sequence",

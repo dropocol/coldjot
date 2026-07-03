@@ -15,7 +15,7 @@ interface AddEmailAccountProps {
 
 export function AddMailbox({
   onClose,
-  onAccountAdded,
+  onAccountAdded: _onAccountAdded,
   showCloseButton = false,
 }: AddEmailAccountProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +33,7 @@ export function AddMailbox({
 
       const { url } = await response.json();
       window.location.href = url;
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to start Gmail authentication",

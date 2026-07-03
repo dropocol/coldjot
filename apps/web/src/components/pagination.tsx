@@ -44,7 +44,7 @@ const PAGE_SIZE_OPTIONS = [1, 5, 10, 20, 30, 50, 100];
 
 export function PaginationControls({
   currentPage,
-  totalPages,
+  totalPages: _totalPages,
   pageSize,
   totalItems,
   isLoading = false,

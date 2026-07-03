@@ -15,7 +15,7 @@ export async function POST(
     const { id } = await params;
 
     // Reset the sequence using queue API
-    const result = await queueApi.resetSequence(id, session.user.id);
+    const _result = await queueApi.resetSequence(id, session.user.id);
 
     return NextResponse.json({
       success: true,

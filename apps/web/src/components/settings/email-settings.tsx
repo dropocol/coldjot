@@ -27,7 +27,7 @@ export default function EmailSettings() {
         setDefaultSubject(settings?.defaultSubject || "");
         setDefaultSignature(settings?.defaultSignature || "");
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to load settings");
     } finally {
       setIsLoading(false);
@@ -48,7 +48,7 @@ export default function EmailSettings() {
 
       if (!response.ok) throw new Error();
       toast.success("Settings saved successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to save settings");
     } finally {
       setIsSaving(false);

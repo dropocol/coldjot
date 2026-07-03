@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -66,7 +66,7 @@ export function SequenceEmailSettings({
   });
   const [newEmail, setNewEmail] = useState("");
   const { toast } = useToast();
-  const router = useRouter();
+  const _router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { updateReadinessField, updateSequence } = useSequence();
 

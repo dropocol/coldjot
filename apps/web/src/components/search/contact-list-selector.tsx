@@ -33,7 +33,7 @@ export function ContactListSelector({
   open,
   onClose,
   onSelect,
-  sequenceId,
+  sequenceId: _sequenceId,
 }: ContactListSelectorProps) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(
@@ -50,7 +50,7 @@ export function ContactListSelector({
         if (!response.ok) throw new Error("Failed to fetch contacts");
         const data = await response.json();
         setContacts(data);
-      } catch (error) {
+      } catch (_error) {
         toast.error("Failed to load contacts");
       } finally {
         setIsLoading(false);
@@ -78,7 +78,7 @@ export function ContactListSelector({
       );
       onSelect(selectedContactsList);
       onClose();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to add contacts");
     } finally {
       setIsLoading(false);

@@ -43,7 +43,7 @@ export function useSequenceSteps(sequenceId: string) {
   const duplicateStep = async (step: SequenceStep) => {
     try {
       setIsLoading(true);
-      const { id, ...stepData } = step;
+      const { id: _id, ...stepData } = step;
       const response = await fetch(`/api/sequences/${sequenceId}/steps`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,7 +57,7 @@ export function useSequenceSteps(sequenceId: string) {
       const newStep = await response.json();
       setSteps([...steps, newStep]);
       toast.success("Step duplicated successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to duplicate step");
     } finally {
       setIsLoading(false);
@@ -77,7 +77,7 @@ export function useSequenceSteps(sequenceId: string) {
       if (!response.ok) throw new Error("Failed to delete step");
       setSteps(steps.filter((s) => s.id !== step.id));
       toast.success("Step deleted successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to delete step");
     } finally {
       setIsLoading(false);

@@ -11,7 +11,7 @@ import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal"
 import { Contact } from "@prisma/client";
 import { toast } from "react-hot-toast";
 
-const metadata: Metadata = {
+const _metadata: Metadata = {
   title: "Lists | Coldjot",
   description: "View and manage your email lists",
 };

@@ -8,7 +8,6 @@ import {
 import { BracesIcon } from "lucide-react";
 import {
   Command,
-  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,

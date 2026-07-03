@@ -48,14 +48,14 @@ import {
   INSERT_ORDERED_LIST_COMMAND,
   REMOVE_LIST_COMMAND,
 } from "@lexical/list";
-import { $isListNode, ListNode } from "@lexical/list";
+import { $isListNode } from "@lexical/list";
 import { LinkDialog } from "../../components/link-dialog";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { $isLinkNode, LinkNode } from "@lexical/link";
 
 export function FloatingMenuPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
-  const [isText, setIsText] = useState(false);
+  const [_isText, setIsText] = useState(false);
   const [isLink, setIsLink] = useState(false);
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);

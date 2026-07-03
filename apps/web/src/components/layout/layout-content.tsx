@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { EnvironmentBanner } from "./environment-banner";
+
 import Sidebar from "./Sidebar";
 import type { Session } from "next-auth";
 import { useRouter } from "next/navigation";

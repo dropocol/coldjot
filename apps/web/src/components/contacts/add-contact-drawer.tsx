@@ -19,7 +19,6 @@ import {
   Loader2,
   FileSpreadsheet,
   Plus,
-  AlertCircle,
   X,
   Upload,
   FileUp,
@@ -190,7 +189,7 @@ export default function AddContactModal({
       toast.success("Contact added successfully");
       onAdd(contact);
       onClose();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to add contact");
     } finally {
       setIsSubmitting(false);

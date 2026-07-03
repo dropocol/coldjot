@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { apolloContactId, domain, firstName, lastName } =
+    const { _apolloContactId, domain, firstName, lastName } =
       await request.json();
 
     const response = await fetch(`${APOLLO_API_URL}/people/match`, {

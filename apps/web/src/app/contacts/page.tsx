@@ -12,7 +12,6 @@ import { Contact } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";
 import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal";
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
-import { toast } from "react-hot-toast";
 
 export default function ContactsPage() {
   const [searchQuery, setSearchQuery] = useState("");

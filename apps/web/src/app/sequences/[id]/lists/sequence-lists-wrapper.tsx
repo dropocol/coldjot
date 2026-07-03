@@ -7,7 +7,7 @@ interface SequenceListsWrapperProps {
 }
 
 export function SequenceListsWrapper({
-  sequenceId,
+  sequenceId: _sequenceId,
 }: SequenceListsWrapperProps) {
   return <SequenceLists />;
 }

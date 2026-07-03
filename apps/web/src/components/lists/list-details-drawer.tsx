@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -47,7 +47,7 @@ export const ListDetailsDrawer = ({
       setLoading(true);
       await onContactRemove(contactId);
       toast.success("Contact removed from list");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to remove contact");
     } finally {
       setLoading(false);

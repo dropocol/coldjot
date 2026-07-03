@@ -11,7 +11,7 @@ interface PageHeaderDescriptionProps {
   children: React.ReactNode;
 }
 
-export function PageHeader({ children, className }: PageHeaderProps) {
+export function PageHeader({ children, className: _className }: PageHeaderProps) {
   return (
     <div className="border-b">
       <div className="container py-6">{children}</div>

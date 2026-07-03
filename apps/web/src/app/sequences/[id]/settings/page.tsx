@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { SequenceSettings } from "@/components/sequences/sequence-settings";
 import type {
   BusinessHours,
-  BusinessScheduleEnum,
   BusinessScheduleType,
 } from "@coldjot/types";
 

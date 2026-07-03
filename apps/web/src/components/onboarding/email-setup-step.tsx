@@ -16,12 +16,12 @@ interface EmailSetupStepProps {
 
 export function EmailSetupStep({
   onNext,
-  onBack,
+  onBack: _onBack,
   hasConnectedEmail = false,
 }: EmailSetupStepProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: _session } = useSession();
 
   const emailProviders = [
     {

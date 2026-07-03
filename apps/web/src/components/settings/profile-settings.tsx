@@ -1,6 +1,5 @@
 "use client";
 
-import { User } from "@coldjot/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 

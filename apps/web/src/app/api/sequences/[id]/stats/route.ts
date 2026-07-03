@@ -1,11 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
-import { StepStatus } from "@coldjot/types";
 
-interface SequenceContactWithStatus {
-  status: StepStatus;
-}
 
 export async function GET(
   req: Request,

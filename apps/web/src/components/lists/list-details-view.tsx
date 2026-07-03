@@ -12,7 +12,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   User,
   Trash2,
-  ArrowLeft,
   MoreHorizontal,
   SendHorizonal,
 } from "lucide-react";
@@ -93,7 +92,7 @@ export const ListDetailsView = memo(
     const [showSequenceModal, setShowSequenceModal] = useState(false);
     const [showAddAllToSequenceModal, setShowAddAllToSequenceModal] =
       useState(false);
-    const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+    const [_selectedRows, _setSelectedRows] = useState<Set<string>>(new Set());
 
     // Get pagination values from URL or use defaults
     const page = Number(searchParams.get("page") || "1");

@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Separator } from "@/components/ui/separator";
-import { User, Building2, Globe, Mail, Calendar } from "lucide-react";
-import Link from "next/link";
-import { formatLinkedInUrl } from "@/lib/utils";
+import { User, Mail, Calendar } from "lucide-react";
+
 import ActionButtons from "../../../components/contacts/action-buttons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CopyButton from "@/components/common/copy";

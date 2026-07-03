@@ -2,13 +2,10 @@ import { Card } from "@/components/ui/card";
 import {
   BarChart3,
   Mail,
-  MousePointerClick,
   Reply,
   AlertTriangle,
   Users,
   Eye,
-  ThumbsUp,
-  Ban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -80,7 +77,7 @@ const formatRate = (numerator: number, denominator: number): string => {
  * Calculate a rate as a percentage
  * Returns 0 if the denominator is 0 or either value is undefined
  */
-const calculateRate = (numerator: number, denominator: number): number => {
+const _calculateRate = (numerator: number, denominator: number): number => {
   if (!denominator || numerator === undefined) return 0;
   return (numerator / denominator) * 100;
 };

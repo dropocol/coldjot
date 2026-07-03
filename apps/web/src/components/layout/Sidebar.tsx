@@ -9,9 +9,6 @@ import {
   FileText,
   Mail,
   Settings,
-  Building2,
-  Menu,
-  X,
   ChevronLeft,
   Search,
   Sparkles,
@@ -30,10 +27,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
+
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
 
-const composeRoute = {
+const _composeRoute = {
   label: "Compose",
   icon: Mail,
   href: "/compose",
@@ -82,7 +79,7 @@ const otherRoutes = [
   },
 ];
 
-const apolloRoute = {
+const _apolloRoute = {
   label: "Apollo Search",
   icon: Sparkles,
   secondaryIcon: Search,
@@ -90,7 +87,7 @@ const apolloRoute = {
   description: "Find new prospects",
 };
 
-const searchRoute = {
+const _searchRoute = {
   label: "Search",
   icon: Search,
   href: "/search",

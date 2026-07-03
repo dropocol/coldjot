@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { readFileSync } from "fs";
-import { join } from "path";
+
 import ReactMarkdown from "react-markdown";
 
 export const metadata: Metadata = {

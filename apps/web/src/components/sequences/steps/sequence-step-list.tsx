@@ -47,7 +47,7 @@ export function SequenceStepList({
   onDelete,
 }: Props) {
   const [orderedSteps, setOrderedSteps] = useState(steps);
-  const [isDragging, setIsDragging] = useState(false);
+  const [_isDragging, setIsDragging] = useState(false);
 
   const handleDragEnd = async (result: DropResult) => {
     setIsDragging(false);
@@ -68,7 +68,7 @@ export function SequenceStepList({
 
     try {
       await onReorder(updatedItems);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to reorder steps");
       setOrderedSteps(steps); // Revert on error
     }

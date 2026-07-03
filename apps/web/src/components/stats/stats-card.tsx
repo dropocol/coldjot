@@ -43,7 +43,7 @@ export function StatsCard({
   icon: Icon,
   color,
   percentage,
-  trend,
+  trend: _trend,
   showProgress = false,
   className,
 }: StatsCardProps) {

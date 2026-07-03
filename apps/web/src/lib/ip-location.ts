@@ -4,7 +4,7 @@ interface LocationInfo {
   region?: string;
 }
 
-export async function getIpLocation(ip: string): Promise<LocationInfo> {
+export async function getIpLocation(_ip: string): Promise<LocationInfo> {
   // For now, return empty location info
   // TODO: Implement actual IP geolocation service
   return {

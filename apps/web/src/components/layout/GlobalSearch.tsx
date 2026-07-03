@@ -9,7 +9,6 @@ import {
   Command,
   CommandDialog,
   CommandEmpty,
-  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
@@ -18,21 +17,19 @@ import { DialogTitle } from "@/components/ui/dialog";
 import {
   Search,
   User,
-  Building2,
-  FileText,
   Loader2,
   ArrowRight,
 } from "lucide-react";
 import { SearchResult, SearchResultType } from "@coldjot/types";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
-import { v4 as uuidv4 } from "uuid";
+
 export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
-  const [searchKey, setSearchKey] = React.useState(0);
+  const [_searchKey, setSearchKey] = React.useState(0);
 
   const mounted = React.useRef(false);
 
@@ -117,7 +114,7 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
     };
   }, [query]);
 
-  const groupedResults = useMemo(() => {
+  const _groupedResults = useMemo(() => {
     const grouped = results.reduce(
       (acc, item) => {
         const group = acc[item.type] || [];

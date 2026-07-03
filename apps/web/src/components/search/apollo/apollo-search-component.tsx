@@ -62,7 +62,7 @@ interface Props {
   userId: string;
 }
 
-export default function ApolloSearchComponent({ userId }: Props) {
+export default function ApolloSearchComponent({ userId: _userId }: Props) {
   const [isSearching, setIsSearching] = useState(false);
   const [isEnriching, setIsEnriching] = useState<Record<string, boolean>>({});
   const [searchResults, setSearchResults] = useState<ApolloContact[]>([]);
@@ -84,7 +84,7 @@ export default function ApolloSearchComponent({ userId }: Props) {
 
       const result = await response.json();
       setSearchResults([...(result.people || []), ...(result.contacts || [])]);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to search contacts");
     } finally {
       setIsSearching(false);

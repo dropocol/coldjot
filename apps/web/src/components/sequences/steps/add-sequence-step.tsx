@@ -26,8 +26,8 @@ export function AddSequenceStep({
 }: AddSequenceStepProps) {
   const [activeDrawer, setActiveDrawer] = useState<ActiveDrawer>("none");
   const [stepData, setStepData] = useState<StepData | null>(null);
-  const [emailData, setEmailData] = useState<EmailData | null>(null);
-  const router = useRouter();
+  const [_emailData, setEmailData] = useState<EmailData | null>(null);
+  const _router = useRouter();
   const { updateReadinessField } = useSequence();
 
   const handleStepSave = async (data: StepData) => {

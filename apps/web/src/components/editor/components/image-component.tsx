@@ -34,7 +34,7 @@ export function ImageComponent({
 }: ImageComponentProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const [editor] = useLexicalComposerContext();
-  const [isSelected, setSelected, clearSelection] =
+  const [isSelected, setSelected, _clearSelection] =
     useLexicalNodeSelection(nodeKey);
 
   const onDelete = useCallback(

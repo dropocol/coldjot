@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
+      const _errorData = await response.text();
       console.error("Apollo API request failed:", response.status);
       // Don't log the raw error body — it may contain PII from Apollo.
       throw new Error("Apollo API request failed");

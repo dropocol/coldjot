@@ -11,21 +11,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
 import {
   Loader2,
   UserPlus,
-  X,
-  Check,
   Clock,
   RefreshCw,
-  Calendar,
   CheckCircle2,
   AlertCircle,
   PlayCircle,
-  Building2,
-  ExternalLink,
   MoreVertical,
   Send,
   Trash,
@@ -34,14 +28,13 @@ import {
 } from "lucide-react";
 import { ListSelector } from "@/components/lists/list-selector";
 import { formatDistanceToNow, format } from "date-fns";
-import { useSequenceStats } from "@/hooks/use-sequence-stats";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Contact, SequenceContact, StepStatus } from "@coldjot/types";
+import type { Contact } from "@coldjot/types";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import type { SequenceContactStatusType } from "@coldjot/types";
 import {
@@ -135,7 +128,7 @@ export function SequenceContacts({
 
       setContacts((prev) => prev.filter((c) => c.contactId !== contactId));
       toast.success("Contact removed from sequence");
-    } catch (error) {
+    } catch (__error) {
       toast.error("Failed to remove contact");
     } finally {
       setIsLoading(false);
@@ -156,7 +149,7 @@ export function SequenceContacts({
 
       await refreshContacts();
       toast.success("Contact scheduled for immediate sending");
-    } catch (error) {
+    } catch (__error) {
       toast.error("Failed to schedule immediate sending");
     } finally {
       setIsLoading(false);
@@ -182,7 +175,7 @@ export function SequenceContacts({
 
       await refreshContacts();
       toast.success("Contact status updated successfully");
-    } catch (error) {
+    } catch (__error) {
       toast.error("Failed to update contact status");
     } finally {
       setIsLoading(false);

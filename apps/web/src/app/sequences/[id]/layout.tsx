@@ -1,10 +1,6 @@
 import { prisma } from "@coldjot/database";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
-import { SequenceControls } from "@/components/sequences/sequence-controls";
-import { SequenceNav } from "@/components/sequences/sequence-nav";
+
 import { SequenceStatus } from "@coldjot/types";
 import { SequenceHeader } from "@/components/sequences/sequence-header";
 import { SequenceProvider } from "@/lib/sequence-context";

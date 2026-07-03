@@ -7,7 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { Sequence, SequenceStatus } from "@coldjot/types";
+import { Sequence } from "@coldjot/types";
 import { SequenceReadinessMetadata } from "@/lib/sequence-utils";
 
 // Define the shape of our context

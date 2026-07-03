@@ -7,7 +7,7 @@ interface FinalSetupStepProps {
   onBack: () => void;
 }
 
-export function FinalSetupStep({ onComplete, onBack }: FinalSetupStepProps) {
+export function FinalSetupStep({ onComplete, onBack: _onBack }: FinalSetupStepProps) {
   const completedSteps = [
     {
       icon: Mail,

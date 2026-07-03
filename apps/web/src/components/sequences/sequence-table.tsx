@@ -86,11 +86,11 @@ export function SequenceTable({
     try {
       const response = await fetch("/api/sequences");
       if (!response.ok) throw new Error("Failed to fetch sequences");
-      const data = await response.json();
+      const _data = await response.json();
       onCloseCreateModal();
       toast.success("Sequence created successfully");
       router.refresh();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to refresh sequences");
     }
   };
@@ -113,7 +113,7 @@ export function SequenceTable({
 
       // Refresh the page to show the updated list
       router.refresh();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to duplicate sequence");
     } finally {
       setDuplicatingId(null);
@@ -143,7 +143,7 @@ export function SequenceTable({
         ...sequences.find((s) => s.id === sequenceId)!,
         status: newStatus,
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to update sequence status");
     }
   };

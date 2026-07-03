@@ -7,9 +7,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Contact } from "@prisma/client";
-import { Mail, Building2, Globe, Calendar } from "lucide-react";
-import Link from "next/link";
-import { formatLinkedInUrl } from "@/lib/utils";
+import { Mail, Calendar } from "lucide-react";
+
 import ActionButtons from "./action-buttons";
 
 interface ContactDetailsDrawerProps {

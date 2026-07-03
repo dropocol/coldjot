@@ -87,7 +87,7 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
 
-    async session({ session, user, token }) {
+    async session({ session, user, token: _token }) {
       // Get user's onboarding status
       const dbUser = await prisma.user.findUnique({
         where: { id: user.id },

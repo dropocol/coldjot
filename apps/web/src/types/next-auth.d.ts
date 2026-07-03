@@ -1,4 +1,6 @@
-import NextAuth from "next-auth";
+// Side-effect import: ensures next-auth's base types are loaded so the
+// module augmentation below merges correctly.
+import "next-auth";
 
 declare module "next-auth" {
   interface Session {

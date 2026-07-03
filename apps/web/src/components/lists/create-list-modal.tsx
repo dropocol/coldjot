@@ -26,7 +26,7 @@ export const CreateListModal = ({
 }: CreateListModalProps) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [_selectedContacts, setSelectedContacts] = useState<string[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

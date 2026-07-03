@@ -7,7 +7,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import {
   CheckCircle2,
@@ -22,10 +21,9 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCheck,
-  PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+
 import { cn } from "@/lib/utils";
 import { Sequence } from "@coldjot/types";
 import {
@@ -33,15 +31,9 @@ import {
   getSequenceSetupProgress,
 } from "@/lib/sequence-utils";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+
 import { useSequence } from "@/lib/sequence-context";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface SequenceSetupChecklistProps {
   sequence?: Sequence;
@@ -54,7 +46,7 @@ export function SequenceSetupChecklist({
   sequence: sequenceProp,
   onStepComplete,
   className,
-  onLaunch,
+  onLaunch: _onLaunch,
 }: SequenceSetupChecklistProps) {
   // Use context if no prop is provided
   const context = useSequence();
@@ -62,7 +54,7 @@ export function SequenceSetupChecklist({
   const handleStepComplete = onStepComplete || context.refreshSequence;
 
   const [isExpanded, setIsExpanded] = useState(true);
-  const [progressValue, setProgressValue] = useState(0);
+  const [_progressValue, setProgressValue] = useState(0);
 
   // Get sequence setup status
   const { steps, isReady } = isSequenceReadyToLaunch(sequence);
@@ -71,7 +63,7 @@ export function SequenceSetupChecklist({
   // instead of relying on metadata which might include lastUpdated
   const totalRequiredSteps = 4; // Explicitly set to 4 required steps
 
-  const { completedSteps, completionPercentage } =
+  const { completedSteps, completionPercentage: _completionPercentage } =
     getSequenceSetupProgress(sequence);
 
   // Calculate the actual completed steps (capped at totalRequiredSteps)

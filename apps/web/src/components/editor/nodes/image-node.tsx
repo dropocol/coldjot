@@ -23,7 +23,7 @@ export interface ImagePayload
   version: 1;
 }
 
-function convertImageElement(
+function _convertImageElement(
   domNode: Node
 ): null | undefined | { src: string; altText: string } {
   if (domNode instanceof HTMLImageElement) {

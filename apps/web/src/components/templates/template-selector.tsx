@@ -22,7 +22,7 @@ interface TemplateSelectorProps {
 
 export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [_isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchTemplates = async () => {

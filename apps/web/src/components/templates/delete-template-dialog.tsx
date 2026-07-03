@@ -32,7 +32,7 @@ export default function DeleteTemplateDialog({
 
       onDelete(template.id);
       toast.success("Template deleted successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to delete template");
     }
   };

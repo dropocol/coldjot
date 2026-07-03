@@ -3,11 +3,11 @@ import { encode as base64Encode } from "js-base64";
 import { prisma } from "@coldjot/database";
 import { gmail_v1 } from "googleapis";
 
-import { refreshAccessToken, refreshEmailAccessToken } from "./google-account";
-import { Prisma, Mailbox } from "@prisma/client";
+import { refreshEmailAccessToken } from "./google-account";
+
 import { logger } from "@/lib/logger";
 
-const oauth2Client = new google.auth.OAuth2(
+const _oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
   `${process.env.AUTH_URL}/api/auth/callback/google`
@@ -33,7 +33,7 @@ interface MailboxCredentials {
   expiryDate: number | null;
 }
 
-type MailboxSelect = {
+type _MailboxSelect = {
   id: true;
   userId: true;
   access_token: true;

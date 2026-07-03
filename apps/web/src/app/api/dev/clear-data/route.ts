@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 
-export async function DELETE(req: Request) {
+export async function DELETE(_req: Request) {
   try {
     // Only allow in development
     if (process.env.NODE_ENV === "production") {

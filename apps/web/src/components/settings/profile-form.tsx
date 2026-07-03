@@ -56,7 +56,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",

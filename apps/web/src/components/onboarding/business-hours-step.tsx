@@ -13,7 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, Clock } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
 import { toast } from "react-hot-toast";
@@ -33,7 +33,7 @@ const DAYS_OF_WEEK = [
   { value: 6, label: "Sat" },
 ];
 
-export function BusinessHoursStep({ onNext, onBack }: BusinessHoursStepProps) {
+export function BusinessHoursStep({ onNext, onBack: _onBack }: BusinessHoursStepProps) {
   const [settings, setSettings] = useState({
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     workDays: [1, 2, 3, 4, 5], // Monday to Friday

@@ -47,7 +47,7 @@ export function UsersClient() {
       if (!response.ok) throw new Error("Failed to fetch users");
       const data = await response.json();
       setUsers(data);
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to load users",
@@ -73,7 +73,7 @@ export function UsersClient() {
         title: "Success",
         description: "User deleted successfully",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete user",

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Send, Info } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { TemplateCommand } from "@/components/templates/template-command";
 import { toast } from "react-hot-toast";
@@ -67,8 +67,8 @@ export function SequenceEmailEditor({
   const [replyToThread, setReplyToThread] = useState(
     initialData?.replyToThread ?? false
   );
-  const [isSending, setIsSending] = useState(false);
-  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [_isSending, _setIsSending] = useState(false);
+  const [_isSendingTest, setIsSendingTest] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [currentTemplateId, setCurrentTemplateId] = useState<
     string | undefined
@@ -234,7 +234,7 @@ export function SequenceEmailEditor({
     });
   };
 
-  const handleSendTest = async () => {
+  const _handleSendTest = async () => {
     if (!sequenceId || !stepId) return;
 
     setIsSendingTest(true);
@@ -254,7 +254,7 @@ export function SequenceEmailEditor({
 
       if (!response.ok) throw new Error("Failed to send test email");
       toast.success("Test email sent successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to send test email");
     } finally {
       setIsSendingTest(false);

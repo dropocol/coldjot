@@ -70,7 +70,7 @@ export function ComponentPickerPlugin(): JSX.Element {
     );
   }, [editor]);
 
-  const insertComponent = (componentId: string) => {
+  const insertComponent = (_componentId: string) => {
     editor.update(() => {
       const root = $getRoot();
       const block = $createDraggableBlockNode();

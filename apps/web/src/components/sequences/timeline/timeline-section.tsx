@@ -25,7 +25,7 @@ export function TimelineSection({
   isInfiniteScroll,
   onScrollModeToggle,
 }: TimelineSectionProps) {
-  const router = useRouter();
+  const _router = useRouter();
   const queryClient = useQueryClient();
 
   const handleRefresh = useCallback(() => {

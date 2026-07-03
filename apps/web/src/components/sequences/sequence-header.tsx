@@ -19,7 +19,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { PlayCircle } from "lucide-react";
 
 export function SequenceHeader() {
   const router = useRouter();
@@ -149,7 +148,7 @@ export function SequenceHeader() {
         sequenceId={sequence.id}
         contactCount={sequence._count?.contacts || sequence.contactCount}
         testMode={sequence.testMode || false}
-        onStatusChange={(newStatus) => {
+        onStatusChange={(_newStatus) => {
           // Update local sequence status via context
           refreshSequence();
           router.refresh();

@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { addContactToSequence } from "@/lib/client-actions";
+
 import { useSequence } from "@/lib/sequence-context";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -60,13 +60,13 @@ export function AddToSequenceModal({
   );
 
   // Try to use the sequence context, but handle the case where it's not available
-  let updateReadinessField: any = null;
+  let _updateReadinessField: any = null;
   try {
     const sequenceContext = useSequence();
-    updateReadinessField = sequenceContext?.updateReadinessField || null;
-  } catch (error) {
+    _updateReadinessField = sequenceContext?.updateReadinessField || null;
+  } catch (_error) {
     // Context not available, will use direct API call instead
-    updateReadinessField = null;
+    _updateReadinessField = null;
   }
 
   // Determine if we're adding multiple contacts
@@ -103,7 +103,7 @@ export function AddToSequenceModal({
         if (sequencesData.length > 0) {
           setSelectedSequenceId(sequencesData[0].id);
         }
-      } catch (error) {
+      } catch (_error) {
         toast.error("Failed to load sequences. Please try again.");
         setSequences([]);
       } finally {
@@ -215,7 +215,7 @@ export function AddToSequenceModal({
 
       toast.success("Contact added to sequence");
       setLastAddedSequenceId(selectedSequenceId);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to add to sequence");
     } finally {
       setAdding(false);

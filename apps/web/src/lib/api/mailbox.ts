@@ -1,4 +1,4 @@
-interface WatchRequestBody {
+interface _WatchRequestBody {
   userId: string;
   email: string;
 }

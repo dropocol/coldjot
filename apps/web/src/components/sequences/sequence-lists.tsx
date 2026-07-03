@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
-import { Loader2, Plus, X, ListPlus, MoreVertical, Trash } from "lucide-react";
+import { Loader2, Plus, ListPlus, MoreVertical, Trash } from "lucide-react";
 import { format } from "date-fns";
 import {
   Tooltip,
@@ -42,7 +42,6 @@ import {
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -64,7 +63,7 @@ export function SequenceLists() {
   const [isRemovingList, setIsRemovingList] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalLists, setTotalLists] = useState(0);
+  const [_totalLists, setTotalLists] = useState(0);
   const limit = 10;
 
   // Fetch sequence lists

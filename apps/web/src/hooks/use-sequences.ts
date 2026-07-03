@@ -14,7 +14,7 @@ export const useSequences = () => {
 
       const data = await response.json();
       setSequences(data);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to load sequences");
     } finally {
       setIsLoading(false);

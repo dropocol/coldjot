@@ -83,7 +83,7 @@ export function ListSelector({
       toast.success(`Added ${list.contacts.length} contacts from ${list.name}`);
       setOpen(false);
       onListSelected();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to add contacts from list");
     } finally {
       setIsLoading(false);

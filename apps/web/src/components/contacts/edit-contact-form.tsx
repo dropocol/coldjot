@@ -52,7 +52,7 @@ export default function EditContactForm({ contact }: EditContactFormProps) {
       toast.success("Contact updated successfully");
       router.refresh();
       router.push("/contacts");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to update contact");
     } finally {
       setIsSubmitting(false);

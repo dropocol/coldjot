@@ -28,7 +28,7 @@ interface TemplateVariable {
   path?: string;
 }
 
-function flattenObject(obj: any, prefix = ""): Record<string, string> {
+function flattenObject(obj: any, _prefix = ""): Record<string, string> {
   const flattened: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(obj)) {
@@ -184,7 +184,7 @@ export default function EmailComposer({ templates }: Props) {
 
       if (!response.ok) throw new Error("Failed to save draft");
       toast.success("Draft saved successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to save draft");
     } finally {
       setIsSaving(false);

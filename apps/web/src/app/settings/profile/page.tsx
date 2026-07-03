@@ -4,7 +4,6 @@ import { Separator } from "@/components/ui/separator";
 import { SettingsMessageHandler } from "@/components/settings/settings-message-handler";
 import { SettingsLayout } from "@/components/settings/settings-layout";
 import ProfileSettings from "@/components/settings/profile-settings";
-import EmailSettings from "@/components/settings/email-settings";
 import GoogleIntegration from "@/components/settings/google-integration";
 
 export default async function ProfileSettingsPage() {

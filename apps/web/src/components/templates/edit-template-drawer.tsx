@@ -35,8 +35,8 @@ export default function EditTemplateDrawer({
 }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
-  const contentRef = useRef<HTMLTextAreaElement>(null);
-  const { register, handleSubmit, setValue, watch } = useForm<FormData>({
+  const _contentRef = useRef<HTMLTextAreaElement>(null);
+  const { register, handleSubmit: _handleSubmit, setValue, watch } = useForm<FormData>({
     defaultValues: {
       name: template.name,
       subject: template.subject,

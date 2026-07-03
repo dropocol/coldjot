@@ -11,22 +11,17 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { EmailList } from "@coldjot/types";
+
 import { Prisma } from "@prisma/client";
 import {
   Search,
-  Plus,
   Loader2,
-  AlertCircle,
   Users,
   ListPlus,
-  CheckCircle,
   Check,
-  X,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
+
 import {
   Table,
   TableBody,
@@ -57,7 +52,7 @@ type EmailListWithCount = Prisma.EmailListGetPayload<{
   };
 }>;
 
-interface ListResponse {
+interface _ListResponse {
   lists: EmailListWithCount[];
   total: number;
   page: number;
