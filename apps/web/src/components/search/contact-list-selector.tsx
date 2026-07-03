@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,9 +18,9 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "react-hot-toast";
 import { Search, Loader2 } from "lucide-react";
 import { Contact } from "@prisma/client";
+import { useContacts } from "@/hooks/queries/use-contacts";
 
 interface ContactListSelectorProps {
   open: boolean;
@@ -35,30 +35,18 @@ export function ContactListSelector({
   onSelect,
   sequenceId: _sequenceId,
 }: ContactListSelectorProps) {
-  const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(
     new Set()
   );
-  const [isLoading, setIsLoading] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const fetchContacts = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch(`/api/contacts?search=${search}`);
-        if (!response.ok) throw new Error("Failed to fetch contacts");
-        const data = await response.json();
-        setContacts(data);
-      } catch (_error) {
-        toast.error("Failed to load contacts");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchContacts();
-  }, [search]);
+  const { data } = useContacts({
+    page: 1,
+    limit: 50,
+    search: search || undefined,
+  });
+  const contacts = (data?.contacts ?? []) as Contact[];
 
   const handleToggleContact = (contactId: string) => {
     const newSelected = new Set(selectedContacts);
@@ -72,16 +60,14 @@ export function ContactListSelector({
 
   const handleAddContacts = async () => {
     try {
-      setIsLoading(true);
+      setIsAdding(true);
       const selectedContactsList = contacts.filter((c) =>
         selectedContacts.has(c.id)
       );
       onSelect(selectedContactsList);
       onClose();
-    } catch (_error) {
-      toast.error("Failed to add contacts");
     } finally {
-      setIsLoading(false);
+      setIsAdding(false);
     }
   };
 
@@ -153,9 +139,9 @@ export function ContactListSelector({
             </Button>
             <Button
               onClick={handleAddContacts}
-              disabled={selectedContacts.size === 0 || isLoading}
+              disabled={selectedContacts.size === 0 || isAdding}
             >
-              {isLoading ? (
+              {isAdding ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Adding...

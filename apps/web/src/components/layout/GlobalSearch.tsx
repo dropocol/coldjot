@@ -22,14 +22,16 @@ import {
 } from "lucide-react";
 import { SearchResult, SearchResultType } from "@coldjot/types";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
+import { useContactSearch } from "@/hooks/queries/use-contacts";
 
 export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [results, setResults] = React.useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [_searchKey, setSearchKey] = React.useState(0);
+
+  // Contact search backed by react-query (gated on non-empty query).
+  const { data: contactResults, isLoading } = useContactSearch(query);
+  const contacts = contactResults ?? [];
 
   const mounted = React.useRef(false);
 
@@ -59,66 +61,14 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  useEffect(() => {
-    if (!query) {
-      setResults([]);
-      return;
-    }
-
-    let active = true;
-
-    const searchItems = async () => {
-      setIsLoading(true);
-
-      try {
-        const [contactsRes] = await Promise.all([
-          fetch(`/api/contacts/search?q=${encodeURIComponent(query)}`),
-        ]);
-
-        if (!active) return;
-
-        const [contacts] = await Promise.all([
-          contactsRes.ok ? contactsRes.json() : [],
-        ]);
-
-        if (!active) return;
-
-        const searchResults: SearchResult[] = [
-          ...contacts.map(
-            (contact: {
-              id: string;
-              firstName: string;
-              lastName: string;
-              email: string;
-            }) => ({
-            id: contact.id,
-            type: "contact",
-            title: `${contact.firstName} ${contact.lastName}`,
-            subtitle: contact.email,
-            url: `/contacts/${contact.id}`,
-          })),
-        ];
-
-        if (active) {
-          setResults(searchResults);
-          setSearchKey((prev) => prev + 1);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error("Search error:", error);
-        if (active) {
-          setResults([]);
-          setIsLoading(false);
-        }
-      }
-    };
-
-    const timeoutId = setTimeout(searchItems, 300);
-    return () => {
-      active = false;
-      clearTimeout(timeoutId);
-    };
-  }, [query]);
+  // Build unified search results from the contacts query.
+  const results: SearchResult[] = contacts.map((contact) => ({
+    id: contact.id,
+    type: "contact" as const,
+    title: `${contact.firstName} ${contact.lastName}`,
+    subtitle: contact.email,
+    url: `/contacts/${contact.id}`,
+  }));
 
   const _groupedResults = useMemo(() => {
     const grouped = results.reduce(

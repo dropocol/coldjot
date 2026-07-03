@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Separator } from "@/components/ui/separator";
@@ -28,67 +28,33 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import {
+  useContactSearch,
+  useDeleteContact,
+} from "@/hooks/queries/use-contacts";
 
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<SearchResultType | "all">("all");
 
-  const performSearch = async (searchQuery: string) => {
-    if (!searchQuery) {
-      setResults([]);
-      return;
-    }
+  // react-query backs the search (gated on a non-empty query).
+  const activeQuery = searchParams.get("q") || query;
+  const { data: contactResults, isLoading } = useContactSearch(activeQuery);
+  const deleteContact = useDeleteContact();
 
-    setIsLoading(true);
-    try {
-      const [contactsRes] = await Promise.all([
-        fetch(`/api/contacts/search?q=${encodeURIComponent(searchQuery)}`),
-      ]);
-
-      const [contacts] = await Promise.all([
-        contactsRes.ok ? contactsRes.json() : [],
-      ]);
-
-      const searchResults: SearchResult[] = [
-        ...contacts.map(
-          (contact: {
-            id: string;
-            firstName: string;
-            lastName: string;
-            email: string;
-          }) => ({
-          id: contact.id,
-          type: "contact",
-          title: `${contact.firstName} ${contact.lastName}`,
-          subtitle: contact.email,
-          url: `/contacts/${contact.id}`,
-        })),
-      ];
-
-      setResults(searchResults);
-    } catch (error) {
-      console.error("Search error:", error);
-      setResults([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Initial search when page loads with query parameter
-  useEffect(() => {
-    if (searchParams.get("q")) {
-      performSearch(searchParams.get("q")!);
-    }
-  }, [searchParams]);
+  const results: SearchResult[] = (contactResults ?? []).map((contact) => ({
+    id: contact.id,
+    type: "contact" as const,
+    title: `${contact.firstName} ${contact.lastName}`,
+    subtitle: contact.email,
+    url: `/contacts/${contact.id}`,
+  }));
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     router.push(`/search?q=${encodeURIComponent(query)}`);
-    performSearch(query);
   };
 
   const filteredResults =
@@ -227,19 +193,8 @@ function SearchContent() {
                                   size="icon"
                                   onClick={async () => {
                                     try {
-                                      const response = await fetch(
-                                        `/api/contacts/${result.id}`,
-                                        {
-                                          method: "DELETE",
-                                        }
-                                      );
-                                      if (!response.ok)
-                                        throw new Error(
-                                          "Failed to delete contact"
-                                        );
-
-                                      setResults((prev) =>
-                                        prev.filter((r) => r.id !== result.id)
+                                      await deleteContact.mutateAsync(
+                                        result.id
                                       );
                                       toast.success(
                                         "Contact deleted successfully"

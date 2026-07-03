@@ -18,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useContactSearch } from "@/hooks/queries/use-contacts";
 
 interface Props {
   selectedContact: Contact | null;
@@ -27,8 +28,11 @@ interface Props {
 export function ContactSearch({ selectedContact, onSelect }: Props) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
-  const [searchResults, setSearchResults] = useState<Contact[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Only run the search query for 2+ char input (matches previous behavior).
+  const searchQuery = inputValue.length >= 2 ? inputValue : "";
+  const { data: searchResults, isLoading } = useContactSearch(searchQuery);
+  const results = (searchResults ?? []) as Contact[];
 
   // Set initial value if contact is pre-selected
   useEffect(() => {
@@ -37,30 +41,6 @@ export function ContactSearch({ selectedContact, onSelect }: Props) {
       setOpen(false);
     }
   }, [selectedContact]);
-
-  // Handle search
-  useEffect(() => {
-    const searchContacts = async () => {
-      if (!inputValue || inputValue.length < 2) return;
-
-      setIsLoading(true);
-      try {
-        const response = await fetch(
-          `/api/contacts/search?q=${encodeURIComponent(inputValue)}`
-        );
-        if (!response.ok) throw new Error("Search failed");
-        const data = await response.json();
-        setSearchResults(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("Search error:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timer = setTimeout(searchContacts, 300);
-    return () => clearTimeout(timer);
-  }, [inputValue]);
 
   return (
     <div className="flex gap-2">
@@ -101,9 +81,9 @@ export function ContactSearch({ selectedContact, onSelect }: Props) {
               <CommandEmpty>
                 {isLoading ? "Searching..." : "No contact found"}
               </CommandEmpty>
-              {searchResults.length > 0 && (
+              {results.length > 0 && (
                 <CommandGroup>
-                  {searchResults.map((contact) => (
+                  {results.map((contact) => (
                     <CommandItem
                       key={contact.id}
                       onSelect={() => {
@@ -145,7 +125,7 @@ export function ContactSearch({ selectedContact, onSelect }: Props) {
           onClick={() => {
             onSelect(null);
             setInputValue("");
-            setSearchResults([]);
+            
           }}
           className="shrink-0"
         >

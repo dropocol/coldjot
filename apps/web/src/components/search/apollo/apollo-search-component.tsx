@@ -30,6 +30,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { api } from "@/lib/http/api-client";
+import { useCreateContact } from "@/hooks/queries/use-contacts";
 
 type FormData = {
   domain: string;
@@ -58,6 +60,11 @@ type ApolloContact = {
   country?: string;
 };
 
+type ApolloEnriched = {
+  email?: string;
+  personal_email?: string;
+};
+
 interface Props {
   userId: string;
 }
@@ -67,22 +74,18 @@ export default function ApolloSearchComponent({ userId: _userId }: Props) {
   const [isEnriching, setIsEnriching] = useState<Record<string, boolean>>({});
   const [searchResults, setSearchResults] = useState<ApolloContact[]>([]);
   const { register, handleSubmit } = useForm<FormData>();
+  const createContact = useCreateContact();
 
   const onSubmit = async (data: FormData) => {
     setIsSearching(true);
     try {
-      const response = await fetch("/api/search/apollo/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          domain: data.domain,
-          titles: ["ceo", "cto", "founder", "co-founder"],
-        }),
+      const result = await api.post<{
+        people?: ApolloContact[];
+        contacts?: ApolloContact[];
+      }>("/api/search/apollo/search", {
+        domain: data.domain,
+        titles: ["ceo", "cto", "founder", "co-founder"],
       });
-
-      if (!response.ok) throw new Error("Search failed");
-
-      const result = await response.json();
       setSearchResults([...(result.people || []), ...(result.contacts || [])]);
     } catch (_error) {
       toast.error("Failed to search contacts");
@@ -94,10 +97,9 @@ export default function ApolloSearchComponent({ userId: _userId }: Props) {
   const enrichContact = async (contact: ApolloContact) => {
     setIsEnriching((prev) => ({ ...prev, [contact.id]: true }));
     try {
-      const response = await fetch("/api/search/apollo/enrich", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const enrichedData = await api.post<{ person?: ApolloEnriched }>(
+        "/api/search/apollo/enrich",
+        {
           apolloContactId: contact.id,
           domain:
             contact.organization?.primary_domain ||
@@ -106,39 +108,21 @@ export default function ApolloSearchComponent({ userId: _userId }: Props) {
               ".com",
           firstName: contact.first_name,
           lastName: contact.last_name,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Enrichment failed");
-
-      const enrichedData = await response.json();
-      const enrichedContact = enrichedData.person || enrichedData;
+        }
+      );
+      const enrichedContact = enrichedData.person || (enrichedData as unknown as ApolloEnriched);
 
       // Save to database
-      const saveResponse = await fetch("/api/contacts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: contact.first_name,
-          lastName: contact.last_name,
-          name: `${contact.first_name} ${contact.last_name}`,
-          email:
-            enrichedContact.email ||
-            enrichedContact.personal_email ||
-            contact.email,
-          domain:
-            contact.organization?.primary_domain ||
-            contact.account?.domain ||
-            contact.organization_name.toLowerCase().replace(/[^a-z0-9]/g, "") +
-              ".com",
-        }),
+      const email =
+        enrichedContact.email ||
+        enrichedContact.personal_email ||
+        contact.email ||
+        "";
+      await createContact.mutateAsync({
+        firstName: contact.first_name,
+        lastName: contact.last_name,
+        email,
       });
-
-      if (!saveResponse.ok) {
-        const errorData = await saveResponse.json();
-        console.error("Save response error:", errorData);
-        throw new Error("Failed to save contact");
-      }
 
       // Update the contact in the list
       setSearchResults((prev) =>
@@ -157,8 +141,7 @@ export default function ApolloSearchComponent({ userId: _userId }: Props) {
       );
 
       toast.success("Contact enriched and saved successfully");
-    } catch (error) {
-      console.error("Enrichment error:", error);
+    } catch (_error) {
       toast.error("Failed to enrich contact");
     } finally {
       setIsEnriching((prev) => ({ ...prev, [contact.id]: false }));
