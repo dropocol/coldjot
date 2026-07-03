@@ -1,7 +1,17 @@
 import { z } from "zod";
+import { config } from "dotenv";
+import path from "path";
 
-// Next.js loads .env* automatically; no dotenv.config() call needed.
-//
+// ColdJot keeps env files under apps/web/env/ (not the app root), so Next.js's
+// built-in .env auto-loading does NOT find them. Load them explicitly here, in
+// the same precedence order Next.js itself uses, mirroring apps/mailops.
+const APP_ENV = process.env.APP_ENV || "development";
+const envDir = path.resolve(process.cwd(), "env");
+config({ path: path.resolve(envDir, ".env") });
+config({ path: path.resolve(envDir, `.env.${APP_ENV}`) });
+config({ path: path.resolve(envDir, ".env.local") });
+config({ path: path.resolve(envDir, `.env.${APP_ENV}.local`) });
+
 // This schema is parsed at module load (boot). A missing/empty REQUIRED secret
 // crashes the process immediately instead of failing later at first use.
 // Mark a var `.optional()` only if the app can legitimately boot without it

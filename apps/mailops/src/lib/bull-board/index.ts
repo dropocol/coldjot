@@ -9,7 +9,7 @@ import type { ServiceManager } from "@/services/service-manager";
  *
  * Returns an Express router the caller mounts behind the service-token
  * middleware (plan 03). Bull-Board gives ops a web UI to inspect/replay jobs
- * across every primary queue and its paired `*:dl` dead-letter queue.
+ * across every primary queue and its paired `*-dl` dead-letter queue.
  *
  * Plan 10 (`plans/refactor-plan/10-backend-job-resilience.md`).
  */

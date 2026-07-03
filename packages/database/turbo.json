@@ -1,66 +1,36 @@
 {
-    "extends": [
-        "//"
-    ],
+    "extends": ["//"],
     "tasks": {
         "build": {
-            "cache": false,
-            "persistent": false,
-            "dependsOn": [
-                "^build",
-                "db:generate"
-            ]
+            "dependsOn": ["db:generate"],
+            "outputs": ["dist/**"]
         },
         "build:dev": {
-            "cache": false,
-            "dependsOn": [
-                "db:deploy",
-                "db:generate"
-            ]
+            "dependsOn": ["db:generate"],
+            "outputs": ["dist/**"]
         },
         "build:prod": {
-            "cache": true,
-            "dependsOn": [
-                "db:deploy:prod",
-                "db:generate"
-            ]
+            "dependsOn": ["db:generate"],
+            "outputs": ["dist/**"]
         },
         "db:generate": {
             "cache": false,
             "outputs": []
         },
-        "db:migrate": {
-            "cache": false
-        },
-        "db:migrate:create": {
-            "cache": false
-        },
-        "db:deploy": {
-            "cache": false
-        },
+        "db:migrate": { "cache": false },
+        "db:migrate:create": { "cache": false },
+        "db:deploy": { "cache": false },
         "db:deploy:prod": {
             "cache": false,
-            "env": [
-                "DATABASE_URL"
-            ]
+            "env": ["DATABASE_URL"]
         },
-        "db:push": {
-            "cache": false
-        },
-        "db:seed": {
-            "cache": false
-        },
-        "db:reset": {
-            "cache": false
-        },
-        "db:studio": {
-            "cache": false
-        },
+        "db:push": { "cache": false },
+        "db:seed": { "cache": false },
+        "db:reset": { "cache": false },
+        "db:studio": { "cache": false },
         "db:seed:prod": {
             "cache": false,
-            "env": [
-                "DATABASE_URL"
-            ]
+            "env": ["DATABASE_URL"]
         }
     }
 }

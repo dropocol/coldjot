@@ -1,30 +1,10 @@
 /** @type {import('next').NextConfig} */
 
-import path from "path";
-import { existsSync } from "fs";
-import dotenv from "dotenv";
-
-const envFile = process.env.APP_ENV
-  ? `.env.${process.env.APP_ENV}`
-  : existsSync(path.join(__dirname, "env", ".env.development"))
-    ? ".env.development"
-    : ".env";
-const envPath = path.join(__dirname, "env", envFile);
-const defaultEnvPath = path.join(__dirname, "env", ".env");
-
-console.log("Checking for env file:", envPath);
-
-if (existsSync(envPath)) {
-  console.log("Loading env file:", envPath);
-  dotenv.config({ path: envPath });
-} else if (existsSync(defaultEnvPath)) {
-  console.log("Loading default .env file:", defaultEnvPath);
-  dotenv.config({ path: defaultEnvPath });
-} else {
-  console.error(
-    `No env file found. Checked:\n- ${envPath}\n- ${defaultEnvPath}`
-  );
-}
+// Importing env here guarantees the zod schema (apps/web/src/env.ts) runs at
+// config-eval time — a missing required var fails the build immediately. The
+// env files under apps/web/env/ are loaded by that module (Next's built-in
+// .env auto-loading does not see the env/ subdirectory).
+import "./src/env";
 
 const nextConfig = {
   distDir: ".next",

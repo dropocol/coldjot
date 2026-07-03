@@ -1,87 +1,55 @@
 {
-    "extends": [
-        "//"
-    ],
+    "extends": ["//"],
     "tasks": {
-        "dev": {
-            "cache": false,
-            "persistent": true
-        },
         "build": {
-            "dependsOn": [
-                "^build"
-            ]
-        },
-        "build:dev": {
-            "cache": true,
-            "dependsOn": [
-                "@coldjot/database#build:dev",
-                "@coldjot/types#build:dev"
-            ],
             "env": [
                 "PORT",
                 "WEB_APP_URL",
                 "MAILOPS_API_URL",
                 "TRACK_API_URL",
-                "DATABASE_URL",
                 "REDIS_*",
-                "GOOGLE_*",
                 "QUEUE_PREFIX",
                 "PUBSUB_*",
-                "BYPASS_BUSINESS_HOURS"
+                "BYPASS_BUSINESS_HOURS",
+                "SERVICE_INTERNAL_TOKEN",
+                "GOOGLE_CLIENT_ID_EMAIL",
+                "GOOGLE_CLIENT_SECRET_EMAIL",
+                "GOOGLE_REDIRECT_URI_EMAIL"
             ],
-            "outputs": [
-                "dist/**"
-            ]
+            "outputs": ["dist/**"]
+        },
+        "build:dev": {
+            "env": [
+                "PORT",
+                "WEB_APP_URL",
+                "MAILOPS_API_URL",
+                "TRACK_API_URL",
+                "REDIS_*",
+                "QUEUE_PREFIX",
+                "PUBSUB_*",
+                "BYPASS_BUSINESS_HOURS",
+                "SERVICE_INTERNAL_TOKEN",
+                "GOOGLE_CLIENT_ID_EMAIL",
+                "GOOGLE_CLIENT_SECRET_EMAIL",
+                "GOOGLE_REDIRECT_URI_EMAIL"
+            ],
+            "outputs": ["dist/**"]
         },
         "build:prod": {
-            "cache": true,
-            "dependsOn": [
-                "@coldjot/database#build:prod",
-                "@coldjot/types#build:prod"
+            "env": [
+                "PORT",
+                "WEB_APP_URL",
+                "MAILOPS_API_URL",
+                "TRACK_API_URL",
+                "REDIS_*",
+                "QUEUE_PREFIX",
+                "PUBSUB_*",
+                "SERVICE_INTERNAL_TOKEN",
+                "GOOGLE_CLIENT_ID_EMAIL",
+                "GOOGLE_CLIENT_SECRET_EMAIL",
+                "GOOGLE_REDIRECT_URI_EMAIL"
             ],
-            "env": [
-                "PORT",
-                "WEB_APP_URL",
-                "MAILOPS_API_URL",
-                "TRACK_API_URL",
-                "DATABASE_URL",
-                "REDIS_*",
-                "GOOGLE_*",
-                "QUEUE_PREFIX",
-                "PUBSUB_*"
-            ],
-            "outputs": [
-                "dist/**"
-            ]
-        },
-        "start:prod": {
-            "cache": true,
-            "env": [
-                "PORT",
-                "WEB_APP_URL",
-                "MAILOPS_API_URL",
-                "TRACK_API_URL",
-                "DATABASE_URL",
-                "REDIS_*",
-                "GOOGLE_*",
-                "QUEUE_PREFIX",
-                "PUBSUB_*"
-            ]
-        },
-        "start:prod:watch": {
-            "cache": true,
-            "env": [
-                "PORT",
-                "WEB_APP_URL",
-                "MAILOPS_API_URL",
-                "TRACK_API_URL",
-                "DATABASE_URL",
-                "REDIS_*",
-                "GOOGLE_*",
-                "QUEUE_PREFIX",
-                "PUBSUB_*"
-            ]
+            "outputs": ["dist/**"]
         }
     }
 }

@@ -1,37 +1,8 @@
 {
-    "extends": [
-        "//"
-    ],
+    "extends": ["//"],
     "tasks": {
-        "build": {
-            "dependsOn": [
-                "^build"
-            ],
-            "outputs": [
-                "dist/**"
-            ]
-        },
-        "build:dev": {
-            "cache": false,
-            "dependsOn": [
-                "^build:dev"
-            ],
-            "outputs": [
-                "dist/**"
-            ]
-        },
-        "build:prod": {
-            "cache": true,
-            "dependsOn": [
-                "^build:prod"
-            ],
-            "outputs": [
-                "dist/**"
-            ]
-        },
-        "dev": {
-            "cache": false,
-            "persistent": true
-        }
+        "build": { "outputs": ["dist/**"] },
+        "build:dev": { "outputs": ["dist/**"] },
+        "build:prod": { "outputs": ["dist/**"] }
     }
 }

@@ -116,9 +116,10 @@ export class ServiceManager {
 
       // Create a paired dead-letter queue for each queue so jobs that exhaust
       // their retries can be copied aside for inspection/replay. DLQs are the
-      // "<name>:dl" BullMQ queues surfaced in Bull-Board.
+      // "<name>-dl" BullMQ queues surfaced in Bull-Board. (Use "-" not ":" —
+      // BullMQ rejects ":" in queue names.)
       for (const [queueKey, queueName] of queueEntries) {
-        const dlName = `${queueName}:dl`;
+        const dlName = `${queueName}-dl`;
         const dlQueue = this.createQueue(queueKey, dlName, true);
         this.dlQueues.set(dlName, dlQueue);
         logger.info(`📬 DLQ initialized: ${dlName}`);
@@ -213,11 +214,11 @@ export class ServiceManager {
 
   /**
    * Get the paired dead-letter queue for a queue name (e.g. for "email-sending"
-   * returns the "email-sending:dl" queue). Used by BaseProcessor when a job
+   * returns the "email-sending-dl" queue). Used by BaseProcessor when a job
    * exhausts its retries.
    */
   public getDlQueue(queueName: string): Queue | undefined {
-    return this.dlQueues.get(`${queueName}:dl`);
+    return this.dlQueues.get(`${queueName}-dl`);
   }
 
   /** All DLQ queues — used by Bull-Board. */

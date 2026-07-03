@@ -1,79 +1,34 @@
 {
-    "extends": [
-        "//"
-    ],
+    "extends": ["//"],
     "tasks": {
-        "dev": {
-            "cache": false,
-            "persistent": true,
-            "inputs": [
-                "$TURBO_DEFAULT$",
-                "**/web/env/.env.*",
-                "**/web/env/.env"
-            ],
-            "env": []
-        },
         "build": {
-            "env": [],
-            "inputs": [
-                "$TURBO_DEFAULT$",
-                "**/web/env/.env.*",
-                "**/web/env/.env"
+            "env": [
+                "NEXT_PUBLIC_*",
+                "NEXTAUTH_*",
+                "GOOGLE_*",
+                "ENCRYPTION_KEY",
+                "AUTH_TRUST_HOST",
+                "MAILOPS_SERVICE_TOKEN"
             ]
         },
         "build:dev": {
-            "dependsOn": [
-                "@coldjot/database#build:dev",
-                "@coldjot/types#build:dev"
-            ],
-            "cache": false,
             "env": [
                 "NEXT_PUBLIC_*",
                 "NEXTAUTH_*",
                 "GOOGLE_*",
-                "DATABASE_URL",
                 "ENCRYPTION_KEY",
-                "AUTH_TRUST_HOST"
-            ],
-            "inputs": [
-                "$TURBO_DEFAULT$",
-                "**/web/env/.env.*",
-                "**/web/env/.env"
+                "AUTH_TRUST_HOST",
+                "MAILOPS_SERVICE_TOKEN"
             ]
         },
         "build:prod": {
-            "dependsOn": [
-                "@coldjot/database#build:prod",
-                "@coldjot/types#build:prod"
-            ],
-            "cache": true,
             "env": [
                 "NEXT_PUBLIC_*",
                 "NEXTAUTH_*",
                 "GOOGLE_*",
-                "DATABASE_URL",
                 "ENCRYPTION_KEY",
-                "AUTH_TRUST_HOST"
-            ],
-            "inputs": [
-                "$TURBO_DEFAULT$",
-                "**/web/env/.env.*",
-                "**/web/env/.env"
-            ]
-        },
-        "start:prod": {
-            "env": [
-                "NEXT_PUBLIC_*",
-                "NEXTAUTH_*",
-                "GOOGLE_*",
-                "DATABASE_URL",
-                "ENCRYPTION_KEY",
-                "AUTH_TRUST_HOST"
-            ],
-            "inputs": [
-                "$TURBO_DEFAULT$",
-                "**/web/env/.env.*",
-                "**/web/env/.env"
+                "AUTH_TRUST_HOST",
+                "MAILOPS_SERVICE_TOKEN"
             ]
         }
     }

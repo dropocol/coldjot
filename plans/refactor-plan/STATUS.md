@@ -1,6 +1,6 @@
 # Refactor Plan — Status
 
-> **Last updated:** plan 10 (BullMQ resilience) committed (`e2e2e77`) and **awaiting owner smoke-testing** before plan 12 (testing) starts. Plan 06 deferred to the very end. Plan 07 (frontend react-query consolidation) code complete; plan 02 code-done; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
+> **Last updated:** plan 13 (monorepo scripts/Turbo/dev-experience cleanup) DONE. Plan 10 (BullMQ resilience) committed (`e2e2e77`) and **awaiting owner smoke-testing** — note: plan 13's smoke-test found & fixed a latent plan-10 DLQ naming bug (`<name>:dl` → `<name>-dl`; BullMQ rejects `:`). Plan 06 deferred to the very end. Plan 07 (frontend react-query consolidation) code complete; plan 02 code-done; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`) plus plan 13.
 > **Two parallel workstreams** live on two branch chains off `master`:
 > - **Security/quality refactor** → `refactor/old-code-update` (plans 01, 03, 04, 05, 09, + part of 11)
 > - **Dependency modernization + plan 08** → `upgrade/remaining-majors` (built on top of `refactor/old-code-update`; supersedes most of plan 11; also completed plan 08)
@@ -31,6 +31,7 @@
 | [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | 🟡 **CODE DONE — awaiting owner smoke-test** | committed `e2e2e77` on `upgrade/remaining-majors`. Migrations applied to dev DB. Shared retry policy, stall config, DLQ per queue, email idempotency guard, bounded schedule-path failures, Bull-Board at `/admin/queues`. **Before starting plan 12:** smoke-test the resilience paths (see the plan-10 section below) so we know what's working before writing tests around it. |
 | [11](./11-tooling-config-dependencies.md) | Align deps, consolidate env, eslint config | ✅ **SUPERSEDED** | fully covered by the dependency-upgrade pass (see below) — every dep is now latest |
 | [12](./12-testing-strategy.md) | Testing baseline | ⏸️ **BLOCKED on plan 10 smoke-test** | scaffolding + security regression tests; start only after plan 10 is verified working |
+| [13](./13-monorepo-scripts-devexperience.md) | Monorepo scripts, Turbo, dev-experience cleanup | ✅ **DONE** | fixed broken root `dev`/`build`/`start` (no-op `build:development`, `start:dev`); rewrote Turbo config (correct `globalEnv`/`globalPassThroughEnv`, `db:deploy` no longer a build side-effect, consistent caching); removed dead deps (axios, concurrently, nodemon, react-day-picker, react-intersection-observer, @hookform/resolvers in mailops, fs-extra/dotenv-cli) + moved 6 lint/test packages to devDeps + harmonized drift (tsx 4.19, rimraf 6, tsup 8.5); unified env loading (web → mailops zod pattern, deleted `next.config.ts` dotenv ladder); added one-command web+mailops dev (`npm run dev`); added `typecheck`/`lint`/`clean` aggregates + `typecheck` script to web; renamed `type-check`→`typecheck` everywhere; deleted dead `apps/web/.eslintrc.json` + `apps/mailops/nodemon.json`. **Also fixed a latent plan-10 bug found during smoke-test:** DLQ queues were named `<name>:dl` — BullMQ rejects `:` in queue names → mailops crashed on boot; renamed to `<name>-dl`. Verified: `npm run build`/`typecheck`/`lint` all green (7/7 tasks), `npm run dev` boots both apps cleanly. |
 
 ---
 
@@ -180,7 +181,7 @@ Hardened the BullMQ job system so transient failures no longer drop emails or lo
    - `20260703223317_add_sequence_contact_failure_tracking` — `SequenceContact.failureCount` (default 0) + `lastError`.
 2. **Smoke-test the resilience paths** (these are the behaviors plan 12 will eventually encode as tests — verify them first):
    - Temporarily throw in `email/processor.ts` for the first 2 attempts → confirm BullMQ retries with exponential backoff and succeeds on the 3rd.
-   - Force a 5x failure → confirm the job lands in `<name>:dl` and is visible in Bull-Board at `/admin/queues` (with `X-Service-Token`).
+   - Force a 5x failure → confirm the job lands in `<name>-dl` (renamed from `<name>:dl` — BullMQ rejects `:` in queue names; the fix landed with plan 13) and is visible in Bull-Board at `/admin/queues` (with `X-Service-Token`).
    - Re-enqueue a sent email job → confirm it's skipped (idempotency), no double send.
    - Force a permanent failure in the schedule path → confirm `SequenceContact.status = "failed"` and `nextScheduledAt = null` (stops looping).
    - Confirm a scheduled email now waits until `scheduledTime` (delay bug fixed) — the "⏰ Email job scheduled" log should show the delay and the job should be `delayed`, not immediately `active`.

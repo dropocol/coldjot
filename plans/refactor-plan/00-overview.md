@@ -58,6 +58,7 @@ Each file below is a standalone, detailed implementation plan with file:line ref
 | [10](./10-backend-job-resilience.md) | Configure BullMQ retries/backoff/DLQ, fix error-swallowing patterns | 🟡 MEDIUM | Medium | Depends on 09 (shared redaction helpers) |
 | [11](./11-tooling-config-dependencies.md) | Align dependency versions, consolidate env access, eslint config | 🟡 MEDIUM | Medium | Yes |
 | [12](./12-testing-strategy.md) | Introduce a testing baseline (unit/integration/e2e) | 🟢 LOW | Large | Do last |
+| [13](./13-monorepo-scripts-devexperience.md) | Fix broken root scripts, correctly wire Turbo (caching/env/graph), remove dead/misplaced deps, unify env loading, run web+mailops in one command | 🟢 LOW | Medium | Yes — independent of all other plans |
 
 > **Separate plan:** [`../mailops-consolidation/plan.md`](../mailops-consolidation/plan.md) — **(Optional, architectural)** Fold mailops into Next.js: DB-as-queue + cron instead of BullMQ/Express. Deletes an entire app and its auth boundary. If you take this route, plans 03 and 10 become unnecessary. Do it after 01/02/05 land.
 
@@ -82,6 +83,7 @@ Each file below is a standalone, detailed implementation plan with file:line ref
 10. `07` + `08` — Frontend data-fetching + code-quality pass.
 11. `11` — Tooling/dependency alignment.
 12. `12` — Testing baseline.
+13. `13` — Monorepo scripts & dev-experience cleanup (fixes broken `dev`/`build`/`start`, Turbo caching, dead deps, env loading; adds one-command web+mailops dev).
 
 **Phase 4 — Optional architectural simplification:**
 13. See the **separate plan** at [`../mailops-consolidation/plan.md`](../mailops-consolidation/plan.md) — decide whether to consolidate mailops into Next.js. This is a big-picture decision (delete a whole app, replace BullMQ with DB+cron), not a bug fix. Read its "Decision checklist" — if you answer yes to all five, it's a major simplification that *makes plans 03 and 10 unnecessary* (no internal auth boundary, no BullMQ to harden). If you go this route, do it after the security plans land but before investing in plan 10.

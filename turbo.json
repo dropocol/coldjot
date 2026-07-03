@@ -1,46 +1,26 @@
 {
     "$schema": "https://turbo.build/schema.json",
-    "globalDependencies": [],
-    "globalPassThroughEnv": [
-        "LOG_LEVEL",
-        "APP_ENV",
-        "NODE_ENV",
-        "DATABASE_URL"
-    ],
+    "globalEnv": ["NODE_ENV", "APP_ENV"],
+    "globalPassThroughEnv": ["DATABASE_URL"],
     "tasks": {
-        "dev": {
-            "cache": false,
-            "persistent": true
+        "dev": { "cache": false, "persistent": true },
+        "build": {
+            "dependsOn": ["^build"],
+            "outputs": ["dist/**", ".next/**"]
         },
         "build:dev": {
-            "dependsOn": [
-                "^build:dev"
-            ],
-            "outputs": [
-                "dist/**",
-                ".next/**"
-            ]
+            "dependsOn": ["^build:dev"],
+            "outputs": ["dist/**", ".next/**"]
         },
         "build:prod": {
-            "dependsOn": [
-                "^build:prod"
-            ],
-            "outputs": [
-                "dist/**",
-                ".next/**"
-            ]
+            "dependsOn": ["^build:prod"],
+            "outputs": ["dist/**", ".next/**"]
         },
-        "start:dev": {
-            "cache": false
-        },
-        "start:prod": {
-            "cache": false
-        },
-        "db:deploy": {
-            "cache": false
-        },
-        "db:deploy:prod": {
-            "cache": false
-        }
+        "start": { "cache": false, "persistent": true },
+        "start:prod": { "cache": false, "persistent": true },
+        "lint": { "dependsOn": ["^build"] },
+        "typecheck": { "dependsOn": ["^build"] },
+        "test": { "dependsOn": ["^build"] },
+        "clean": { "cache": false }
     }
 }

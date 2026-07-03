@@ -27,10 +27,10 @@
         "build:prod": "tsup src/index.ts --format esm,cjs --dts",
         "lint": "eslint \"src/**/*.ts*\"",
         "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
-        "type-check": "tsc --noEmit"
+        "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "tsup": "^8.0.1"
+        "tsup": "^8.5.1"
     },
     "devDependencies": {
         "@types/node": "^26.1.0",
