@@ -44,11 +44,12 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
   __showCaption: boolean;
   __caption: string | undefined;
 
-  static getType(): string {
+  static getType(): "image" {
     return "image";
   }
 
-  static clone(node: ImageNode): ImageNode {
+  static clone(data: unknown): ImageNode {
+    const node = data as ImageNode;
     return new ImageNode(
       node.__src,
       node.__altText,
@@ -61,9 +62,9 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
     );
   }
 
-  static importJSON(serializedNode: ImagePayload): ImageNode {
+  static importJSON(serializedNode: SerializedLexicalNode & Record<string, unknown>): ImageNode {
     const { src, altText, width, height, maxWidth, caption, showCaption } =
-      serializedNode;
+      serializedNode as unknown as ImagePayload;
     const node = $createImageNode({
       src,
       altText,

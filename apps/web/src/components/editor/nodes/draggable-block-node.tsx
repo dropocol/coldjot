@@ -3,6 +3,7 @@ import {
   ElementNode,
   LexicalNode,
   NodeKey,
+  SerializedLexicalNode,
   SerializedElementNode,
   Spread,
 } from "lexical";
@@ -13,12 +14,12 @@ export interface SerializedDraggableBlockNode extends SerializedElementNode {
 }
 
 export class DraggableBlockNode extends ElementNode {
-  static getType(): string {
+  static getType(): "draggable-block" {
     return "draggable-block";
   }
 
-  static clone(node: DraggableBlockNode): DraggableBlockNode {
-    return new DraggableBlockNode(node.__key);
+  static clone(data: unknown): DraggableBlockNode {
+    return new DraggableBlockNode((data as DraggableBlockNode).__key);
   }
 
   createDOM(config: EditorConfig): HTMLElement {
@@ -35,7 +36,7 @@ export class DraggableBlockNode extends ElementNode {
   }
 
   static importJSON(
-    serializedNode: SerializedDraggableBlockNode
+    serializedNode: SerializedLexicalNode & Record<string, unknown>
   ): DraggableBlockNode {
     return $createDraggableBlockNode();
   }
