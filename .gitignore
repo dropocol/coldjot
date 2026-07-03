@@ -68,6 +68,10 @@ next-env.d.ts
 
 links/*
 
+# Local package downloads / archives (e.g. prisma zip) — never commit
+/npm/
+*.zip
+
 scripts/reset.py
 
 prompts/
