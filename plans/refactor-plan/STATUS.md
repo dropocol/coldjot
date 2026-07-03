@@ -155,7 +155,8 @@ Full detail in `../HANDOFF.md`. Summary:
 1. **Branches:** `refactor/old-code-update` (security) is the base; `upgrade/remaining-majors` (deps) is stacked on top. Merge order: security first, then deps — or merge `upgrade/remaining-majors` directly (it contains both).
 2. **Pick up where this left off:**
    - To continue the **security** work: plan 02 is code-done (you just run the wipe + re-login + rotate values). Plan 06 (DB schema) needs DB access + a backup.
-   - To continue **quality** work: plan 07 (react-query), plan 10 (BullMQ resilience), plan 12 (testing). Plan 08 is fully done.
+   - To continue **quality** work: **plan 07 (react-query consolidation) is the next active plan** — start there. Then plan 10 (BullMQ resilience), plan 12 (testing). Plan 08 is fully done.
+   - **Plan 07 starting point:** the foundation hasn't been built yet. Begin with Step 1 (typed API client `lib/http/api-client.ts`), Step 2 (query keys `lib/query/keys.ts`), Step 8 (react-query defaults — note `query-provider.tsx` currently creates a new `QueryClient` per render, a bug), then Step 3 (per-resource hooks). Only then migrate components (Step 4). See `07-frontend-data-fetching.md` for full detail.
 3. **Read first:** `00-overview.md` for the full audit, then the specific plan doc. Each plan doc is self-contained with file:line refs and verification checklists.
 4. **Verify before merging:** `tsc --noEmit` + `npm run build` in both apps; smoke-test the auth boundary (401 without token), IDOR (403/404 cross-tenant), and tracking (event recorded).
 
