@@ -1,0 +1,23 @@
+# Build artifacts
+dist/**
+.next/**
+.turbo/**
+*.tsbuildinfo
+
+# Dependencies
+node_modules/**
+package-lock.json
+
+# Generated
+**/node_modules/**
+coverage/**
+.next/**
+
+# Data / logs
+*.log
+logs/**
+npm-debug.log*
+
+# Vendored / non-source
+package-lock.json
+plans/**/archived-scripts.json

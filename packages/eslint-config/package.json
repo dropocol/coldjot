@@ -1,0 +1,47 @@
+{
+    "name": "@coldjot/eslint-config",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist/**"
+    ],
+    "scripts": {
+        "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+        "build": "tsup src/index.ts src/next.ts src/types.ts --format esm,cjs --dts",
+        "build:prod": "tsup src/index.ts src/next.ts src/types.ts --format esm,cjs --dts",
+        "lint": "eslint \"src/**/*.ts\"",
+        "clean": "rm -rf .turbo node_modules dist",
+        "typecheck": "tsc --noEmit"
+    },
+    "engines": {
+        "node": ">=24"
+    },
+    "dependencies": {
+        "tsup": "^8.5.1"
+    },
+    "peerDependencies": {
+        "@typescript-eslint/eslint-plugin": "^8.62.1",
+        "@typescript-eslint/parser": "^8.62.1",
+        "eslint": "^10.0.0",
+        "typescript-eslint": "^8.62.1"
+    },
+    "peerDependenciesMeta": {
+        "@typescript-eslint/eslint-plugin": { "optional": true },
+        "typescript-eslint": { "optional": true }
+    },
+    "devDependencies": {
+        "@types/node": "^26.1.0",
+        "eslint": "^10.6.0",
+        "typescript": "^6.0.3"
+    }
+}

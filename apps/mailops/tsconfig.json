@@ -1,10 +1,12 @@
 {
-    "extends": "@coldjot/tsconfig/library.json",
+    "extends": "@coldjot/tsconfig/app.json",
     "compilerOptions": {
         "lib": ["es2023"],
         "outDir": "./dist",
         "rootDir": "./src",
         "noEmit": true,
+        "incremental": false,
+        "moduleResolution": "bundler",
         "paths": {
             "@/*": ["./src/*"],
             "@/lib/*": ["./src/lib/*"],

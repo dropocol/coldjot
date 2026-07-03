@@ -1,0 +1,10 @@
+{
+    "extends": "@coldjot/tsconfig/library.json",
+    "compilerOptions": {
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "ignoreDeprecations": "6.0"
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
+}
