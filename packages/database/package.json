@@ -36,12 +36,12 @@
         "@prisma/adapter-pg": "^7.8.0",
         "@prisma/client": "^7.8.0",
         "pg": "^8.22.0",
-        "tsup": "^8.0.1"
+        "tsup": "^8.5.1"
     },
     "devDependencies": {
-        "@types/node": "^24",
-        "dotenv": "^16.4.7",
-        "dotenv-cli": "^7.3.0",
+        "@types/node": "^26.1.0",
+        "dotenv": "^17.4.2",
+        "dotenv-cli": "^11.0.0",
         "prisma": "^7.8.0",
         "rimraf": "^5.0.5",
         "typescript": "^6.0.3"
