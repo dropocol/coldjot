@@ -1,9 +1,9 @@
 # Refactor Plan — Status
 
-> **Last updated:** dependency-upgrade pass complete. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
+> **Last updated:** plan 08 (frontend code quality) complete — web ESLint now fully clean (0 errors / 0 warnings). This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
 > **Two parallel workstreams** live on two branch chains off `master`:
-> - **Security/quality refactor** → `refactor/old-code-update` (plans 01, 03, 04, 05, 08, 09, + part of 11)
-> - **Dependency modernization** → `upgrade/remaining-majors` (built on top of `refactor/old-code-update`; supersedes most of plan 11)
+> - **Security/quality refactor** → `refactor/old-code-update` (plans 01, 03, 04, 05, 09, + part of 11)
+> - **Dependency modernization + plan 08** → `upgrade/remaining-majors` (built on top of `refactor/old-code-update`; supersedes most of plan 11; also completed plan 08)
 >
 > Read `../HANDOFF.md` for the deploy-blocking operational items (env tokens, secret rotation, DB migrations).
 
@@ -100,6 +100,32 @@ Built on top of `refactor/old-code-update`. This supersedes plan 11 entirely. **
 
 ---
 
+## ✅ Plan 08 — frontend code quality — DONE (on `upgrade/remaining-majors`)
+
+Completed in 6 commits (`bb50c78` → `33d4111`). The web app's ESLint now reports **0 errors / 0 warnings**.
+
+### What got done
+| Area | Before | After |
+|---|---|---|
+| Debug `console.log` in web src | ~93 | **0** |
+| `@typescript-eslint/no-explicit-any` | 76 | **0** |
+| `@typescript-eslint/no-unused-vars` | 335 | **0** |
+| `react-hooks/exhaustive-deps` | 10 | **0** |
+| Total ESLint warnings (web) | 439 | **0** |
+
+### Key code changes
+- **Logging:** removed all leftover debug `console.log`; migrated operational logs in `google-account`/`gmail` to the redacting `logger`; deleted sensitive logs (auth tokens, userId+refreshToken) from `auth.config` / `google-account`.
+- **Types:** typed `sequence-context` via the `Sequence` type; rewrote `sequence-utils` with proper narrowing; extracted duplicated `transformEmailData` into `lib/email/transform.ts`; typed DOM refs, Lucide icons, recharts tooltips, the Gmail API client (`gmail_v1.Gmail`), and Lexical node guards per base-class signatures.
+- **Dead code:** deleted two unused `toolbar.tsx` files (50 unused symbols); removed 140 unused imports + 48 empty import statements.
+- **Bug-catching fixes:** removed a dead `dupe-else-if` branch, 4 useless-catch wrappers, an empty if-block; attached `cause` to rethrown errors; converted `next.config.ts` CJS `require`s to ESM imports; resolved the stale step-reorder TODO (renumber already implemented).
+- **ESLint:** every rule promoted `warn` → `error` (`no-explicit-any`, `no-unused-vars`, `rules-of-hooks`, `exhaustive-deps`, `useless-catch`, `prefer-const`, `preserve-caught-error`, `no-empty`, `no-dupe-else-if`, `no-require-imports`, `no-empty-object-type`). Configured `caughtErrorsIgnorePattern` + `destructuredArrayIgnorePattern` so `_`-prefixed bindings are honored.
+- **Type package:** added `metadata` + `contactCount` to the `Sequence` type; widened `EmailData.templateId` to `string | null`; fixed the DTS build (`ignoreDeprecations: "6.0"` unblocked a phantom `baseUrl` deprecation under TS 6).
+
+### ⚠️ Note for reviewers
+The Prisma ↔ `@coldjot/types` boundary has a systemic enum-vs-string-literal and `| null` vs optional-field mismatch (`Sequence`, `SequenceStep`). Several `as` casts at those boundaries (`sequences/[id]/layout.tsx`, `sequences/[id]/page.tsx`, `sequence-step-editor.tsx`) are intentional — the runtime shapes are correct, only TS null-precision differs. Reconciling the type definitions with the actual DB string values is a separate task (overlaps with plans 02b/06).
+
+---
+
 ## 🔴 Blocked on YOU (operational / destructive — do before deploying)
 
 Full detail in `../HANDOFF.md`. Summary:
@@ -126,7 +152,7 @@ Full detail in `../HANDOFF.md`. Summary:
 1. **Branches:** `refactor/old-code-update` (security) is the base; `upgrade/remaining-majors` (deps) is stacked on top. Merge order: security first, then deps — or merge `upgrade/remaining-majors` directly (it contains both).
 2. **Pick up where this left off:**
    - To continue the **security** work: implement plan 02b (token encryption) and plan 06 (DB schema) — both need DB access + a backup.
-   - To continue **quality** work: plan 07 (react-query), plan 08 remainder (component console.logs + ESLint tightening), plan 10 (BullMQ resilience), plan 12 (testing).
+   - To continue **quality** work: plan 07 (react-query), plan 10 (BullMQ resilience), plan 12 (testing). Plan 08 is fully done.
 3. **Read first:** `00-overview.md` for the full audit, then the specific plan doc. Each plan doc is self-contained with file:line refs and verification checklists.
 4. **Verify before merging:** `tsc --noEmit` + `npm run build` in both apps; smoke-test the auth boundary (401 without token), IDOR (403/404 cross-tenant), and tracking (event recorded).
 
@@ -144,9 +170,14 @@ npx prisma generate --schema=packages/database/prisma/schema.prisma
 (cd apps/mailops && npx tsc --noEmit)
 (cd apps/web && npx tsc --noEmit)
 
-# Build (root npm run build has a pre-existing broken script — build directly)
-(cd packages/types && npm run build)
+# Build per-package (the root `npm run build` runs `turbo run build:development`,
+# which no package defines — a separate turbo-config gap. Build workspaces directly:)
+(cd packages/types && npm run build)        # DTS build fixed (ignoreDeprecations)
 (cd packages/database && npm run build)
 (cd apps/mailops && npm run build)
 (cd apps/web && MAILOPS_SERVICE_TOKEN=<token> APP_ENV=development npx next build)
+
+# Lint (web is now fully clean: 0 errors / 0 warnings; mailops clean)
+(cd apps/web && npx eslint .)
+(cd apps/mailops && npx eslint .)
 ```
