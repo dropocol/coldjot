@@ -24,6 +24,11 @@ import {
   FileUp,
 } from "lucide-react";
 import Papa from "papaparse";
+import {
+  useCreateContact,
+  useBatchCreateContacts,
+} from "@/hooks/queries/use-contacts";
+import type { CreateContactInput } from "@/lib/schemas";
 
 type FormData = {
   firstName: string;
@@ -57,13 +62,15 @@ export default function AddContactModal({
     handleSubmit,
     formState: { errors },
   } = useForm<FormData>();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>("manual");
   const [parsedContacts, setParsedContacts] = useState<ParsedContacts | null>(
     null
   );
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const createContact = useCreateContact();
+  const batchCreate = useBatchCreateContacts();
+  const isSubmitting = createContact.isPending || batchCreate.isPending;
 
   const importMethods = [
     {
@@ -117,8 +124,7 @@ export default function AddContactModal({
           toast.error("Failed to parse CSV file");
         },
       });
-    } catch (error) {
-      console.error("File reading error:", error);
+    } catch {
       toast.error("Failed to read CSV file");
     }
   };
@@ -133,68 +139,38 @@ export default function AddContactModal({
   const handleUpload = async () => {
     if (!parsedContacts) return;
 
-    setIsSubmitting(true);
     try {
-      const response = await fetch("/api/contacts/batch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(parsedContacts.contacts),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error || "Failed to import contacts");
-      } else {
-        toast.success(
-          `Successfully imported ${data.imported} contacts${
-            data.skipped ? ` (${data.skipped} skipped)` : ""
-          }`
-        );
-        setUploadSuccess(true);
-        setParsedContacts(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        onClose();
+      const data = await batchCreate.mutateAsync(
+        parsedContacts.contacts as CreateContactInput[]
+      );
+      toast.success(
+        `Successfully imported ${data.imported} contacts${
+          data.skipped ? ` (${data.skipped} skipped)` : ""
+        }`
+      );
+      setUploadSuccess(true);
+      setParsedContacts(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
-    } catch (error) {
-      console.error("Failed to import contacts:", error);
+      onClose();
+    } catch (_error) {
       toast.error("Failed to import contacts");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
     try {
-      const response = await fetch("/api/contacts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...data,
-        }),
+      const contact = await createContact.mutateAsync({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.error(errorData.error || "Failed to add contact");
-        return;
-      }
-
-      const contact = await response.json();
       toast.success("Contact added successfully");
-      onAdd(contact);
+      onAdd(contact as Contact);
       onClose();
     } catch (_error) {
       toast.error("Failed to add contact");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

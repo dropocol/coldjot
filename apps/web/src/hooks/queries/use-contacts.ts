@@ -56,6 +56,19 @@ export function useCreateContact() {
   });
 }
 
+/** Bulk-create contacts (POST /api/contacts/batch, body { contacts }). */
+export function useBatchCreateContacts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (contacts: CreateContactInput[]) =>
+      api.post<{ success: true; imported: number; skipped: number }>(
+        "/api/contacts/batch",
+        { contacts }
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.contacts.all }),
+  });
+}
+
 export function useUpdateContact(id: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -15,6 +15,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { Template } from "@coldjot/types";
+import { useCreateTemplate } from "@/hooks/queries/use-templates";
 
 type FormData = {
   name: string;
@@ -28,8 +29,9 @@ interface Props {
 }
 
 export default function AddTemplateDrawer({ onClose, onSave }: Props) {
-  const [isSaving, setIsSaving] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
+  const createTemplate = useCreateTemplate();
+  const isSaving = createTemplate.isPending;
   const { register, handleSubmit, setValue, watch } = useForm<FormData>();
   const content = watch("content");
 
@@ -37,24 +39,12 @@ export default function AddTemplateDrawer({ onClose, onSave }: Props) {
     if (isLinkDialogOpen) return;
 
     try {
-      setIsSaving(true);
-      const response = await fetch("/api/templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error("Failed to create template");
-
-      const template = await response.json();
+      const template = await createTemplate.mutateAsync(data);
       onSave(template);
       toast.success("Template created successfully");
       onClose();
-    } catch (error) {
-      console.error("Error creating template:", error);
+    } catch (_error) {
       toast.error("Failed to create template");
-    } finally {
-      setIsSaving(false);
     }
   };
 

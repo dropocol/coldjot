@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
+import { useUpdateTemplate } from "@/hooks/queries/use-templates";
 
 interface Props {
   template: Template;
@@ -33,9 +34,10 @@ export default function EditTemplateDrawer({
   onClose,
   onSave,
 }: Props) {
-  const [isSaving, setIsSaving] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const _contentRef = useRef<HTMLTextAreaElement>(null);
+  const updateTemplate = useUpdateTemplate(template.id);
+  const isSaving = updateTemplate.isPending;
   const { register, handleSubmit: _handleSubmit, setValue, watch } = useForm<FormData>({
     defaultValues: {
       name: template.name,
@@ -66,23 +68,11 @@ export default function EditTemplateDrawer({
     };
 
     try {
-      setIsSaving(true);
-      const response = await fetch(`/api/templates/${template.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error("Failed to update template");
-
-      const updatedTemplate = await response.json();
+      const updatedTemplate = await updateTemplate.mutateAsync(data);
       onSave(updatedTemplate);
       toast.success("Template updated successfully");
-    } catch (error) {
-      console.error("Error updating template:", error);
+    } catch (_error) {
       toast.error("Failed to update template");
-    } finally {
-      setIsSaving(false);
     }
   };
 

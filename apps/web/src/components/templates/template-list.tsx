@@ -32,6 +32,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PaginationControls } from "@/components/pagination";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useTemplates,
+  useCreateTemplate,
+} from "@/hooks/queries/use-templates";
+import { qk } from "@/lib/query/keys";
 
 interface TemplateListProps {
   searchQuery?: string;
@@ -45,15 +51,6 @@ interface TemplateListProps {
   onPageSizeChange: (size: number) => void;
 }
 
-interface TemplateResponse {
-  templates: Template[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage: number | undefined;
-}
-
 export default function TemplateList({
   searchQuery = "",
   onSearchStart,
@@ -65,77 +62,43 @@ export default function TemplateList({
   onPageChange,
   onPageSizeChange,
 }: TemplateListProps) {
-  const [templates, setTemplates] = useState<Template[]>(initialTemplates);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(
     null
   );
-  const [total, setTotal] = useState(0);
+  const qc = useQueryClient();
 
+  const { data, isLoading, isFetching } = useTemplates({
+    page,
+    limit,
+    search: searchQuery.length >= 2 ? searchQuery : undefined,
+  });
+  const createTemplate = useCreateTemplate();
+
+  // Surface the parent's search start/end callbacks while fetching.
   useEffect(() => {
-    const fetchTemplates = async () => {
-      if (!isInitialLoad && searchQuery.length === 1) {
-        return;
-      }
+    if (isFetching && onSearchStart) onSearchStart();
+    if (!isFetching && onSearchEnd) onSearchEnd();
+    // Parent callbacks are treated as stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFetching]);
 
-      setIsLoading(true);
-      onSearchStart?.();
-      try {
-        const queryParams = new URLSearchParams();
-        queryParams.set("page", page.toString());
-        queryParams.set("limit", limit.toString());
-        if (searchQuery.length >= 2) {
-          queryParams.set("q", searchQuery);
-        }
+  const templates = data?.templates ?? initialTemplates;
+  const total = data?.total ?? initialTemplates.length;
 
-        const url = `/api/templates?${queryParams.toString()}`;
-        const response = await fetch(url);
-        const data: TemplateResponse = await response.json();
-        setTemplates(data.templates);
-        setTotal(data.total);
-      } catch (error) {
-        console.error("Failed to fetch templates:", error);
-      } finally {
-        setIsLoading(false);
-        setIsInitialLoad(false);
-        onSearchEnd?.();
-      }
-    };
-
-    if (searchQuery.length === 0 || searchQuery.length >= 2) {
-      fetchTemplates();
-    }
-  }, [searchQuery, onSearchStart, onSearchEnd, isInitialLoad, page, limit]);
-
-  const showLoading = isLoading || isInitialLoad;
+  const showLoading = isLoading;
   const showEmptyState = !showLoading && templates.length === 0;
 
   const handleDuplicate = async (template: Template) => {
     try {
-      const response = await fetch("/api/templates", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: `${template.name} (Copy)`,
-          subject: template.subject,
-          content: template.content,
-        }),
+      await createTemplate.mutateAsync({
+        name: `${template.name} (Copy)`,
+        subject: template.subject,
+        content: template.content,
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to duplicate template");
-      }
-
-      const duplicatedTemplate = await response.json();
-      setTemplates((prev) => [duplicatedTemplate, ...prev]);
       toast.success("Template duplicated successfully");
-    } catch (error) {
-      console.error("Failed to duplicate template:", error);
+    } catch (_error) {
       toast.error("Failed to duplicate template");
     }
   };
@@ -259,12 +222,8 @@ export default function TemplateList({
         <EditTemplateDrawer
           template={editingTemplate}
           onClose={() => setEditingTemplate(null)}
-          onSave={(updatedTemplate) => {
-            setTemplates((prev) =>
-              prev.map((t) =>
-                t.id === updatedTemplate.id ? updatedTemplate : t
-              )
-            );
+          onSave={() => {
+            qc.invalidateQueries({ queryKey: qk.templates.all });
             setEditingTemplate(null);
             toast.success("Template updated successfully");
           }}
@@ -275,10 +234,8 @@ export default function TemplateList({
         <DeleteTemplateDialog
           template={deletingTemplate}
           onClose={() => setDeletingTemplate(null)}
-          onDelete={(deletedTemplate) => {
-            setTemplates((prev) =>
-              prev.filter((t) => t.id !== deletedTemplate)
-            );
+          onDelete={() => {
+            qc.invalidateQueries({ queryKey: qk.templates.all });
             setDeletingTemplate(null);
             toast.success("Template deleted successfully");
           }}

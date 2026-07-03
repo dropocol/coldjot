@@ -1,3 +1,5 @@
+"use client";
+
 import { Template } from "@coldjot/types";
 import {
   AlertDialog,
@@ -10,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "react-hot-toast";
+import { useDeleteTemplate } from "@/hooks/queries/use-templates";
 
 interface Props {
   template: Template;
@@ -22,14 +25,11 @@ export default function DeleteTemplateDialog({
   onClose,
   onDelete,
 }: Props) {
+  const deleteTemplate = useDeleteTemplate();
+
   const handleDelete = async () => {
     try {
-      const response = await fetch(`/api/templates/${template.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) throw new Error("Failed to delete template");
-
+      await deleteTemplate.mutateAsync(template.id);
       onDelete(template.id);
       toast.success("Template deleted successfully");
     } catch (_error) {

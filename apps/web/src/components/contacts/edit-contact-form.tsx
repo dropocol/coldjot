@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { useUpdateContact } from "@/hooks/queries/use-contacts";
 
 type FormData = {
   firstName: string;
@@ -22,7 +22,8 @@ interface EditContactFormProps {
 
 export default function EditContactForm({ contact }: EditContactFormProps) {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const updateContact = useUpdateContact(contact.id);
+  const isSubmitting = updateContact.isPending;
 
   const {
     register,
@@ -37,25 +38,13 @@ export default function EditContactForm({ contact }: EditContactFormProps) {
   });
 
   const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/contacts/${contact.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update contact");
-
+      await updateContact.mutateAsync(data);
       toast.success("Contact updated successfully");
       router.refresh();
       router.push("/contacts");
     } catch (_error) {
       toast.error("Failed to update contact");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

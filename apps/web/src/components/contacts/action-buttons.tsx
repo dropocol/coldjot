@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
+import { useDeleteContact } from "@/hooks/queries/use-contacts";
 
 interface ActionButtonsProps {
   contact: Contact;
@@ -41,6 +42,7 @@ export default function ActionButtons({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAddToList, setShowAddToList] = useState(false);
   const router = useRouter();
+  const deleteContact = useDeleteContact();
 
   const handleSave = (updatedContact: Contact) => {
     setEditingContact(null);
@@ -69,8 +71,8 @@ export default function ActionButtons({
       ].slice(0, MAX_RECENT_CONTACTS);
 
       localStorage.setItem(RECENT_CONTACTS_KEY, JSON.stringify(updatedRecents));
-    } catch (error) {
-      console.error("Error updating recent contacts:", error);
+    } catch {
+      // Ignore a corrupt recent-contacts payload.
     }
 
     router.push("/compose");
@@ -78,13 +80,7 @@ export default function ActionButtons({
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`/api/contacts/${contact.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete contact");
-      }
+      await deleteContact.mutateAsync(contact.id);
 
       // Remove from recent contacts if present
       try {
@@ -98,14 +94,13 @@ export default function ActionButtons({
           RECENT_CONTACTS_KEY,
           JSON.stringify(updatedRecents)
         );
-      } catch (error) {
-        console.error("Error updating recent contacts:", error);
+      } catch {
+        // Ignore a corrupt recent-contacts payload.
       }
 
       toast.success("Contact deleted successfully");
       router.push("/contacts");
-    } catch (error) {
-      console.error("Error deleting contact:", error);
+    } catch (_error) {
       toast.error("Failed to delete contact");
     } finally {
       setShowDeleteDialog(false);

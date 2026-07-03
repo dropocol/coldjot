@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { FileText } from "lucide-react";
+import { useTemplates } from "@/hooks/queries/use-templates";
 
 interface Template {
   id: string;
@@ -31,26 +32,10 @@ interface TemplateCommandProps {
 
 export function TemplateCommand({ onSelect }: TemplateCommandProps) {
   const [open, setOpen] = useState(false);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        const response = await fetch("/api/templates");
-        if (!response.ok) throw new Error("Failed to fetch templates");
-        const data = await response.json();
-        setTemplates(data.templates);
-      } catch (error) {
-        console.error("Error fetching templates:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTemplates();
-  }, []);
+  const { data, isLoading } = useTemplates({ page: 1, limit: 100 });
+  const templates = (data?.templates ?? []) as Template[];
 
   const filteredTemplates =
     search === ""

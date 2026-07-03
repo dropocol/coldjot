@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import { Contact } from "@prisma/client";
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { useUpdateContact } from "@/hooks/queries/use-contacts";
 
 type FormData = {
   firstName: string;
@@ -32,7 +32,8 @@ export default function EditContactDrawer({
   onClose,
   onSave,
 }: EditContactDrawerProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const updateContact = useUpdateContact(contact.id);
+  const isSubmitting = updateContact.isPending;
   const {
     register,
     handleSubmit,
@@ -46,27 +47,12 @@ export default function EditContactDrawer({
   });
 
   const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/contacts/${contact.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update contact");
-
-      const updatedContact = await response.json();
-      onSave(updatedContact);
-
+      const updatedContact = await updateContact.mutateAsync(data);
+      onSave(updatedContact as Contact);
       toast.success("Contact updated successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to update contact");
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

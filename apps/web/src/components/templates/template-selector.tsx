@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEffect, useState } from "react";
+import { useTemplates } from "@/hooks/queries/use-templates";
 
 interface Template {
   id: string;
@@ -21,25 +21,8 @@ interface TemplateSelectorProps {
 }
 
 export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [_isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        const response = await fetch("/api/templates");
-        if (!response.ok) throw new Error("Failed to fetch templates");
-        const data = await response.json();
-        setTemplates(data);
-      } catch (error) {
-        console.error("Error fetching templates:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTemplates();
-  }, []);
+  const { data } = useTemplates({ page: 1, limit: 100 });
+  const templates = (data?.templates ?? []) as Template[];
 
   const handleSelect = (templateId: string) => {
     const template = templates.find((t) => t.id === templateId);
