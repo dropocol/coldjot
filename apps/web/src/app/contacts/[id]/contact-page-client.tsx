@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Separator } from "@/components/ui/separator";
-import { User, Building2, Globe, Linkedin, Mail, Calendar } from "lucide-react";
+import { User, Building2, Globe, Mail, Calendar } from "lucide-react";
 import Link from "next/link";
 import { formatLinkedInUrl } from "@/lib/utils";
 import ActionButtons from "../../../components/contacts/action-buttons";

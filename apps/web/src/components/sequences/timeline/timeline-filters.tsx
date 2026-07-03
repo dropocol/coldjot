@@ -104,7 +104,6 @@ export function TimelineFilters() {
             mode="single"
             selected={date}
             onSelect={handleDateSelect}
-            initialFocus
           />
         </PopoverContent>
       </Popover>
