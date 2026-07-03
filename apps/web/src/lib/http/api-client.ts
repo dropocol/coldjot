@@ -60,5 +60,9 @@ export const api = {
     request<T>(path, withBody("PUT", body)),
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, withBody("PATCH", body)),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  delete: <T>(path: string, body?: unknown) =>
+    request<T>(
+      path,
+      body === undefined ? { method: "DELETE" } : withBody("DELETE", body)
+    ),
 };
