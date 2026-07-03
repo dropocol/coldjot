@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,7 @@ import { CheckCircle2, AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { SequenceStatus } from "@coldjot/types";
 import { isSequenceReadyToLaunch } from "@/lib/sequence-utils";
 import { useSequence } from "@/lib/sequence-context";
+import { useLaunchSequence } from "@/hooks/queries/use-sequences";
 
 interface LaunchSequenceModalProps {
   open: boolean;
@@ -35,15 +35,15 @@ export function LaunchSequenceModal({
   onStatusChange,
 }: LaunchSequenceModalProps) {
   const { sequence, refreshSequence } = useSequence();
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-
   // Use context values if props are not provided
   const actualSequenceId = sequenceId || sequence.id;
   const actualContactCount =
     contactCount || sequence._count?.contacts || sequence.contactCount || 0;
   const actualTestMode =
     testMode !== undefined ? testMode : sequence.testMode || false;
+
+  const launch = useLaunchSequence(actualSequenceId);
+  const { toast } = useToast();
 
   // Get sequence setup status
   const { steps, isReady } = isSequenceReadyToLaunch(sequence);
@@ -59,51 +59,25 @@ export function LaunchSequenceModal({
     }
 
     try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${actualSequenceId}/launch`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            testMode: actualTestMode,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-
-        toast({
-          title: "An Error Occurred",
-          description: errorData.message,
-          variant: "destructive",
-        });
-        return;
-      }
+      await launch.mutateAsync(actualTestMode);
 
       // Call the onStatusChange callback if provided
       onStatusChange?.(SequenceStatus.ACTIVE);
 
       // Refresh the sequence data
-      await refreshSequence();
+      refreshSequence();
 
       onClose();
       toast({
         title: "Sequence Launched",
         description: "Your sequence has been launched successfully",
       });
-    } catch (error) {
-      console.error("Error launching sequence:", error);
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to launch sequence",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -240,7 +214,7 @@ export function LaunchSequenceModal({
               // disabled={isLoading || !isReady}
               className="gap-2"
             >
-              {isLoading ? (
+              {launch.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Sparkles className="h-4 w-4" />

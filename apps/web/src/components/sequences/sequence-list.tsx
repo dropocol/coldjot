@@ -36,30 +36,15 @@ export function SequenceList({
   onCloseCreateModal,
   onAddSequence,
 }: SequenceListProps) {
-  const [sequences, setSequences] = useState<Sequence[]>(initialSequences);
-  const [_showStepEditor, setShowStepEditor] = useState(false);
-  const [_selectedSequence, _setSelectedSequence] = useState<Sequence | null>(
-    null
-  );
+  const sequences = initialSequences;
   const router = useRouter();
 
-  const handleCreateSuccess = async () => {
-    try {
-      const response = await fetch("/api/sequences");
-      if (!response.ok) throw new Error("Failed to fetch sequences");
-      const data = await response.json();
-      setSequences(data);
-      onCloseCreateModal();
-      toast.success("Sequence created successfully");
-      router.refresh();
-    } catch (_error) {
-      toast.error("Failed to refresh sequences");
-    }
-  };
-
-  const _handleStepSave = (_stepData: unknown) => {
-    setShowStepEditor(false);
-    // Handle step save logic here
+  const handleCreateSuccess = () => {
+    // The create mutation (in CreateSequenceModal) invalidates
+    // qk.sequences.all; router.refresh() updates the server-rendered list.
+    onCloseCreateModal();
+    toast.success("Sequence created successfully");
+    router.refresh();
   };
 
   return (

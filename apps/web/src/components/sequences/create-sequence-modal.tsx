@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   Dialog,
@@ -14,6 +13,7 @@ import { Label } from "@/components/ui/label";
 
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import { useCreateSequence } from "@/hooks/queries/use-sequences";
 
 interface FormData {
   name: string;
@@ -32,7 +32,8 @@ export function CreateSequenceModal({
   onClose,
   onSuccess,
 }: CreateSequenceModalProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const createSequence = useCreateSequence();
+  const isSubmitting = createSequence.isPending;
   const {
     register,
     handleSubmit,
@@ -40,23 +41,17 @@ export function CreateSequenceModal({
   } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
     try {
-      const response = await fetch("/api/sequences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      await createSequence.mutateAsync({
+        name: data.name,
+        permissions: data.permissions as "team" | "private",
+        schedule: data.schedule as "business" | "custom",
       });
-
-      if (!response.ok) throw new Error("Failed to create sequence");
-
       toast.success("Sequence created successfully");
       onSuccess();
       onClose();
     } catch (_error) {
       toast.error("Failed to create sequence");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

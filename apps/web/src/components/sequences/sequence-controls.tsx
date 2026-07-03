@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { PlayIcon, PauseIcon } from "lucide-react";
 import { SequenceStatus } from "@coldjot/types";
+import { useSequenceControl } from "@/hooks/queries/use-sequences";
 
 interface SequenceControlsProps {
   sequenceId: string;
@@ -18,25 +19,16 @@ export function SequenceControls({
   onStatusChange,
 }: SequenceControlsProps) {
   const [status, setStatus] = useState<SequenceStatus>(initialStatus);
-  const [isLoading, setIsLoading] = useState(false);
+  const control = useSequenceControl(sequenceId);
   const { toast } = useToast();
 
   useEffect(() => {
     setStatus(initialStatus);
   }, [initialStatus]);
 
-  const handleControl = async (action: SequenceStatus) => {
+  const handleControl = async (action: SequenceStatus.ACTIVE | SequenceStatus.PAUSED) => {
     try {
-      setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/control`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update sequence");
+      await control.mutateAsync(action);
 
       const newStatus =
         action === SequenceStatus.PAUSED
@@ -49,15 +41,12 @@ export function SequenceControls({
         title: "Sequence Updated",
         description: `Sequence ${action} successfully`,
       });
-    } catch (error) {
-      console.error("Error controlling sequence:", error);
+    } catch (_error) {
       toast({
         title: "Error",
         description: `Failed to ${action} sequence`,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -77,7 +66,7 @@ export function SequenceControls({
             : SequenceStatus.ACTIVE
         )
       }
-      disabled={isLoading}
+      disabled={control.isPending}
       className="min-w-[100px]"
     >
       {status === SequenceStatus.ACTIVE ? (

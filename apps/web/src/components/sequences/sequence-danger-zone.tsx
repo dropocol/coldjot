@@ -17,6 +17,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  useResetSequence,
+  useDeleteSequence,
+} from "@/hooks/queries/use-sequences";
 
 interface SequenceDangerZoneProps {
   sequenceId: string;
@@ -29,19 +33,14 @@ export function SequenceDangerZone({
 }: SequenceDangerZoneProps) {
   const { toast } = useToast();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const reset = useResetSequence(sequenceId);
+  const deleteSequence = useDeleteSequence();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const isLoading = reset.isPending || deleteSequence.isPending;
 
   const handleReset = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}/reset`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to reset sequence");
-      }
+      await reset.mutateAsync();
 
       onStatusChange?.(SequenceStatus.DRAFT);
 
@@ -57,21 +56,12 @@ export function SequenceDangerZone({
         description: "Failed to reset sequence",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleDelete = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequenceId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete sequence");
-      }
+      await deleteSequence.mutateAsync(sequenceId);
 
       toast({
         title: "Success",
@@ -86,8 +76,6 @@ export function SequenceDangerZone({
         variant: "destructive",
       });
       setIsDeleteDialogOpen(false);
-    } finally {
-      setIsLoading(false);
     }
   };
 

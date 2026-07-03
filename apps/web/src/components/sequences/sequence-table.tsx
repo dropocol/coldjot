@@ -41,6 +41,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PaginationControls } from "@/components/pagination";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/http/api-client";
+import { qk } from "@/lib/query/keys";
+import type { Sequence as SequenceType } from "@coldjot/types";
 
 interface Sequence {
   id: string;
@@ -81,30 +85,34 @@ export function SequenceTable({
 }: SequenceTableProps) {
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const router = useRouter();
+  const qc = useQueryClient();
 
-  const handleCreateSuccess = async () => {
-    try {
-      const response = await fetch("/api/sequences");
-      if (!response.ok) throw new Error("Failed to fetch sequences");
-      const _data = await response.json();
-      onCloseCreateModal();
-      toast.success("Sequence created successfully");
-      router.refresh();
-    } catch (_error) {
-      toast.error("Failed to refresh sequences");
-    }
+  // Table-level mutations (id is passed per-call, not baked into the hook).
+  const duplicate = useMutation({
+    mutationFn: (id: string) =>
+      api.post<SequenceType>(`/api/sequences/${id}/duplicate`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.sequences.all }),
+  });
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: SequenceStatus }) =>
+      api.post<SequenceType>(`/api/sequences/${id}/control`, {
+        action: status,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.sequences.all }),
+  });
+
+  const handleCreateSuccess = () => {
+    // The create mutation (in CreateSequenceModal) invalidates
+    // qk.sequences.all; router.refresh() updates the server-rendered table.
+    onCloseCreateModal();
+    toast.success("Sequence created successfully");
+    router.refresh();
   };
 
   const handleDuplicate = async (sequenceId: string) => {
     try {
       setDuplicatingId(sequenceId);
-      const response = await fetch(`/api/sequences/${sequenceId}/duplicate`, {
-        method: "POST",
-      });
-
-      if (!response.ok) throw new Error("Failed to duplicate sequence");
-
-      const duplicatedSequence = await response.json();
+      const duplicatedSequence = await duplicate.mutateAsync(sequenceId);
 
       // Add the duplicated sequence to the list
       onAddSequence(duplicatedSequence);
@@ -129,15 +137,7 @@ export function SequenceTable({
         ? SequenceStatus.PAUSED
         : SequenceStatus.ACTIVE;
     try {
-      const response = await fetch(`/api/sequences/${sequenceId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update sequence status");
+      await setStatus.mutateAsync({ id: sequenceId, status: newStatus });
 
       onAddSequence({
         ...sequences.find((s) => s.id === sequenceId)!,
