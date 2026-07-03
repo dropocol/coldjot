@@ -16,19 +16,34 @@ function invalidateContacts(
   qc: ReturnType<typeof useQueryClient>,
   sequenceId: string
 ) {
-  qc.invalidateQueries({ queryKey: qk.sequences.contacts(sequenceId) });
-  // Contact count feeds the sequence readiness flags.
+  // Broad: refresh every page of this sequence's contacts + the detail's
+  // contact-count readiness.
+  qc.invalidateQueries({ queryKey: ["sequences", sequenceId, "contacts"] });
   qc.invalidateQueries({ queryKey: qk.sequences.detail(sequenceId) });
 }
 
-export function useSequenceContacts(sequenceId: string) {
+export function useSequenceContacts(
+  sequenceId: string,
+  params?: { page: number; limit: number },
+  options?: { enabled?: boolean; refetchInterval?: number | false }
+) {
   return useQuery({
-    queryKey: qk.sequences.contacts(sequenceId),
-    queryFn: () =>
-      api.get<SequenceContactsResponse>(
+    queryKey: qk.sequences.contacts(sequenceId, params),
+    queryFn: () => {
+      if (params) {
+        const qs = new URLSearchParams();
+        qs.set("page", String(params.page));
+        qs.set("limit", String(params.limit));
+        return api.get<SequenceContactsResponse>(
+          `/api/sequences/${sequenceId}/contacts?${qs.toString()}`
+        );
+      }
+      return api.get<SequenceContactsResponse>(
         `/api/sequences/${sequenceId}/contacts`
-      ),
-    enabled: !!sequenceId,
+      );
+    },
+    enabled: (options?.enabled ?? true) && !!sequenceId,
+    refetchInterval: options?.refetchInterval ?? false,
   });
 }
 

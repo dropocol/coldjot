@@ -17,6 +17,14 @@ import {
   type EmailData,
   StepPriority as StepPriorityEnum,
 } from "@coldjot/types";
+import {
+  useSequenceSteps,
+  useReorderSteps,
+  useUpdateStep,
+  useCreateStep,
+  useDeleteStep,
+  useDuplicateStep,
+} from "@/hooks/queries/use-sequence-steps";
 
 // Define a minimal sequence type for the overview page
 interface OverviewSequence {
@@ -70,8 +78,23 @@ interface StepEditorData {
 }
 
 export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
-  const [steps, setSteps] = useState<SequenceStep[]>(sequence.steps);
-  const [isLoading, setIsLoading] = useState(false);
+  // Steps are owned by react-query; seeded from the prop via initialData so
+  // first paint is SSR-accurate, then kept fresh by the mutations below.
+  const { data: steps = [] } = useSequenceSteps(sequence.id);
+  const reorder = useReorderSteps(sequence.id);
+  const updateStep = useUpdateStep(sequence.id);
+  const createStep = useCreateStep(sequence.id);
+  const deleteStep = useDeleteStep(sequence.id);
+  const duplicateStep = useDuplicateStep(sequence.id);
+
+  // Any of the step mutations counts as "loading".
+  const isMutating =
+    reorder.isPending ||
+    updateStep.isPending ||
+    createStep.isPending ||
+    deleteStep.isPending ||
+    duplicateStep.isPending;
+
   const [showStepEditor, setShowStepEditor] = useState(false);
   const [showEmailEditor, setShowEmailEditor] = useState(false);
   const [editingStep, setEditingStep] = useState<SequenceStep | null>(null);
@@ -84,38 +107,10 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
 
   const handleStepReorder = async (reorderedSteps: SequenceStep[]) => {
     try {
-      setIsLoading(true);
-      // Update the order and previousStepId for each step
-      const updatedSteps = reorderedSteps.map((step, index) => ({
-        ...step,
-        order: index,
-        previousStepId: index > 0 ? reorderedSteps[index - 1].id : undefined,
-      }));
-
-      // Update the steps in the database
-      const response = await fetch(
-        `/api/sequences/${sequence.id}/steps/reorder`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            steps: updatedSteps.map((step) => ({
-              ...step,
-              previousStepId: step.previousStepId ?? null,
-            })),
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to reorder steps");
-
-      // Update local state
-      setSteps(updatedSteps);
+      await reorder.mutateAsync(reorderedSteps);
       toast.success("Steps reordered successfully");
     } catch (_error) {
       toast.error("Failed to reorder steps");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -157,55 +152,25 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
     setShowEmailEditor(true);
   };
 
-  const handleStepAdded = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/sequences/${sequence.id}/steps`);
-      if (!response.ok) throw new Error("Failed to fetch steps");
-      const updatedSteps = await response.json();
-      setSteps(updatedSteps);
-    } catch (_error) {
-      toast.error("Failed to refresh steps");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleEmailSave = async (emailData: EmailData) => {
     if (!editingStep) return;
 
     try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${sequence.id}/steps/${editingStep.id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...editingStep,
-            ...emailData,
-            // Clear content and subject if using template
-            ...(emailData.templateId
-              ? { content: null, subject: null }
-              : {}),
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to update step");
-
-      const updatedSteps = await fetch(
-        `/api/sequences/${sequence.id}/steps`
-      ).then((res) => res.json());
-      setSteps(updatedSteps);
+      await updateStep.mutateAsync({
+        stepId: editingStep.id,
+        patch: {
+          ...editingStep,
+          ...emailData,
+          // Clear content and subject if using template
+          ...(emailData.templateId ? { content: null, subject: null } : {}),
+        },
+      });
       setShowEmailEditor(false);
       setEditingStep(null);
       setEmailEditorData(undefined);
       toast.success("Step updated successfully");
     } catch (_error) {
       toast.error("Failed to update step");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -213,88 +178,36 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
     if (!editingStep) return;
 
     try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${sequence.id}/steps/${editingStep.id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...editingStep,
-            ...stepData,
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to update step");
-
-      const updatedSteps = await fetch(
-        `/api/sequences/${sequence.id}/steps`
-      ).then((res) => res.json());
-      setSteps(updatedSteps);
+      await updateStep.mutateAsync({
+        stepId: editingStep.id,
+        patch: {
+          ...editingStep,
+          ...stepData,
+        },
+      });
       setShowStepEditor(false);
       setEditingStep(null);
       toast.success("Step settings updated successfully");
     } catch (_error) {
       toast.error("Failed to update step settings");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleStepDuplicate = async (step: SequenceStep) => {
     try {
-      setIsLoading(true);
-
-      // Extract step data excluding the ID
-      const { id: _id, ...stepData } = step;
-
-      // Create a new step with the same data
-      const response = await fetch(`/api/sequences/${sequence.id}/steps`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...stepData,
-          order: steps.length, // Place at the end of the sequence
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to duplicate step");
-
-      // Refresh steps after duplication
-      const updatedSteps = await fetch(
-        `/api/sequences/${sequence.id}/steps`
-      ).then((res) => res.json());
-      setSteps(updatedSteps);
+      await duplicateStep.mutateAsync(step);
       toast.success("Step duplicated successfully");
     } catch (_error) {
       toast.error("Failed to duplicate step");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleStepDelete = async (step: SequenceStep) => {
     try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${sequence.id}/steps/${step.id}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to delete step");
-
-      const updatedSteps = await fetch(
-        `/api/sequences/${sequence.id}/steps`
-      ).then((res) => res.json());
-      setSteps(updatedSteps);
+      await deleteStep.mutateAsync(step.id);
       toast.success("Step deleted successfully");
     } catch (_error) {
       toast.error("Failed to delete step");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -317,25 +230,6 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
     bounceRate: stats?.bounceRate || 0,
   });
 
-  // const mapStatsToDisplay = (
-  //   stats: SequenceStatsType | null
-  // ): SequenceStatsDisplay => ({
-  //   totalEmails: 1214,
-  //   sentEmails: 1214,
-  //   openedEmails: 765,
-  //   uniqueOpens: 391,
-  //   clickedEmails: 1149,
-  //   repliedEmails: 178,
-  //   bouncedEmails: 0,
-  //   unsubscribed: 0,
-  //   interested: 0,
-  //   peopleContacted: 376,
-  //   openRate: 62,
-  //   clickRate: 94,
-  //   replyRate: 14,
-  //   bounceRate: 0,
-  // });
-
   return (
     <div className="space-y-8">
       <div>
@@ -344,7 +238,7 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
       </div>
 
       <div className="space-y-4">
-        {isLoading ? (
+        {isMutating ? (
           <div className="flex items-center justify-center p-8">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -366,7 +260,6 @@ export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
             />
             <AddSequenceStep
               sequenceId={sequence.id}
-              onStepAdded={handleStepAdded}
               steps={steps}
             />
           </>

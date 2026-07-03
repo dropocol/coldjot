@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -47,6 +47,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  useSequenceLists,
+  useAddListToSequence,
+  useRemoveListFromSequence,
+  useSyncListInSequence,
+} from "@/hooks/queries/use-sequence-lists";
 
 interface SequenceList extends EmailList {
   _count?: {
@@ -56,86 +62,32 @@ interface SequenceList extends EmailList {
 
 export function SequenceLists() {
   const { sequence, refreshSequence } = useSequence();
-  const [lists, setLists] = useState<SequenceList[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isAddingList, setIsAddingList] = useState(false);
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
-  const [isRemovingList, setIsRemovingList] = useState(false);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [_totalLists, setTotalLists] = useState(0);
   const limit = 10;
 
-  // Fetch sequence lists
-  const fetchSequenceLists = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${sequence.id}/lists?page=${page}&limit=${limit}`
-      );
+  const { data, isLoading } = useSequenceLists(sequence.id, { page, limit });
+  // The API returns Prisma rows that include _count; cast at the boundary.
+  const lists = (data?.lists ?? []) as SequenceList[];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / limit);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch sequence lists");
-      }
+  const addMutation = useAddListToSequence(sequence.id);
+  const removeMutation = useRemoveListFromSequence(sequence.id);
+  const syncMutation = useSyncListInSequence(sequence.id);
 
-      const data = await response.json();
-      setLists(data.lists);
-      setTotalPages(Math.ceil(data.total / limit));
-      setTotalLists(data.total);
-    } catch (error) {
-      console.error("Error fetching sequence lists:", error);
-      toast.error("Failed to load lists");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sequence.id, page, limit]);
-
-  useEffect(() => {
-    if (sequence?.id) {
-      fetchSequenceLists();
-    }
-    // fetchSequenceLists is a component-body closure; deliberately excluded.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, sequence?.id]);
-
-  // Add list to sequence
+  // Add list to sequence (connect + sync). Both mutations invalidate the
+  // lists query; refreshSequence keeps the parent sequence detail in sync.
   const handleAddList = async (listId: string) => {
     try {
       setIsAddingList(true);
-
-      // First, connect the list to the sequence
-      const response = await fetch(`/api/sequences/${sequence.id}/lists`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ listId }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to add list to sequence");
-      }
-
-      // Then, trigger the sync process by creating a sync record
-      const syncResponse = await fetch(
-        `/api/sequences/${sequence.id}/lists/${listId}/sync`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!syncResponse.ok) {
-        console.warn("List added but sync may be delayed");
-      }
-
-      await fetchSequenceLists();
-      await refreshSequence();
+      await addMutation.mutateAsync(listId);
+      // Sync is best-effort: a delay here doesn't fail the add.
+      await syncMutation.mutateAsync(listId).catch(() => undefined);
+      refreshSequence();
       toast.success("List added to sequence");
-    } catch (error) {
-      console.error("Error adding list to sequence:", error);
+    } catch (_error) {
       toast.error("Failed to add list");
     } finally {
       setIsAddingList(false);
@@ -145,29 +97,13 @@ export function SequenceLists() {
   // Remove list from sequence
   const handleRemoveList = async () => {
     if (!selectedListId) return;
-
     try {
-      setIsRemovingList(true);
-
-      const response = await fetch(
-        `/api/sequences/${sequence.id}/lists/${selectedListId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to remove list from sequence");
-      }
-
-      await fetchSequenceLists();
-      await refreshSequence();
+      await removeMutation.mutateAsync(selectedListId);
+      refreshSequence();
       toast.success("List removed from sequence");
-    } catch (error) {
-      console.error("Error removing list from sequence:", error);
+    } catch (_error) {
       toast.error("Failed to remove list");
     } finally {
-      setIsRemovingList(false);
       setSelectedListId(null);
     }
   };
@@ -175,21 +111,10 @@ export function SequenceLists() {
   // Sync contacts from a specific list
   const handleSyncList = async (listId: string) => {
     try {
-      const response = await fetch(
-        `/api/sequences/${sequence.id}/lists/${listId}/sync`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to sync list contacts");
-      }
-
+      await syncMutation.mutateAsync(listId);
+      refreshSequence();
       toast.success("List contacts synced to sequence");
-      await refreshSequence();
-    } catch (error) {
-      console.error("Error syncing list contacts:", error);
+    } catch (_error) {
       toast.error("Failed to sync list contacts");
     }
   };
@@ -389,7 +314,7 @@ export function SequenceLists() {
               onClick={handleRemoveList}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isRemovingList ? (
+              {removeMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Trash className="h-4 w-4 mr-2" />

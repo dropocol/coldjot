@@ -16,6 +16,10 @@ import { Label } from "@/components/ui/label";
 import { ContactSearch } from "../search/contact-search-dropdown";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { Input } from "@/components/ui/input";
+import {
+  useCreateDraft,
+  useSendDraft,
+} from "@/hooks/queries/use-drafts";
 
 interface Props {
   templates: Template[];
@@ -93,14 +97,16 @@ export default function EmailComposer({ templates }: Props) {
   const [subject, setSubject] = useState("");
   const [processedSubject, setProcessedSubject] = useState("");
   const [showRawContent, setShowRawContent] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSending, setIsSending] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [fallbacks, setFallbacks] = useState<Record<string, string>>({});
   const [templateVariables, setTemplateVariables] = useState<
     TemplateVariable[]
   >([]);
   const [showVariablePanel, setShowVariablePanel] = useState(false);
+  const createDraft = useCreateDraft();
+  const sendDraft = useSendDraft();
+  const isSaving = createDraft.isPending;
+  const isSending = createDraft.isPending || sendDraft.isPending;
 
   useEffect(() => {
     try {
@@ -110,8 +116,8 @@ export default function EmailComposer({ templates }: Props) {
         setSelectedContact(contact);
         localStorage.removeItem("selectedContact");
       }
-    } catch (error) {
-      console.error("Error loading saved contact:", error);
+    } catch {
+      // Ignore a corrupt saved-contact payload.
     }
   }, []);
 
@@ -171,64 +177,30 @@ export default function EmailComposer({ templates }: Props) {
   const handleSaveAsDraft = async () => {
     try {
       if (!selectedContact || !selectedTemplate) return;
-      setIsSaving(true);
-
-      const response = await fetch("/api/drafts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactId: selectedContact.id,
-          templateId: selectedTemplate,
-          content: rawContent,
-          subject: subject,
-          fallbacks,
-        }),
+      await createDraft.mutateAsync({
+        contactId: selectedContact.id,
+        templateId: selectedTemplate,
+        content: rawContent,
       });
-
-      if (!response.ok) throw new Error("Failed to save draft");
       toast.success("Draft saved successfully");
     } catch (_error) {
       toast.error("Failed to save draft");
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleSendEmail = async () => {
     try {
       if (!selectedContact || !selectedTemplate) return;
-      setIsSending(true);
-
-      const draftResponse = await fetch("/api/drafts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactId: selectedContact.id,
-          templateId: selectedTemplate,
-          content: rawContent,
-          subject: subject,
-          fallbacks,
-        }),
+      // Create the draft, then send it.
+      const draft = await createDraft.mutateAsync({
+        contactId: selectedContact.id,
+        templateId: selectedTemplate,
+        content: rawContent,
       });
-
-      if (!draftResponse.ok) throw new Error("Failed to save draft");
-      const draft = await draftResponse.json();
-
-      const sendResponse = await fetch("/api/drafts/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          draftId: draft.id,
-        }),
-      });
-
-      if (!sendResponse.ok) throw new Error("Failed to send email");
+      await sendDraft.mutateAsync(draft.id);
       toast.success("Email sent successfully");
-    } catch (error) {
-      console.error("Error sending email:", error);
+    } catch (_error) {
       toast.error("Failed to send email");
-    } finally {
-      setIsSending(false);
     }
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ContactSearch } from "@/components/search/contact-search-dropdown";
 import {
@@ -44,8 +44,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PaginationControls } from "@/components/pagination";
-import { addContactToSequence } from "@/lib/client-actions";
 import { useSequence } from "@/lib/sequence-context";
+import {
+  useSequenceContacts,
+  useAddContactToSequence,
+  useRemoveContactFromSequence,
+  useSendContactStepNow,
+  useUpdateContactStatus,
+} from "@/hooks/queries/use-sequence-contacts";
 
 // Add extended SequenceContact type with all required properties
 interface ExtendedSequenceContact {
@@ -82,77 +88,57 @@ export function SequenceContacts({
   onPageChange,
   onPageSizeChange,
 }: SequenceContactsProps) {
-  const [contacts, setContacts] = useState<ExtendedSequenceContact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [totalSteps, setTotalSteps] = useState(0);
-  const [total, setTotal] = useState(0);
   const { updateReadinessField } = useSequence();
+
+  // Poll for updates while the sequence is active; otherwise just fetch once.
+  const { data, isLoading } = useSequenceContacts(
+    sequenceId,
+    { page, limit },
+    { refetchInterval: isActive ? 30_000 : false }
+  );
+  const contacts =
+    (data?.contacts as ExtendedSequenceContact[] | undefined) ?? [];
+  const totalSteps = data?.totalSteps ?? 0;
+  const total = data?.total ?? 0;
+
+  const addMutation = useAddContactToSequence(sequenceId);
+  const removeMutation = useRemoveContactFromSequence(sequenceId);
+  const sendNowMutation = useSendContactStepNow(sequenceId);
+  const statusMutation = useUpdateContactStatus(sequenceId);
+  // Any contact mutation counts as "loading" for the button/spinner gates.
+  const isMutating =
+    addMutation.isPending ||
+    removeMutation.isPending ||
+    sendNowMutation.isPending ||
+    statusMutation.isPending;
 
   const handleAddContact = async (contact: Contact) => {
     try {
-      setIsLoading(true);
-
-      // Use the client action instead of direct fetch
-      const newContact = await addContactToSequence(
-        sequenceId,
-        contact.id,
-        updateReadinessField
-      );
-
-      // Update the local state with the new contact
-      setContacts((prev) => [newContact, ...prev]);
-      setTotal((prev) => prev + 1);
+      await addMutation.mutateAsync(contact.id);
+      updateReadinessField("hasContacts", true);
       setSelectedContact(null);
-
       toast.success("Contact added to sequence");
-    } catch (error) {
-      console.error("Error adding contact:", error);
+    } catch (_error) {
       toast.error("Failed to add contact");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleRemoveContact = async (contactId: string) => {
     try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${sequenceId}/contacts/${contactId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to remove contact");
-
-      setContacts((prev) => prev.filter((c) => c.contactId !== contactId));
+      await removeMutation.mutateAsync(contactId);
       toast.success("Contact removed from sequence");
-    } catch (__error) {
+    } catch (_error) {
       toast.error("Failed to remove contact");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleSendNow = async (contactId: string) => {
     try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${sequenceId}/contacts/${contactId}/send-now`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to send now");
-
-      await refreshContacts();
+      await sendNowMutation.mutateAsync({ contactId });
       toast.success("Contact scheduled for immediate sending");
-    } catch (__error) {
+    } catch (_error) {
       toast.error("Failed to schedule immediate sending");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -161,66 +147,12 @@ export function SequenceContacts({
     status: SequenceContactStatusType
   ) => {
     try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${sequenceId}/contacts/${contactId}/status`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to update status");
-
-      await refreshContacts();
+      await statusMutation.mutateAsync({ contactId, status });
       toast.success("Contact status updated successfully");
-    } catch (__error) {
+    } catch (_error) {
       toast.error("Failed to update contact status");
-    } finally {
-      setIsLoading(false);
     }
   };
-
-  const refreshContacts = async () => {
-    try {
-      setIsLoading(true);
-      const queryParams = new URLSearchParams();
-      queryParams.set("page", page.toString());
-      queryParams.set("limit", limit.toString());
-
-      const response = await fetch(
-        `/api/sequences/${sequenceId}/contacts?${queryParams.toString()}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setContacts(data.contacts as ExtendedSequenceContact[]);
-        setTotalSteps(data.totalSteps);
-        setTotal(data.total);
-      }
-    } catch (error) {
-      console.error("Failed to refresh contacts:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    refreshContacts();
-
-    // If sequence is active, poll for updates every 30 seconds
-    let interval: NodeJS.Timeout;
-    if (isActive) {
-      interval = setInterval(refreshContacts, 30000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-    // refreshContacts is a component-body closure; deliberately excluded (the
-    // interval should reset only when these inputs change).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sequenceId, isActive, page, limit]);
 
   const getStatusDetails = (contact: ExtendedSequenceContact) => {
     if (contact.status === SequenceContactStatusEnum.REPLIED) {
@@ -294,19 +226,18 @@ export function SequenceContacts({
         </div>
         <Button
           onClick={() => selectedContact && handleAddContact(selectedContact)}
-          disabled={!selectedContact || isLoading}
+          disabled={!selectedContact || isMutating}
         >
-          {isLoading ? (
+          {isMutating ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <UserPlus className="h-4 w-4 mr-2" />
           )}
           Add Contact
         </Button>
-        <ListSelector
-          sequenceId={sequenceId}
-          onListSelected={refreshContacts}
-        />
+        {/* ListSelector adds contacts via its own flow; mutations invalidate
+            this query, so no explicit callback is needed. */}
+        <ListSelector sequenceId={sequenceId} onListSelected={() => undefined} />
       </div>
 
       <div className="p-0">
@@ -440,9 +371,9 @@ export function SequenceContacts({
                         <Button
                           variant="ghost"
                           size="icon"
-                          disabled={isLoading}
+                          disabled={isMutating}
                         >
-                          {isLoading ? (
+                          {isMutating ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <MoreVertical className="h-4 w-4" />

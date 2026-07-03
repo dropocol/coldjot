@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2, SendHorizonal, Search, Users, Check } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { Contact, Sequence } from "@prisma/client";
+import { Contact } from "@prisma/client";
 import {
   Table,
   TableBody,
@@ -27,6 +27,12 @@ import { cn } from "@/lib/utils";
 
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { useSequences } from "@/hooks/queries/use-sequences";
+import {
+  useAddContactToSequence,
+  useBulkAddContactsToSequence,
+  useAddListContactsToSequence,
+} from "@/hooks/queries/use-sequence-contacts";
 
 interface Props {
   open: boolean;
@@ -49,9 +55,7 @@ export function AddToSequenceModal({
   listName,
   contactCount,
 }: Props) {
-  const [sequences, setSequences] = useState<Sequence[]>([]);
   const [selectedSequenceId, setSelectedSequenceId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastAddedSequenceId, setLastAddedSequenceId] = useState<string | null>(
@@ -63,47 +67,29 @@ export function AddToSequenceModal({
   const isSingleContactInArray = contacts.length === 1;
   const isFromList = !!listId;
 
+  // Fetch the user's sequences only while the modal is open.
+  const { data: sequencesData, isLoading: loading } = useSequences({
+    page: 1,
+    limit: 100,
+  });
+  const sequences = useMemo(
+    () => sequencesData?.sequences ?? [],
+    [sequencesData]
+  );
+  const addContact = useAddContactToSequence(selectedSequenceId || "_");
+  const bulkAddContacts = useBulkAddContactsToSequence(
+    selectedSequenceId || "_"
+  );
+  const addListContacts = useAddListContactsToSequence(
+    selectedSequenceId || "_"
+  );
+
+  // Default-select the first sequence once loaded.
   useEffect(() => {
-    const fetchSequences = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/sequences", {
-          credentials: "include",
-        });
-
-        if (response.status === 401) {
-          toast.error(
-            "Authentication error. Please refresh the page and try again."
-          );
-          setSequences([]);
-          return;
-        }
-
-        if (!response.ok) {
-          toast.error(`Failed to fetch sequences: ${response.statusText}`);
-          setSequences([]);
-          return;
-        }
-
-        const data = await response.json();
-        const sequencesData = Array.isArray(data) ? data : data.sequences || [];
-        setSequences(sequencesData);
-
-        if (sequencesData.length > 0) {
-          setSelectedSequenceId(sequencesData[0].id);
-        }
-      } catch (_error) {
-        toast.error("Failed to load sequences. Please try again.");
-        setSequences([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (open) {
-      fetchSequences();
+    if (sequences.length > 0 && !selectedSequenceId) {
+      setSelectedSequenceId(sequences[0].id);
     }
-  }, [open]);
+  }, [sequences, selectedSequenceId]);
 
   const handleAddToSequence = async () => {
     if (!selectedSequenceId) {
@@ -116,28 +102,12 @@ export function AddToSequenceModal({
     try {
       // Case 1: Adding all contacts from a list
       if (isFromList && listId) {
-        const response = await fetch(
-          `/api/sequences/${selectedSequenceId}/contacts/list`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ listId }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          toast.error(errorData.message);
-          return;
-        }
-
-        const data = await response.json();
+        const data = await addListContacts.mutateAsync([listId]);
         toast.success(
-          `Added ${data.added} contacts from ${listName} to sequence${
-            data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
+          `Added ${data.added ?? 0} contacts from ${listName} to sequence${
+            data.skipped ? ` (${data.skipped} already in sequence)` : ""
           }`
         );
-
         setLastAddedSequenceId(selectedSequenceId);
         return;
       }
@@ -154,28 +124,12 @@ export function AddToSequenceModal({
           return;
         }
 
-        const response = await fetch(
-          `/api/sequences/${selectedSequenceId}/contacts/bulk`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contactIds: idsToAdd }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          toast.error(errorData.message);
-          return;
-        }
-
-        const data = await response.json();
+        const data = await bulkAddContacts.mutateAsync(idsToAdd);
         toast.success(
-          `Added ${data.added} contacts to sequence${
-            data.skipped > 0 ? ` (${data.skipped} already in sequence)` : ""
+          `Added ${data.added ?? 0} contacts to sequence${
+            data.skipped ? ` (${data.skipped} already in sequence)` : ""
           }`
         );
-
         setLastAddedSequenceId(selectedSequenceId);
         return;
       }
@@ -187,21 +141,7 @@ export function AddToSequenceModal({
         return;
       }
 
-      const response = await fetch(
-        `/api/sequences/${selectedSequenceId}/contacts`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contactId }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.error(errorData.message);
-        return;
-      }
-
+      await addContact.mutateAsync(contactId);
       toast.success("Contact added to sequence");
       setLastAddedSequenceId(selectedSequenceId);
     } catch (_error) {

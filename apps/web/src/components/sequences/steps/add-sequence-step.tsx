@@ -6,28 +6,24 @@ import { Plus } from "lucide-react";
 import { SequenceStepEditor } from "./sequence-step-editor";
 import { SequenceEmailEditor } from "../editor/sequence-email-editor";
 import { toast } from "react-hot-toast";
-import { useRouter } from "next/navigation";
 import type { SequenceStep, StepData, EmailData } from "@coldjot/types";
-import { addStepToSequence } from "@/lib/client-actions";
+import { useCreateStep } from "@/hooks/queries/use-sequence-steps";
 import { useSequence } from "@/lib/sequence-context";
 
 interface AddSequenceStepProps {
   sequenceId: string;
-  onStepAdded?: () => void;
   steps: SequenceStep[];
 }
 
 type ActiveDrawer = "none" | "step" | "email";
 
-export function AddSequenceStep({
-  sequenceId,
-  onStepAdded,
-  steps,
-}: AddSequenceStepProps) {
+export function AddSequenceStep({ sequenceId, steps }: AddSequenceStepProps) {
   const [activeDrawer, setActiveDrawer] = useState<ActiveDrawer>("none");
   const [stepData, setStepData] = useState<StepData | null>(null);
   const [_emailData, setEmailData] = useState<EmailData | null>(null);
-  const _router = useRouter();
+  const createStep = useCreateStep(sequenceId);
+  // Optimistically flip the readiness flag locally; the detail-query
+  // invalidation in useCreateStep will reconcile with the server.
   const { updateReadinessField } = useSequence();
 
   const handleStepSave = async (data: StepData) => {
@@ -42,23 +38,20 @@ export function AddSequenceStep({
       const previousStepId =
         steps.length > 0 ? steps[steps.length - 1].id : undefined;
 
-      const stepDataToSave = {
+      await createStep.mutateAsync({
         ...stepData,
         ...data,
         order: steps.length,
         previousStepId,
         replyToThread: data.replyToThread,
-      };
-
-      await addStepToSequence(sequenceId, stepDataToSave, updateReadinessField);
+      });
+      updateReadinessField("hasSteps", true);
 
       toast.success("Step added successfully");
       setActiveDrawer("none");
       setStepData(null);
       setEmailData(null);
-      onStepAdded?.();
-    } catch (error) {
-      console.error("Error adding step:", error);
+    } catch (_error) {
       toast.error("Failed to add step");
     }
   };

@@ -8,7 +8,7 @@ import {
   useImperativeHandle,
   memo,
 } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
 import {
   User,
   Trash2,
@@ -16,7 +16,6 @@ import {
   SendHorizonal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { EmailList } from "@coldjot/types";
 import { toast } from "react-hot-toast";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
@@ -49,8 +48,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  useListDetail,
+  useRemoveContactsFromList,
+} from "@/hooks/queries/use-lists";
 
-type EmailListWithContacts = Omit<EmailList, "contacts"> & {
+type EmailListWithContacts = {
+  id: string;
+  name: string;
+  description?: string | null;
   contacts: Contact[];
   _pagination?: {
     total: number;
@@ -77,65 +83,47 @@ export const ListDetailsView = memo(
   ) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [list, setList] = useState<EmailListWithContacts | null>(null);
-    const [loading, setLoading] = useState(true);
+    const params = useParams<{ id: string }>();
+    const listId = params?.id ?? "";
+
     const [contactToRemove, setContactToRemove] = useState<string | null>(null);
     const [selectedContacts, setSelectedContacts] = useState<Set<string>>(
       new Set()
     );
     const [selectedContactForDetails, setSelectedContactForDetails] =
       useState<Contact | null>(null);
-    const [total, setTotal] = useState(0);
     const [contactsToAddToSequence, setContactsToAddToSequence] = useState<
       Contact[]
     >([]);
     const [showSequenceModal, setShowSequenceModal] = useState(false);
     const [showAddAllToSequenceModal, setShowAddAllToSequenceModal] =
       useState(false);
-    const [_selectedRows, _setSelectedRows] = useState<Set<string>>(new Set());
 
     // Get pagination values from URL or use defaults
     const page = Number(searchParams.get("page") || "1");
     const limit = Number(searchParams.get("limit") || "10");
 
-    const fetchList = async () => {
-      try {
-        // Get list ID from URL
-        const listId = window.location.pathname.split("/").pop();
-        const queryParams = new URLSearchParams();
-        queryParams.set("page", page.toString());
-        queryParams.set("limit", limit.toString());
+    const { data: list, isLoading: loading, refetch } = useListDetail(listId, {
+      page,
+      limit,
+    });
+    const removeContacts = useRemoveContactsFromList(listId);
 
-        const response = await fetch(
-          `/api/lists/${listId}?${queryParams.toString()}`
-        );
-        if (!response.ok) throw new Error("Failed to fetch list");
-        const data = await response.json();
-        setList(data);
-        setTotal(data._pagination?.total || 0);
+    const listData = list as EmailListWithContacts | undefined;
+    const total = listData?._pagination?.total ?? 0;
 
-        // Clear selection when page changes
-        setSelectedContacts(new Set());
-      } catch (error) {
-        console.error("Failed to fetch list:", error);
-        toast.error("Failed to load list details");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Expose the fetchList method to parent components
-    useImperativeHandle(ref, () => ({
-      fetchList,
-      getContacts: () => list?.contacts || [],
-    }));
-
+    // Clear selection when the page changes.
     useEffect(() => {
-      fetchList();
-      // fetchList is a component-body closure; deliberately excluded to keep
-      // this as a "refetch on page/limit change" effect.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      setSelectedContacts(new Set());
     }, [page, limit]);
+
+    // Expose fetchList (refetch) + getContacts to parent components.
+    useImperativeHandle(ref, () => ({
+      fetchList: async () => {
+        await refetch();
+      },
+      getContacts: () => listData?.contacts ?? [],
+    }));
 
     // Notify parent component when selected contacts change
     useEffect(() => {
@@ -162,34 +150,15 @@ export const ListDetailsView = memo(
     };
 
     const handleBulkRemove = async () => {
-      if (!list || selectedContacts.size === 0) return;
+      if (!listData || selectedContacts.size === 0) return;
 
       try {
-        const response = await fetch(`/api/lists/${list.id}/contacts`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contactIds: Array.from(selectedContacts),
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to remove contacts from list");
-        }
-
-        const data = await response.json();
-
-        // Refresh the list to get updated data
-        fetchList();
-
-        // Clear selection
+        const data = await removeContacts.mutateAsync(
+          Array.from(selectedContacts)
+        );
         setSelectedContacts(new Set());
-
         toast.success(`${data.removed} contacts removed from list`);
-      } catch (error) {
-        console.error("Failed to remove contacts:", error);
+      } catch (_error) {
         toast.error("Failed to remove contacts from list");
       }
     };
@@ -197,14 +166,14 @@ export const ListDetailsView = memo(
     const handleBulkAddToSequence = useCallback(() => {
       // Filter selected contacts from the list
       const selectedContactsList =
-        list?.contacts.filter((c) => selectedContacts.has(c.id)) || [];
+        listData?.contacts.filter((c) => selectedContacts.has(c.id)) ?? [];
 
       // Set the contacts to add to sequence
       setContactsToAddToSequence(selectedContactsList);
 
       // Show the sequence modal
       setShowSequenceModal(true);
-    }, [list, selectedContacts]);
+    }, [listData, selectedContacts]);
 
     const handleSingleAddToSequence = useCallback(
       (contact: Contact) => {
@@ -235,28 +204,12 @@ export const ListDetailsView = memo(
     }, []);
 
     const handleRemoveContact = async (contactId: string) => {
-      if (!list) return;
+      if (!listData) return;
 
       try {
-        // Use the DELETE endpoint directly with a single contact ID
-        const response = await fetch(`/api/lists/${list.id}/contacts`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contactIds: [contactId],
-          }),
-        });
-
-        if (!response.ok) throw new Error("Failed to remove contact from list");
-
-        // Refresh the list to get updated data
-        fetchList();
-
+        await removeContacts.mutateAsync([contactId]);
         toast.success("Contact removed from list");
-      } catch (error) {
-        console.error("Failed to remove contact:", error);
+      } catch (_error) {
         toast.error("Failed to remove contact");
       } finally {
         setContactToRemove(null);
@@ -264,22 +217,20 @@ export const ListDetailsView = memo(
     };
 
     const handlePageChange = (newPage: number) => {
-      const listId = window.location.pathname.split("/").pop();
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("page", newPage.toString());
-      router.push(`/lists/${listId}?${params.toString()}`);
+      const search = new URLSearchParams(searchParams.toString());
+      search.set("page", newPage.toString());
+      router.push(`/lists/${listId}?${search.toString()}`);
     };
 
     const handlePageSizeChange = (newLimit: number) => {
-      const listId = window.location.pathname.split("/").pop();
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("limit", newLimit.toString());
-      params.set("page", "1"); // Reset to first page when changing page size
-      router.push(`/lists/${listId}?${params.toString()}`);
+      const search = new URLSearchParams(searchParams.toString());
+      search.set("limit", newLimit.toString());
+      search.set("page", "1"); // Reset to first page when changing page size
+      router.push(`/lists/${listId}?${search.toString()}`);
     };
 
     const handleAddAllToSequence = () => {
-      if (!list) return;
+      if (!listData) return;
       setShowAddAllToSequenceModal(true);
     };
 
@@ -301,7 +252,7 @@ export const ListDetailsView = memo(
       );
     }
 
-    if (!list) {
+    if (!listData) {
       return <div>List not found</div>;
     }
 
@@ -309,8 +260,8 @@ export const ListDetailsView = memo(
       <div className="flex flex-col h-full">
         {showHeader && (
           <PageHeader
-            title={list.name}
-            description={list.description || "No description"}
+            title={listData.name}
+            description={listData.description || "No description"}
             action={
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={handleAddAllToSequence}>
@@ -342,13 +293,13 @@ export const ListDetailsView = memo(
                   <TableHead className="w-[50px]">
                     <Checkbox
                       checked={
-                        list.contacts.length > 0 &&
-                        selectedContacts.size === list.contacts.length
+                        listData.contacts.length > 0 &&
+                        selectedContacts.size === listData.contacts.length
                       }
                       onCheckedChange={(checked) => {
                         if (checked) {
                           setSelectedContacts(
-                            new Set(list.contacts.map((c) => c.id))
+                            new Set(listData.contacts.map((c) => c.id))
                           );
                         } else {
                           setSelectedContacts(new Set());
@@ -362,7 +313,7 @@ export const ListDetailsView = memo(
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.contacts.length === 0 ? (
+                {listData.contacts.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={4}
@@ -372,7 +323,7 @@ export const ListDetailsView = memo(
                     </TableCell>
                   </TableRow>
                 ) : (
-                  list.contacts.map((contact) => (
+                  listData.contacts.map((contact) => (
                     <TableRow
                       key={contact.id}
                       className="hover:bg-muted/50 cursor-pointer"
@@ -512,8 +463,8 @@ export const ListDetailsView = memo(
           <AddToSequenceModal
             open={showAddAllToSequenceModal}
             onClose={handleCloseAddAllToSequenceModal}
-            listId={list.id}
-            listName={list.name}
+            listId={listData.id}
+            listName={listData.name}
             contactCount={total}
           />
         )}

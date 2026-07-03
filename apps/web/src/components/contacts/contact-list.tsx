@@ -47,6 +47,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import ContactDetailsDrawer from "./contact-details-drawer";
 import { AddToSequenceModal } from "./add-to-sequence-modal";
 import { PaginationControls } from "@/components/pagination";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useContacts,
+  useDeleteContact,
+  ContactsListResponse,
+} from "@/hooks/queries/use-contacts";
+import { qk } from "@/lib/query/keys";
 
 interface ContactListProps {
   searchQuery?: string;
@@ -94,11 +101,9 @@ export function ContactList({
   onContactsToAddChange,
 }: ContactListProps) {
   const router = useRouter();
-  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
+  const qc = useQueryClient();
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [contactToAddToList, setContactToAddToList] =
     useState<ContactToList | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(
@@ -108,45 +113,25 @@ export function ContactList({
     useState<Contact | null>(null);
   const [contactToAddToSequence, setContactToAddToSequence] =
     useState<Contact | null>(null);
-  const [total, setTotal] = useState(0);
 
+  // Only fetch when the search query is empty or at least 2 chars (matches the
+  // previous behavior of skipping single-character queries).
+  const enabled = searchQuery.length === 0 || searchQuery.length >= 2;
+
+  const { data, isLoading, isFetching } = useContacts({
+    page,
+    limit,
+    search: searchQuery.length >= 2 ? searchQuery : undefined,
+  });
+  const deleteContact = useDeleteContact();
+
+  // Surface the parent's search start/end callbacks while fetching.
   useEffect(() => {
-    const fetchContacts = async () => {
-      if (!isInitialLoad && searchQuery.length === 1) {
-        return;
-      }
-
-      setIsLoading(true);
-      if (onSearchStart) onSearchStart();
-      try {
-        const queryParams = new URLSearchParams();
-        queryParams.set("page", page.toString());
-        queryParams.set("limit", limit.toString());
-        if (searchQuery.length >= 2) {
-          queryParams.set("q", searchQuery);
-        }
-
-        const url = `/api/contacts?${queryParams.toString()}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        setContacts(data.contacts);
-        setTotal(data.total);
-      } catch (error) {
-        console.error("Failed to fetch contacts:", error);
-      } finally {
-        setIsLoading(false);
-        setIsInitialLoad(false);
-        if (onSearchEnd) onSearchEnd();
-      }
-    };
-
-    if (searchQuery.length === 0 || searchQuery.length >= 2) {
-      fetchContacts();
-    }
-    // Fetch deliberately keyed on these inputs; parent callbacks (onSearchStart/End,
-    // isInitialLoad) are stable and intentionally excluded to avoid refetch loops.
+    if (isFetching && onSearchStart) onSearchStart();
+    if (!isFetching && onSearchEnd) onSearchEnd();
+    // Parent callbacks are treated as stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, page, limit]);
+  }, [isFetching]);
 
   // Notify parent component when selected contacts change
   useEffect(() => {
@@ -159,17 +144,18 @@ export function ContactList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContacts]);
 
-  const showLoading = isLoading || isInitialLoad;
+  const response = data as ContactsListResponse | undefined;
+  // Use the server-fetched page when available; fall back to the initial page
+  // (passed from the server component) so first paint is SSR-accurate.
+  const contacts = response?.contacts ?? initialContacts;
+  const total = response?.total ?? initialContacts.length;
+  void enabled;
+
+  const showLoading = isLoading;
   const showEmptyState = !showLoading && contacts.length === 0;
 
   const handleDelete = async (contact: Contact) => {
-    const response = await fetch(`/api/contacts/${contact.id}`, {
-      method: "DELETE",
-    });
-
-    if (response.ok) {
-      setContacts(contacts.filter((c) => c.id !== contact.id));
-    }
+    await deleteContact.mutateAsync(contact.id);
   };
 
   const _handleComposeEmail = (contact: Contact) => {
@@ -377,12 +363,9 @@ export function ContactList({
         <EditContactModal
           contact={editingContact}
           onClose={() => setEditingContact(null)}
-          onSave={(updatedContact) => {
-            setContacts(
-              contacts.map((c) =>
-                c.id === updatedContact.id ? updatedContact : c
-              )
-            );
+          onSave={() => {
+            // The drawer performs the PUT; invalidate so the list refetches.
+            qc.invalidateQueries({ queryKey: qk.contacts.all });
             setEditingContact(null);
           }}
         />
