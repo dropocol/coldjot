@@ -1,6 +1,6 @@
 # Refactor Plan — Status
 
-> **Last updated:** plan 10 (BullMQ resilience) code complete. Consolidation decision (postponed — see below); plan 06 deferred to the very end; **plan 12 is the next active plan**. Plan 07 (frontend react-query consolidation) code complete; plan 02 code-done; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
+> **Last updated:** plan 10 (BullMQ resilience) committed (`e2e2e77`) and **awaiting owner smoke-testing** before plan 12 (testing) starts. Plan 06 deferred to the very end. Plan 07 (frontend react-query consolidation) code complete; plan 02 code-done; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
 > **Two parallel workstreams** live on two branch chains off `master`:
 > - **Security/quality refactor** → `refactor/old-code-update` (plans 01, 03, 04, 05, 09, + part of 11)
 > - **Dependency modernization + plan 08** → `upgrade/remaining-majors` (built on top of `refactor/old-code-update`; supersedes most of plan 11; also completed plan 08)
@@ -28,9 +28,9 @@
 | [07](./07-frontend-data-fetching.md) | Consolidate on react-query | ✅ **DONE** | `upgrade/remaining-majors` — see the plan-07 section below. The whole web app now fetches via the typed `api` client + react-query hooks; the hand-rolled `sequence-context` is backed by react-query; ~50 components/pages migrated. `tsc --noEmit` clean, web ESLint 0/0, `next build` passes. |
 | [08](./08-frontend-code-quality.md) | Remove console.log/any, dead code, lint | ✅ **DONE** | all `console.log` removed; `any` 76→0; unused-vars 335→0; exhaustive-deps 10→0; duplicated `transformEmailData` extracted; dead toolbar files deleted; stale step-reorder TODO resolved. **All ESLint rules now `error`** (no-explicit-any, no-unused-vars, rules-of-hooks, exhaustive-deps, useless-catch, prefer-const, preserve-caught-error, etc.). Web lint fully clean: 0 errors / 0 warnings |
 | [09](./09-backend-logging-pii.md) | Redact PII/tokens from logs | ✅ **DONE** | `refactor/old-code-update` (`70b3b74`); pino call-site refactor + pino 10 in upgrade chain |
-| [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | ✅ **DONE** | `upgrade/remaining-majors` — see the plan-10 section below. Shared retry policy module, stall config, DLQ per queue, email idempotency guard, bounded schedule-path failures, Bull-Board re-mounted at `/admin/queues`. `tsc --noEmit` clean, mailops ESLint 0/0, `tsup` build passes. |
+| [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | 🟡 **CODE DONE — awaiting owner smoke-test** | committed `e2e2e77` on `upgrade/remaining-majors`. Migrations applied to dev DB. Shared retry policy, stall config, DLQ per queue, email idempotency guard, bounded schedule-path failures, Bull-Board at `/admin/queues`. **Before starting plan 12:** smoke-test the resilience paths (see the plan-10 section below) so we know what's working before writing tests around it. |
 | [11](./11-tooling-config-dependencies.md) | Align deps, consolidate env, eslint config | ✅ **SUPERSEDED** | fully covered by the dependency-upgrade pass (see below) — every dep is now latest |
-| [12](./12-testing-strategy.md) | Testing baseline | 🔴 **NEXT ACTIVE PLAN** | scaffolding + security regression tests first |
+| [12](./12-testing-strategy.md) | Testing baseline | ⏸️ **BLOCKED on plan 10 smoke-test** | scaffolding + security regression tests; start only after plan 10 is verified working |
 
 ---
 
@@ -158,9 +158,9 @@ All worst offenders + ~40 more: sequence-overview (10 fetches → 1 query + muta
 
 ---
 
-## ✅ Plan 10 — backend job resilience — DONE (on `upgrade/remaining-majors`)
+## 🟡 Plan 10 — backend job resilience — CODE DONE, AWAITING SMOKE-TEST (on `upgrade/remaining-majors`, commit `e2e2e77`)
 
-Hardened the BullMQ job system so transient failures no longer drop emails or loop forever. `tsc --noEmit` clean, mailops ESLint **0 errors / 0 warnings**, `tsup` build passes. Two additive migrations written (NOT yet applied to a live DB — operator step, see below).
+Hardened the BullMQ job system so transient failures no longer drop emails or loop forever. `tsc --noEmit` clean, mailops ESLint **0 errors / 0 warnings**, `tsup` build passes. **Both additive migrations have been applied to the dev DB.** Code is committed but **NOT yet verified by manual smoke-testing** — plan 12 (testing) is intentionally blocked until the owner confirms what's actually working. Report bugs/findings back so they can be fixed before tests are written around this behavior.
 
 ### What got done
 - **Shared policy module** (`apps/mailops/src/config/queue/policy.ts`): one source of truth for `JOB_RETRY` (5 attempts, exponential 5s backoff), `JOB_DEFAULTS` (retention), `STALL_POLICY` (30s check / `maxStalledCount: 1` / 60s lock), and the schedule-path cap `SCHEDULE_MAX_FAILURES: 5`.
@@ -174,11 +174,11 @@ Hardened the BullMQ job system so transient failures no longer drop emails or lo
 - **Retry consolidation:** the two ad-hoc retry paths now read the shared ceiling — `PUBSUB_CONFIG.MAX_RETRIES` and `refreshAccessToken`'s default both reference `JOB_RETRY.attempts`.
 - **`--expose-gc` kept** — confirmed genuinely used by `memory/monitor.ts` (`global.gc()`); the plan doc's "remove if unused" didn't apply.
 
-### ⚠️ Carryover (operator / smoke-tests)
-1. **Apply the two migrations** against your DB (after a backup): `prisma migrate deploy` from `packages/database` (or `prisma migrate dev` in dev). Both are additive/nullable — zero downtime. Migration SQL is already written under `prisma/migrations/`.
+### ⚠️ Smoke-tests for the owner (do these before plan 12)
+1. ~~**Apply the two migrations**~~ — DONE, applied to the dev DB. (For other envs: `prisma migrate deploy` from `packages/database`. Both are additive/nullable — zero downtime.)
    - `20260703223316_add_email_tracking_jobid` — `EmailTracking.jobId` + index.
    - `20260703223317_add_sequence_contact_failure_tracking` — `SequenceContact.failureCount` (default 0) + `lastError`.
-2. **Smoke-test the resilience paths:**
+2. **Smoke-test the resilience paths** (these are the behaviors plan 12 will eventually encode as tests — verify them first):
    - Temporarily throw in `email/processor.ts` for the first 2 attempts → confirm BullMQ retries with exponential backoff and succeeds on the 3rd.
    - Force a 5x failure → confirm the job lands in `<name>:dl` and is visible in Bull-Board at `/admin/queues` (with `X-Service-Token`).
    - Re-enqueue a sent email job → confirm it's skipped (idempotency), no double send.
@@ -209,7 +209,8 @@ Full detail in `../HANDOFF.md`. Summary:
    - To later verify: `SELECT access_token FROM "Mailbox" LIMIT 5;` should show `enc1:…` strings, not `ya29.…`.
 4. **DB migrations (plan 06)** — **DEFERRED to the very end** (owner decision). Will be picked up once everything else is satisfactory. Needs a DB backup + staging before any destructive work:
    - Add missing indexes (`Session.userId`, `Template.userId`, `Draft.contactId`/`templateId`, `EmailEvent.contactId`/`sequenceId`), explicit cascade policy, optional soft-deletes.
-5. **Plan 10 migrations** — code is deployed; **apply the two additive migrations** (after a backup): `prisma migrate deploy` from `packages/database`. `20260703223316_add_email_tracking_jobid` (`EmailTracking.jobId` + index), `20260703223317_add_sequence_contact_failure_tracking` (`SequenceContact.failureCount` default 0 + `lastError`). Both are additive/nullable — zero downtime.
+5. **Plan 10 migrations** — code is deployed; migrations applied to dev. For other envs: **apply the two additive migrations** (after a backup): `prisma migrate deploy` from `packages/database`. `20260703223316_add_email_tracking_jobid` (`EmailTracking.jobId` + index), `20260703223317_add_sequence_contact_failure_tracking` (`SequenceContact.failureCount` default 0 + `lastError`). Both are additive/nullable — zero downtime.
+6. **Plan 10 smoke-test** — the resilience behavior (retries, DLQ, idempotency, schedule bounds, Bull-Board, delay bug fix) is **not yet manually verified**. See the plan-10 section below for the checklist. Plan 12 (testing) is blocked on this — we shouldn't write tests around behavior that hasn't been confirmed working.
 
 ---
 
@@ -248,7 +249,7 @@ Code path: AES-256-GCM field crypto + Prisma `$extends` encrypt-on-write / decry
 1. **Branches:** `refactor/old-code-update` (security) is the base; `upgrade/remaining-majors` (deps) is stacked on top. Merge order: security first, then deps — or merge `upgrade/remaining-majors` directly (it contains both).
 2. **Pick up where this left off:**
    - To continue the **security** work: plan 02 is code-done (you just run the wipe + re-login + rotate values — see "Plan 02 — operator runbook" below). Plan 06 (DB schema) is **deferred to the very end** (owner decision).
-   - To continue **quality** work: **plan 12 (testing baseline) is the next active plan** (scaffolding + security regression tests first). Plans 07, 08, and 10 are fully done.
+   - To continue **quality** work: **plan 12 (testing baseline) is next** — BUT it's blocked until you smoke-test plan 10 (see the plan-10 section below). Once you confirm what's working, plan 12 starts with scaffolding + security regression tests. Plans 07, 08, and 10 (code) are done.
    - **Plan 07 is done** — see the plan-07 completion section below for what landed and the carryover smoke-tests.
 3. **Read first:** `00-overview.md` for the full audit, then the specific plan doc. Each plan doc is self-contained with file:line refs and verification checklists.
 4. **Verify before merging:** `tsc --noEmit` + `npm run build` in both apps; smoke-test the auth boundary (401 without token), IDOR (403/404 cross-tenant), and tracking (event recorded).
