@@ -1,6 +1,6 @@
 # Refactor Plan — Status
 
-> **Last updated:** plan 02 (secrets + token encryption) code complete; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
+> **Last updated:** plan 07 (frontend react-query consolidation) code complete; plan 02 code-done; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
 > **Two parallel workstreams** live on two branch chains off `master`:
 > - **Security/quality refactor** → `refactor/old-code-update` (plans 01, 03, 04, 05, 09, + part of 11)
 > - **Dependency modernization + plan 08** → `upgrade/remaining-majors` (built on top of `refactor/old-code-update`; supersedes most of plan 11; also completed plan 08)
@@ -19,7 +19,7 @@
 | [04](./04-security-input-validation.md) | zod validation across API routes | ✅ **DONE** | `refactor/old-code-update` (`a2629d5`) |
 | [05](./05-security-tracking-webhook.md) | Fix no-op tracking + open redirect | ✅ **DONE** | `refactor/old-code-update` (`42941ae`) |
 | [06](./06-database-schema.md) | Indexes, cascade/soft-delete, migration hygiene | 🔴 **NOT STARTED** | needs DB backup + staging (destructive) |
-| [07](./07-frontend-data-fetching.md) | Consolidate on react-query | 🟡 **NOT STARTED** | large, incremental |
+| [07](./07-frontend-data-fetching.md) | Consolidate on react-query | ✅ **DONE** | `upgrade/remaining-majors` — see the plan-07 section below. The whole web app now fetches via the typed `api` client + react-query hooks; the hand-rolled `sequence-context` is backed by react-query; ~50 components/pages migrated. `tsc --noEmit` clean, web ESLint 0/0, `next build` passes. |
 | [08](./08-frontend-code-quality.md) | Remove console.log/any, dead code, lint | ✅ **DONE** | all `console.log` removed; `any` 76→0; unused-vars 335→0; exhaustive-deps 10→0; duplicated `transformEmailData` extracted; dead toolbar files deleted; stale step-reorder TODO resolved. **All ESLint rules now `error`** (no-explicit-any, no-unused-vars, rules-of-hooks, exhaustive-deps, useless-catch, prefer-const, preserve-caught-error, etc.). Web lint fully clean: 0 errors / 0 warnings |
 | [09](./09-backend-logging-pii.md) | Redact PII/tokens from logs | ✅ **DONE** | `refactor/old-code-update` (`70b3b74`); pino call-site refactor + pino 10 in upgrade chain |
 | [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | 🟡 **NOT STARTED** | may be moot if mailops consolidation proceeds |
@@ -126,6 +126,32 @@ The Prisma ↔ `@coldjot/types` boundary has a systemic enum-vs-string-literal a
 
 ---
 
+## ✅ Plan 07 — frontend react-query consolidation — DONE (on `upgrade/remaining-majors`)
+
+11 commits (`d9d7cce` → final). Consolidated the web app on **one** data-fetching strategy (react-query), retiring the ~50 hand-rolled `useEffect + fetch + useState` blocks and the standalone raw-fetch `sequence-context`. `tsc --noEmit` clean, web ESLint **0 errors / 0 warnings**, `next build` passes.
+
+### Foundation (additive)
+- **`lib/http/api-client.ts`** — typed same-origin client for `/api/*` (`ApiError`, `get/post/put/patch/delete`, `credentials: include`, 204-safe body parsing, optional DELETE body). Mailops stays separate (`lib/queue/queue-api-client.ts`).
+- **`lib/query/keys.ts`** — hierarchical `qk` factory (contacts, lists, sequences, templates, mailboxes, timeline, drafts, users) for targeted + broad invalidation.
+- **`providers/query-provider.tsx`** — `QueryClient` in a `useState` initializer (one per browser) with defaults (`staleTime 30s`, `retry 1`, `refetchOnWindowFocus false`).
+- **`components/shared/query-state.tsx`** — `<QueryState>` render-prop wrapper standardizing loading / error / empty UX.
+
+### Hooks (`hooks/queries/`)
+Per-resource `useQuery` + `useMutation` hooks with `onSuccess` invalidation: contacts (incl. batch + search), lists (incl. add/remove contacts), sequences (detail `initialData`-hydratable, create/delete/duplicate/control/launch/reset/settings + optimistic patch), sequence-steps (reorder is optimistic w/ rollback), sequence-contacts, sequence-lists, templates, mailboxes (incl. aliases refresh), timeline (paginated + infinite), drafts.
+
+### `sequence-context` (Step 6 — deviation noted)
+The plan said *delete* `lib/sequence-context.tsx`. Instead it was **rewritten in place** to be react-query-backed while preserving the `SequenceProvider` / `useSequence()` export surface — so all 9 consumers (header, launch modal, lists, contacts, setup-checklist, email-settings, business-hours-settings, add-sequence-step, the layout) compile and behave identically with **zero call-site churn**. `useSequence()` reads the id from context; `useSequence(id)` overload supports out-of-provider use. The dead try/catch in `add-to-sequence-modal.tsx` (rendered outside the provider on the contacts page) was removed — the variable it captured was never used.
+
+### Components & pages migrated (Step 4 + 4b)
+All worst offenders + ~40 more: sequence-overview (10 fetches → 1 query + mutations), sequence-contacts (polling via `refetchInterval`), sequence-lists, list-details-view (`useParams` replaces `window.location.pathname` parsing), contact-list, add-to-sequence-modal, email-composer, sequence/table/list/controls/danger-zone/settings/analytics, all template components, all list components + the `[id]` page, search (GlobalSearch, dropdowns, Apollo, the search page), mailboxes section + add-mailbox, timeline (list/infinite/recent/page-client/section — export stays a direct fetch since it returns a CSV blob), onboarding (container + 3 steps, now `"use client"`), settings (profile/email), admin users, dev TestDataManager, both editors. Two superseded hand-rolled hooks (`hooks/use-sequences.ts`, `hooks/use-sequence-steps.ts`) deleted.
+
+### ⚠️ Carryover (your smoke-tests)
+1. **Visual smoke** the migrated flows: sequence step reorder (optimistic, should snap on drop), add/remove contact (list refreshes without reload), add-to-list 409 "already in list" path, timeline pagination + infinite scroll, mailbox aliases refresh.
+2. **`react-query` cache sanity** — add `<ReactQueryDevtools/>` temporarily and confirm queries dedupe (one request per key with multiple subscribers) and invalidate after mutations.
+3. **No behavior change intended** — every toast message and loading state was preserved. The one semantic fix: `template-selector` / `sequence-list-selector` previously treated the paginated `{templates}`/`{lists}` object as a bare array (showed nothing); they now read `data.templates`/`data.lists` correctly.
+
+---
+
 ## 🔴 Blocked on YOU (operational / destructive — do before deploying)
 
 Full detail in `../HANDOFF.md`. Summary:
@@ -143,7 +169,6 @@ Full detail in `../HANDOFF.md`. Summary:
 
 ## 🟡 Deferred (lower-risk, do later)
 
-- **Plan 07 (react-query consolidation):** large, incremental — untouched.
 - **Plan 10 (BullMQ retries/DLQ/idempotency):** untouched. May be moot if the `plans/mailops-consolidation/` work proceeds.
 - **Plan 12 (testing baseline):** untouched. Do last.
 - **`@tiptap/*`** is at v3 and still actively imported by 6 components (`compose`, `sequences`, `templates` via `editor-old/rich-text-editor.tsx`). Plan 11's editor consolidation (Lexical vs TipTap) is still open — migrating those callers to Lexical would let `editor-old/` and the TipTap deps be deleted.
@@ -155,8 +180,8 @@ Full detail in `../HANDOFF.md`. Summary:
 1. **Branches:** `refactor/old-code-update` (security) is the base; `upgrade/remaining-majors` (deps) is stacked on top. Merge order: security first, then deps — or merge `upgrade/remaining-majors` directly (it contains both).
 2. **Pick up where this left off:**
    - To continue the **security** work: plan 02 is code-done (you just run the wipe + re-login + rotate values). Plan 06 (DB schema) needs DB access + a backup.
-   - To continue **quality** work: **plan 07 (react-query consolidation) is the next active plan** — start there. Then plan 10 (BullMQ resilience), plan 12 (testing). Plan 08 is fully done.
-   - **Plan 07 starting point:** the foundation hasn't been built yet. Begin with Step 1 (typed API client `lib/http/api-client.ts`), Step 2 (query keys `lib/query/keys.ts`), Step 8 (react-query defaults — note `query-provider.tsx` currently creates a new `QueryClient` per render, a bug), then Step 3 (per-resource hooks). Only then migrate components (Step 4). See `07-frontend-data-fetching.md` for full detail.
+   - To continue **quality** work: **plan 10 (BullMQ resilience) is the next active plan**, then plan 12 (testing). Plans 07 and 08 are fully done.
+   - **Plan 07 is done** — see the plan-07 completion section below for what landed and the carryover smoke-tests.
 3. **Read first:** `00-overview.md` for the full audit, then the specific plan doc. Each plan doc is self-contained with file:line refs and verification checklists.
 4. **Verify before merging:** `tsc --noEmit` + `npm run build` in both apps; smoke-test the auth boundary (401 without token), IDOR (403/404 cross-tenant), and tracking (event recorded).
 
