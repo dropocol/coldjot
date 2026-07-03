@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Metadata } from "next";
+import { useParams } from "next/navigation";
 import { ListDetailsView } from "@/components/lists/list-details-view";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,10 @@ import { Separator } from "@/components/ui/separator";
 import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal";
 import { Contact } from "@prisma/client";
 import { toast } from "react-hot-toast";
+import {
+  useListDetail,
+  useRemoveContactsFromList,
+} from "@/hooks/queries/use-lists";
 
 const _metadata: Metadata = {
   title: "Lists | Coldjot",
@@ -17,9 +22,9 @@ const _metadata: Metadata = {
 };
 
 export default function ListDetailsPage() {
-  const [listName, setListName] = useState<string>("");
-  const [listDescription, setListDescription] = useState<string>("");
-  const [listId, setListId] = useState<string>("");
+  const params = useParams<{ id: string }>();
+  const listId = params?.id ?? "";
+
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [contactsToAddToSequence, setContactsToAddToSequence] = useState<
     Contact[]
@@ -27,36 +32,19 @@ export default function ListDetailsPage() {
   const [showSequenceModal, setShowSequenceModal] = useState(false);
   const [showAddAllToSequenceModal, setShowAddAllToSequenceModal] =
     useState(false);
-  const [totalContacts, setTotalContacts] = useState(0);
   const listDetailsViewRef = useRef<{
     fetchList: () => Promise<void>;
     getContacts: () => Contact[];
   }>(null);
 
-  // Get list ID from URL
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const id = window.location.pathname.split("/").pop() || "";
-      setListId(id);
-
-      // Fetch list details for the header
-      const fetchListDetails = async () => {
-        try {
-          const response = await fetch(`/api/lists/${id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setListName(data.name);
-            setListDescription(data.description || "No description");
-            setTotalContacts(data._pagination?.total || 0);
-          }
-        } catch (error) {
-          console.error("Failed to fetch list details:", error);
-        }
-      };
-
-      fetchListDetails();
-    }
-  }, []);
+  // Header data (the inner ListDetailsView fetches its own paginated copy;
+  // this query fills the page header on first paint).
+  const { data: list } = useListDetail(listId, { page: 1, limit: 1 });
+  const listName = list?.name ?? "";
+  const listDescription = list?.description || "No description";
+  const totalContacts = (list as { _pagination?: { total: number } } | undefined)
+    ?._pagination?.total ?? 0;
+  const removeContacts = useRemoveContactsFromList(listId);
 
   const handleSelectedContactsChange = (contactIds: string[]) => {
     setSelectedContacts(contactIds);
@@ -98,21 +86,9 @@ export default function ListDetailsPage() {
     if (selectedContacts.length === 0) return;
 
     try {
-      const response = await fetch(`/api/lists/${listId}/contacts`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contactIds: Array.from(selectedContacts),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to remove contacts from list");
-      }
-
-      const data = await response.json();
+      const data = await removeContacts.mutateAsync(
+        Array.from(selectedContacts)
+      );
 
       // Refresh the list view
       if (listDetailsViewRef.current?.fetchList) {
@@ -123,8 +99,7 @@ export default function ListDetailsPage() {
       setSelectedContacts([]);
 
       toast.success(`${data.removed} contacts removed from list`);
-    } catch (error) {
-      console.error("Failed to remove contacts:", error);
+    } catch (_error) {
       toast.error("Failed to remove contacts from list");
     }
   };

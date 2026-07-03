@@ -23,6 +23,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import { PaginationControls } from "@/components/pagination";
+import {
+  useLists,
+  useCreateList,
+  useDeleteList,
+} from "@/hooks/queries/use-lists";
 
 interface EmailListsViewProps {
   searchQuery?: string;
@@ -41,15 +46,6 @@ type EmailListWithCount = EmailList & {
   };
 };
 
-interface ListResponse {
-  lists: EmailListWithCount[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage: number | undefined;
-}
-
 const EmailListsView = ({
   searchQuery = "",
   onSearchEnd,
@@ -61,67 +57,40 @@ const EmailListsView = ({
   onPageSizeChange,
 }: EmailListsViewProps) => {
   const router = useRouter();
-  const [lists, setLists] = useState<EmailListWithCount[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const { data, isLoading, isFetching, refetch } = useLists({
+    page,
+    limit,
+    search: searchQuery || undefined,
+  });
+  const createList = useCreateList();
+  const deleteList = useDeleteList();
+
+  // Surface the parent's search-end callback when fetching settles.
   useEffect(() => {
-    const fetchLists = async () => {
-      setIsLoading(true);
-      try {
-        const queryParams = new URLSearchParams();
-        queryParams.set("page", page.toString());
-        queryParams.set("limit", limit.toString());
-        if (searchQuery) {
-          queryParams.set("q", searchQuery);
-        }
+    if (!isFetching) onSearchEnd?.();
+    // Parent callback is treated as stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFetching]);
 
-        const response = await fetch(`/api/lists?${queryParams.toString()}`);
-        const data: ListResponse = await response.json();
-        setLists(data.lists);
-        setTotal(data.total);
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to load lists";
-        setError(errorMessage);
-        toast.error("Failed to load email lists");
-      } finally {
-        setIsLoading(false);
-        onSearchEnd?.();
-      }
-    };
-
-    fetchLists();
-  }, [searchQuery, page, limit, onSearchEnd]);
+  const lists = (data?.lists ?? []) as EmailListWithCount[];
+  const total = data?.total ?? 0;
 
   const handleCreateList = async (
     list: Omit<EmailList, "id" | "createdAt" | "updatedAt">
   ) => {
     try {
       setError(null);
-      const response = await fetch("/api/lists", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...list,
-          contacts: list.contacts || [],
-        }),
+      await createList.mutateAsync({
+        name: list.name,
+        description: list.description,
+        tags: list.tags,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to create list");
-      }
-
-      const newList = await response.json();
-      setLists((prev) => [newList, ...prev]);
       toast.success("Email list created successfully");
-    } catch (error) {
+    } catch (err) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to create email list";
+        err instanceof Error ? err.message : "Failed to create email list";
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -130,29 +99,20 @@ const EmailListsView = ({
   const handleDeleteList = async (list: EmailList) => {
     try {
       setError(null);
-      const response = await fetch(`/api/lists/${list.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to delete list");
-      }
-
-      setLists((prev) => prev.filter((l) => l.id !== list.id));
+      await deleteList.mutateAsync(list.id);
       toast.success("Email list deleted successfully");
-    } catch (error) {
+    } catch (err) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to delete email list";
+        err instanceof Error ? err.message : "Failed to delete email list";
       setError(errorMessage);
       toast.error(errorMessage);
     }
   };
 
   const handleRetry = () => {
-    setIsLoading(true);
     setError(null);
-    // Assuming you want to fetch the first page again
+    void refetch();
+    // Reset to the first page as the previous behavior did.
     onPageChange(1);
   };
 

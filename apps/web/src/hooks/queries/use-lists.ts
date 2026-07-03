@@ -108,6 +108,28 @@ export function useAddContactToList(id: string) {
 }
 
 /**
+ * Bulk-add contacts to a list (PUT /api/lists/[id]/contacts, body
+ * `{ contactIds }`). The endpoint filters out ids already present and
+ * triggers a sync. Returns 409 if all contacts already exist.
+ */
+export function useAddContactsToList(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (contactIds: string[]) =>
+      api.put<{
+        message?: string;
+        added?: number;
+        skipped?: number;
+        total?: number;
+      }>(`/api/lists/${id}/contacts`, { contactIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.lists.detail(id) });
+      qc.invalidateQueries({ queryKey: qk.lists.contacts(id) });
+    },
+  });
+}
+
+/**
  * Remove contacts from a list (DELETE /api/lists/[id]/contacts).
  * The endpoint takes a body `{ contactIds: string[] }` (validated against
  * setListContactsSchema) and filters those ids out of the current set.

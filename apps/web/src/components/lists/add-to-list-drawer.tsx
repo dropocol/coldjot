@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -33,6 +33,8 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useLists, useAddContactsToList } from "@/hooks/queries/use-lists";
+import { ApiError } from "@/lib/http/api-client";
 
 interface AddToListDrawerProps {
   isVisible: boolean;
@@ -52,15 +54,6 @@ type EmailListWithCount = Prisma.EmailListGetPayload<{
   };
 }>;
 
-interface _ListResponse {
-  lists: EmailListWithCount[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage: number | undefined;
-}
-
 export function AddToListDrawer({
   isVisible,
   setIsVisible,
@@ -68,53 +61,38 @@ export function AddToListDrawer({
   contactId,
   isMultiple = false,
 }: AddToListDrawerProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [lists, setLists] = useState<EmailListWithCount[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [lastAddedListId, setLastAddedListId] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+
+  const { data, isLoading, refetch } = useLists({ page: 1, limit: 100 });
+  const lists = useMemo(
+    () => (data?.lists ?? []) as unknown as EmailListWithCount[],
+    [data]
+  );
+
+  // Mutations are bound per-call, so use a queryClient-driven flow here.
+  // We need the selectedListId before instantiating the hook; use a sentinel
+  // and call the hook with the real id once selected.
+  const addContacts = useAddContactsToList(selectedListId ?? "_");
+
+  // Default-select the first list when loaded.
+  useEffect(() => {
+    if (lists.length > 0 && !selectedListId) {
+      setSelectedListId(lists[0].id);
+    }
+  }, [lists, selectedListId]);
+
+  // Reset state when the drawer is reopened.
+  useEffect(() => {
+    if (isVisible) setLastAddedListId(null);
+  }, [isVisible]);
 
   // Compute filtered lists based on search query
   const filteredLists = lists.filter((list) =>
     list.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  useEffect(() => {
-    const fetchLists = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch("/api/lists");
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch lists");
-        }
-
-        setLists(data.lists || []);
-
-        // Set the first list as selected by default if we have lists
-        if (data.lists && data.lists.length > 0 && !selectedListId) {
-          setSelectedListId(data.lists[0].id);
-        }
-      } catch (error) {
-        console.error("Error fetching lists:", error);
-        setError("Failed to fetch lists");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isVisible) {
-      fetchLists();
-      // Reset states when opening
-      setLastAddedListId(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isVisible]);
 
   const handleSubmit = async () => {
     if (!selectedListId) {
@@ -122,31 +100,13 @@ export function AddToListDrawer({
       return;
     }
 
-    setAdding(true);
     const contactIds = isMultiple ? contactId.split(",") : [contactId];
 
     try {
-      const response = await fetch(`/api/lists/${selectedListId}/contacts`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ contactIds }),
-      });
-
-      const data = await response.json();
-
-      // Handle 409 Conflict (already exists) as a partial success
-      if (response.status === 409) {
-        toast.success(data.message);
-        setLastAddedListId(selectedListId);
-        return;
-      }
-
-      if (!response.ok) {
-        toast.error(data.message || "Failed to add contacts to list");
-        return;
-      }
+      setError(null);
+      // Rebind to the selected list. The hook was instantiated with the
+      // sentinel above; mutate via a fresh client call instead.
+      const data = await addContacts.mutateAsync(contactIds);
 
       // Show success message
       const contactText = contactIds.length === 1 ? "contact" : "contacts";
@@ -154,13 +114,17 @@ export function AddToListDrawer({
 
       // Remember the last added list
       setLastAddedListId(selectedListId);
-
-      // Keep the drawer open and the list selection visible
-    } catch (error) {
-      console.error("Failed to add contacts to list:", error);
+      void data;
+    } catch (err) {
+      // 409 Conflict (all contacts already in the list) is a partial success.
+      if (err instanceof ApiError && err.status === 409) {
+        const body = err.body as { message?: string } | null;
+        toast.success(body?.message ?? "Contacts already in list");
+        setLastAddedListId(selectedListId);
+        return;
+      }
+      setError("Failed to add contacts to list");
       toast.error("Failed to add contacts to list");
-    } finally {
-      setAdding(false);
     }
   };
 
@@ -214,23 +178,7 @@ export function AddToListDrawer({
                 variant="outline"
                 onClick={() => {
                   setError(null);
-                  setIsLoading(true);
-                  // Retry fetching lists
-                  fetch("/api/lists")
-                    .then((res) => res.json())
-                    .then((data) => {
-                      setLists(data.lists || []);
-                      if (data.lists && data.lists.length > 0) {
-                        setSelectedListId(data.lists[0].id);
-                      }
-                    })
-                    .catch((err) => {
-                      console.error("Error retrying fetch:", err);
-                      setError("Failed to fetch lists");
-                    })
-                    .finally(() => {
-                      setIsLoading(false);
-                    });
+                  void refetch();
                 }}
               >
                 Retry
@@ -320,10 +268,10 @@ export function AddToListDrawer({
           <Button
             variant="default"
             className="w-full"
-            disabled={!selectedListId || adding}
+            disabled={!selectedListId || addContacts.isPending}
             onClick={handleSubmit}
           >
-            {adding ? (
+            {addContacts.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Adding to List...

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -17,21 +17,13 @@ import {
 } from "@/components/ui/popover";
 import { List, Users } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { Contact } from "@prisma/client";
+import { useLists } from "@/hooks/queries/use-lists";
+import { useAddListContactsToSequence } from "@/hooks/queries/use-sequence-contacts";
 
 interface EmailList {
   id: string;
   name: string;
-  contacts: Contact[];
-}
-
-interface ListResponse {
-  lists: EmailList[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage: number | undefined;
+  contacts: { id: string }[];
 }
 
 interface ListSelectorProps {
@@ -44,49 +36,19 @@ export function ListSelector({
   onListSelected,
 }: ListSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [lists, setLists] = useState<EmailList[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchLists = async () => {
-      try {
-        const response = await fetch("/api/lists");
-        if (!response.ok) throw new Error("Failed to fetch lists");
-        const data: ListResponse = await response.json();
-        setLists(data.lists);
-      } catch (error) {
-        console.error("Error fetching lists:", error);
-      }
-    };
-
-    fetchLists();
-  }, []);
+  const { data } = useLists({ page: 1, limit: 100 });
+  const lists = (data?.lists ?? []) as EmailList[];
+  const addListContacts = useAddListContactsToSequence(sequenceId);
 
   const handleSelectList = async (list: EmailList) => {
     try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/sequences/${sequenceId}/contacts/list`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ listId: list.id }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.error(errorData.message);
-        return;
-      }
-
+      await addListContacts.mutateAsync([list.id]);
       toast.success(`Added ${list.contacts.length} contacts from ${list.name}`);
       setOpen(false);
       onListSelected();
     } catch (_error) {
       toast.error("Failed to add contacts from list");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -108,7 +70,7 @@ export function ListSelector({
                 <CommandItem
                   key={list.id}
                   onSelect={() => handleSelectList(list)}
-                  disabled={isLoading}
+                  disabled={addListContacts.isPending}
                 >
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />

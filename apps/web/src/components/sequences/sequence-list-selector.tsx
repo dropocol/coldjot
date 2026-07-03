@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, ReactNode } from "react";
+import { useState, ReactNode } from "react";
 import {
   Command,
   CommandEmpty,
@@ -15,23 +15,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Users } from "lucide-react";
-import { toast } from "react-hot-toast";
 import { EmailList as BaseEmailList } from "@coldjot/types";
+import { useLists } from "@/hooks/queries/use-lists";
 
 // Extend the EmailList type to include the _count property
 interface EmailList extends BaseEmailList {
   _count?: {
     contacts: number;
   };
-}
-
-interface ListResponse {
-  lists: EmailList[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage: number | undefined;
 }
 
 interface SequenceListSelectorProps {
@@ -46,39 +37,14 @@ export function SequenceListSelector({
   trigger,
 }: SequenceListSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [lists, setLists] = useState<EmailList[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchLists = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch("/api/lists");
-        if (!response.ok) throw new Error("Failed to fetch lists");
-        const data: ListResponse = await response.json();
-
-        // Filter out lists that are already in the sequence
-        const filteredLists =
-          excludeIds.length > 0
-            ? data.lists.filter((list) => !excludeIds.includes(list.id))
-            : data.lists;
-
-        setLists(filteredLists);
-      } catch (error) {
-        console.error("Error fetching lists:", error);
-        toast.error("Failed to load lists");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (open) {
-      fetchLists();
-    }
-
-    // Only re-run when the popover opens or excludeIds changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, JSON.stringify(excludeIds)]);
+  const { data, isLoading } = useLists({ page: 1, limit: 100 });
+  const allLists = (data?.lists ?? []) as EmailList[];
+  // Filter out lists that are already attached to the sequence.
+  const lists =
+    excludeIds.length > 0
+      ? allLists.filter((list) => !excludeIds.includes(list.id))
+      : allLists;
 
   const handleSelectList = (listId: string) => {
     onSelect(listId);
