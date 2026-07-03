@@ -75,8 +75,6 @@ export async function PUT(
   }
 }
 
-// TODO : reset order of steps after a deletion
-
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string; stepId: string }> }
