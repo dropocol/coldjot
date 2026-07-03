@@ -1,0 +1,63 @@
+{
+  "$comment": "Scripts removed during the plan-13 duplicate-command cleanup (2026-07-04). Kept for reference — these commands worked but were redundant (identical to another script, or referenced a task name nothing invokes). If you need any of them back, copy the entry into the corresponding package.json `scripts` block. Each entry is keyed by package path.",
+  "root (package.json)": {
+    "dev:apps": {
+      "command": "turbo run dev --filter=web --filter=mailops",
+      "reason": "Identical to `dev`. Removed; `dev` does the same thing."
+    },
+    "redis:down": {
+      "command": "docker compose down",
+      "reason": "Identical to `services:down`. The name implied it stopped only redis, but `docker compose down` stops ALL services. Removed as misleading; use `services:down`."
+    },
+    "redis:logs": {
+      "command": "docker compose logs -f redis",
+      "reason": "Narrow per-service log tail. Removed in favor of the single `services:logs` (`docker compose logs -f`) which you can Ctrl-C / filter. To follow one service: `docker compose logs -f redis`."
+    },
+    "db:down": {
+      "command": "docker compose down",
+      "reason": "Identical to `services:down`. Same misleading-name issue as `redis:down`. Removed; use `services:down`."
+    },
+    "db:logs": {
+      "command": "docker compose logs -f postgres",
+      "reason": "Narrow per-service log tail. Removed in favor of `services:logs`. To follow one service: `docker compose logs -f postgres`."
+    }
+  },
+  "apps/web/package.json": {
+    "build:dev": {
+      "command": "export APP_ENV=development && next build",
+      "reason": "Identical to `build`. Removed; `build` is the dev build (APP_ENV=development). `build:prod` is kept (APP_ENV=production)."
+    }
+  },
+  "apps/mailops/package.json": {
+    "build:dev": {
+      "command": "tsup",
+      "reason": "Identical to `build`. Removed; `build` is the canonical command."
+    }
+  },
+  "packages/types/package.json": {
+    "build:dev": {
+      "command": "tsup src/index.ts --format esm,cjs --dts",
+      "reason": "Identical to `build`. Removed."
+    }
+  },
+  "packages/database/package.json": {
+    "build:dev": {
+      "command": "tsup",
+      "reason": "Identical to `build`. Removed."
+    },
+    "# Development commands": {
+      "command": "",
+      "reason": "Empty-string 'comment' script (npm shows it in `npm run` output but it does nothing). Removed; comments belong in this archive file or in README."
+    },
+    "# Production commands": {
+      "command": "",
+      "reason": "Empty-string 'comment' script. Removed; same as above."
+    }
+  },
+  "$notes": {
+    "build:prod": "KEPT in every package — it's a real, used distinction (root `npm run build:prod` → `turbo run build:prod`; web's build:prod sets APP_ENV=production).",
+    "build:dev turbo task": "Also removed from every turbo.json (root + apps + packages) since no script defines it anymore. `turbo run build` covers the dev build.",
+    "dev": "KEPT (the primary dev command). `dev:all` KEPT (includes package watchers).",
+    "service-scoped docker": "For one-service operations, call docker compose directly: `docker compose up -d redis`, `docker compose logs -f postgres`. The `services:*` aggregate scripts remain."
+  }
+}

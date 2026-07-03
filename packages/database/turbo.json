@@ -5,10 +5,6 @@
             "dependsOn": ["db:generate"],
             "outputs": ["dist/**"]
         },
-        "build:dev": {
-            "dependsOn": ["db:generate"],
-            "outputs": ["dist/**"]
-        },
         "build:prod": {
             "dependsOn": ["db:generate"],
             "outputs": ["dist/**"]

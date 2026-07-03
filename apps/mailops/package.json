@@ -10,7 +10,6 @@
         "dev": "NODE_OPTIONS='--max-old-space-size=4096' tsx watch src/server.ts",
         "build": "NODE_OPTIONS='--max-old-space-size=4096' tsup",
         "start": "node --expose-gc dist/server.js",
-        "build:dev": "tsup",
         "build:prod": "tsup",
         "start:prod": "NODE_ENV=production node --expose-gc dist/server.js",
         "dev:debug": "NODE_OPTIONS='--max-old-space-size=4096 --inspect' tsx watch --inspect src/server.ts",

@@ -11,16 +11,6 @@
                 "MAILOPS_SERVICE_TOKEN"
             ]
         },
-        "build:dev": {
-            "env": [
-                "NEXT_PUBLIC_*",
-                "NEXTAUTH_*",
-                "GOOGLE_*",
-                "ENCRYPTION_KEY",
-                "AUTH_TRUST_HOST",
-                "MAILOPS_SERVICE_TOKEN"
-            ]
-        },
         "build:prod": {
             "env": [
                 "NEXT_PUBLIC_*",

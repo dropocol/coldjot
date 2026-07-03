@@ -6,7 +6,6 @@
     "dev": "next dev --turbopack",
     "build": "export APP_ENV=development && next build",
     "start": "export APP_ENV=development && next start",
-    "build:dev": "export APP_ENV=development && next build",
     "build:prod": "export APP_ENV=production && next build",
     "start:prod": "export APP_ENV=production && next start",
     "lint": "eslint .",

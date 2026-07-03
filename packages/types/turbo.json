@@ -2,7 +2,6 @@
     "extends": ["//"],
     "tasks": {
         "build": { "outputs": ["dist/**"] },
-        "build:dev": { "outputs": ["dist/**"] },
         "build:prod": { "outputs": ["dist/**"] }
     }
 }
