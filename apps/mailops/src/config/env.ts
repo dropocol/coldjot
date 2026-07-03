@@ -44,7 +44,12 @@ const envSchema = z.object({
   // PubSubService becomes a no-op stub: no client is constructed and no gRPC
   // calls are made, so mailops boots without GCP identity. Defaults to true
   // so production behavior is unchanged.
-  MAILOPS_PUBSUB_ENABLED: z.coerce.boolean().default(true),
+  // NOTE: z.coerce.boolean() would parse "false" as true (Boolean("false")),
+  // so we transform the string explicitly.
+  MAILOPS_PUBSUB_ENABLED: z
+    .string()
+    .default("true")
+    .transform((v) => v === "true"),
 });
 
 // Parse and validate environment variables
