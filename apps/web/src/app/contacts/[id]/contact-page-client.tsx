@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Separator } from "@/components/ui/separator";
 import { User, Mail, Calendar } from "lucide-react";
@@ -9,6 +8,7 @@ import ActionButtons from "../../../components/contacts/action-buttons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CopyButton from "@/components/common/copy";
 import { Contact } from "@prisma/client";
+import { useContact } from "@/hooks/queries/use-contacts";
 
 interface ContactPageClientProps {
   contactId: string;
@@ -17,33 +17,16 @@ interface ContactPageClientProps {
 export default function ContactPageClient({
   contactId,
 }: ContactPageClientProps) {
-  const [contact, setContact] = useState<Contact | null>(null);
-
-  useEffect(() => {
-    const fetchContact = async () => {
-      try {
-        const response = await fetch(`/api/contacts/${contactId}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch contact");
-        }
-        const data = await response.json();
-        setContact(data);
-      } catch (error) {
-        console.error("Error loading contact:", error);
-      }
-    };
-
-    if (contactId) {
-      fetchContact();
-    }
-  }, [contactId]);
+  const { data: contact } = useContact(contactId);
 
   if (!contact) {
     return null; // Or loading state
   }
 
-  const handleContactUpdate = (updatedContact: Contact) => {
-    setContact(updatedContact);
+  const handleContactUpdate = (_updatedContact: Contact) => {
+    void _updatedContact;
+    // The ActionButtons mutations invalidate qk.contacts.detail, so the
+    // query above refetches automatically.
   };
 
   return (

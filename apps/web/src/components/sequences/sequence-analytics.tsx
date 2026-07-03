@@ -5,6 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { api } from "@/lib/http/api-client";
+import { qk } from "@/lib/query/keys";
 
 interface SequenceAnalytics {
   totalEmails: number;
@@ -15,13 +17,10 @@ interface SequenceAnalytics {
 }
 
 export function SequenceAnalytics({ sequenceId }: { sequenceId: string }) {
-  const { data: analytics, isLoading } = useQuery<SequenceAnalytics>({
-    queryKey: ["sequence-analytics", sequenceId],
-    queryFn: async () => {
-      const res = await fetch(`/api/sequences/${sequenceId}/analytics`);
-      if (!res.ok) throw new Error("Failed to fetch analytics");
-      return res.json();
-    },
+  const { data: analytics, isLoading } = useQuery({
+    queryKey: qk.sequences.analytics(sequenceId),
+    queryFn: () =>
+      api.get<SequenceAnalytics>(`/api/sequences/${sequenceId}/analytics`),
   });
 
   if (isLoading) return <div>Loading analytics...</div>;
