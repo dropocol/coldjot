@@ -25,7 +25,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import { useSequence } from "@/lib/sequence-context";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
@@ -58,16 +57,6 @@ export function AddToSequenceModal({
   const [lastAddedSequenceId, setLastAddedSequenceId] = useState<string | null>(
     null
   );
-
-  // Try to use the sequence context, but handle the case where it's not available
-  let _updateReadinessField: unknown = null;
-  try {
-    const sequenceContext = useSequence();
-    _updateReadinessField = sequenceContext?.updateReadinessField || null;
-  } catch (_error) {
-    // Context not available, will use direct API call instead
-    _updateReadinessField = null;
-  }
 
   // Determine if we're adding multiple contacts
   const isMultiple = contacts.length > 1 || contactIds.length > 1;
