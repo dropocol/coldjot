@@ -1,5 +1,7 @@
 import { Job, Queue, Worker, WorkerOptions } from "bullmq";
 import { logger } from "@/lib/log";
+import { ServiceManager } from "../service-manager";
+import { STALL_POLICY, JOB_RETRY } from "@/config/queue/policy";
 
 type JobStatus =
   | "waiting"
@@ -21,6 +23,12 @@ export abstract class BaseProcessor<T = any> {
     this.queue = queue;
     this.worker = new Worker(name, this.process.bind(this), {
       ...workerOptions,
+      // Stall-detection policy (plan 10). BullMQ defaults leave these unset,
+      // so a stalled job is effectively lost. With maxStalledCount: 1 a job
+      // that stalls once is moved to failed (and then to the DLQ by onFailed).
+      stalledInterval: STALL_POLICY.stalledInterval,
+      maxStalledCount: STALL_POLICY.maxStalledCount,
+      lockDuration: STALL_POLICY.lockDuration,
       connection: queue.opts.connection,
     });
 
@@ -75,12 +83,36 @@ export abstract class BaseProcessor<T = any> {
   }
 
   protected async onFailed(job: Job<T>, error: Error): Promise<void> {
+    const attempts = job.opts?.attempts ?? JOB_RETRY.attempts;
+    const exhausted = job.attemptsMade >= attempts;
+
     logger.error({
       queue: job.queueName,
       name: job.name,
       attemptsMade: job.attemptsMade,
+      attempts,
+      exhausted,
       error: error.message,
     }, `🚧 ❌ Job failed: ${job.id}`);
+
+    // When a job has exhausted its retries, copy it to the paired DLQ for
+    // inspection/replay. The original is still subject to BullMQ's
+    // removeOnFail retention.
+    if (exhausted) {
+      try {
+        const dlQueue = ServiceManager.getInstance().getDlQueue(this.worker.name);
+        if (dlQueue && dlQueue.name !== this.worker.name) {
+          await dlQueue.add(job.name, job.data, { jobId: job.id });
+          logger.error({
+            queue: job.queueName,
+            jobId: job.id,
+            dlq: dlQueue.name,
+          }, "job moved to DLQ");
+        }
+      } catch (dlqError) {
+        logger.error({ err: dlqError, jobId: job.id }, "failed to move job to DLQ");
+      }
+    }
   }
 
   protected async onError(error: Error): Promise<void> {
@@ -93,7 +125,13 @@ export abstract class BaseProcessor<T = any> {
   }
 
   protected async onStalled(jobId: string): Promise<void> {
-    logger.warn(`🚧 ⚠️ Job stalled: ${jobId}`);
+    // A stalled job means the worker crashed/hung mid-process. With
+    // maxStalledCount: 1, BullMQ will move it to failed after this, which in
+    // turn routes it to the DLQ via onFailed — so log at error level.
+    logger.error({
+      queue: this.worker.name,
+      jobId,
+    }, `🚧 ⚠️ Job stalled: ${jobId}`);
   }
 
   public async pause(): Promise<void> {

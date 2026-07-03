@@ -49,6 +49,11 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// Middleware needs the Node.js runtime because @coldjot/database now ships a
+// Prisma `$extends` encrypt/decrypt hook (plan 02b) that imports Node's `crypto`
+// at module top-level. `crypto` is unavailable in the Edge Runtime.
+export const runtime = "nodejs";
+
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

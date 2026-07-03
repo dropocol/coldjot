@@ -8,6 +8,7 @@ import {
   QUEUE_PREFIX,
   type QueueName,
 } from "@/config";
+import { JOB_DEFAULTS } from "@/config/queue/policy";
 
 // Core services
 import { MemoryMonitor } from "./core/memory/monitor";
@@ -33,6 +34,7 @@ export class ServiceManager {
   private rateLimitService: RateLimitService | null = null;
   private jobManager: JobManager;
   private queues: Map<string, Queue>;
+  private dlQueues: Map<string, Queue>;
   private processors: Map<string, ProcessorType>;
   private watchCleanupService: WatchCleanupService;
   private pubSubService: PubSubService;
@@ -40,6 +42,7 @@ export class ServiceManager {
   private constructor() {
     this.redisConnection = RedisConnection.getInstance();
     this.queues = new Map();
+    this.dlQueues = new Map();
     this.processors = new Map();
     this.jobManager = createJobManager(this);
     this.watchCleanupService = new WatchCleanupService();
@@ -111,6 +114,16 @@ export class ServiceManager {
         logger.info(`📬 Queue initialized: ${queueName}`);
       }
 
+      // Create a paired dead-letter queue for each queue so jobs that exhaust
+      // their retries can be copied aside for inspection/replay. DLQs are the
+      // "<name>:dl" BullMQ queues surfaced in Bull-Board.
+      for (const [queueKey, queueName] of queueEntries) {
+        const dlName = `${queueName}:dl`;
+        const dlQueue = this.createQueue(queueKey, dlName, true);
+        this.dlQueues.set(dlName, dlQueue);
+        logger.info(`📬 DLQ initialized: ${dlName}`);
+      }
+
       logger.info(`✅ Initialized ${queueEntries.length} queues`);
     } catch (error) {
       logger.error({ err: error }, "❌ Error initializing queues");
@@ -118,12 +131,26 @@ export class ServiceManager {
     }
   }
 
-  private createQueue(queueKey: QueueName, queueName: string): Queue {
+  private createQueue(
+    queueKey: QueueName,
+    queueName: string,
+    isDlq = false
+  ): Queue {
     try {
       // Get queue-specific options or use defaults
       const queueConfig = {
         ...DEFAULT_QUEUE_OPTIONS,
         ...(QUEUE_OPTIONS[queueKey] || {}),
+        // DLQs keep jobs indefinitely-ish; never re-run them automatically.
+        ...(isDlq
+          ? {
+              defaultJobOptions: {
+                ...JOB_DEFAULTS,
+                attempts: 1,
+                backoff: undefined,
+              },
+            }
+          : {}),
         // These settings should override any other configurations
         connection: this.redisConnection.getClient(),
         prefix: QUEUE_PREFIX.slice(0, -1), // Remove trailing colon as BullMQ adds it
@@ -184,6 +211,25 @@ export class ServiceManager {
     return this.queues.get(name);
   }
 
+  /**
+   * Get the paired dead-letter queue for a queue name (e.g. for "email-sending"
+   * returns the "email-sending:dl" queue). Used by BaseProcessor when a job
+   * exhausts its retries.
+   */
+  public getDlQueue(queueName: string): Queue | undefined {
+    return this.dlQueues.get(`${queueName}:dl`);
+  }
+
+  /** All DLQ queues — used by Bull-Board. */
+  public getAllDlQueues(): Queue[] {
+    return Array.from(this.dlQueues.values());
+  }
+
+  /** All primary queues — used by Bull-Board. */
+  public getAllQueues(): Queue[] {
+    return Array.from(this.queues.values());
+  }
+
   public getProcessor(name: string): ProcessorType | undefined {
     return this.processors.get(name);
   }
@@ -212,6 +258,12 @@ export class ServiceManager {
       for (const [name, queue] of this.queues.entries()) {
         await queue.close();
         logger.info(`📬 Queue closed: ${name}`);
+      }
+
+      // Close all DLQs
+      for (const [name, queue] of this.dlQueues.entries()) {
+        await queue.close();
+        logger.info(`📬 DLQ closed: ${name}`);
       }
 
       // Close Redis connection

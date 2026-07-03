@@ -9,16 +9,30 @@ import mailboxRouter from "./routes/mailbox";
 import listsRouter from "./routes/lists";
 import { requireServiceToken } from "@/lib/auth/service-auth";
 import { env } from "@/config";
+import { mountBullBoard } from "@/lib/bull-board";
 
 const app = express();
 const port = 3001;
 const serviceManager = createServiceManager();
 
-// Initialize all services
-serviceManager.initialize().catch((error) => {
-  logger.error("Failed to initialize services:", error);
-  process.exit(1);
-});
+// Initialize all services, then mount Bull-Board (which needs the queues).
+serviceManager
+  .initialize()
+  .then(() => {
+    try {
+      const router = mountBullBoard(serviceManager);
+      // Gate behind the shared service token (plan 03) so the queue admin UI
+      // is reachable only from the web app / authenticated operators.
+      app.use("/admin/queues", requireServiceToken, router);
+      logger.info("📊 Bull-Board mounted at /admin/queues");
+    } catch (error) {
+      logger.error({ err: error }, "Failed to mount Bull-Board");
+    }
+  })
+  .catch((error) => {
+    logger.error("Failed to initialize services:", error);
+    process.exit(1);
+  });
 
 // Middleware
 // Restrict CORS to the known web origin(s) instead of reflecting any origin.

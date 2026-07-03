@@ -6,6 +6,7 @@ import {
   SendEmailOptions,
   EmailResult,
   SequenceContactStatusEnum,
+  EmailTrackingStatusEnum,
   type EmailTrackingMetadata,
   type SequenceStep,
   StepTypeEnum,
@@ -42,7 +43,10 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
   protected async process(job: Job<EmailJob>): Promise<void> {
     try {
-      const result = await this.processEmail(job.data);
+      // job.id is `string | undefined` until BullMQ assigns one; fall back to
+      // an empty string so the idempotency guard's where-clause stays valid
+      // (an empty jobId simply won't match a prior "sent" row).
+      const result = await this.processEmail(job.data, job.id ?? "");
       if (!result.success) {
         throw new Error(result.error || "Failed to process email");
       }
@@ -53,16 +57,27 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
   }
 
   private async processEmail(
-    data: EmailJob
+    data: EmailJob,
+    jobId: string
   ): Promise<{ success: boolean; error?: string }> {
     logger.info(
-      { sequenceId: data.sequenceId, contactId: data.contactId, stepId: data.stepId },
+      { sequenceId: data.sequenceId, contactId: data.contactId, stepId: data.stepId, jobId },
       "📨 Starting to process email job"
     );
 
     try {
+      // Idempotency guard (plan 10): if a sent row already exists for this
+      // BullMQ job, a retry is re-running an already-successful send — skip.
+      const alreadySent = await prisma.emailTracking.findFirst({
+        where: { jobId, status: EmailTrackingStatusEnum.SENT },
+        select: { id: true },
+      });
+      if (alreadySent) {
+        logger.info({ jobId }, "📧 Email already sent for this job, skipping (idempotency)");
+        return { success: true };
+      }
+
       // Check if thread has already received a reply or bounce
-      // TODO : Also remove the job from the queue if it has already been processed
       const shouldProceed = await this.checkThreadEvents(data);
       if (!shouldProceed) {
         logger.info("📭 Skipping email send due to existing thread events");
@@ -160,6 +175,9 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         stepId: data.stepId,
         contactId: data.contactId,
         subject: subjectInfo.subject, // Use the determined subject
+        // Carried through to the EmailTracking.jobId column by createEmailTracking
+        // so the idempotency guard above can detect duplicate sends (plan 10).
+        jobId,
       };
 
       // Create tracking object

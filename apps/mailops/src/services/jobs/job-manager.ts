@@ -1,6 +1,7 @@
 import { Queue, Job } from "bullmq";
 import { logger } from "@/lib/log";
 import { QUEUE_NAMES } from "@/config";
+import { JOB_RETRY, JOB_DEFAULTS } from "@/config/queue/policy";
 import type { ProcessingJob, EmailJob } from "@coldjot/types";
 import { ServiceManager } from "../service-manager";
 
@@ -22,10 +23,9 @@ export class JobManager {
 
     logger.info(`Adding sequence job to queue`);
     return await queue.add(QUEUE_NAMES.SEQUENCE, job, {
-      removeOnComplete: true,
-      removeOnFail: {
-        count: 3, // Keep last 3 failed jobs
-      },
+      ...JOB_DEFAULTS,
+      attempts: JOB_RETRY.attempts,
+      backoff: JOB_RETRY.backoff,
     });
   }
 
@@ -59,13 +59,10 @@ export class JobManager {
     }
 
     return await queue.add(QUEUE_NAMES.EMAIL, job, {
-      // delay,
-      removeOnComplete: {
-        count: 5,
-      },
-      removeOnFail: {
-        count: 5, // Keep last 5 failed jobs
-      },
+      delay,
+      ...JOB_DEFAULTS,
+      attempts: JOB_RETRY.attempts,
+      backoff: JOB_RETRY.backoff,
     });
   }
 

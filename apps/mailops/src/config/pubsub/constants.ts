@@ -1,3 +1,5 @@
+import { JOB_RETRY } from "../queue/policy";
+
 export const PUBSUB_CONFIG = {
   // PubSub subscription name
   SUBSCRIPTION_NAME:
@@ -11,8 +13,10 @@ export const PUBSUB_CONFIG = {
     process.env.PUBSUB_AUDIENCE ||
     "https://cobra-electric-thoroughly.ngrok-free.app/api/pubsub",
 
-  // Maximum retries for failed message processing
-  MAX_RETRIES: 3,
+  // Maximum retries for failed message processing. Aligned to the shared
+  // job-resilience policy (plan 10 / `config/queue/policy.ts`) so every retry
+  // path in mailops uses the same ceiling.
+  MAX_RETRIES: JOB_RETRY.attempts,
 
   // Backoff delay between retries (in seconds)
   BACKOFF_SECONDS: 60,

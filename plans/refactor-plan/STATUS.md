@@ -1,11 +1,17 @@
 # Refactor Plan — Status
 
-> **Last updated:** plan 07 (frontend react-query consolidation) code complete; plan 02 code-done; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
+> **Last updated:** plan 10 (BullMQ resilience) code complete. Consolidation decision (postponed — see below); plan 06 deferred to the very end; **plan 12 is the next active plan**. Plan 07 (frontend react-query consolidation) code complete; plan 02 code-done; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
 > **Two parallel workstreams** live on two branch chains off `master`:
 > - **Security/quality refactor** → `refactor/old-code-update` (plans 01, 03, 04, 05, 09, + part of 11)
 > - **Dependency modernization + plan 08** → `upgrade/remaining-majors` (built on top of `refactor/old-code-update`; supersedes most of plan 11; also completed plan 08)
 >
 > Read `../HANDOFF.md` for the deploy-blocking operational items (env tokens, secret rotation, DB migrations).
+>
+> ## 🔵 Architecture decision — mailops consolidation postponed
+> `plans/mailops-consolidation/` was evaluated and **deliberately postponed** (not adopted now; may revisit in the future). Consequences:
+> - **Plan 10 (BullMQ resilience) is NOT moot** — it's the next active coding plan. BullMQ stays in production for now, so hardening it (retries, backoff, DLQ, idempotency) is real, valuable work.
+> - **Plan 03 (service auth + CORS) stays load-bearing** — the web↔mailops internal auth boundary remains.
+> - Do **not** start any consolidation work; revisit the decision later.
 
 ---
 
@@ -18,13 +24,13 @@
 | [03](./03-security-mailops-auth-cors.md) | Service auth + CORS allowlist | ✅ **DONE** | `refactor/old-code-update` (`fd6c416`) |
 | [04](./04-security-input-validation.md) | zod validation across API routes | ✅ **DONE** | `refactor/old-code-update` (`a2629d5`) |
 | [05](./05-security-tracking-webhook.md) | Fix no-op tracking + open redirect | ✅ **DONE** | `refactor/old-code-update` (`42941ae`) |
-| [06](./06-database-schema.md) | Indexes, cascade/soft-delete, migration hygiene | 🔴 **NOT STARTED** | needs DB backup + staging (destructive) |
+| [06](./06-database-schema.md) | Indexes, cascade/soft-delete, migration hygiene | ⏸️ **DEFERRED — last** | owner decision: do at the very end once everything else is satisfactory. Needs DB backup + staging (destructive) when started. |
 | [07](./07-frontend-data-fetching.md) | Consolidate on react-query | ✅ **DONE** | `upgrade/remaining-majors` — see the plan-07 section below. The whole web app now fetches via the typed `api` client + react-query hooks; the hand-rolled `sequence-context` is backed by react-query; ~50 components/pages migrated. `tsc --noEmit` clean, web ESLint 0/0, `next build` passes. |
 | [08](./08-frontend-code-quality.md) | Remove console.log/any, dead code, lint | ✅ **DONE** | all `console.log` removed; `any` 76→0; unused-vars 335→0; exhaustive-deps 10→0; duplicated `transformEmailData` extracted; dead toolbar files deleted; stale step-reorder TODO resolved. **All ESLint rules now `error`** (no-explicit-any, no-unused-vars, rules-of-hooks, exhaustive-deps, useless-catch, prefer-const, preserve-caught-error, etc.). Web lint fully clean: 0 errors / 0 warnings |
 | [09](./09-backend-logging-pii.md) | Redact PII/tokens from logs | ✅ **DONE** | `refactor/old-code-update` (`70b3b74`); pino call-site refactor + pino 10 in upgrade chain |
-| [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | 🟡 **NOT STARTED** | may be moot if mailops consolidation proceeds |
+| [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | ✅ **DONE** | `upgrade/remaining-majors` — see the plan-10 section below. Shared retry policy module, stall config, DLQ per queue, email idempotency guard, bounded schedule-path failures, Bull-Board re-mounted at `/admin/queues`. `tsc --noEmit` clean, mailops ESLint 0/0, `tsup` build passes. |
 | [11](./11-tooling-config-dependencies.md) | Align deps, consolidate env, eslint config | ✅ **SUPERSEDED** | fully covered by the dependency-upgrade pass (see below) — every dep is now latest |
-| [12](./12-testing-strategy.md) | Testing baseline | 🟡 **NOT STARTED** | do last |
+| [12](./12-testing-strategy.md) | Testing baseline | 🔴 **NEXT ACTIVE PLAN** | scaffolding + security regression tests first |
 
 ---
 
@@ -152,6 +158,45 @@ All worst offenders + ~40 more: sequence-overview (10 fetches → 1 query + muta
 
 ---
 
+## ✅ Plan 10 — backend job resilience — DONE (on `upgrade/remaining-majors`)
+
+Hardened the BullMQ job system so transient failures no longer drop emails or loop forever. `tsc --noEmit` clean, mailops ESLint **0 errors / 0 warnings**, `tsup` build passes. Two additive migrations written (NOT yet applied to a live DB — operator step, see below).
+
+### What got done
+- **Shared policy module** (`apps/mailops/src/config/queue/policy.ts`): one source of truth for `JOB_RETRY` (5 attempts, exponential 5s backoff), `JOB_DEFAULTS` (retention), `STALL_POLICY` (30s check / `maxStalledCount: 1` / 60s lock), and the schedule-path cap `SCHEDULE_MAX_FAILURES: 5`.
+- **Enqueue policy** (`job-manager.ts`): `addSequenceJob` / `addEmailJob` now pass `…JOB_DEFAULTS, attempts, backoff`. Removed the per-add retention overrides that were silently narrowing retention.
+- **Bug fix:** `addEmailJob`'s computed `delay` was commented out — scheduled emails fired immediately. Uncommented (guarded by the existing `Math.max(0,…)`).
+- **Stall handling** (`base-processor.ts`): `Worker` now sets `stalledInterval` / `maxStalledCount` / `lockDuration`. `onStalled` logs at `error`. A stalled job is moved to failed (then to the DLQ) instead of being lost.
+- **Dead-letter queue** (`base-processor.ts` + `service-manager.ts`): when a job exhausts retries it's copied to its paired `<name>:dl` queue. Service manager constructs + closes a DLQ per primary queue and exposes `getDlQueue` / `getAllQueues` / `getAllDlQueues`.
+- **Email idempotency** (`email/processor.ts` + `lib/tracking/index.ts`): before sending, checks `EmailTracking` for an existing `sent` row with the same `jobId`; if present, skips. New `EmailTracking.jobId` column (indexed) stamps the BullMQ job id at tracking-create time. Resolves the long-standing `TODO` at processor L65. Defense-in-depth: the existing bounce/reply guard is kept.
+- **Bounded schedule failures** (`schedule/processor.ts`): the ScheduleProcessor sends emails *inline* (not via the EMAIL queue), so BullMQ attempts don't apply — added a `failureCount` + `lastError` on `SequenceContact`. On error: increment; at `SCHEDULE_MAX_FAILURES` set `status = "failed"` + clear `nextScheduledAt` (stops the poller loop, surfaces in UI); otherwise reschedule with the existing 5-min backoff. This is the most user-visible fix — permanently-failing contacts no longer loop silently.
+- **Bull-Board** re-installed (`@bull-board/api` + `@bull-board/express` @ ^8.0.2) and mounted at `/admin/queues` behind the existing `requireServiceToken` middleware (plan 03). Mount helper: `apps/mailops/src/lib/bull-board/index.ts`. Shows every primary queue + its DLQ.
+- **Retry consolidation:** the two ad-hoc retry paths now read the shared ceiling — `PUBSUB_CONFIG.MAX_RETRIES` and `refreshAccessToken`'s default both reference `JOB_RETRY.attempts`.
+- **`--expose-gc` kept** — confirmed genuinely used by `memory/monitor.ts` (`global.gc()`); the plan doc's "remove if unused" didn't apply.
+
+### ⚠️ Carryover (operator / smoke-tests)
+1. **Apply the two migrations** against your DB (after a backup): `prisma migrate deploy` from `packages/database` (or `prisma migrate dev` in dev). Both are additive/nullable — zero downtime. Migration SQL is already written under `prisma/migrations/`.
+   - `20260703223316_add_email_tracking_jobid` — `EmailTracking.jobId` + index.
+   - `20260703223317_add_sequence_contact_failure_tracking` — `SequenceContact.failureCount` (default 0) + `lastError`.
+2. **Smoke-test the resilience paths:**
+   - Temporarily throw in `email/processor.ts` for the first 2 attempts → confirm BullMQ retries with exponential backoff and succeeds on the 3rd.
+   - Force a 5x failure → confirm the job lands in `<name>:dl` and is visible in Bull-Board at `/admin/queues` (with `X-Service-Token`).
+   - Re-enqueue a sent email job → confirm it's skipped (idempotency), no double send.
+   - Force a permanent failure in the schedule path → confirm `SequenceContact.status = "failed"` and `nextScheduledAt = null` (stops looping).
+   - Confirm a scheduled email now waits until `scheduledTime` (delay bug fixed) — the "⏰ Email job scheduled" log should show the delay and the job should be `delayed`, not immediately `active`.
+3. **Bull-Board auth:** it's gated by `SERVICE_INTERNAL_TOKEN` (the same token web→mailops uses). Decide whether that's the long-term auth you want for an admin UI vs. a dedicated admin auth.
+
+### Risks & rollback
+- Retries amplify load during an outage — exponential backoff + existing per-queue `limiter` (`max`/`duration`) cap throughput.
+- `maxStalledCount: 1` could fail a genuinely-slow job; `lockDuration: 60s` exceeds any normal email send.
+- **Migrations are additive** → trivial rollback (`DROP COLUMN`).
+- **Idempotency guard** adds one indexed `findFirst` per send — cheap.
+- **Rollback:** revert the policy (set `attempts: 1`); DLQ + Bull-Board are additive; drop the two columns to revert schema.
+
+---
+
+
+
 ## 🔴 Blocked on YOU (operational / destructive — do before deploying)
 
 Full detail in `../HANDOFF.md`. Summary:
@@ -162,15 +207,38 @@ Full detail in `../HANDOFF.md`. Summary:
    - Run `DATABASE_URL=… node --import tsx packages/database/scripts/wipe-oauth-tokens.ts` (first with `DRY_RUN=1` to preview, then `DRY_RUN=0` to wipe plaintext tokens).
    - Re-authenticate Gmail. New tokens are stored AES-256-GCM encrypted.
    - To later verify: `SELECT access_token FROM "Mailbox" LIMIT 5;` should show `enc1:…` strings, not `ya29.…`.
-4. **DB migrations (plan 06)** — NOT implemented:
+4. **DB migrations (plan 06)** — **DEFERRED to the very end** (owner decision). Will be picked up once everything else is satisfactory. Needs a DB backup + staging before any destructive work:
    - Add missing indexes (`Session.userId`, `Template.userId`, `Draft.contactId`/`templateId`, `EmailEvent.contactId`/`sequenceId`), explicit cascade policy, optional soft-deletes.
+5. **Plan 10 migrations** — code is deployed; **apply the two additive migrations** (after a backup): `prisma migrate deploy` from `packages/database`. `20260703223316_add_email_tracking_jobid` (`EmailTracking.jobId` + index), `20260703223317_add_sequence_contact_failure_tracking` (`SequenceContact.failureCount` default 0 + `lastError`). Both are additive/nullable — zero downtime.
+
+---
+
+## 📘 Plan 02 — operator runbook (code is DONE, you run these)
+
+Plan 02 is **code-complete**; nothing more to write. These are the manual operator steps you must run for it to take effect. (Two parts: **02a** = rotate secret values; **02b** = activate token-at-rest encryption.)
+
+### 02a — rotate secret values (discretionary)
+The on-disk `.env.production` / `.env.extra` files were never committed (git history audit = clean), but the real values still live on disk. Rotate at your discretion:
+- production DB password
+- `NEXTAUTH_SECRET`
+- `ENCRYPTION_KEY` (rotation needs the dual-key path — set the old value as `ENCRYPTION_KEY_OLD` first, then deploy the new `ENCRYPTION_KEY`; the decrypt layer reads `ENCRYPTION_KEY_OLD` for legacy ciphertext)
+- Google OAuth client secrets (resetting these **invalidates existing refresh tokens** — coordinate with 02b's re-login)
+- service-account key, Apollo/DeepSeek API keys, `PUBSUB_VERIFICATION_TOKEN`, `CRON_SECRET`
+
+### 02b — activate OAuth token-at-rest encryption (REQUIRED for the security fix to actually protect tokens)
+Code path: AES-256-GCM field crypto + Prisma `$extends` encrypt-on-write / decrypt-on-read on `Mailbox` / `Account` token fields; wipe script written. To finish:
+1. **Preview the wipe** (no changes): `DATABASE_URL=… node --import tsx packages/database/scripts/wipe-oauth-tokens.ts` with `DRY_RUN=1` (the default).
+2. **Run the wipe** for real: `DRY_RUN=0 node --import tsx packages/database/scripts/wipe-oauth-tokens.ts`. Plaintext tokens are blanked.
+3. **Re-authenticate Gmail** so fresh tokens are written through the encrypt-on-write hook.
+4. **Verify**: `SELECT access_token FROM "Mailbox" LIMIT 5;` should now show `enc1:…` ciphertext, not `ya29.…`.
+
+> ⚠️ Edge-runtime note (already fixed): plan 02b's `$extends` hook imports Node's `crypto`, which is unavailable in the Next.js Edge Runtime. `apps/web/middleware.ts` therefore runs on the Node.js runtime (`export const runtime = "nodejs"`). If you ever move the onboarding check out of middleware, you can drop that.
 
 ---
 
 ## 🟡 Deferred (lower-risk, do later)
 
-- **Plan 10 (BullMQ retries/DLQ/idempotency):** untouched. May be moot if the `plans/mailops-consolidation/` work proceeds.
-- **Plan 12 (testing baseline):** untouched. Do last.
+- **Plan 06 (DB schema / indexes / cascade / soft-delete):** deliberately deferred to the very end (owner decision). Will be the last refactor to land — needs a DB backup + staging since it's destructive. Not blocking deploy.
 - **`@tiptap/*`** is at v3 and still actively imported by 6 components (`compose`, `sequences`, `templates` via `editor-old/rich-text-editor.tsx`). Plan 11's editor consolidation (Lexical vs TipTap) is still open — migrating those callers to Lexical would let `editor-old/` and the TipTap deps be deleted.
 
 ---
@@ -179,8 +247,8 @@ Full detail in `../HANDOFF.md`. Summary:
 
 1. **Branches:** `refactor/old-code-update` (security) is the base; `upgrade/remaining-majors` (deps) is stacked on top. Merge order: security first, then deps — or merge `upgrade/remaining-majors` directly (it contains both).
 2. **Pick up where this left off:**
-   - To continue the **security** work: plan 02 is code-done (you just run the wipe + re-login + rotate values). Plan 06 (DB schema) needs DB access + a backup.
-   - To continue **quality** work: **plan 10 (BullMQ resilience) is the next active plan**, then plan 12 (testing). Plans 07 and 08 are fully done.
+   - To continue the **security** work: plan 02 is code-done (you just run the wipe + re-login + rotate values — see "Plan 02 — operator runbook" below). Plan 06 (DB schema) is **deferred to the very end** (owner decision).
+   - To continue **quality** work: **plan 12 (testing baseline) is the next active plan** (scaffolding + security regression tests first). Plans 07, 08, and 10 are fully done.
    - **Plan 07 is done** — see the plan-07 completion section below for what landed and the carryover smoke-tests.
 3. **Read first:** `00-overview.md` for the full audit, then the specific plan doc. Each plan doc is self-contained with file:line refs and verification checklists.
 4. **Verify before merging:** `tsc --noEmit` + `npm run build` in both apps; smoke-test the auth boundary (401 without token), IDOR (403/404 cross-tenant), and tracking (event recorded).

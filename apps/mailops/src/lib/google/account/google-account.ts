@@ -3,6 +3,7 @@ import { sleep } from "@/utils";
 import { google } from "googleapis";
 import { TokenRefreshError } from "@coldjot/types";
 import { getSenderMailbox, updateMailboxCredentials } from "@/lib/mailbox";
+import { JOB_RETRY } from "@/config/queue/policy";
 // -----------------------------------------
 // -----------------------------------------
 // -----------------------------------------
@@ -12,7 +13,9 @@ export async function refreshAccessToken(
   userId: string,
   mailboxId: string,
   refreshToken: string,
-  maxRetries = 3
+  // Aligned to the shared job-resilience policy (plan 10) so every retry path
+  // in mailops uses the same ceiling.
+  maxRetries = JOB_RETRY.attempts
 ): Promise<string | null> {
   let attempt = 0;
 

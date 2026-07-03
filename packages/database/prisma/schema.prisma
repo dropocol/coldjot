@@ -207,6 +207,12 @@ model SequenceContact {
     createdAt       DateTime  @default(now())
     updatedAt       DateTime  @updatedAt
 
+    // Failure tracking for the schedule path's inline send loop (plan 10).
+    // The ScheduleProcessor sends directly (not via the EMAIL queue), so
+    // BullMQ attempts don't bound its retries; this counter does.
+    failureCount Int     @default(0)
+    lastError    String?
+
     sequence Sequence @relation("SequenceToContact", fields: [sequenceId], references: [id])
     contact  Contact  @relation("ContactToSequence", fields: [contactId], references: [id])
 
@@ -290,6 +296,11 @@ model EmailTracking {
     // previewText String? // Email preview text
     // templateId  String? // Reference to the template used
 
+    // BullMQ job id that produced this row — used by the email processor's
+    // idempotency guard (plan 10). Nullable: pre-existing rows predate the
+    // guard and are treated as "unknown, proceed" on first encounter.
+    jobId String?
+
     // Relations
     links      TrackedLink[]
     events     EmailEvent[]
@@ -307,6 +318,7 @@ model EmailTracking {
     @@index([sequenceId])
     @@index([userId])
     @@index([contactId])
+    @@index([jobId])
 }
 
 model EmailEvent {

@@ -24,6 +24,10 @@ import {
 import { EMAIL_SCHEDULER_CONFIG } from "@/config";
 import { QUEUE_NAMES } from "@/config";
 import { getWorkerOptions } from "@/config";
+import {
+  SCHEDULE_MAX_FAILURES,
+  SCHEDULE_FAILURE_BACKOFF_MS,
+} from "@/config/queue/policy";
 import { ServiceManager } from "@/services/service-manager";
 import { updateSequenceContactStatus } from "../sequence/helper";
 // Define the type for what we actually need from the sequence
@@ -50,6 +54,7 @@ interface SequenceContactWithRelations {
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  failureCount: number;
   sequence: SequenceWithRelations;
   contact: {
     id: string;
@@ -158,6 +163,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
           completedAt: true,
           createdAt: true,
           updatedAt: true,
+          failureCount: true,
           sequence: {
             select: {
               id: true,
@@ -578,36 +584,71 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         "✅ Successfully processed email"
       );
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       logger.error(
         {
           id: email.id,
           sequenceId: sequence.id,
           contactId: contact.id,
           email: contact.email,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: errorMessage,
           stack: error instanceof Error ? error.stack : undefined,
         },
         "❌ Error processing email"
       );
 
-      // Schedule retry
-      logger.debug(
-        {
-          id: email.id,
-          retryDelay: this.retryDelay,
-          nextRetry: new Date(Date.now() + this.retryDelay).toISOString(),
-        },
-        "🔄 Scheduling retry"
-      );
+      // Bounded retry for the schedule path. This processor sends emails inline
+      // (not via the EMAIL queue), so BullMQ attempts don't apply here — we
+      // track failures on the SequenceContact row itself. Once a contact hits
+      // SCHEDULE_MAX_FAILURES it's marked "failed" and removed from the poller's
+      // query (nextScheduledAt = null) so it surfaces in the UI instead of
+      // looping forever (plan 10).
+      const nextFailureCount = (email.failureCount ?? 0) + 1;
+      const exhausted = nextFailureCount >= SCHEDULE_MAX_FAILURES;
+      // Truncate stored error so a huge stacktrace can't bloat the row.
+      const truncatedError = errorMessage.slice(0, 1000);
 
-      await prisma.sequenceContact.update({
-        where: { id: email.id },
-        data: {
-          nextScheduledAt: new Date(Date.now() + this.retryDelay),
-        },
-      });
+      if (exhausted) {
+        await prisma.sequenceContact.update({
+          where: { id: email.id },
+          data: {
+            failureCount: nextFailureCount,
+            lastError: truncatedError,
+            status: SequenceContactStatusEnum.FAILED,
+            nextScheduledAt: null,
+          },
+        });
+        logger.error(
+          {
+            sequenceId: sequence.id,
+            contactId: contact.id,
+            failureCount: nextFailureCount,
+          },
+          "contact marked failed after max schedule retries"
+        );
+      } else {
+        const nextRetry = new Date(Date.now() + SCHEDULE_FAILURE_BACKOFF_MS);
+        logger.debug(
+          {
+            id: email.id,
+            failureCount: nextFailureCount,
+            nextRetry: nextRetry.toISOString(),
+          },
+          "🔄 Scheduling bounded retry"
+        );
+        await prisma.sequenceContact.update({
+          where: { id: email.id },
+          data: {
+            failureCount: nextFailureCount,
+            lastError: truncatedError,
+            nextScheduledAt: nextRetry,
+          },
+        });
+      }
 
-      // Re-throw error for higher-level handling
+      // Re-throw so the poller job itself is visible as failed in BullMQ.
+      // The repeating scheduler continues to fire on its interval regardless.
       throw error;
     }
   }

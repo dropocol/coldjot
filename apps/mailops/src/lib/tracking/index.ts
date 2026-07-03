@@ -49,6 +49,9 @@ export async function createEmailTracking(
       contactId: metadata.contactId,
       status: "pending",
       subject: metadata.subject,
+      // Stamp the BullMQ job id so the email processor's idempotency guard
+      // can detect a re-attempted job that already sent (plan 10).
+      jobId: metadata.jobId,
       metadata: {
         email: metadata.email,
         userId: metadata.userId,
