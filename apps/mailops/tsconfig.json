@@ -1,55 +1,21 @@
 {
-    "extends": "../../tsconfig.json",
+    "extends": "@coldjot/tsconfig/library.json",
     "compilerOptions": {
-        "target": "es2023",
-        "module": "esnext",
-        "lib": [
-            "es2023"
-        ],
-        "declaration": true,
-        "declarationMap": true,
-        "sourceMap": true,
+        "lib": ["es2023"],
         "outDir": "./dist",
         "rootDir": "./src",
-        "strict": true,
-        "moduleResolution": "bundler",
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "noEmit": false,
-        "incremental": false,
+        "noEmit": true,
         "paths": {
-            "@/*": [
-                "./src/*"
-            ],
-            "@/lib/*": [
-                "./src/lib/*"
-            ],
-            "@/services/*": [
-                "./src/services/*"
-            ],
-            "@/routes/*": [
-                "./src/routes/*"
-            ],
-            "@/types/*": [
-                "./src/types/*"
-            ],
-            "@/env": [
-                "./src/env.ts"
-            ],
-            "@/config/*": [
-                "./src/config/*"
-            ],
-            "@/config": [
-                "./src/config/index.ts"
-            ]
+            "@/*": ["./src/*"],
+            "@/lib/*": ["./src/lib/*"],
+            "@/services/*": ["./src/services/*"],
+            "@/routes/*": ["./src/routes/*"],
+            "@/types/*": ["./src/types/*"],
+            "@/env": ["./src/env.ts"],
+            "@/config/*": ["./src/config/*"],
+            "@/config": ["./src/config/index.ts"]
         }
     },
-    "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "node_modules",
-        "dist"
-    ]
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
 }

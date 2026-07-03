@@ -1,0 +1,15 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "compilerOptions": {
+        "target": "es2023",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "lib": ["es2023"],
+        "strict": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true
+    }
+}

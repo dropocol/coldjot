@@ -1,5 +1,31 @@
 # Refactor Plan — Status
 
+> **Quick reference:** see the table below for the status of every plan at a glance. Detailed per-plan notes follow in the "Plan-by-plan status" section.
+>
+> **Legend:** ✅ Done · 🟢 Code done, operator action needed · 🟡 Code done, awaiting verification · ⏸️ Blocked/Deferred · ⬜ Not started
+
+## At-a-glance status
+
+| # | Plan | Status | Notes |
+|---|---|---|---|
+| [01](./01-security-idor-authorization.md) | IDOR + authorization layer | ✅ **DONE** | committed `fa69382` |
+| [02](./02-security-secrets-credentials.md) | Rotate secrets + encrypt OAuth tokens | 🟢 **CODE DONE — 2 operator steps left** | rotate secret values; run `wipe-oauth-tokens.ts` + re-login Gmail |
+| [03](./03-security-mailops-auth-cors.md) | Service auth + CORS allowlist | ✅ **DONE** | committed `fd6c416` |
+| [04](./04-security-input-validation.md) | zod validation across API routes | ✅ **DONE** | committed `a2629d5` |
+| [05](./05-security-tracking-webhook.md) | Fix no-op tracking + open redirect | ✅ **DONE** | committed `42941ae` |
+| [06](./06-database-schema.md) | Indexes, cascade/soft-delete, migration hygiene | ⏸️ **DEFERRED — last** | owner decision: do at the very end; needs DB backup + staging |
+| [07](./07-frontend-data-fetching.md) | Consolidate on react-query | ✅ **DONE** | whole web app on typed `api` + react-query; ~50 components migrated |
+| [08](./08-frontend-code-quality.md) | Remove console.log/any, dead code, lint | ✅ **DONE** | `any` 76→0; lint 0 errors / 0 warnings; all rules `error` |
+| [09](./09-backend-logging-pii.md) | Redact PII/tokens from logs | ✅ **DONE** | committed `70b3b74` |
+| [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | 🟡 **CODE DONE — awaiting smoke-test** | committed `e2e2e77`; DLQ `:`-naming bug fixed in plan 13 |
+| [11](./11-tooling-config-dependencies.md) | Align deps, consolidate env, eslint config | ✅ **SUPERSEDED** | covered by the dependency-upgrade pass |
+| [12](./12-testing-strategy.md) | Testing baseline | ⏸️ **BLOCKED on plan 10 smoke-test** | start only after plan 10 verified |
+| [13](./13-monorepo-scripts-devexperience.md) | Monorepo scripts, Turbo, dev-experience cleanup | ✅ **DONE** | committed `945b08c` + `3d9969b`; build/typecheck/lint green |
+
+**Totals:** 8 done · 2 awaiting owner action/verification (02, 10) · 2 blocked/deferred (06, 12) · 1 superseded (11) — **0 not started.**
+
+---
+
 > **Last updated:** plan 13 (monorepo scripts/Turbo/dev-experience cleanup) DONE. Plan 10 (BullMQ resilience) committed (`e2e2e77`) and **awaiting owner smoke-testing** — note: plan 13's smoke-test found & fixed a latent plan-10 DLQ naming bug (`<name>:dl` → `<name>-dl`; BullMQ rejects `:`). Plan 06 deferred to the very end. Plan 07 (frontend react-query consolidation) code complete; plan 02 code-done; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`) plus plan 13.
 > **Two parallel workstreams** live on two branch chains off `master`:
 > - **Security/quality refactor** → `refactor/old-code-update` (plans 01, 03, 04, 05, 09, + part of 11)

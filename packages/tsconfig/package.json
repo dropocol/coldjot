@@ -1,0 +1,13 @@
+{
+    "name": "@coldjot/tsconfig",
+    "version": "0.0.0",
+    "private": true,
+    "files": [
+        "*.json"
+    ],
+    "exports": {
+        "./base.json": "./base.json",
+        "./library.json": "./library.json",
+        "./app.json": "./app.json"
+    }
+}

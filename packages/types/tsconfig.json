@@ -1,31 +1,10 @@
 {
-    "extends": "../../tsconfig.json",
+    "extends": "@coldjot/tsconfig/library.json",
     "compilerOptions": {
-        "target": "es2023",
-        "module": "esnext",
-        "lib": [
-            "es2023"
-        ],
-        "declaration": true,
-        "declarationMap": true,
-        "sourceMap": true,
         "outDir": "./dist",
         "rootDir": "./src",
-        "strict": true,
-        "moduleResolution": "bundler",
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "types": ["node"],
-        "noEmit": false,
-        "incremental": false,
         "ignoreDeprecations": "6.0"
     },
-    "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "node_modules",
-        "dist"
-    ]
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
 }
