@@ -1,6 +1,6 @@
 # Refactor Plan — Status
 
-> **Last updated:** plan 08 (frontend code quality) complete — web ESLint now fully clean (0 errors / 0 warnings). This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
+> **Last updated:** plan 02 (secrets + token encryption) code complete; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
 > **Two parallel workstreams** live on two branch chains off `master`:
 > - **Security/quality refactor** → `refactor/old-code-update` (plans 01, 03, 04, 05, 09, + part of 11)
 > - **Dependency modernization + plan 08** → `upgrade/remaining-majors` (built on top of `refactor/old-code-update`; supersedes most of plan 11; also completed plan 08)
@@ -14,7 +14,7 @@
 | # | Plan | Status | Where |
 |---|---|---|---|
 | [01](./01-security-idor-authorization.md) | IDOR + authorization layer | ✅ **DONE** | `refactor/old-code-update` (`fa69382`) |
-| [02](./02-security-secrets-credentials.md) | Rotate secrets + encrypt OAuth tokens | 🔴 **BLOCKED ON YOU** | 02a (rotation) is operational; 02b (token encryption migration) not implemented |
+| [02](./02-security-secrets-credentials.md) | Rotate secrets + encrypt OAuth tokens | 🟢 **CODE DONE — 2 operator steps left** | 02a: git history audited (clean); .gitignore consolidated; boot-time zod validation; Prisma query-logging locked down. 02b: AES-256-GCM field crypto + Prisma `$extends` encrypt-on-write/decrypt-on-read on `Mailbox`/`Account` token fields; wipe script written. **You must:** (1) rotate the actual secret values in their dashboards, (2) run `wipe-oauth-tokens.ts` (DRY_RUN=0) + re-login Gmail so tokens are stored encrypted. `ENCRYPTION_KEY` rotation needs the dual-key path (`ENCRYPTION_KEY_OLD`) |
 | [03](./03-security-mailops-auth-cors.md) | Service auth + CORS allowlist | ✅ **DONE** | `refactor/old-code-update` (`fd6c416`) |
 | [04](./04-security-input-validation.md) | zod validation across API routes | ✅ **DONE** | `refactor/old-code-update` (`a2629d5`) |
 | [05](./05-security-tracking-webhook.md) | Fix no-op tracking + open redirect | ✅ **DONE** | `refactor/old-code-update` (`42941ae`) |
@@ -131,10 +131,13 @@ The Prisma ↔ `@coldjot/types` boundary has a systemic enum-vs-string-literal a
 Full detail in `../HANDOFF.md`. Summary:
 
 1. **Generate `SERVICE_INTERNAL_TOKEN`** and set it in both apps (REQUIRED to boot). `openssl rand -hex 32`.
-2. **Rotate leaked secrets (plan 02a)** — production DB password, `NEXTAUTH_SECRET`, `ENCRYPTION_KEY`, Google OAuth secrets, service-account key, API keys. Audit git history for accidental commits first.
-3. **DB migrations** (plans 02b, 06) — NOT implemented:
-   - **02b:** encrypt OAuth tokens at rest (`Mailbox`/`Account` tokens currently plaintext). Needs Prisma extension + backfill + dual-read window.
-   - **06:** add missing indexes (`Session.userId`, `Template.userId`, `Draft.contactId`/`templateId`, `EmailEvent.contactId`/`sequenceId`), explicit cascade policy, optional soft-deletes.
+2. **Rotate secret VALUES (plan 02a)** — the on-disk `.env.production`/`.env.extra` files were never committed to git (history audit clean), but the real values live on disk. Rotate at your discretion: production DB password, `NEXTAUTH_SECRET`, `ENCRYPTION_KEY`, Google OAuth client secrets (resetting invalidates existing refresh tokens), service-account key, Apollo/DeepSeek API keys, `PUBSUB_VERIFICATION_TOKEN`, `CRON_SECRET`.
+3. **Activate token-at-rest encryption (plan 02b)** — code is deployed. To finish:
+   - Run `DATABASE_URL=… node --import tsx packages/database/scripts/wipe-oauth-tokens.ts` (first with `DRY_RUN=1` to preview, then `DRY_RUN=0` to wipe plaintext tokens).
+   - Re-authenticate Gmail. New tokens are stored AES-256-GCM encrypted.
+   - To later verify: `SELECT access_token FROM "Mailbox" LIMIT 5;` should show `enc1:…` strings, not `ya29.…`.
+4. **DB migrations (plan 06)** — NOT implemented:
+   - Add missing indexes (`Session.userId`, `Template.userId`, `Draft.contactId`/`templateId`, `EmailEvent.contactId`/`sequenceId`), explicit cascade policy, optional soft-deletes.
 
 ---
 
@@ -151,7 +154,7 @@ Full detail in `../HANDOFF.md`. Summary:
 
 1. **Branches:** `refactor/old-code-update` (security) is the base; `upgrade/remaining-majors` (deps) is stacked on top. Merge order: security first, then deps — or merge `upgrade/remaining-majors` directly (it contains both).
 2. **Pick up where this left off:**
-   - To continue the **security** work: implement plan 02b (token encryption) and plan 06 (DB schema) — both need DB access + a backup.
+   - To continue the **security** work: plan 02 is code-done (you just run the wipe + re-login + rotate values). Plan 06 (DB schema) needs DB access + a backup.
    - To continue **quality** work: plan 07 (react-query), plan 10 (BullMQ resilience), plan 12 (testing). Plan 08 is fully done.
 3. **Read first:** `00-overview.md` for the full audit, then the specific plan doc. Each plan doc is self-contained with file:line refs and verification checklists.
 4. **Verify before merging:** `tsc --noEmit` + `npm run build` in both apps; smoke-test the auth boundary (401 without token), IDOR (403/404 cross-tenant), and tracking (event recorded).
