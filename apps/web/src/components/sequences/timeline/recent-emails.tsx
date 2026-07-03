@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { TimelineItem } from "./timeline-item";
 import { EmailDetailsDrawer } from "./email-details-drawer";
@@ -8,18 +7,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { EmailTracking } from "@/types/email";
+import { useTimeline } from "@/hooks/queries/use-timeline";
 
 interface RecentEmailsProps {
   userId: string;
-}
-
-interface TimelineResponse {
-  emails: EmailTracking[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage: number | undefined;
 }
 
 export function RecentEmails({ userId }: RecentEmailsProps) {
@@ -27,23 +18,12 @@ export function RecentEmails({ userId }: RecentEmailsProps) {
     null
   );
 
-  const { data, isLoading, isError } = useQuery<TimelineResponse>({
-    queryKey: ["recent-emails", userId],
-    queryFn: async () => {
-      const queryParams = new URLSearchParams();
-      queryParams.set("page", "1");
-      queryParams.set("limit", "20");
-      queryParams.set("userId", userId);
-
-      const response = await fetch(`/api/timeline?${queryParams.toString()}`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch recent emails");
-      }
-
-      return response.json();
-    },
+  const { data, isLoading, isError } = useTimeline({
+    page: 1,
+    limit: 20,
+    userId,
   });
+  const emails = (data?.emails ?? []) as unknown as EmailTracking[];
 
   if (isLoading) {
     return (
@@ -61,7 +41,7 @@ export function RecentEmails({ userId }: RecentEmailsProps) {
     );
   }
 
-  if (!data || data.emails.length === 0) {
+  if (emails.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         No recent emails found
@@ -79,7 +59,7 @@ export function RecentEmails({ userId }: RecentEmailsProps) {
           </Button>
         </div>
 
-        {data.emails.map((email) => (
+        {emails.map((email) => (
           <TimelineItem
             key={email.id}
             email={email}

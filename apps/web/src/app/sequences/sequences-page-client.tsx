@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LocalSearch } from "@/components/ui/local-search";
@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { SequenceTable } from "@/components/sequences/sequence-table";
 import { SequenceStatus, SequenceStep } from "@coldjot/types";
 import { usePagination } from "@/hooks/use-pagination";
+import { useSequences } from "@/hooks/queries/use-sequences";
 
 interface Sequence {
   id: string;
@@ -22,15 +23,6 @@ interface Sequence {
   };
 }
 
-interface SequenceResponse {
-  sequences: Sequence[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage: number | undefined;
-}
-
 interface SequencesPageClientProps {
   initialSequences: Sequence[];
 }
@@ -40,71 +32,26 @@ export function SequencesPageClient({
 }: SequencesPageClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [sequences, setSequences] = useState<Sequence[]>(initialSequences);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const pagination = usePagination({ enableInfiniteScroll: false });
 
-  useEffect(() => {
-    const fetchSequences = async () => {
-      setIsLoading(true);
-      try {
-        const queryParams = new URLSearchParams();
-        queryParams.set("page", pagination.page.toString());
-        queryParams.set("limit", pagination.limit.toString());
-        if (activeSearch) {
-          queryParams.set("q", activeSearch);
-        }
-
-        const response = await fetch(
-          `/api/sequences?${queryParams.toString()}`
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch sequences");
-        }
-
-        const data: SequenceResponse = await response.json();
-        setSequences(data.sequences);
-        setTotal(data.total);
-      } catch (error) {
-        console.error("Failed to fetch sequences:", error);
-      } finally {
-        setIsLoading(false);
-        setIsSearching(false);
-      }
-    };
-
-    fetchSequences();
-  }, [activeSearch, pagination.page, pagination.limit]);
+  const { data, isLoading, isFetching } = useSequences({
+    page: pagination.page,
+    limit: pagination.limit,
+    search: activeSearch || undefined,
+  });
+  const sequences = (data?.sequences ?? initialSequences) as Sequence[];
+  const total = data?.total ?? initialSequences.length;
 
   const handleSearch = (value: string) => {
     setActiveSearch(value);
-    setIsSearching(true);
   };
 
-  const handleAddSequence = (newSequence: Sequence) => {
-    // Check if the sequence already exists in the list
-    const exists = sequences.some((seq) => seq.id === newSequence.id);
-
-    // Update the sequences list with the new sequence
-    setSequences((prev) => {
-      if (exists) {
-        // Replace the existing sequence
-        return prev.map((seq) =>
-          seq.id === newSequence.id ? newSequence : seq
-        );
-      } else {
-        // Add the new sequence to the beginning of the list
-        return [newSequence, ...prev];
-      }
-    });
-
-    // Update the total count only if it's a new sequence
-    if (!exists) {
-      setTotal((prev) => prev + 1);
-    }
+  // SequenceTable mutates local state for optimistic updates between
+  // invalidation and refetch; we no longer keep a separate `sequences` state,
+  // so onAddSequence is a no-op here (the table invalidates qk.sequences.all).
+  const handleAddSequence = (_newSequence: Sequence) => {
+    void _newSequence;
   };
 
   return (
@@ -121,7 +68,7 @@ export function SequencesPageClient({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onSearch={handleSearch}
-              isLoading={isSearching}
+              isLoading={isFetching}
             />
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />

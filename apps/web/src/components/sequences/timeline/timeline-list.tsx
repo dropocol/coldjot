@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { TimelineItem } from "./timeline-item";
 import { EmailDetailsDrawer } from "./email-details-drawer";
 import { PaginationControls } from "@/components/pagination";
 import { useInView } from "react-intersection-observer";
 import type { EmailTracking } from "@/types/email";
+import {
+  useTimeline,
+  useInfiniteTimeline,
+} from "@/hooks/queries/use-timeline";
 
 interface TimelineListProps {
   sequenceId?: string;
@@ -18,15 +21,6 @@ interface TimelineListProps {
   onPageSizeChange: (size: number) => void;
   isInfiniteScroll: boolean;
   onScrollModeToggle?: () => void;
-}
-
-interface TimelineResponse {
-  emails: EmailTracking[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage: number | undefined;
 }
 
 export function TimelineList({
@@ -44,42 +38,19 @@ export function TimelineList({
   );
   const { ref, inView } = useInView();
 
-  const fetchTimelineData = async (
-    pageParam = page
-  ): Promise<TimelineResponse> => {
-    const queryParams = new URLSearchParams();
-    queryParams.set("page", pageParam.toString());
-    queryParams.set("limit", limit.toString());
-    if (userId) queryParams.set("userId", userId);
-
-    const endpoint = sequenceId
-      ? `/api/sequences/${sequenceId}/timeline`
-      : `/api/timeline`;
-
-    const response = await fetch(`${endpoint}?${queryParams.toString()}`);
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch timeline data");
-    }
-
-    return response.json();
-  };
-
   // Regular pagination query
-  const paginationQuery = useQuery<TimelineResponse>({
-    queryKey: ["timeline", sequenceId, userId, page, limit],
-    queryFn: () => fetchTimelineData(page),
-    enabled: !isInfiniteScroll,
+  const paginationQuery = useTimeline({
+    page,
+    limit,
+    sequenceId,
+    userId,
   });
 
   // Infinite scroll query
-  const infiniteQuery = useInfiniteQuery({
-    queryKey: ["timeline-infinite", sequenceId, userId, limit],
-    queryFn: ({ pageParam = 1 }) => fetchTimelineData(pageParam),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.nextPage : undefined,
-    enabled: isInfiniteScroll,
+  const infiniteQuery = useInfiniteTimeline({
+    limit,
+    sequenceId,
+    userId,
   });
 
   // Load more when scrolling to the bottom
@@ -117,7 +88,8 @@ export function TimelineList({
   const renderEmails = () => {
     if (isInfiniteScroll) {
       const emails =
-        infiniteQuery.data?.pages.flatMap((page) => page.emails) ?? [];
+        (infiniteQuery.data?.pages.flatMap((p) => p.emails) ??
+          []) as unknown as EmailTracking[];
       if (emails.length === 0) {
         return (
           <div className="text-center py-8 text-muted-foreground">
@@ -140,7 +112,8 @@ export function TimelineList({
     }
 
     const data = paginationQuery.data;
-    if (!data || data.emails.length === 0) {
+    const emails = (data?.emails ?? []) as unknown as EmailTracking[];
+    if (!data || emails.length === 0) {
       return (
         <div className="text-center py-8 text-muted-foreground">
           No emails found
@@ -148,7 +121,7 @@ export function TimelineList({
       );
     }
 
-    return data.emails.map((email) => (
+    return emails.map((email) => (
       <TimelineItem
         key={email.id}
         email={email}

@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { TimelineHeader } from "./timeline-header";
 import { TimelineList } from "./timeline-list";
 import { useQueryClient } from "@tanstack/react-query";
+import { qk } from "@/lib/query/keys";
 
 interface TimelineSectionProps {
   userId: string;
@@ -25,38 +25,31 @@ export function TimelineSection({
   isInfiniteScroll,
   onScrollModeToggle,
 }: TimelineSectionProps) {
-  const _router = useRouter();
   const queryClient = useQueryClient();
 
   const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: ["timeline", undefined, userId],
-    });
-  }, [queryClient, userId]);
+    // Broad invalidation across every timeline query for this user.
+    queryClient.invalidateQueries({ queryKey: qk.timeline.all });
+  }, [queryClient]);
 
   const handleExport = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/timeline?userId=${userId}`, {
-        method: "POST",
-      });
+    // The export endpoint returns a CSV blob (not JSON), so it stays a direct
+    // fetch — react-query is for cached data, not file downloads.
+    const response = await fetch(`/api/timeline?userId=${userId}`, {
+      method: "POST",
+    });
+    if (!response.ok) return;
 
-      if (!response.ok) {
-        throw new Error("Failed to export timeline data");
-      }
-
-      // Create a blob from the response
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "timeline.csv";
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error("Failed to export timeline:", error);
-    }
+    // Create a blob from the response
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "timeline.csv";
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   }, [userId]);
 
   return (
