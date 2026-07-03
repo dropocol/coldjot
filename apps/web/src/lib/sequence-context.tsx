@@ -7,13 +7,13 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { SequenceStatus } from "@coldjot/types";
+import { Sequence, SequenceStatus } from "@coldjot/types";
 import { SequenceReadinessMetadata } from "@/lib/sequence-utils";
 
 // Define the shape of our context
 interface SequenceContextType {
-  sequence: any;
-  updateSequence: (newData: any) => void;
+  sequence: Sequence;
+  updateSequence: (newData: Partial<Sequence>) => void;
   updateReadinessField: (
     field: keyof SequenceReadinessMetadata,
     value: boolean
@@ -33,7 +33,7 @@ export function SequenceProvider({
   initialSequence,
 }: {
   children: ReactNode;
-  initialSequence: any;
+  initialSequence: Sequence;
 }) {
   const [sequence, setSequence] = useState(initialSequence);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -41,12 +41,11 @@ export function SequenceProvider({
   // Update sequence when initialSequence changes (e.g., from server)
   useEffect(() => {
     setSequence(initialSequence);
-    console.log("initialSequence", initialSequence);
   }, [initialSequence]);
 
   // Function to update the entire sequence object
-  const updateSequence = (newData: any) => {
-    setSequence((prev: any) => ({
+  const updateSequence = (newData: Partial<Sequence>) => {
+    setSequence((prev) => ({
       ...prev,
       ...newData,
     }));
@@ -57,7 +56,7 @@ export function SequenceProvider({
     field: keyof SequenceReadinessMetadata,
     value: boolean
   ) => {
-    setSequence((prev: any) => {
+    setSequence((prev) => {
       // Create a new metadata object with the updated field
       const currentMetadata = prev.metadata || {};
       const currentReadiness = currentMetadata.readiness || {

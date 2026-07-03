@@ -63,8 +63,6 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
   }, []);
 
   useEffect(() => {
-    console.log("Query changed:", query);
-
     if (!query) {
       setResults([]);
       return;
@@ -73,7 +71,6 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
     let active = true;
 
     const searchItems = async () => {
-      console.log("Starting search for:", query);
       setIsLoading(true);
 
       try {
@@ -120,10 +117,6 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
     };
   }, [query]);
 
-  React.useEffect(() => {
-    console.log("Results Length:", results.length);
-  }, [results]);
-
   const groupedResults = useMemo(() => {
     const grouped = results.reduce(
       (acc, item) => {
@@ -147,8 +140,6 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
 
   const displayedResults =
     results.length > 0 ? [...results.slice(0, 2), viewAllItem] : [];
-
-  console.log("DisplayedResults:", displayedResults);
 
   const handleViewAll = () => {
     setOpen(false);

@@ -206,14 +206,9 @@ export function ContactList({
   };
 
   const handleAddToSequence = (contact: Contact) => {
-    console.log("handleAddToSequence called with contact:", contact.email);
-    console.log("onContactsToAddChange exists:", !!onContactsToAddChange);
-
     if (onContactsToAddChange) {
-      console.log("Calling parent's onContactsToAddChange with contact ID");
       onContactsToAddChange([{ id: contact.id } as Contact]);
     } else {
-      console.log("Setting contactToAddToSequence and showing modal directly");
       setContactToAddToSequence(contact);
     }
   };

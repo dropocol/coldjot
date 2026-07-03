@@ -20,7 +20,7 @@
 | [05](./05-security-tracking-webhook.md) | Fix no-op tracking + open redirect | ✅ **DONE** | `refactor/old-code-update` (`42941ae`) |
 | [06](./06-database-schema.md) | Indexes, cascade/soft-delete, migration hygiene | 🔴 **NOT STARTED** | needs DB backup + staging (destructive) |
 | [07](./07-frontend-data-fetching.md) | Consolidate on react-query | 🟡 **NOT STARTED** | large, incremental |
-| [08](./08-frontend-code-quality.md) | Remove console.log/any, dead code, lint | 🟡 **PARTIAL** | token/PII logs + dead code done (`5435613`); ~130 console.logs in *component* files remain; ESLint safety rules phased to `warn` during upgrade |
+| [08](./08-frontend-code-quality.md) | Remove console.log/any, dead code, lint | 🟢 **MOSTLY DONE** | all debug `console.log`s removed; `any` 76→29; duplicated `transformEmailData` extracted; sequence-context typed; correctness ESLint rules promoted `warn`→`error` (rules-of-hooks, useless-catch, no-empty, prefer-const, preserve-caught-error, etc.); 335 unused-vars + 29 any + 10 exhaustive-deps remain at `warn` (hygiene) |
 | [09](./09-backend-logging-pii.md) | Redact PII/tokens from logs | ✅ **DONE** | `refactor/old-code-update` (`70b3b74`); pino call-site refactor + pino 10 in upgrade chain |
 | [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | 🟡 **NOT STARTED** | may be moot if mailops consolidation proceeds |
 | [11](./11-tooling-config-dependencies.md) | Align deps, consolidate env, eslint config | ✅ **SUPERSEDED** | fully covered by the dependency-upgrade pass (see below) — every dep is now latest |
@@ -115,10 +115,14 @@ Full detail in `../HANDOFF.md`. Summary:
 ## 🟡 Deferred (lower-risk, do later)
 
 - **Plan 07 (react-query consolidation):** large, incremental — untouched.
-- **Plan 08 remainder:** ~130 `console.log` in *component* files (UI debug logs, lower risk than the API/token logs already cleaned). Re-enable disabled ESLint rules phased `warn`→`error` (currently `warn` after the upgrade).
+- **Plan 08 remainder:** the bulk is done (see plan row above). Still open:
+  - 335 `no-unused-vars` warnings (mostly genuinely-unused imports/state in ~115 files — real dead code, mechanical to remove).
+  - 29 `no-explicit-any` warnings (mostly 3rd-party tooltips, Lexical nodes, one-off `useRef<any>` — each needs a context-specific type).
+  - 10 `react-hooks/exhaustive-deps` warnings (real useEffect dep cases — need careful `useCallback` fixes before promoting the rule to `error`).
+  - Toast library consolidation (react-hot-toast → shadcn useToast), oversized-file splits, the broken-step-reorder TODO, and the editor-old (TipTap) deletion are all still open.
 - **Plan 10 (BullMQ retries/DLQ/idempotency):** untouched. May be moot if the `plans/mailops-consolidation/` work proceeds.
 - **Plan 12 (testing baseline):** untouched. Do last.
-- **`@tiptap/*`** is now at v3 but only used in `editor-old/` (dead code). Plan 11's editor consolidation (Lexical vs TipTap) is still open — recommend deleting `editor-old/` to drop the TipTap deps entirely.
+- **`@tiptap/*`** is at v3 and still actively imported by 6 components (`compose`, `sequences`, `templates` via `editor-old/rich-text-editor.tsx`). Plan 11's editor consolidation (Lexical vs TipTap) is still open — migrating those callers to Lexical would let `editor-old/` and the TipTap deps be deleted.
 
 ---
 

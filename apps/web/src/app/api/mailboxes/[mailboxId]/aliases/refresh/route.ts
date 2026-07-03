@@ -118,10 +118,11 @@ export async function POST(req: Request, { params }: RouteParams) {
       }
 
       return NextResponse.json(updatedAccount);
-    } catch (error: any) {
+    } catch (error) {
+      const gerr = error as { message?: string; response?: { data?: unknown } };
       console.error("[GMAIL_ALIASES_REFRESH] Gmail API Error:", {
-        message: error.message,
-        response: error.response?.data,
+        message: gerr.message,
+        response: gerr.response?.data,
       });
       return new NextResponse("Failed to refresh Gmail aliases", {
         status: 500,

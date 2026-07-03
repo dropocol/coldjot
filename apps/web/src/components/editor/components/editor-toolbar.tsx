@@ -193,7 +193,7 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
                 size="sm"
                 className="flex-shrink-0"
                 onClick={() => {
-                  console.log("Data Variable clicked");
+                  // TODO: implement data-variable insertion
                 }}
                 aria-label="Insert data variable"
               >
@@ -212,7 +212,7 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
                 size="sm"
                 className="flex-shrink-0"
                 onClick={() => {
-                  console.log("Button clicked");
+                  // TODO: implement button insertion
                 }}
                 aria-label="Insert button"
               >
@@ -255,7 +255,7 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
                 size="sm"
                 className="flex-shrink-0"
                 onClick={() => {
-                  console.log("Icon clicked");
+                  // TODO: implement icon insertion
                 }}
                 aria-label="Insert icon"
               >
@@ -274,7 +274,7 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
                 size="sm"
                 className="flex-shrink-0"
                 onClick={() => {
-                  console.log("Columns clicked");
+                  // TODO: implement columns insertion
                 }}
                 aria-label="Insert columns"
               >

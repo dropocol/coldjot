@@ -89,7 +89,8 @@ export async function updateSequenceReadinessField(
       ? { ...(sequence.metadata as object) }
       : {};
 
-    const currentReadiness = (currentMetadata as any).readiness || {};
+    const currentReadiness =
+      (currentMetadata as Record<string, unknown>).readiness || {};
 
     const updatedMetadata = {
       ...currentMetadata,

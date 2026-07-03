@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Zap } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface EmailAnalysisProps {
   content: {
@@ -52,20 +53,10 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
     reasons: spamReasons,
   } = checkEmailSpam(content.html);
 
-  console.log("Spam score:", spamScore);
+  logger.debug("Spam score:", spamScore);
 
   // Calculate read time (minimum 15 seconds, based on 210 WPM)
   const readTime = Math.max(Math.ceil((stats.totalWords / 210) * 60), 15);
-
-  // Debug logging
-  console.log("Analysis Debug:", {
-    readabilityScore,
-    readingEase,
-    stats,
-    spamScore,
-    spamStatus,
-    readTime,
-  });
 
   // Define color constants for the gauge
   const colors = {
@@ -289,7 +280,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
             size="sm"
             className="w-full mt-2"
             onClick={() => {
-              console.log("Running AI test...");
+              // TODO: implement AI test
             }}
           >
             <Zap className="h-4 w-4 mr-2" />

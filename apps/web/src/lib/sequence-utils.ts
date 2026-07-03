@@ -15,12 +15,35 @@ export type SequenceReadinessResult = {
   steps: SequenceReadinessMetadata;
 };
 
+const DEFAULT_READINESS: SequenceReadinessMetadata = {
+  hasSteps: false,
+  hasContacts: false,
+  hasBusinessHours: false,
+  hasMailbox: false,
+};
+
+const READY_READINESS: SequenceReadinessMetadata = {
+  hasSteps: true,
+  hasContacts: true,
+  hasBusinessHours: true,
+  hasMailbox: true,
+};
+
+/** Narrow a sequence's JSON metadata blob into the readiness shape (or default). */
+function getReadiness(sequence: Sequence): SequenceReadinessMetadata {
+  const readiness = sequence.metadata?.readiness;
+  if (readiness && typeof readiness === "object") {
+    return { ...DEFAULT_READINESS, ...(readiness as Partial<SequenceReadinessMetadata>) };
+  }
+  return DEFAULT_READINESS;
+}
+
 /**
  * Checks if a sequence is ready to launch based on its metadata
  * If metadata is not available, returns a default result
  */
 export const isSequenceReadyToLaunch = (
-  sequence: Sequence | any
+  sequence: Sequence
 ): SequenceReadinessResult => {
   // Skip checks for active or paused sequences
   if (
@@ -29,23 +52,11 @@ export const isSequenceReadyToLaunch = (
   ) {
     return {
       isReady: true,
-      steps: {
-        hasSteps: true,
-        hasContacts: true,
-        hasBusinessHours: true,
-        hasMailbox: true,
-      },
+      steps: READY_READINESS,
     };
   }
 
-  // Get readiness from metadata if available
-  const metadata = sequence.metadata || {};
-  const readinessData = metadata.readiness || {
-    hasSteps: false,
-    hasContacts: false,
-    hasBusinessHours: false,
-    hasMailbox: false,
-  };
+  const readinessData = getReadiness(sequence);
 
   // Check if all steps are completed
   const isReady =
@@ -64,7 +75,7 @@ export const isSequenceReadyToLaunch = (
  * Calculates the completion percentage of sequence setup
  */
 export const getSequenceSetupProgress = (
-  sequence: Sequence | any
+  sequence: Sequence
 ): {
   completedSteps: number;
   totalSteps: number;
@@ -73,9 +84,9 @@ export const getSequenceSetupProgress = (
   const { steps } = isSequenceReadyToLaunch(sequence);
 
   const totalSteps = 4; // Total number of setup steps
-  const completedSteps = Object.values(steps).filter(
-    (step) => step && step !== steps.lastUpdated
-  ).length;
+  const completedSteps = (
+    Object.entries(steps) as [string, boolean | string | undefined][]
+  ).filter(([key, value]) => key !== "lastUpdated" && value).length;
   const completionPercentage = Math.round((completedSteps / totalSteps) * 100);
 
   return {
@@ -90,15 +101,16 @@ export const getSequenceSetupProgress = (
  * Returns true if metadata is missing or outdated
  */
 export const shouldUpdateSequenceMetadata = (
-  sequence: Sequence | any
+  sequence: Sequence
 ): boolean => {
+  const readiness = sequence.metadata?.readiness;
   // If no metadata or no readiness data, update is needed
-  if (!sequence.metadata || !sequence.metadata.readiness) {
+  if (!readiness || typeof readiness !== "object") {
     return true;
   }
 
   // If last update was more than 5 minutes ago, update is needed
-  const lastUpdated = sequence.metadata.readiness.lastUpdated;
+  const lastUpdated = (readiness as SequenceReadinessMetadata).lastUpdated;
   if (!lastUpdated) {
     return true;
   }
@@ -113,7 +125,7 @@ export const shouldUpdateSequenceMetadata = (
  */
 export const updateSequenceMetadata = async (
   sequenceId: string
-): Promise<any> => {
+): Promise<Record<string, unknown> | null> => {
   try {
     const response = await fetch(`/api/sequences/${sequenceId}/metadata`, {
       method: "POST",
@@ -123,8 +135,8 @@ export const updateSequenceMetadata = async (
       throw new Error("Failed to update sequence metadata");
     }
 
-    const data = await response.json();
-    return data.metadata;
+    const data = (await response.json()) as { metadata?: Record<string, unknown> };
+    return data.metadata ?? null;
   } catch (error) {
     console.error("Error updating sequence metadata:", error);
     return null;
@@ -136,9 +148,9 @@ export const updateSequenceMetadata = async (
  * This is useful for updating the UI without a full page reload
  */
 export const updateLocalSequenceWithMetadata = (
-  sequence: any,
-  metadata: any
-): any => {
+  sequence: Sequence,
+  metadata: Record<string, unknown>
+): Sequence => {
   if (!sequence) return sequence;
 
   return {

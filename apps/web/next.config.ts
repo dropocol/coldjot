@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 
-const path = require("path");
-const { existsSync } = require("fs");
-const dotenv = require("dotenv");
+import path from "path";
+import { existsSync } from "fs";
+import dotenv from "dotenv";
 
 const envFile = process.env.APP_ENV
   ? `.env.${process.env.APP_ENV}`

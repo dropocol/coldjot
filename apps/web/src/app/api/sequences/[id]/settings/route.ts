@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
 import { BusinessScheduleEnum } from "@coldjot/types";
@@ -45,7 +46,7 @@ export async function PATCH(
     }
 
     // Start building the update data
-    const updateData: any = {};
+    const updateData: Prisma.SequenceUpdateInput = {};
 
     // Handle basic fields
     if (json.name !== undefined) updateData.name = json.name;

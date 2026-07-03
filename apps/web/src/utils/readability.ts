@@ -29,20 +29,11 @@ export const countWordsBySpaces = (text: string | undefined | null): number => {
     );
   });
 
-  console.log("Space-based word count:", {
-    cleanedText,
-    wordCount: words.length,
-    words,
-  });
-
   return words.length;
 };
 
 // Accurate word counter (preserves contractions and possessives)
 export const countWordsAccurate = (text: string | undefined | null): number => {
-  console.log("Counting words accurately:", {
-    text,
-  });
   if (!text || typeof text !== "string") return 0;
   const cleanedText = cleanText(text);
 
@@ -56,12 +47,6 @@ export const countWordsAccurate = (text: string | undefined | null): number => {
       if (word === "URL" || word === "EMAIL") return true;
       return !/^[.!?,;:-]+$/.test(word) && /[a-zA-Z]/.test(word);
     });
-
-  // console.log("Accurate word count:", {
-  //   cleanedText,
-  //   wordCount: words.length,
-  //   words,
-  // });
 
   return words.length;
 };
@@ -123,32 +108,11 @@ export const getTextStats = (text: string | undefined | null) => {
 
   const totalWords = words.length;
 
-  // Log both counting methods for comparison
-  // console.log("Word Count Comparison:", {
-  //   accurateCount: countWordsAccurate(text),
-  //   spaceBasedCount: countWordsBySpaces(text),
-  //   difference: countWordsBySpaces(text) - countWordsAccurate(text),
-  // });
-
   // Improved sentence detection: handle hyphens and abbreviations
   const sentences = cleanedText
     .split(/([.!?]+(?![a-zA-Z0-9-])|\n)(?=\s+)/)
     .map((s) => (s && typeof s === "string" ? s.trim() : ""))
     .filter((s) => s && s.length > 0 && /[a-zA-Z]/.test(s));
-
-  // Enhanced debug logging for word and sentence verification
-  if (process.env.NODE_ENV !== "production") {
-    // console.log("Text Stats Debug:", {
-    //   inputText:
-    //     text?.slice(0, 100) + (text?.length && text.length > 100 ? "..." : ""),
-    //   cleanedText:
-    //     cleanedText.slice(0, 100) + (cleanedText.length > 100 ? "..." : ""),
-    //   totalWords,
-    //   totalSentences: sentences.length,
-    //   wordsList: words,
-    //   sentencesList: sentences,
-    // });
-  }
 
   return {
     words,

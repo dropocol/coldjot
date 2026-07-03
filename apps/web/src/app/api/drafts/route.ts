@@ -67,8 +67,8 @@ export async function POST(request: Request) {
       });
 
       return NextResponse.json(draft);
-    } catch (error: any) {
-      if (error.message === "TOKEN_EXPIRED") {
+    } catch (error) {
+      if (error instanceof Error && error.message === "TOKEN_EXPIRED") {
         // Refresh the token
         const newAccessToken = await refreshAccessToken(
           account.userId,

@@ -105,8 +105,8 @@ export function SequenceEmailEditor({
           setSubject(template.subject);
           setContent(template.content);
         }
-      } catch (error: any) {
-        if (error?.name === "AbortError") return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
 
         console.error("Error fetching template:", error);
         if (isMounted) {

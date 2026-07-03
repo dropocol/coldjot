@@ -70,7 +70,7 @@ export async function POST(request: Request) {
         );
 
         if (typeof newAccessToken !== "string") {
-          throw new Error("Failed to refresh access token");
+          throw new Error("Failed to refresh access token", { cause: error });
         }
 
         // Retry with new token

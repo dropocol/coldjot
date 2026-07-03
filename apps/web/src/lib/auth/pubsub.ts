@@ -23,8 +23,6 @@ const client = jwksClient({
 
 export async function verifyPubSubJwt(token: string): Promise<boolean> {
   try {
-    console.log("🚀 Verifying Pub/Sub JWT...");
-
     const decodedHeader = jwt.decode(token, { complete: true })?.header;
     if (!decodedHeader?.kid) {
       throw new Error("No key ID (kid) found in token header");

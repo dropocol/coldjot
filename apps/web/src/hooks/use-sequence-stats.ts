@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import type { Prisma } from "@prisma/client";
 
+// `{}` here is the idiomatic Prisma "no includes/select" payload args shape.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 type SequenceStats = Prisma.SequenceStatsGetPayload<{}>;
 
 export function useSequenceStats(sequenceId: string) {

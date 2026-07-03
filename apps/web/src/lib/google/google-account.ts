@@ -1,6 +1,7 @@
 import { prisma } from "@coldjot/database";
 import { sleep } from "@/utils";
 import { google } from "googleapis";
+import { logger } from "@/lib/logger";
 
 export interface GoogleAccount {
   access_token: string;
@@ -79,29 +80,29 @@ export async function refreshAccessToken(
         throw new Error("No access token returned");
       }
 
-      console.log(`🔄 Token refreshed successfully on attempt ${attempt + 1}`);
+      logger.debug(`Token refreshed successfully on attempt ${attempt + 1}`);
 
       // Save the new access token
-      console.log(`🔄 Finding account for user ${userId}`);
+      logger.debug(`Finding account for user ${userId}`);
       const account = await prisma.account.findFirst({
         where: {
           userId: userId,
         },
       });
-      console.log(`🔄 Account found: ${account?.id}`);
+      logger.debug(`Account found: ${account?.id}`);
 
       if (!account) {
-        console.error(`❌ Account not found for user ${userId}`);
+        logger.error(`Account not found for user ${userId}`);
         return null;
         // throw new Error("Account not found");
       }
 
-      console.log(
-        `🔄 Updating account ${account.id} : ${userId} with new access token`
+      logger.debug(
+        `Updating account ${account.id} for user ${userId} with new access token`
       );
 
       try {
-        const updatedAccount = await prisma.account.update({
+        await prisma.account.update({
           where: { id: account.id },
           data: {
             access_token: credentials.access_token,
@@ -111,9 +112,8 @@ export async function refreshAccessToken(
             // id_token: credentials.id_token,
           },
         });
-        console.log(`🔄 Updated account: ${updatedAccount}`);
       } catch (error) {
-        console.error(`❌ Error updating account: ${error}`);
+        logger.error(`Error updating account: ${error}`);
       }
 
       return credentials.access_token;
@@ -121,27 +121,24 @@ export async function refreshAccessToken(
       attempt++;
       const err = error as TokenRefreshError;
 
-      // Log the error details
-      console.error(`❌ Token refresh attempt ${attempt} failed:`, {
+      // Log the error details (no token values)
+      logger.error(`Token refresh attempt ${attempt} failed:`, {
         error: err.message,
         code: err.code,
         status: err.status,
       });
 
-      console.log(`🔄 Attempt ${attempt} failed`);
-      console.log(userId);
-      console.log(refreshToken);
-      console.log(maxRetries);
-
       // If we've exhausted all retries, throw the error
       if (attempt === maxRetries) {
-        console.error(`❌ Token refresh failed after ${maxRetries} attempts`);
-        throw new Error(`Failed to refresh token: ${err.message}`);
+        logger.error(`Token refresh failed after ${maxRetries} attempts`);
+        throw new Error(`Failed to refresh token: ${err.message}`, {
+          cause: error,
+        });
       }
 
       // Calculate delay with exponential backoff (1s, 2s, 4s, etc.)
       const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-      console.log(`⏳ Retrying in ${delay}ms...`);
+      logger.debug(`Retrying in ${delay}ms...`);
       await sleep(delay);
     }
   }
@@ -168,30 +165,30 @@ export async function refreshEmailAccessToken(
         throw new Error("No access token returned");
       }
 
-      console.log(
-        `🔄 Email token refreshed successfully on attempt ${attempt + 1}`
+      logger.debug(
+        `Email token refreshed successfully on attempt ${attempt + 1}`
       );
 
       // Save the new access token
-      console.log(`🔄 Finding mailbox for user ${userId}`);
+      logger.debug(`Finding mailbox for user ${userId}`);
       const mailbox = await prisma.mailbox.findFirst({
         where: {
           userId: userId,
         },
       });
-      console.log(`🔄 Mailbox found: ${mailbox?.id}`);
+      logger.debug(`Mailbox found: ${mailbox?.id}`);
 
       if (!mailbox) {
-        console.error(`❌ Mailbox not found for user ${userId}`);
+        logger.error(`Mailbox not found for user ${userId}`);
         return null;
       }
 
-      console.log(
-        `🔄 Updating mailbox ${mailbox.id} : ${userId} with new access token`
+      logger.debug(
+        `Updating mailbox ${mailbox.id} for user ${userId} with new access token`
       );
 
       try {
-        const updatedMailbox = await prisma.mailbox.update({
+        await prisma.mailbox.update({
           where: { id: mailbox.id },
           data: {
             access_token: credentials.access_token,
@@ -200,9 +197,8 @@ export async function refreshEmailAccessToken(
               : null,
           },
         });
-        console.log(`🔄 Updated mailbox: ${updatedMailbox.id}`);
       } catch (error) {
-        console.error(`❌ Error updating mailbox: ${error}`);
+        logger.error(`Error updating mailbox: ${error}`);
       }
 
       return credentials.access_token;
@@ -210,29 +206,26 @@ export async function refreshEmailAccessToken(
       attempt++;
       const err = error as TokenRefreshError;
 
-      // Log the error details
-      console.error(`❌ Email token refresh attempt ${attempt} failed:`, {
+      // Log the error details (no token values)
+      logger.error(`Email token refresh attempt ${attempt} failed:`, {
         error: err.message,
         code: err.code,
         status: err.status,
       });
 
-      console.log(`🔄 Attempt ${attempt} failed`);
-      console.log(userId);
-      console.log(refreshToken);
-      console.log(maxRetries);
-
       // If we've exhausted all retries, throw the error
       if (attempt === maxRetries) {
-        console.error(
-          `❌ Email token refresh failed after ${maxRetries} attempts`
+        logger.error(
+          `Email token refresh failed after ${maxRetries} attempts`
         );
-        throw new Error(`Failed to refresh email token: ${err.message}`);
+        throw new Error(`Failed to refresh email token: ${err.message}`, {
+          cause: error,
+        });
       }
 
       // Calculate delay with exponential backoff (1s, 2s, 4s, etc.)
       const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-      console.log(`⏳ Retrying in ${delay}ms...`);
+      logger.debug(`Retrying in ${delay}ms...`);
       await sleep(delay);
     }
   }

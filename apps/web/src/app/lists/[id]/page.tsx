@@ -30,21 +30,6 @@ export default function ListDetailsPage() {
   const [totalContacts, setTotalContacts] = useState(0);
   const listDetailsViewRef = useRef<any>(null);
 
-  // Debug state changes
-  useEffect(() => {
-    console.log("State updated:", {
-      selectedContacts: selectedContacts.length,
-      contactsToAddToSequence: contactsToAddToSequence.length,
-      showSequenceModal,
-      showAddAllToSequenceModal,
-    });
-  }, [
-    selectedContacts,
-    contactsToAddToSequence,
-    showSequenceModal,
-    showAddAllToSequenceModal,
-  ]);
-
   // Get list ID from URL
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -75,43 +60,21 @@ export default function ListDetailsPage() {
   };
 
   const handleContactsToAddChange = (contacts: Contact[]) => {
-    console.log(
-      "handleContactsToAddChange called with",
-      contacts.length,
-      "contacts"
-    );
-
-    // Log the contact IDs
-    console.log("Contact IDs:", contacts.map((c) => c.id).join(", "));
-
     // Store the contacts for the modal
     setContactsToAddToSequence(contacts);
-    console.log("Setting showSequenceModal to true");
     setShowSequenceModal(true);
   };
 
   const handleBulkAddToSequence = () => {
     if (selectedContacts.length === 0) {
-      console.log("No contacts selected");
       return;
     }
 
-    console.log(
-      "handleBulkAddToSequence called with",
-      selectedContacts.length,
-      "contact IDs"
-    );
-
-    console.log("Selected contact IDs:", selectedContacts.join(", "));
-
     // Create contact objects with just IDs for the modal
     const contactObjects = selectedContacts.map((id) => ({ id }) as Contact);
-    console.log("Created contact objects:", contactObjects);
 
     setContactsToAddToSequence(contactObjects);
 
-    console.log("showSequenceModal:", showSequenceModal);
-    console.log("contactsToAddToSequence length:", contactObjects.length);
     setShowSequenceModal(true);
   };
 
@@ -120,11 +83,8 @@ export default function ListDetailsPage() {
   };
 
   const handleCloseSequenceModal = () => {
-    console.log("Closing sequence modal");
-    console.log("Current contactsToAddToSequence:", contactsToAddToSequence);
     setShowSequenceModal(false);
     setContactsToAddToSequence([]);
-    console.log("Reset contactsToAddToSequence to empty array");
   };
 
   const handleCloseAddAllToSequenceModal = () => {

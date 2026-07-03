@@ -28,20 +28,31 @@ export default tseslint.config(
       },
     },
     rules: {
+      // Hygiene rules with remaining backlog — kept at warn until the cleanup
+      // (plan 08) drives them to zero, at which point they move to error.
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-      "@typescript-eslint/no-require-imports": "warn",
-      // Pre-existing patterns in the codebase; Plan 08 phases these to error.
-      "no-useless-catch": "warn",
+
+      // Correctness / bug-catching rules — now at zero violations, enforced.
+      // rules-of-hooks is unconditional correctness; exhaustive-deps stays at
+      // warn (plan 08 phase 1) — 10 pre-existing useEffect dep cases remain and
+      // need careful useCallback fixes before promoting to error.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+      "@typescript-eslint/no-require-imports": "error",
+      "no-useless-catch": "error",
+      "no-empty": "error",
+      "no-dupe-else-if": "error",
+      "prefer-const": "error",
+      "@typescript-eslint/no-empty-object-type": "error",
+      "preserve-caught-error": "error",
+
+      // One legitimate control-char range (MIME ASCII boundary); suppressed inline.
       "no-control-regex": "warn",
-      "no-empty": "warn",
-      "no-dupe-else-if": "warn",
-      "prefer-const": "warn",
-      "@typescript-eslint/no-empty-object-type": "warn",
-      "preserve-caught-error": "warn",
+
       "react/no-unescaped-entities": "off",
       "@next/next/no-html-link-for-pages": "off",
     },

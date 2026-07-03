@@ -61,9 +61,9 @@ async function fetchAndSaveAliases(gmail: any, mailboxId: string) {
     }
 
     logger.info({ count: aliasesToCreate.length }, "saved gmail aliases");
-  } catch (error: any) {
+  } catch (error) {
     logger.error("[GMAIL_CALLBACK] Failed to fetch/save aliases:", {
-      message: error.message,
+      message: error instanceof Error ? error.message : String(error),
     });
     // Don't throw - we don't want to fail the whole callback if alias fetching fails
   }
@@ -203,8 +203,11 @@ export async function GET(request: Request) {
         `${process.env.NEXT_PUBLIC_APP_URL}/settings?error=gmail_auth_failed&reason=token_error`
       );
     }
-  } catch (error: any) {
-    logger.error("[GMAIL_CALLBACK] Error:", error.message);
+  } catch (error) {
+    logger.error(
+      "[GMAIL_CALLBACK] Error:",
+      error instanceof Error ? error.message : String(error)
+    );
     return Response.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/settings?error=gmail_auth_failed&reason=unexpected_error`
     );

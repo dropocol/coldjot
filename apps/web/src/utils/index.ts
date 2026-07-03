@@ -45,6 +45,9 @@ export const normalizeMessageId = (messageId: string): string => {
 
 // MIME and subject handling
 export const encodeMIMEWords = (text: string): string => {
+  // Encode when the text contains any non-ASCII character. The control-char
+  // range here is intentional: it defines the ASCII boundary for MIME encoding.
+  // eslint-disable-next-line no-control-regex
   if (!/^[\x00-\x7F]*$/.test(text)) {
     const encoded = Buffer.from(text, "utf-8").toString("base64");
     return `=?UTF-8?B?${encoded}?=`;

@@ -96,7 +96,6 @@ export function BusinessHoursSettings({
   };
 
   const handleScheduleTypeChange = (value: BusinessScheduleType) => {
-    console.log("handleScheduleTypeChange", value);
     setScheduleType(value);
 
     // Ensure workDays is always an array when changing schedule type
@@ -123,8 +122,6 @@ export function BusinessHoursSettings({
         workHoursEnd:
           settings.workHoursEnd || DEFAULT_BUSINESS_HOURS.workHoursEnd,
       };
-
-      console.log("Saving business hours:", businessHoursData);
 
       // Use the client action instead of direct fetch
       const result = await updateBusinessHours(

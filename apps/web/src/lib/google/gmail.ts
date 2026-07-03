@@ -5,6 +5,7 @@ import { gmail_v1 } from "googleapis";
 
 import { refreshAccessToken, refreshEmailAccessToken } from "./google-account";
 import { Prisma, Mailbox } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -62,9 +63,6 @@ export function shouldRefreshToken(credentials: MailboxCredentials): boolean {
   const now = new Date().getTime() + 5 * 60 * 1000; // 5 minutes buffer
   const needsRefresh = Boolean(expiryDate && expiryDate < now);
 
-  if (needsRefresh) {
-  }
-
   return needsRefresh;
 }
 
@@ -77,7 +75,7 @@ export async function refreshEmailTokenIfNeeded(
 ): Promise<string> {
   try {
     if (shouldRefreshToken(credentials)) {
-      console.log("🔄 Attempting to refresh email access token", {
+      logger.debug("Attempting to refresh email access token", {
         userId: credentials.userId,
       });
 
@@ -90,7 +88,7 @@ export async function refreshEmailTokenIfNeeded(
         throw new Error("Failed to refresh email access token");
       }
 
-      console.log("✅ Email access token refreshed successfully", {
+      logger.debug("Email access token refreshed successfully", {
         userId: credentials.userId,
       });
 
@@ -173,9 +171,11 @@ export async function createGmailDraft({
       });
 
       return response.data.id;
-    } catch (error: any) {
-      if (error.status === 401) {
-        throw new Error("TOKEN_EXPIRED");
+    } catch (error) {
+      // Gaxios errors carry a numeric status; rethrow as a sentinel on auth failure.
+      const status = (error as { status?: number }).status;
+      if (status === 401) {
+        throw new Error("TOKEN_EXPIRED", { cause: error });
       }
       throw error;
     }
@@ -242,7 +242,7 @@ export async function getGmailSubject(
     });
 
     const subject = thread.data.messages?.[0]?.payload?.headers?.find(
-      (header: any) => header.name.toLowerCase() === "subject"
+      (header) => header.name?.toLowerCase() === "subject"
     )?.value;
 
     return subject || undefined;

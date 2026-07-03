@@ -78,11 +78,15 @@ export interface Sequence {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Arbitrary metadata blob stored as JSON in the DB (e.g. readiness flags). */
+  metadata?: Record<string, unknown> | null;
   steps: SequenceStep[];
   contacts: SequenceContact[];
   _count: {
     contacts: number;
   };
+  /** Computed convenience field populated by the API/layout layer. */
+  contactCount?: number;
   testMode: boolean;
   disableSending: boolean;
   testEmails: string[];

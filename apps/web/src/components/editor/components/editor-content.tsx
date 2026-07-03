@@ -37,29 +37,8 @@ export function EditorContent() {
     editor.update(() => {
       const html = $generateHtmlFromNodes(editor);
 
-      // Get clean text content
-      const tempDiv = document.createElement("div");
-      tempDiv.innerHTML = html;
-      const textContent = tempDiv.textContent || "";
-      const cleanText = textContent
-        .replace(/\s+/g, " ")
-        .replace(/\n+/g, "\n")
-        .trim();
-
-      // Create debug info
-      const debugInfo = {
-        html,
-        cleanText,
-        wordCount: cleanText.split(/\s+/).length,
-        words: cleanText.split(/\s+/),
-      };
-
       // Copy HTML to clipboard
-      navigator.clipboard.writeText(html).then(() => {
-        console.log("Debug Info:", debugInfo);
-        console.log("Word count:", debugInfo.wordCount);
-        console.log("Words:", debugInfo.words);
-      });
+      navigator.clipboard.writeText(html);
     });
   };
 

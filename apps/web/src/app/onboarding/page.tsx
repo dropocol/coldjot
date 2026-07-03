@@ -16,9 +16,6 @@ export default async function OnboardingPage() {
   // Get the current step from the session, defaulting to 0 if not set
   const currentStep = session.user.onboardingStep ?? 0;
 
-  console.log("Current step", currentStep);
-  console.log("Session user", session.user);
-
   // Redirect to the current step
   redirect(`/onboarding/${ONBOARDING_STEPS[currentStep].id}`);
 }

@@ -2,7 +2,7 @@ export interface EmailEvent {
   id: string;
   type: string;
   timestamp: Date;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface TrackedLink {
@@ -23,7 +23,7 @@ export interface EmailTracking {
   previewText?: string;
   recipientEmail: string;
   status: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   sequenceId: string;
   stepId: string;
   contactId: string;
@@ -39,7 +39,7 @@ export interface EmailTracking {
     id: string;
     type: string;
     timestamp: Date;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
   }>;
   links: Array<{
     id: string;

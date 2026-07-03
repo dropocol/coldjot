@@ -2,6 +2,12 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 
+interface ReorderStep {
+  id: string;
+  order: number;
+  previousStepId: string | null;
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -12,7 +18,7 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { steps } = await req.json();
+    const { steps } = (await req.json()) as { steps: ReorderStep[] };
     const { id } = await params;
 
     // Verify sequence ownership
@@ -30,7 +36,7 @@ export async function POST(
     // Update all steps in a transaction
     // TODO : check order + 1 if needed
     await prisma.$transaction(
-      steps.map((step: any) =>
+      steps.map((step) =>
         prisma.sequenceStep.update({
           where: { id: step.id },
           data: {

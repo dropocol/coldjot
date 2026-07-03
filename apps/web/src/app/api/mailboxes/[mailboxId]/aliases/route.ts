@@ -67,10 +67,12 @@ export async function GET(req: Request, { params }: RouteParams) {
           })) || [];
 
       return NextResponse.json(aliases);
-    } catch (error: any) {
+    } catch (error) {
+      // Gaxios-style error: has .message and an optional .response.data payload.
+      const gerr = error as { message?: string; response?: { data?: unknown } };
       console.error("[GMAIL_ALIASES_GET] Gmail API Error:", {
-        message: error.message,
-        response: error.response?.data,
+        message: gerr.message,
+        response: gerr.response?.data,
       });
       return new NextResponse("Failed to fetch Gmail aliases", { status: 500 });
     }

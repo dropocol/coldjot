@@ -67,7 +67,6 @@ export default function EditTemplateDrawer({
 
     try {
       setIsSaving(true);
-      console.log(data);
       const response = await fetch(`/api/templates/${template.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

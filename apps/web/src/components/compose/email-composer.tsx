@@ -132,8 +132,6 @@ export default function EmailComposer({ templates }: Props) {
         ...selectedContact,
       });
 
-      console.log(flatData);
-
       // Process content and subject
       const processedContentText = replaceVariablesWithValues(
         rawContent,

@@ -1,5 +1,6 @@
 "use client";
 
+import { Sequence } from "@coldjot/types";
 import { SequenceReadinessMetadata } from "./sequence-utils";
 
 /**
@@ -47,7 +48,7 @@ export async function addContactToSequence(
  */
 export async function addStepToSequence(
   sequenceId: string,
-  stepData: any,
+  stepData: Record<string, unknown>,
   updateReadinessField: (
     field: keyof SequenceReadinessMetadata,
     value: boolean
@@ -81,7 +82,7 @@ export async function addStepToSequence(
  */
 export async function updateBusinessHours(
   sequenceId: string,
-  businessHoursData: any,
+  businessHoursData: Record<string, unknown>,
   updateReadinessField: (
     field: keyof SequenceReadinessMetadata,
     value: boolean
@@ -157,7 +158,7 @@ export async function updateSequenceSettings(
     disableSending?: boolean;
     testEmails?: string[];
   },
-  updateSequence: (newData: any) => void
+  updateSequence: (newData: Partial<Sequence>) => void
 ) {
   try {
     const response = await fetch(`/api/sequences/${sequenceId}/settings`, {

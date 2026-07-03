@@ -203,20 +203,10 @@ export const ListDetailsView = memo(
 
     const handleSingleAddToSequence = useCallback(
       (contact: Contact) => {
-        console.log(
-          "handleSingleAddToSequence called with contact:",
-          contact.email,
-          contact.id
-        );
-        console.log("Full contact object:", contact);
-        console.log("onContactsToAddChange exists:", !!onContactsToAddChange);
-
         if (onContactsToAddChange) {
           // Pass the contact ID instead of the full contact object
-          console.log("Calling parent's onContactsToAddChange with contact ID");
           onContactsToAddChange([{ id: contact.id } as Contact]);
         } else {
-          console.log("Setting contactsToAddToSequence and showSequenceModal");
           // Use the same approach as bulk add to sequence
           // Ensure we're passing the full contact object
           setContactsToAddToSequence([
@@ -228,7 +218,6 @@ export const ListDetailsView = memo(
               name: contact.name || `${contact.firstName} ${contact.lastName}`,
             } as Contact,
           ]);
-          console.log("Contact added to contactsToAddToSequence:", contact.id);
           setShowSequenceModal(true);
         }
       },
@@ -236,12 +225,9 @@ export const ListDetailsView = memo(
     );
 
     const handleCloseSequenceModal = useCallback(() => {
-      console.log("Closing sequence modal");
-      console.log("Current contactsToAddToSequence:", contactsToAddToSequence);
       setShowSequenceModal(false);
       setContactsToAddToSequence([]);
-      console.log("Reset contactsToAddToSequence to empty array");
-    }, [contactsToAddToSequence]);
+    }, []);
 
     const handleRemoveContact = async (contactId: string) => {
       if (!list) return;
@@ -293,7 +279,6 @@ export const ListDetailsView = memo(
     };
 
     const handleCloseAddAllToSequenceModal = () => {
-      console.log("Closing add all to sequence modal");
       setShowAddAllToSequenceModal(false);
     };
 

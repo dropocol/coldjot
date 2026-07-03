@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { updateSequenceReadinessMetadata } from "@/lib/metadata-utils";
+import type { SequenceReadinessMetadata } from "@/lib/sequence-utils";
 
 export async function GET(
   req: Request,
@@ -43,8 +44,8 @@ export async function GET(
     // Only update metadata for draft sequences if it's missing or incomplete
     if (sequence && sequence.status === "draft") {
       // Cast metadata to an object with proper typing
-      const metadataObj = (sequence.metadata as Record<string, any>) || {};
-      const readiness = metadataObj.readiness || {};
+      const metadataObj = (sequence.metadata as Record<string, unknown>) || {};
+      const readiness = (metadataObj.readiness as Partial<SequenceReadinessMetadata>) || {};
 
       // Check if we need to update the metadata
       const needsUpdate =

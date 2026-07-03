@@ -75,7 +75,6 @@ export function LaunchSequenceModal({
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("Error launching sequence:", errorData.error);
 
         toast({
           title: "An Error Occurred",

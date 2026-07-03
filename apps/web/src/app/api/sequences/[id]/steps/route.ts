@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { updateSequenceReadinessField } from "@/lib/metadata-utils";
+import type { SequenceReadinessMetadata } from "@/lib/sequence-utils";
 
 export async function POST(
   req: Request,
@@ -69,8 +70,9 @@ export async function POST(
 
     // Update the sequence metadata only if this is the first step
     // or if the metadata doesn't already indicate that steps exist
-    const metadataObj = (sequence.metadata as Record<string, any>) || {};
-    const readiness = metadataObj.readiness || {};
+    const metadataObj = (sequence.metadata as Record<string, unknown>) || {};
+    const readiness =
+      (metadataObj.readiness as Partial<SequenceReadinessMetadata>) || {};
 
     if (sequence.steps.length === 0 || !readiness.hasSteps) {
       await updateSequenceReadinessField(sequence.id, "hasSteps", true);

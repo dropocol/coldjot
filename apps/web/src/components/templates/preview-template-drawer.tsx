@@ -95,7 +95,7 @@ export default function PreviewTemplateDrawer({
     });
 
     // Get the formatted text
-    let formattedText = tempDiv.innerText
+    const formattedText = tempDiv.innerText
       .replace(/\n{3,}/g, "\n\n") // Replace multiple line breaks with double line breaks
       .trim();
 

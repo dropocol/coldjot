@@ -59,12 +59,9 @@ export const authConfig: NextAuthConfig = {
   trustHost: true,
 
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       if (account?.provider === "google" && account.access_token) {
         try {
-          console.log("🚀 Signing in with Google...");
-          console.log(user, account, profile);
-
           // const existingAccount = await findGoogleAccount(user.sub!);
           const existingAccount = await findGoogleAccount(
             account.providerAccountId
@@ -79,7 +76,6 @@ export const authConfig: NextAuthConfig = {
               }),
             });
 
-            console.log("updatedAccount");
             return true;
           } else {
             if (!user.id) return false;
@@ -170,9 +166,7 @@ export const authConfig: NextAuthConfig = {
       return session;
     },
 
-    async jwt({ token, account, profile }) {
-      console.log("jwt", token, account, profile);
-
+    async jwt({ token, account }) {
       if (!account) return token;
 
       if (account?.access_token) {

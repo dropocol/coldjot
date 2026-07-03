@@ -290,19 +290,6 @@ export const checkEmailSpam = (email: string): SpamCheckResult => {
     );
   }
 
-  // Debug logging
-  console.log("Spam Analysis Debug:", {
-    textLength: cleanedText.length,
-    htmlLength: email.length,
-    linkCount: links.length,
-    imageCount: images.length,
-    scriptCount: scripts.length,
-    wordCount: words.length,
-    sentenceCount: sentences.length,
-    spamScore,
-    reasons: detectedReasons,
-  });
-
   // Determine status
   let status: string;
   if (spamScore >= 80) status = "Excellent (Highly Likely to Reach Inbox)";

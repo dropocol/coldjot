@@ -140,9 +140,6 @@ export default function ApolloSearchComponent({ userId }: Props) {
         throw new Error("Failed to save contact");
       }
 
-      const savedContact = await saveResponse.json();
-      console.log("Saved contact:", savedContact);
-
       // Update the contact in the list
       setSearchResults((prev) =>
         prev.map((c) =>

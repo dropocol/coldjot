@@ -18,7 +18,8 @@
         "forceConsistentCasingInFileNames": true,
         "types": ["node"],
         "noEmit": false,
-        "incremental": false
+        "incremental": false,
+        "ignoreDeprecations": "6.0"
     },
     "include": [
         "src/**/*"

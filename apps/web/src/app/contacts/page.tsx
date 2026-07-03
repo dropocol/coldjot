@@ -47,38 +47,18 @@ export default function ContactsPage() {
   };
 
   const handleContactsToAddChange = (contactsToAdd: Contact[]) => {
-    console.log(
-      "handleContactsToAddChange called with",
-      contactsToAdd.length,
-      "contacts"
-    );
-
-    // Log the contact IDs instead of emails
-    console.log("Contact IDs:", contactsToAdd.map((c) => c.id).join(", "));
-
     // Store the contact IDs for the modal
     setContactsToAddToSequence(contactsToAdd);
-    console.log("Setting showSequenceModal to true");
     setShowSequenceModal(true);
   };
 
   const handleBulkAddToSequence = () => {
     if (selectedContacts.length === 0) return;
 
-    console.log(
-      "handleBulkAddToSequence called with",
-      selectedContacts.length,
-      "contact IDs"
-    );
-
-    console.log("Selected contact IDs:", selectedContacts.join(", "));
-
     // Create contact objects with just IDs for the modal
     const contactObjects = selectedContacts.map((id) => ({ id }) as Contact);
     setContactsToAddToSequence(contactObjects);
 
-    console.log("showSequenceModal:", showSequenceModal);
-    console.log("contactsToAddToSequence length:", contactObjects.length);
     setShowSequenceModal(true);
   };
 
@@ -88,7 +68,6 @@ export default function ContactsPage() {
   };
 
   const handleCloseSequenceModal = () => {
-    console.log("Closing sequence modal");
     setShowSequenceModal(false);
   };
 

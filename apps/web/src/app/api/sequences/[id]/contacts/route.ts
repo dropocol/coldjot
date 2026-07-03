@@ -84,8 +84,7 @@ export async function GET(
       } else if (contact.completed) {
         status = SequenceContactStatusEnum.COMPLETED;
         // } else if (latestEvent?.type.toLowerCase() === "bounced") {
-      } else if (contact.status === SequenceContactStatusEnum.BOUNCED) {
-        status = SequenceContactStatusEnum.FAILED;
+        //   status = SequenceContactStatusEnum.FAILED;
       } else if (contact.currentStep > 0) {
         status = SequenceContactStatusEnum.IN_PROGRESS;
       } else {
