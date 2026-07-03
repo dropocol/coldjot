@@ -54,3 +54,16 @@ export function useUpdateMailbox(id: string) {
     },
   });
 }
+
+/** Refresh Gmail aliases (POST /api/mailboxes/[id]/aliases/refresh). */
+export function useRefreshMailboxAliases(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post<unknown>(`/api/mailboxes/${id}/aliases/refresh`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.mailboxes.detail(id) });
+      qc.invalidateQueries({ queryKey: qk.mailboxes.all });
+    },
+  });
+}

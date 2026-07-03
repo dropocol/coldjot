@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,8 @@ import type {
   BusinessScheduleType,
 } from "@coldjot/types";
 import { SequenceDangerZone } from "@/components/sequences/sequence-danger-zone";
+import { useMailboxes } from "@/hooks/queries/use-mailboxes";
+import { useUpdateSequenceSettings } from "@/hooks/queries/use-sequences";
 
 interface SequenceSettingsProps {
   sequence: {
@@ -38,61 +40,33 @@ interface SequenceSettingsProps {
 export function SequenceSettings({ sequence }: SequenceSettingsProps) {
   const router = useRouter();
   const [name, setName] = useState(sequence.name);
-  const [isSaving, setIsSaving] = useState(false);
-  const [mailboxes, setMailboxes] = useState<MailboxWithRequired[]>([]);
-  const [_isLoadingMailboxes, setIsLoadingMailboxes] = useState(true);
+  const updateSettings = useUpdateSequenceSettings(sequence.id);
+  const isSaving = updateSettings.isPending;
 
-  useEffect(() => {
-    const fetchMailboxes = async () => {
-      try {
-        const response = await fetch("/api/mailboxes");
-        if (!response.ok) throw new Error("Failed to fetch mailboxes");
-        const data = await response.json();
-        // Ensure required fields are present
-        const mailboxesWithRequired = data.map(
-          (m: {
-            id: string;
-            email: string;
-            name?: string | null;
-            aliases?: unknown;
-          }) => ({
-            id: m.id,
-            email: m.email,
-            name: m.name || null,
-            aliases: m.aliases,
-          })
-        );
-        setMailboxes(mailboxesWithRequired);
-      } catch (error) {
-        console.error("Failed to fetch mailboxes:", error);
-        toast.error("Failed to load mailboxes");
-      } finally {
-        setIsLoadingMailboxes(false);
-      }
-    };
-
-    fetchMailboxes();
-  }, []);
+  const { data: mailboxData } = useMailboxes<{
+    id: string;
+    email: string;
+    name?: string | null;
+    aliases?: unknown;
+  }>();
+  // Ensure required fields are present
+  const mailboxes = (mailboxData ?? []).map(
+    (m) =>
+      ({
+        id: m.id,
+        email: m.email,
+        name: m.name || null,
+        aliases: m.aliases,
+      }) as MailboxWithRequired
+  );
 
   const handleSave = async () => {
     try {
-      setIsSaving(true);
-      const response = await fetch(`/api/sequences/${sequence.id}/settings`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update sequence");
-
+      await updateSettings.mutateAsync({ name });
       toast.success("Settings updated successfully");
       router.refresh();
     } catch (_error) {
       toast.error("Failed to update settings");
-    } finally {
-      setIsSaving(false);
     }
   };
 

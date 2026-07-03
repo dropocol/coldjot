@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, X } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { Mailbox } from "@prisma/client";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/http/api-client";
 
 interface AddEmailAccountProps {
   onClose: () => void;
@@ -18,20 +19,15 @@ export function AddMailbox({
   onAccountAdded: _onAccountAdded,
   showCloseButton = false,
 }: AddEmailAccountProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const gmailAuth = useMutation({
+    mutationFn: () => api.post<{ url: string }>("/api/mailboxes/gmail/auth", {}),
+  });
+  const isLoading = gmailAuth.isPending;
 
   const handleGmailSignIn = async () => {
     try {
-      setIsLoading(true);
-      // Start Gmail OAuth flow
-      const response = await fetch("/api/mailboxes/gmail/auth", {
-        method: "POST",
-      });
-
-      if (!response.ok) throw new Error("Failed to start Gmail authentication");
-
-      const { url } = await response.json();
+      const { url } = await gmailAuth.mutateAsync();
       window.location.href = url;
     } catch (_error) {
       toast({
@@ -39,7 +35,6 @@ export function AddMailbox({
         description: "Failed to start Gmail authentication",
         variant: "destructive",
       });
-      setIsLoading(false);
     }
   };
 

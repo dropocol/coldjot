@@ -129,6 +129,16 @@ export function useResetSequence(id: string) {
   });
 }
 
+/** Save sequence settings (PATCH /api/sequences/[id]/settings). */
+export function useUpdateSequenceSettings(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Record<string, unknown>) =>
+      api.patch<Sequence>(`/api/sequences/${id}/settings`, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.sequences.detail(id) }),
+  });
+}
+
 /**
  * Optimistically patch the cached sequence detail. Used by the `useSequence`
  * shim to mirror the old context's `updateSequence` / `updateReadinessField`

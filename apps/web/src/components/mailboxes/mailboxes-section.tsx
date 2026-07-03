@@ -8,6 +8,9 @@ import { MailboxList, type MailboxWithAliases } from "./mailbox-list";
 import { AddMailbox } from "./add-mailbox";
 import type { Mailbox } from "@coldjot/database";
 import { startMailboxWatch, stopMailboxWatch } from "@/lib/api/mailbox";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/http/api-client";
+import { qk } from "@/lib/query/keys";
 
 interface MailboxesSectionProps {
   initialAccounts: MailboxWithAliases[];
@@ -19,91 +22,78 @@ export function MailboxesSection({ initialAccounts }: MailboxesSectionProps) {
   );
   const [accounts, setAccounts] =
     useState<MailboxWithAliases[]>(initialAccounts);
+  const qc = useQueryClient();
+
+  // Per-call mutations (id is passed per-call, not baked into the hook).
+  const updateMailbox = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<Mailbox>;
+    }) => api.patch<MailboxWithAliases>(`/api/mailboxes/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.mailboxes.all }),
+  });
+  const deleteMailbox = useMutation({
+    mutationFn: (id: string) => api.delete<null>(`/api/mailboxes/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.mailboxes.all }),
+  });
+  const refreshAliases = useMutation({
+    mutationFn: (id: string) =>
+      api.post<MailboxWithAliases>(`/api/mailboxes/${id}/aliases/refresh`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.mailboxes.all }),
+  });
 
   const handleAccountUpdate = async (
     accountId: string,
     data: Partial<Mailbox>
   ) => {
-    try {
-      const response = await fetch(`/api/mailboxes/${accountId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error("Failed to update account");
-
-      const updatedAccount: MailboxWithAliases = await response.json();
-      setAccounts((prev) =>
-        prev.map((account) =>
-          account.id === accountId ? updatedAccount : account
-        )
-      );
-    } catch (error) {
-      console.error("[EMAIL_ACCOUNTS_UPDATE]", error);
-      throw error;
-    }
+    const updatedAccount = await updateMailbox.mutateAsync({
+      id: accountId,
+      data,
+    });
+    setAccounts((prev) =>
+      prev.map((account) =>
+        account.id === accountId
+          ? (updatedAccount as MailboxWithAliases)
+          : account
+      )
+    );
   };
 
   const handleAccountDelete = async (accountId: string) => {
-    try {
-      const response = await fetch(`/api/mailboxes/${accountId}`, {
-        method: "DELETE",
-      });
+    await deleteMailbox.mutateAsync(accountId);
+    setAccounts((prev) => prev.filter((account) => account.id !== accountId));
 
-      if (!response.ok) throw new Error("Failed to delete account");
-
-      setAccounts((prev) => prev.filter((account) => account.id !== accountId));
-
-      // Show add account form if no accounts left
-      if (accounts.length === 1) {
-        setIsAddingAccount(true);
-      }
-    } catch (error) {
-      console.error("[EMAIL_ACCOUNTS_DELETE]", error);
-      throw error;
+    // Show add account form if no accounts left
+    if (accounts.length === 1) {
+      setIsAddingAccount(true);
     }
   };
 
   const handleAliasesRefresh = async (accountId: string) => {
-    try {
-      const response = await fetch(
-        `/api/mailboxes/${accountId}/aliases/refresh`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to refresh aliases");
-
-      const updatedAccount: MailboxWithAliases = await response.json();
-      setAccounts((prev) =>
-        prev.map((account) =>
-          account.id === accountId ? updatedAccount : account
-        )
-      );
-    } catch (error) {
-      console.error("[EMAIL_ACCOUNTS_REFRESH_ALIASES]", error);
-      throw error;
-    }
+    const updatedAccount = await refreshAliases.mutateAsync(accountId);
+    setAccounts((prev) =>
+      prev.map((account) =>
+        account.id === accountId
+          ? (updatedAccount as MailboxWithAliases)
+          : account
+      )
+    );
   };
 
   const handleWatchUpdate = async (email: string, action: "start" | "stop") => {
-    try {
-      // Find the account with the matching email to get its userId
-      const account = accounts.find((acc) => acc.email === email);
-      if (!account) {
-        throw new Error("Account not found");
-      }
+    // Find the account with the matching email to get its userId
+    const account = accounts.find((acc) => acc.email === email);
+    if (!account) {
+      throw new Error("Account not found");
+    }
 
-      if (action === "start") {
-        await startMailboxWatch(account.userId, email);
-      } else {
-        await stopMailboxWatch(email);
-      }
-    } catch (error) {
-      console.error("[EMAIL_WATCH_UPDATE]", error);
-      throw error;
+    if (action === "start") {
+      await startMailboxWatch(account.userId, email);
+    } else {
+      await stopMailboxWatch(email);
     }
   };
 
