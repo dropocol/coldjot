@@ -1,7 +1,19 @@
-import { BusinessHours, ProcessingWindow, RateLimits } from "./sequences";
-import { BusinessScheduleEnum, EmailJobEnum, ProcessingJobEnum } from "./enums";
+import type { BusinessHours, ProcessingWindow, RateLimits } from "./sequence";
+import type {
+  BusinessScheduleEnum,
+  EmailJobEnum,
+  ProcessingJobEnum,
+  SequenceHealthStatusType,
+  ErrorRecoveryStatusType,
+  RetryStrategyBackoffType,
+} from "./enums";
 
-// Job Types
+// Re-export the enums/type-aliases that pair with the queue surface, so
+// `import { ... } from "@coldjot/types/queue"` is self-contained. (Not re-listed
+// from the root barrel — see ./index.ts which exports enums separately.)
+
+// ─── Job Types ───────────────────────────────────────────────────────────────
+
 export interface ProcessingJob {
   type: ProcessingJobEnum.SEQUENCE;
   sequenceId: string;
@@ -21,13 +33,13 @@ export interface EmailJob {
   messageId?: string;
   scheduledTime?: string;
   to: string;
-  // subject?: string;
   threadId?: string;
   testMode?: boolean;
   disableSending?: boolean;
 }
 
-// Monitoring Types
+// ─── Monitoring Types ────────────────────────────────────────────────────────
+
 export interface AlertConfig {
   errorThreshold: number;
   warningThreshold: number;
@@ -52,7 +64,7 @@ export interface AlertThresholds {
 
 export interface SequenceHealth {
   sequenceId: string;
-  status: "healthy" | "warning" | "error" | "critical";
+  status: SequenceHealthStatusType;
   errorCount: number;
   lastCheck: Date;
   lastError?: string;
@@ -75,7 +87,8 @@ export interface SystemMetrics {
   jobsFailed: number;
 }
 
-// Processing Types
+// ─── Processing Types ────────────────────────────────────────────────────────
+
 export interface ProcessingResult {
   success: boolean;
   error?: string;
@@ -108,7 +121,17 @@ export interface QueueMetrics {
   throughput: number;
 }
 
-// Error Recovery Types
+// ─── Error Recovery Types ────────────────────────────────────────────────────
+
+export interface RetryStrategy {
+  maxRetries: number;
+  backoffType: RetryStrategyBackoffType;
+  backoffDelay: number; // in milliseconds
+  maxDelay?: number; // maximum delay for exponential backoff
+  customBackoff?: (attempt: number) => number;
+  shouldRetry?: (error: Error) => boolean;
+}
+
 export interface ErrorRecovery {
   jobId: string;
   error: string;
@@ -116,15 +139,6 @@ export interface ErrorRecovery {
   lastRetry: Date;
   nextRetry?: Date;
   strategy: RetryStrategy;
-  status: "pending" | "retrying" | "failed" | "recovered";
+  status: ErrorRecoveryStatusType;
   metadata: Record<string, any>;
-}
-
-export interface RetryStrategy {
-  maxRetries: number;
-  backoffType: "fixed" | "exponential" | "custom";
-  backoffDelay: number; // in milliseconds
-  maxDelay?: number; // maximum delay for exponential backoff
-  customBackoff?: (attempt: number) => number;
-  shouldRetry?: (error: Error) => boolean;
 }

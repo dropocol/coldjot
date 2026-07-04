@@ -1,40 +1,8 @@
-import type { gmail_v1 } from "googleapis";
-export type MessagePartHeader = gmail_v1.Schema$MessagePartHeader;
-export type Gmail = gmail_v1.Gmail;
-export type Message = gmail_v1.Schema$Message;
+import { z } from "zod";
 import type { EmailTracking } from "./events";
-import { Mailbox } from "./mailbox";
+import type { Mailbox } from "./mailbox";
 
-export interface CreateDraftOptions {
-  to: string;
-  subject: string;
-  content: string;
-  accessToken: string;
-}
-
-export interface SendDraftOptions {
-  draftId: string;
-  accessToken: string;
-}
-
-export interface EmailResponse {
-  messageId: string;
-  threadId?: string;
-}
-
-// Add new types and utilities for email threading
-export interface ThreadHeaders {
-  messageId: string;
-  inReplyTo?: string;
-  references?: string[];
-}
-export interface EmailResult {
-  messageId?: string;
-  threadId?: string;
-  success?: boolean;
-  error?: string;
-  isFake?: boolean;
-}
+// ─── Send options (uses the tracking envelope from events.ts) ────────────────
 
 export interface SendEmailOptions {
   to: string;
@@ -58,13 +26,74 @@ export interface SenderInfo {
   header: string;
 }
 
-export interface MessageHeader {
-  name?: string;
-  value?: string;
+/** Result of email subject resolution (new thread vs reply). */
+export interface SubjectInfo {
+  subject: string;
+  isReply: boolean;
+  originalSubject?: string;
 }
 
-export interface GmailMessage {
-  payload?: {
-    headers?: MessageHeader[];
-  };
+export interface EmailResponse {
+  messageId: string;
+  threadId?: string;
 }
+
+// ─── DB-aligned tracking row (canonical; supersedes web's local EmailTracking) ─
+
+export interface EmailContact {
+  name: string;
+  email: string;
+}
+
+export interface EmailEventRow {
+  id: string;
+  type: string;
+  timestamp: Date;
+  metadata: Record<string, unknown>;
+}
+
+export interface TrackedLinkRow {
+  id: string;
+  originalUrl: string;
+  clickCount: number;
+}
+
+/**
+ * DB-aligned email-tracking row as returned by the web API.
+ * This is the canonical "rich" shape; the send-time envelope of the same
+ * name lives in `./events.ts`.
+ */
+export interface EmailTrackingRow {
+  id: string;
+  messageId: string;
+  subject: string;
+  previewText?: string;
+  recipientEmail: string;
+  status: string;
+  metadata: Record<string, unknown>;
+  sequenceId: string;
+  stepId: string;
+  contactId: string;
+  userId: string;
+  openCount: number;
+  sentAt: Date | null;
+  openedAt: Date | null;
+  clickedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  contact?: EmailContact | null;
+  events: EmailEventRow[];
+  links: TrackedLinkRow[];
+}
+
+// ─── Schemas ─────────────────────────────────────────────────────────────────
+
+export const sendDraftSchema = z.object({
+  draftId: z.string().min(1),
+});
+export type SendDraftInput = z.infer<typeof sendDraftSchema>;
+
+export const trackEventSchema = z.object({
+  emailId: z.string().min(1),
+});
+export type TrackEventInput = z.infer<typeof trackEventSchema>;

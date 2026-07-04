@@ -1,4 +1,4 @@
-import type { StatsData, ChartData } from "@/types/stats";
+import type { StatsData, ChartData } from "@coldjot/types";
 
 export const DEMO_STATS: StatsData = {
   totalEmails: 22453,

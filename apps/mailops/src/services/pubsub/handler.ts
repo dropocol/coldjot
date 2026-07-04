@@ -9,7 +9,7 @@ import {
   GmailMessageMetadata,
   DecodedNotification,
   MessageDetails,
-} from "../../types/pubsub";
+} from "@coldjot/types";
 import { logger } from "@/lib/log";
 import { backOff } from "exponential-backoff";
 import { SequenceContactStatusEnum, EmailEventEnum } from "@coldjot/types";

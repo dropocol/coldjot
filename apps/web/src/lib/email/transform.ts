@@ -1,5 +1,5 @@
 import { prisma } from "@coldjot/database";
-import type { EmailTracking } from "@/types/email";
+import type { EmailTrackingRow } from "@coldjot/types";
 
 /**
  * Shape of a raw EmailTracking row including the relations the timeline routes
@@ -28,7 +28,7 @@ export type TimelineEmail = Awaited<
  * EmailTracking shape consumed by the timeline UI. Shared by both the
  * sequence-scoped and global timeline routes.
  */
-export function transformEmailData(email: TimelineEmail): EmailTracking {
+export function transformEmailData(email: TimelineEmail): EmailTrackingRow {
   // Calculate opens from events
   const openEvents = email.events.filter((e) => e.type === "opened");
   const openCount = openEvents.length;

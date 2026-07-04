@@ -8,7 +8,7 @@ import {
   notFound,
 } from "@/lib/auth/access";
 import { parseBody } from "@/lib/http/validation";
-import { updateListSchema } from "@/lib/schemas";
+import { updateListSchema } from "@coldjot/types/schemas";
 
 export async function GET(
   request: Request,

@@ -1,12 +1,3 @@
-// export interface ThreadCheckData {
-//   threadId: string;
-//   userId: string;
-//   sequenceId: string;
-//   contactId: string;
-//   lastCheckedAt: Date;
-//   createdAt: Date;
-// }
-
 export interface ThreadCheckData {
   threadId: string;
   userId: string;

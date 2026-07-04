@@ -10,7 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { Card } from "@coldjot/ui/components/card";
-import type { ChartData } from "@/types/stats";
+import type { ChartData } from "@coldjot/types";
 import { format } from "date-fns";
 
 interface StatsChartProps {

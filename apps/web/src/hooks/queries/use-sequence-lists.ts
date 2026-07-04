@@ -2,18 +2,15 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
-import { qk, type ListParams } from "@/lib/query/keys";
-import type { EmailList } from "@coldjot/types";
+import { qk } from "@/lib/query/keys";
+import type { ListParams } from "@coldjot/types";
+import type {
+  EmailList,
+  PaginatedResponse,
+} from "@coldjot/types";
 
 /** Response shape of GET /api/sequences/[id]/lists. */
-export interface SequenceListsResponse {
-  lists: EmailList[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage?: number;
-}
+export type SequenceListsResponse = PaginatedResponse<"lists", EmailList>;
 
 function invalidateSequenceLists(
   qc: ReturnType<typeof useQueryClient>,

@@ -1,16 +1,10 @@
 import { gmail_v1 } from "googleapis";
 import { getGmailSubject } from "./google/gmail";
-import type { SequenceStep } from "@coldjot/types";
+import type { SequenceStep, SubjectInfo } from "@coldjot/types";
 import { logger } from "./log";
 import { prisma } from "@coldjot/database";
 import { replacePlaceholders } from "@/lib/placeholders";
 import type { Contact } from "@prisma/client";
-
-export interface SubjectInfo {
-  subject: string;
-  isReply: boolean;
-  originalSubject?: string;
-}
 
 export async function determineEmailSubject(
   step: SequenceStep,

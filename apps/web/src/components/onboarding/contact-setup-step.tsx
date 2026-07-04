@@ -21,7 +21,7 @@ import {
   useCreateContact,
   useBatchCreateContacts,
 } from "@/hooks/queries/use-contacts";
-import type { CreateContactInput } from "@/lib/schemas";
+import type { CreateContactInput } from "@coldjot/types/schemas";
 
 interface ContactSetupStepProps {
   onNext: () => void;

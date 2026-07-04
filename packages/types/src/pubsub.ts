@@ -1,13 +1,25 @@
+import { z } from "zod";
+
+// ─── Schemas ─────────────────────────────────────────────────────────────────
+
+export const pubSubMessageSchema = z.object({
+  message: z.object({
+    data: z.string(),
+    messageId: z.string(),
+    publishTime: z.string(),
+    attributes: z.record(z.string(), z.string()).optional(),
+  }),
+  subscription: z.string(),
+});
+export type PubSubPushRequest = z.infer<typeof pubSubMessageSchema>;
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 export interface PubSubMessage {
   messageId: string;
   data: string;
   publishTime: string;
   attributes?: Record<string, string>;
-}
-
-export interface PubSubPushRequest {
-  message: PubSubMessage;
-  subscription: string;
 }
 
 export interface DecodedNotification {
@@ -58,19 +70,6 @@ export interface NotificationRecord {
   data?: Record<string, any>;
 }
 
-export interface GmailHistoryRecord {
-  id: string;
-  messagesAdded?: Array<{
-    message: GmailMessageMetadata;
-  }>;
-  labelsAdded?: Array<{
-    message: GmailMessageMetadata;
-  }>;
-  labelsRemoved?: Array<{
-    message: GmailMessageMetadata;
-  }>;
-}
-
 export interface GmailMessageMetadata {
   id: string;
   threadId: string;
@@ -89,4 +88,17 @@ export interface GmailMessageMetadata {
       };
     }>;
   };
+}
+
+export interface GmailHistoryRecord {
+  id: string;
+  messagesAdded?: Array<{
+    message: GmailMessageMetadata;
+  }>;
+  labelsAdded?: Array<{
+    message: GmailMessageMetadata;
+  }>;
+  labelsRemoved?: Array<{
+    message: GmailMessageMetadata;
+  }>;
 }

@@ -2,7 +2,9 @@
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
-import { qk, type ListParams } from "@/lib/query/keys";
+import { qk } from "@/lib/query/keys";
+import type { ListParams } from "@coldjot/types";
+import type { PaginatedResponse } from "@coldjot/types";
 
 export interface TimelineEmail {
   id: string;
@@ -10,14 +12,7 @@ export interface TimelineEmail {
 }
 
 /** Response shape of GET /api/timeline and /api/sequences/[id]/timeline. */
-export interface TimelineResponse {
-  emails: TimelineEmail[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage?: number;
-}
+export type TimelineResponse = PaginatedResponse<"emails", TimelineEmail>;
 
 interface TimelineQueryParams extends ListParams {
   sequenceId?: string;

@@ -3,14 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
 import { qk } from "@/lib/query/keys";
-import type { SequenceContact } from "@coldjot/types";
-
-/** Response shape of GET /api/sequences/[id]/contacts. */
-export interface SequenceContactsResponse {
-  contacts: SequenceContact[];
-  totalSteps: number;
-  total: number;
-}
+import type {
+  SequenceContact,
+  SequenceContactsResponse,
+} from "@coldjot/types";
 
 function invalidateContacts(
   qc: ReturnType<typeof useQueryClient>,

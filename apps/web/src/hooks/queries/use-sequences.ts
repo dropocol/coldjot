@@ -2,24 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
-import { qk, type ListParams } from "@/lib/query/keys";
-import type { Sequence, SequenceStatus } from "@coldjot/types";
+import { qk } from "@/lib/query/keys";
+import type {
+  CreateSequenceInput,
+  ListParams,
+  PaginatedResponse,
+  Sequence,
+  SequenceStatus,
+} from "@coldjot/types";
 
 /** Response shape of GET /api/sequences. */
-export interface SequencesListResponse {
-  sequences: Sequence[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage?: number;
-}
-
-export interface CreateSequenceInput {
-  name: string;
-  permissions: "team" | "private";
-  schedule: "business" | "custom";
-}
+export type SequencesListResponse = PaginatedResponse<"sequences", Sequence>;
 
 function sequencesQueryString(params: ListParams): string {
   const qs = new URLSearchParams();

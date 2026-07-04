@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { updateSequenceReadinessField } from "@/lib/metadata-utils";
 import { findOwnedContact, notFound } from "@/lib/auth/access";
 import { parseBody } from "@/lib/http/validation";
-import { addContactToSequenceSchema } from "@/lib/schemas";
+import { addContactToSequenceSchema } from "@coldjot/types/schemas";
 
 export async function GET(
   req: Request,

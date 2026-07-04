@@ -9,16 +9,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@coldjot/ui/components/tooltip";
-import type { EmailTracking } from "@/types/email";
+import type { EmailTrackingRow } from "@coldjot/types";
 
 interface TimelineItemProps {
-  email: EmailTracking & {
+  email: EmailTrackingRow & {
     contact?: {
       name: string;
       email: string;
     } | null;
   };
-  onSelect: (email: EmailTracking) => void;
+  onSelect: (email: EmailTrackingRow) => void;
 }
 
 export function TimelineItem({ email, onSelect }: TimelineItemProps) {

@@ -1,6 +1,13 @@
-import { Mailbox } from "./mailbox";
+import type { gmail_v1 } from "googleapis";
 
-// Types
+export type MessagePartHeader = gmail_v1.Schema$MessagePartHeader;
+export type Gmail = gmail_v1.Gmail;
+export type Message = gmail_v1.Schema$Message;
+
+import type { Mailbox } from "./mailbox";
+
+// ─── Client config ───────────────────────────────────────────────────────────
+
 export interface GmailClientOptions {
   userId?: string;
   accessToken: string;
@@ -22,6 +29,8 @@ export interface MailboxCredentials {
   expiryDate?: number;
 }
 
+// ─── Send / update options ───────────────────────────────────────────────────
+
 export interface SendGmailOptions {
   to: string;
   subject: string;
@@ -32,11 +41,6 @@ export interface SendGmailOptions {
   mailbox?: Mailbox;
 }
 
-export interface GmailResponse {
-  messageId: string;
-  threadId?: string;
-}
-
 export interface UpdateSentEmailOptions {
   to: string;
   subject: string;
@@ -45,4 +49,50 @@ export interface UpdateSentEmailOptions {
   originalContent: string;
   threadId?: string;
   mailbox?: Mailbox;
+}
+
+export interface GmailResponse {
+  messageId: string;
+  threadId?: string;
+}
+
+// ─── Drafts ──────────────────────────────────────────────────────────────────
+
+export interface CreateDraftOptions {
+  to: string;
+  subject: string;
+  content: string;
+  accessToken: string;
+}
+
+export interface SendDraftOptions {
+  draftId: string;
+  accessToken: string;
+}
+
+// ─── Headers / messages ──────────────────────────────────────────────────────
+
+export interface ThreadHeaders {
+  messageId: string;
+  inReplyTo?: string;
+  references?: string[];
+}
+
+export interface EmailResult {
+  messageId?: string;
+  threadId?: string;
+  success?: boolean;
+  error?: string;
+  isFake?: boolean;
+}
+
+export interface MessageHeader {
+  name?: string;
+  value?: string;
+}
+
+export interface GmailMessage {
+  payload?: {
+    headers?: MessageHeader[];
+  };
 }

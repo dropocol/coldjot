@@ -18,18 +18,115 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js",
             "require": "./dist/index.cjs"
-        }
+        },
+        "./schemas": {
+            "types": "./dist/schemas.d.ts",
+            "import": "./dist/schemas.js",
+            "require": "./dist/schemas.cjs"
+        },
+        "./common": {
+            "types": "./dist/common.d.ts",
+            "import": "./dist/common.js",
+            "require": "./dist/common.cjs"
+        },
+        "./enums": {
+            "types": "./dist/enums.d.ts",
+            "import": "./dist/enums.js",
+            "require": "./dist/enums.cjs"
+        },
+        "./user": {
+            "types": "./dist/user.d.ts",
+            "import": "./dist/user.js",
+            "require": "./dist/user.cjs"
+        },
+        "./contact": {
+            "types": "./dist/contact.d.ts",
+            "import": "./dist/contact.js",
+            "require": "./dist/contact.cjs"
+        },
+        "./list": {
+            "types": "./dist/list.d.ts",
+            "import": "./dist/list.js",
+            "require": "./dist/list.cjs"
+        },
+        "./template": {
+            "types": "./dist/template.d.ts",
+            "import": "./dist/template.js",
+            "require": "./dist/template.cjs"
+        },
+        "./sequence": {
+            "types": "./dist/sequence.d.ts",
+            "import": "./dist/sequence.js",
+            "require": "./dist/sequence.cjs"
+        },
+        "./mailbox": {
+            "types": "./dist/mailbox.d.ts",
+            "import": "./dist/mailbox.js",
+            "require": "./dist/mailbox.cjs"
+        },
+        "./gmail": {
+            "types": "./dist/gmail.d.ts",
+            "import": "./dist/gmail.js",
+            "require": "./dist/gmail.cjs"
+        },
+        "./email": {
+            "types": "./dist/email.d.ts",
+            "import": "./dist/email.js",
+            "require": "./dist/email.cjs"
+        },
+        "./events": {
+            "types": "./dist/events.d.ts",
+            "import": "./dist/events.js",
+            "require": "./dist/events.cjs"
+        },
+        "./thread": {
+            "types": "./dist/thread.d.ts",
+            "import": "./dist/thread.js",
+            "require": "./dist/thread.cjs"
+        },
+        "./queue": {
+            "types": "./dist/queue.d.ts",
+            "import": "./dist/queue.js",
+            "require": "./dist/queue.cjs"
+        },
+        "./search": {
+            "types": "./dist/search.d.ts",
+            "import": "./dist/search.js",
+            "require": "./dist/search.cjs"
+        },
+        "./watch": {
+            "types": "./dist/watch.d.ts",
+            "import": "./dist/watch.js",
+            "require": "./dist/watch.cjs"
+        },
+        "./pubsub": {
+            "types": "./dist/pubsub.d.ts",
+            "import": "./dist/pubsub.js",
+            "require": "./dist/pubsub.cjs"
+        },
+        "./placeholders": {
+            "types": "./dist/placeholders.d.ts",
+            "import": "./dist/placeholders.js",
+            "require": "./dist/placeholders.cjs"
+        },
+        "./app-url": {
+            "types": "./dist/app-url.d.ts",
+            "import": "./dist/app-url.js",
+            "require": "./dist/app-url.cjs"
+        },
+        "./package.json": "./package.json"
     },
     "scripts": {
-        "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
-        "build": "tsup src/index.ts --format esm,cjs --dts",
-        "build:prod": "tsup src/index.ts --format esm,cjs --dts",
+        "dev": "tsup --format esm,cjs --dts --watch",
+        "build": "tsup --format esm,cjs --dts",
+        "build:prod": "tsup --format esm,cjs --dts",
         "lint": "eslint \"src/**/*.ts*\"",
         "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "tsup": "^8.5.1"
+        "tsup": "^8.5.1",
+        "zod": "^4.4.3"
     },
     "devDependencies": {
         "@types/node": "^26.1.0",

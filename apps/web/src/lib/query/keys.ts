@@ -11,11 +11,7 @@
  * `["contacts","detail",...]`.
  */
 
-export interface ListParams {
-  page: number;
-  limit: number;
-  search?: string;
-}
+import type { ListParams } from "@coldjot/types";
 
 function searchParam(params: ListParams): string {
   // Normalize so `{page:1,limit:20,search:"a"}` and `{search:"a",page:1,limit:20}`

@@ -1,7 +1,6 @@
 "use client";
 
-import { Sequence } from "@coldjot/types";
-import { SequenceReadinessMetadata } from "./sequence-utils";
+import { Sequence, type SequenceReadinessMetadata } from "@coldjot/types";
 
 /**
  * Client-side actions for updating sequence state

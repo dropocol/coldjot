@@ -1,10 +1,12 @@
 import { Contact } from "@prisma/client";
+import type {
+  PlaceholderContext as SharedPlaceholderContext,
+} from "@coldjot/types";
 
-export interface PlaceholderContext {
-  contact?: Contact | null;
+/** web-local alias: `fallbacks` is required for the web replace path. */
+export type PlaceholderContext = SharedPlaceholderContext<Contact> & {
   fallbacks: Record<string, string>;
-  customValues?: Record<string, string>;
-}
+};
 
 export function replacePlaceholders(
   content: string,

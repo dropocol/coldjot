@@ -7,8 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { Suspense } from "react";
 import { Card } from "@coldjot/ui/components/card";
 import { Skeleton } from "@coldjot/ui/components/skeleton";
-import type { StatsData, ChartData } from "@/types/stats";
-import { type DateRange } from "@/components/stats/date-range-selector";
+import type { StatsData, ChartData, DateRange } from "@coldjot/types";
 import { DateRangeSelectorWrapper } from "@/components/stats/date-range-selector-wrapper";
 import {
   DEMO_STATS,

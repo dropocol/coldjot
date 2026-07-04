@@ -6,7 +6,7 @@ import { TimelineItem } from "./timeline-item";
 import { EmailDetailsDrawer } from "./email-details-drawer";
 import { PaginationControls } from "@/components/pagination";
 import { useInView } from "react-intersection-observer";
-import type { EmailTracking } from "@/types/email";
+import type { EmailTrackingRow } from "@coldjot/types";
 import {
   useTimeline,
   useInfiniteTimeline,
@@ -33,7 +33,7 @@ export function TimelineList({
   isInfiniteScroll,
   onScrollModeToggle,
 }: TimelineListProps) {
-  const [selectedEmail, setSelectedEmail] = useState<EmailTracking | null>(
+  const [selectedEmail, setSelectedEmail] = useState<EmailTrackingRow | null>(
     null
   );
   const { ref, inView } = useInView();
@@ -89,7 +89,7 @@ export function TimelineList({
     if (isInfiniteScroll) {
       const emails =
         (infiniteQuery.data?.pages.flatMap((p) => p.emails) ??
-          []) as unknown as EmailTracking[];
+          []) as unknown as EmailTrackingRow[];
       if (emails.length === 0) {
         return (
           <div className="text-center py-8 text-muted-foreground">
@@ -112,7 +112,7 @@ export function TimelineList({
     }
 
     const data = paginationQuery.data;
-    const emails = (data?.emails ?? []) as unknown as EmailTracking[];
+    const emails = (data?.emails ?? []) as unknown as EmailTrackingRow[];
     if (!data || emails.length === 0) {
       return (
         <div className="text-center py-8 text-muted-foreground">

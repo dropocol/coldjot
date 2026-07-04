@@ -10,7 +10,7 @@ import { parseBody } from "@/lib/http/validation";
 import {
   addContactToListSchema,
   setListContactsSchema,
-} from "@/lib/schemas";
+} from "@coldjot/types/schemas";
 
 // Helper function to trigger list sync via mailops
 async function triggerListSync(listId: string) {

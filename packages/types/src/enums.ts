@@ -30,8 +30,6 @@ export enum EmailTrackingEnum {
   CAMPAIGN = "campaign",
 }
 
-// TODO: combine with EmailTrackingStatusEnum
-// Define EmailEventType based on the schema enum
 export enum EmailEventEnum {
   SENT = "sent",
   OPENED = "opened",
@@ -92,3 +90,40 @@ export enum SequenceContactStatusEnum {
 }
 
 export type SequenceContactStatusType = SequenceContactStatusEnum;
+
+// ─── Queue / monitoring enums (canonical: adopted from mailops) ──────────────
+
+export enum SequenceHealthStatusEnum {
+  HEALTHY = "healthy",
+  WARNING = "warning",
+  ERROR = "error",
+  CRITICAL = "critical",
+}
+
+export type SequenceHealthStatusType = SequenceHealthStatusEnum;
+
+export enum ErrorRecoveryStatusEnum {
+  PENDING = "pending",
+  RETRYING = "retrying",
+  FAILED = "failed",
+  RECOVERED = "recovered",
+}
+
+export type ErrorRecoveryStatusType = ErrorRecoveryStatusEnum;
+
+export enum RetryStrategyBackoffEnum {
+  FIXED = "fixed",
+  EXPONENTIAL = "exponential",
+  CUSTOM = "custom",
+}
+
+export type RetryStrategyBackoffType = RetryStrategyBackoffEnum;
+
+// ─── Stats date ranges ───────────────────────────────────────────────────────
+
+export type DateRange =
+  | "today"
+  | "this_week"
+  | "last_7_days"
+  | "last_30_days"
+  | "all_time";

@@ -2,17 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
-import { qk, type ListParams } from "@/lib/query/keys";
-import type { Template } from "@coldjot/types";
+import { qk } from "@/lib/query/keys";
+import type { ListParams } from "@coldjot/types";
+import type {
+  PaginatedResponse,
+  Template,
+} from "@coldjot/types";
 
-export interface TemplatesListResponse {
-  templates: Template[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage?: number;
-}
+export type TemplatesListResponse = PaginatedResponse<"templates", Template>;
 
 function qs(params: ListParams): string {
   const s = new URLSearchParams();

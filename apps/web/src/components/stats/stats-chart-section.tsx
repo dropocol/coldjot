@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { Card } from "@coldjot/ui/components/card";
 import { Skeleton } from "@coldjot/ui/components/skeleton";
 import { StatsChart } from "./stats-chart";
-import type { ChartData } from "@/types/stats";
+import type { ChartData } from "@coldjot/types";
 
 interface StatsChartSectionProps {
   data: ChartData[];

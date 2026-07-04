@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { DateRangeSelector, type DateRange } from "./date-range-selector";
+import { DateRangeSelector } from "./date-range-selector";
+import type { DateRange } from "@coldjot/types";
 
 export function DateRangeSelectorWrapper() {
   const router = useRouter();

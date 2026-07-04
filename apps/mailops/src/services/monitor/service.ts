@@ -2,6 +2,7 @@ import { prisma } from "@coldjot/database";
 import {
   AlertConfig,
   SequenceHealth,
+  SequenceHealthStatusEnum,
   SystemMetrics,
   QueueMetrics,
 } from "@coldjot/types";
@@ -103,7 +104,7 @@ export class MonitoringService {
         await this.initializeSequenceStats(sequenceId);
         return {
           sequenceId,
-          status: "healthy",
+          status: SequenceHealthStatusEnum.HEALTHY,
           errorCount: 0,
           lastCheck: new Date(),
           metrics: {
@@ -129,13 +130,13 @@ export class MonitoringService {
       const errorRate = queueMetrics.errorRate;
 
       // Determine health status
-      let status: SequenceHealth["status"] = "healthy";
+      let status: SequenceHealth["status"] = SequenceHealthStatusEnum.HEALTHY;
       if (errorRate >= config.criticalThreshold) {
-        status = "critical";
+        status = SequenceHealthStatusEnum.CRITICAL;
       } else if (errorRate >= config.errorThreshold) {
-        status = "error";
+        status = SequenceHealthStatusEnum.ERROR;
       } else if (errorRate >= config.warningThreshold) {
-        status = "warning";
+        status = SequenceHealthStatusEnum.WARNING;
       }
 
       const health: SequenceHealth = {

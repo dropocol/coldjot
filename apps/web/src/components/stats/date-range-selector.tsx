@@ -1,13 +1,7 @@
 "use client";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
-
-export type DateRange =
-  | "today"
-  | "this_week"
-  | "last_7_days"
-  | "last_30_days"
-  | "all_time";
+import type { DateRange } from "@coldjot/types";
 
 interface DateRangeSelectorProps {
   value: DateRange;

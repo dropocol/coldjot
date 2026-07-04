@@ -4,7 +4,7 @@ import { refreshAccessToken } from "@/lib/google/google-account";
 import { sendGmailDraft } from "@/lib/google/gmail";
 import { NextResponse } from "next/server";
 import { parseBody } from "@/lib/http/validation";
-import { sendDraftSchema } from "@/lib/schemas";
+import { sendDraftSchema } from "@coldjot/types/schemas";
 
 export async function POST(request: Request) {
   const session = await auth();

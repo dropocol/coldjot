@@ -1,5 +1,5 @@
 import { StatsCard } from "./stats-card";
-import type { StatsData } from "@/types/stats";
+import type { StatsData } from "@coldjot/types";
 import {
   BarChart3,
   Mail,

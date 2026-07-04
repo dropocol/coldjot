@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { updateSequenceReadinessField } from "@/lib/metadata-utils";
-import type { SequenceReadinessMetadata } from "@/lib/sequence-utils";
+import type { SequenceReadinessMetadata } from "@coldjot/types";
 
 export async function POST(
   req: Request,

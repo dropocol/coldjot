@@ -3,7 +3,7 @@ import {
   PubSubMessage,
   DecodedNotification,
   MessageDetails,
-} from "../../types/pubsub";
+} from "@coldjot/types";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import { logger } from "@/lib/log";
 import { prisma } from "@coldjot/database";

@@ -11,7 +11,7 @@ import { prisma } from "@coldjot/database";
 import { getBaseUrl } from "@/utils";
 import { updateSequenceStats } from "@/lib/stats";
 import type { Prisma } from "@prisma/client";
-import { EmailEventType } from "@coldjot/types";
+import { EmailEventType, EmailEventMetadata } from "@coldjot/types";
 import { logger } from "@/lib/log";
 import { ProcessingJobEnum } from "@coldjot/types";
 export async function createEmailTracking(
@@ -376,20 +376,6 @@ export async function getSequenceEvents(
     },
   });
 }
-export interface EventMetadata {
-  userAgent?: string;
-  ipAddress?: string;
-  location?: string;
-  deviceType?: string;
-  replyMessageId?: string;
-  bounceReason?: string;
-  threadId?: string;
-  messageId?: string;
-  from?: string;
-  snippet?: string;
-  timestamp?: string;
-}
-
 /**
  * Track an email event and update sequence stats
  * @param emailId - The ID of the email being tracked
@@ -401,7 +387,7 @@ export async function trackEmailEvent(
   trackingId: string,
   // sequenceId: string,
   type: EmailEventType,
-  metadata?: EventMetadata,
+  metadata?: EmailEventMetadata,
   trackingData?: EmailTrackingMetadata
 ) {
   try {

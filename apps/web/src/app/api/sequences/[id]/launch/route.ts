@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { SequenceStatus } from "@coldjot/types";
 import { updateSequenceReadinessMetadata } from "@/lib/metadata-utils";
 import { parseBody } from "@/lib/http/validation";
-import { launchSequenceSchema } from "@/lib/schemas";
+import { launchSequenceSchema } from "@coldjot/types/schemas";
 
 export async function POST(
   req: Request,

@@ -2,22 +2,19 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
-import { qk, type ListParams } from "@/lib/query/keys";
+import { qk } from "@/lib/query/keys";
+import type { ListParams } from "@coldjot/types";
 import type {
   CreateContactInput,
   UpdateContactInput,
-} from "@/lib/schemas";
-import type { Contact } from "@coldjot/types";
+} from "@coldjot/types/schemas";
+import type {
+  Contact,
+  PaginatedResponse,
+} from "@coldjot/types";
 
 /** Response shape of GET /api/contacts. */
-export interface ContactsListResponse {
-  contacts: Contact[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage?: number;
-}
+export type ContactsListResponse = PaginatedResponse<"contacts", Contact>;
 
 function contactsQueryString(params: ListParams): string {
   const qs = new URLSearchParams();

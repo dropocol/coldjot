@@ -2,23 +2,12 @@ import { Router } from "express";
 import { PubSubService } from "../services/pubsub/client";
 import { PubSubHandler } from "../services/pubsub/handler";
 import { logger } from "@/lib/log";
-import { z } from "zod";
+import { pubSubMessageSchema as PubSubMessageSchema } from "@coldjot/types/pubsub";
 import { verifyPubSubJwt } from "../lib/auth/pubsub";
 
 const router = Router();
 const pubsubService = PubSubService.getInstance();
 const pubsubHandler = new PubSubHandler();
-
-// Schema for PubSub push message
-const PubSubMessageSchema = z.object({
-  message: z.object({
-    data: z.string(),
-    messageId: z.string(),
-    publishTime: z.string(),
-    attributes: z.record(z.string(), z.string()).optional(),
-  }),
-  subscription: z.string(),
-});
 
 // Initialize PubSub service when the router is created
 pubsubService.initialize().catch((error) => {

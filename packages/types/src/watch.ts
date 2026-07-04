@@ -1,11 +1,14 @@
 import { z } from "zod";
 
-export const WatchSetupSchema = z.object({
+// ─── Schemas ─────────────────────────────────────────────────────────────────
+
+export const watchSetupSchema = z.object({
   userId: z.string(),
   email: z.email(),
 });
+export type WatchSetupParams = z.infer<typeof watchSetupSchema>;
 
-export type WatchSetupParams = z.infer<typeof WatchSetupSchema>;
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface WatchResponse {
   historyId: string;

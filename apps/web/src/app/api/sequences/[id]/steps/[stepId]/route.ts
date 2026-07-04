@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { parseBody } from "@/lib/http/validation";
-import { updateSequenceStepSchema } from "@/lib/schemas";
+import { updateSequenceStepSchema } from "@coldjot/types/schemas";
 
 export async function PUT(
   req: Request,

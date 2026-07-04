@@ -2,34 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
-import { qk, type ListParams } from "@/lib/query/keys";
-import type { UpdateListInput } from "@/lib/schemas";
-import type { Contact, EmailList } from "@coldjot/types";
+import { qk } from "@/lib/query/keys";
+import type {
+  EmailList,
+  ListDetailResponse,
+  ListParams,
+  PaginatedResponse,
+} from "@coldjot/types";
+import type { UpdateListInput } from "@coldjot/types/schemas";
 
 /** Response shape of GET /api/lists. */
-export interface ListsListResponse {
-  lists: EmailList[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage?: number;
-}
-
-/** Pagination block attached to GET /api/lists/[id]. */
-interface ListDetailPagination {
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  nextPage?: number;
-}
-
-/** Response shape of GET /api/lists/[id]. */
-export interface ListDetailResponse extends EmailList {
-  contacts: Contact[];
-  _pagination: ListDetailPagination;
-}
+export type ListsListResponse = PaginatedResponse<"lists", EmailList>;
 
 function listsQueryString(params: ListParams): string {
   const qs = new URLSearchParams();

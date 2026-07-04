@@ -1,9 +1,10 @@
 import { Contact } from "@prisma/client";
+import type { PlaceholderContext } from "@coldjot/types";
 
-export interface PlaceholderOptions {
+/** mailops-local alias: contact is required for the replace/validate path. */
+export type PlaceholderOptions = PlaceholderContext<Contact> & {
   contact: Contact;
-  fallbacks?: Record<string, string>;
-}
+};
 
 /**
  * Replaces placeholders in text content with actual values from contact data

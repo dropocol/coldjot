@@ -8,7 +8,7 @@ import {
   WATCH_CONFIG,
   WATCH_ERRORS,
 } from "../../config/watch/constants";
-import { WatchResponse, WatchError, WatchErrorCode } from "../../types/watch";
+import { WatchResponse, WatchError, WatchErrorCode } from "@coldjot/types";
 import { backOff, type BackoffOptions } from "exponential-backoff";
 import { PubSub } from "@google-cloud/pubsub";
 import { refreshTokenIfNeeded } from "@/lib/google/gmail/helper";

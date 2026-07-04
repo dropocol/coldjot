@@ -130,7 +130,7 @@ export function SequenceHeader() {
       <SequenceNav sequenceId={sequence.id} />
 
       {isDraft && (
-        <div className="mt-6 mb-6 max-w-5xl mx-auto">
+        <div className="mt-4 mb-4 max-w-5xl mx-auto">
           <SequenceSetupChecklist sequence={sequence} onStepComplete={refreshSequence} />
         </div>
       )}

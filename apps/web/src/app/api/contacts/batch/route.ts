@@ -3,7 +3,7 @@ import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { parseBody } from "@/lib/http/validation";
-import { batchCreateContactsSchema } from "@/lib/schemas";
+import { batchCreateContactsSchema } from "@coldjot/types/schemas";
 
 export async function POST(req: Request) {
   try {

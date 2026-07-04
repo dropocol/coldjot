@@ -6,7 +6,7 @@ import { EmailDetailsDrawer } from "./email-details-drawer";
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
 import Link from "next/link";
-import type { EmailTracking } from "@/types/email";
+import type { EmailTrackingRow } from "@coldjot/types";
 import { useTimeline } from "@/hooks/queries/use-timeline";
 
 interface RecentEmailsProps {
@@ -14,7 +14,7 @@ interface RecentEmailsProps {
 }
 
 export function RecentEmails({ userId }: RecentEmailsProps) {
-  const [selectedEmail, setSelectedEmail] = useState<EmailTracking | null>(
+  const [selectedEmail, setSelectedEmail] = useState<EmailTrackingRow | null>(
     null
   );
 
@@ -23,7 +23,7 @@ export function RecentEmails({ userId }: RecentEmailsProps) {
     limit: 20,
     userId,
   });
-  const emails = (data?.emails ?? []) as unknown as EmailTracking[];
+  const emails = (data?.emails ?? []) as unknown as EmailTrackingRow[];
 
   if (isLoading) {
     return (

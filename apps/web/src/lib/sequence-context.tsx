@@ -7,8 +7,7 @@ import React, {
   ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Sequence } from "@coldjot/types";
-import { SequenceReadinessMetadata } from "@/lib/sequence-utils";
+import { Sequence, type SequenceReadinessMetadata } from "@coldjot/types";
 import { qk } from "@/lib/query/keys";
 import { useSequenceDetail } from "@/hooks/queries/use-sequences";
 

@@ -13,12 +13,12 @@ import {
   Send,
   ExternalLink,
 } from "lucide-react";
-import type { EmailTracking } from "@/types/email";
+import type { EmailTrackingRow } from "@coldjot/types";
 
 import { Button } from "@coldjot/ui/components/button";
 
 interface EmailDetailsDrawerProps {
-  email: EmailTracking | null;
+  email: EmailTrackingRow | null;
   isOpen: boolean;
   onClose: () => void;
 }

@@ -1,19 +1,9 @@
-import { Sequence, SequenceStatus } from "@coldjot/types";
-
-// Type for the sequence readiness metadata
-export type SequenceReadinessMetadata = {
-  hasSteps: boolean;
-  hasContacts: boolean;
-  hasBusinessHours: boolean;
-  hasMailbox: boolean;
-  lastUpdated?: string; // ISO date string
-};
-
-// Type for the result of isSequenceReadyToLaunch
-export type SequenceReadinessResult = {
-  isReady: boolean;
-  steps: SequenceReadinessMetadata;
-};
+import {
+  Sequence,
+  SequenceStatus,
+  type SequenceReadinessMetadata,
+  type SequenceReadinessResult,
+} from "@coldjot/types";
 
 const DEFAULT_READINESS: SequenceReadinessMetadata = {
   hasSteps: false,

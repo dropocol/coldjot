@@ -1,17 +1,11 @@
 import { Router } from "express";
 import { WatchService } from "../services/watch";
 import { logger } from "@/lib/log";
-import { z } from "zod";
+import { watchSetupSchema as MailboxWatchSchema } from "@coldjot/types/watch";
 import { prisma } from "@coldjot/database";
 
 const router = Router();
 const watchService = new WatchService();
-
-// Schema for mailbox watch setup
-const MailboxWatchSchema = z.object({
-  userId: z.string(),
-  email: z.email(),
-});
 
 /**
  * Setup watch for a mailbox

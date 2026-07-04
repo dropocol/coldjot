@@ -24,6 +24,13 @@ export interface SequenceMailbox {
   aliasId: string | null;
 }
 
+/** Mailbox shape including aliases, as used by UI consumers. */
+export interface MailboxWithAliases extends Mailbox {
+  id: string;
+  email: string;
+  aliases: EmailAlias[];
+}
+
 export interface TokenRefreshError extends Error {
   code?: string;
   status?: number;

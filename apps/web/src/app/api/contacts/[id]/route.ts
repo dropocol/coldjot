@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { isNotFound, notFound } from "@/lib/auth/access";
 import { parseBody } from "@/lib/http/validation";
-import { updateContactSchema } from "@/lib/schemas";
+import { updateContactSchema } from "@coldjot/types/schemas";
 
 export async function GET(
   request: Request,

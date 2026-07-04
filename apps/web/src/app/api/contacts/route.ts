@@ -3,7 +3,7 @@ import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { parseBody, parseQuery } from "@/lib/http/validation";
-import { createContactSchema, paginationSchema } from "@/lib/schemas";
+import { createContactSchema, paginationSchema } from "@coldjot/types/schemas";
 
 export async function GET(req: Request) {
   try {
