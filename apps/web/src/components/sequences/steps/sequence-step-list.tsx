@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { GripVertical } from "lucide-react";
-import {
-  DragDropContext,
-  Draggable,
-  Droppable,
-  DropResult,
-} from "@hello-pangea/dnd";
+import { DragDropContext, Draggable, Droppable, DropResult } from "@hello-pangea/dnd";
 import { Mail, MoreHorizontal } from "lucide-react";
 import { Badge } from "@coldjot/ui/components/badge";
 import { Button } from "@coldjot/ui/components/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
 import { toast } from "sonner";
 import { cn } from "@coldjot/ui/lib/utils";
 import type { SequenceStep } from "@coldjot/types";
@@ -70,10 +70,7 @@ export function SequenceStepList({
   };
 
   return (
-    <DragDropContext
-      onDragStart={() => setIsDragging(true)}
-      onDragEnd={handleDragEnd}
-    >
+    <DragDropContext onDragStart={() => setIsDragging(true)} onDragEnd={handleDragEnd}>
       <Droppable droppableId="steps">
         {(provided) => (
           <div
@@ -87,15 +84,9 @@ export function SequenceStepList({
                   <div
                     ref={provided.innerRef}
                     {...provided.draggableProps}
-                    className={cn(
-                      "p-4 flex items-center gap-4",
-                      snapshot.isDragging && "bg-muted"
-                    )}
+                    className={cn("p-4 flex items-center gap-4", snapshot.isDragging && "bg-muted")}
                   >
-                    <div
-                      {...provided.dragHandleProps}
-                      className="flex-shrink-0 cursor-grab"
-                    >
+                    <div {...provided.dragHandleProps} className="flex-shrink-0 cursor-grab">
                       <GripVertical className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-shrink-0">
@@ -105,9 +96,7 @@ export function SequenceStepList({
                     </div>
                     <div className="flex-grow">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          Day {index + 1}: Manual email
-                        </span>
+                        <span className="font-medium">Day {index + 1}: Manual email</span>
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {step.subject || "(No Subject)"}
@@ -135,34 +124,17 @@ export function SequenceStepList({
   );
 }
 
-function StepActions({
-  step,
-  onEdit,
-  onEditTemplate,
-  onDuplicate,
-  onDelete,
-}: StepActionsProps) {
+function StepActions({ step, onEdit, onEditTemplate, onDuplicate, onDelete }: StepActionsProps) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
+      <DropdownMenuTrigger render={<Button variant="ghost" size="icon" />}>
+        <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onEdit(step)}>
-          Edit Settings
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onEditTemplate(step)}>
-          Edit Template
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onDuplicate(step)}>
-          Duplicate
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => onDelete(step)}
-          className="text-destructive"
-        >
+        <DropdownMenuItem onClick={() => onEdit(step)}>Edit Settings</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEditTemplate(step)}>Edit Template</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDuplicate(step)}>Duplicate</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDelete(step)} className="text-destructive">
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>

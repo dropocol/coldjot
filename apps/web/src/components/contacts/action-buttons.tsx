@@ -7,8 +7,22 @@ import { useState } from "react";
 import EditContactModal from "./edit-contact-drawer";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@coldjot/ui/components/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
 import { useDeleteContact } from "@/hooks/queries/use-contacts";
 
@@ -20,10 +34,7 @@ interface ActionButtonsProps {
 const RECENT_CONTACTS_KEY = "recentContacts";
 const MAX_RECENT_CONTACTS = 5;
 
-export default function ActionButtons({
-  contact,
-  onContactUpdate,
-}: ActionButtonsProps) {
+export default function ActionButtons({ contact, onContactUpdate }: ActionButtonsProps) {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAddToList, setShowAddToList] = useState(false);
@@ -48,9 +59,7 @@ export default function ActionButtons({
 
     // Update recent contacts
     try {
-      const recentContacts = JSON.parse(
-        localStorage.getItem(RECENT_CONTACTS_KEY) || "[]"
-      );
+      const recentContacts = JSON.parse(localStorage.getItem(RECENT_CONTACTS_KEY) || "[]");
       const updatedRecents = [
         contact.id,
         ...recentContacts.filter((id: string) => id !== contact.id),
@@ -70,16 +79,9 @@ export default function ActionButtons({
 
       // Remove from recent contacts if present
       try {
-        const recentContacts = JSON.parse(
-          localStorage.getItem(RECENT_CONTACTS_KEY) || "[]"
-        );
-        const updatedRecents = recentContacts.filter(
-          (id: string) => id !== contact.id
-        );
-        localStorage.setItem(
-          RECENT_CONTACTS_KEY,
-          JSON.stringify(updatedRecents)
-        );
+        const recentContacts = JSON.parse(localStorage.getItem(RECENT_CONTACTS_KEY) || "[]");
+        const updatedRecents = recentContacts.filter((id: string) => id !== contact.id);
+        localStorage.setItem(RECENT_CONTACTS_KEY, JSON.stringify(updatedRecents));
       } catch {
         // Ignore a corrupt recent-contacts payload.
       }
@@ -101,10 +103,8 @@ export default function ActionButtons({
           Compose
         </Button>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+          <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+            <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setEditingContact(contact)}>

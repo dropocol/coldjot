@@ -3,7 +3,14 @@
 import { useState } from "react";
 
 import { Button } from "@coldjot/ui/components/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@coldjot/ui/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { FileText } from "lucide-react";
 import { useTemplates } from "@/hooks/queries/use-templates";
@@ -40,19 +47,12 @@ export function TemplateCommand({ onSelect }: TemplateCommandProps) {
   //  Always set modal={true} to to allow scrolling the parent page and popover to work
   return (
     <Popover open={open} onOpenChange={setOpen} modal={true}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <FileText className="h-4 w-4" />
-          Templates
-        </Button>
+      <PopoverTrigger render={<Button variant="outline" className="gap-2" />}>
+        <FileText className="h-4 w-4" />
+        Templates
       </PopoverTrigger>
 
-      <PopoverContent
-        className="w-[400px] p-0"
-        align="start"
-        sideOffset={5}
-        side="top"
-      >
+      <PopoverContent className="w-[400px] p-0" align="start" sideOffset={5} side="top">
         <Command>
           <CommandInput
             placeholder="Search templates..."
@@ -60,9 +60,7 @@ export function TemplateCommand({ onSelect }: TemplateCommandProps) {
             onValueChange={setSearch}
           />
           <CommandList className="max-h-[300px] overflow-auto">
-            <CommandEmpty>
-              {isLoading ? "Loading templates..." : "No templates found"}
-            </CommandEmpty>
+            <CommandEmpty>{isLoading ? "Loading templates..." : "No templates found"}</CommandEmpty>
             <CommandGroup>
               {filteredTemplates.map((template) => (
                 <CommandItem

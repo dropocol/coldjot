@@ -1,9 +1,28 @@
 "use client";
 
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@coldjot/ui/components/pagination";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@coldjot/ui/components/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@coldjot/ui/components/select";
 import { Button } from "@coldjot/ui/components/button";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@coldjot/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@coldjot/ui/components/tooltip";
 import { ArrowDownWideNarrow, Loader2, ListEnd } from "lucide-react";
 
 interface PaginationControlsProps {
@@ -87,16 +106,11 @@ export function PaginationControls({
   if (isInfiniteScroll) {
     return (
       <div className="flex flex-row justify-between gap-4 border-t pt-4">
-        <div
-          ref={infiniteScrollRef}
-          className="h-8 flex items-center justify-center"
-        >
+        <div ref={infiniteScrollRef} className="h-8 flex items-center justify-center">
           {isFetchingNextPage ? (
             <Loader2 className="h-6 w-6 animate-spin" />
           ) : hasNextPage ? (
-            <span className="text-sm text-muted-foreground">
-              Scroll to load more
-            </span>
+            <span className="text-sm text-muted-foreground">Scroll to load more</span>
           ) : (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <ListEnd className="h-4 w-4" />
@@ -108,16 +122,18 @@ export function PaginationControls({
           <div className="flex items-center justify-end">
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onScrollModeToggle}
-                    className="gap-2"
-                  >
-                    <ArrowDownWideNarrow className="h-4 w-4" />
-                    Switch to Pagination
-                  </Button>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onScrollModeToggle}
+                      className="gap-2"
+                    />
+                  }
+                >
+                  <ArrowDownWideNarrow className="h-4 w-4" />
+                  Switch to Pagination
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Toggle between pagination and infinite scroll</p>
@@ -158,25 +174,25 @@ export function PaginationControls({
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-sm text-muted-foreground whitespace-nowrap">
-              items per page
-            </span>
+            <span className="text-sm text-muted-foreground whitespace-nowrap">items per page</span>
           </div>
         </div>
 
         {onScrollModeToggle && (
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onScrollModeToggle}
-                  className="gap-2"
-                >
-                  <ArrowDownWideNarrow className="h-4 w-4" />
-                  Switch to Infinite Scroll
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onScrollModeToggle}
+                    className="gap-2"
+                  />
+                }
+              >
+                <ArrowDownWideNarrow className="h-4 w-4" />
+                Switch to Infinite Scroll
               </TooltipTrigger>
               <TooltipContent>
                 <p>Toggle between pagination and infinite scroll</p>
@@ -211,9 +227,7 @@ export function PaginationControls({
               ))}
             </SelectContent>
           </Select>
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
-            items per page
-          </span>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">items per page</span>
         </div>
       </div>
 
@@ -227,9 +241,7 @@ export function PaginationControls({
                   e.preventDefault();
                   if (currentPage > 1) onPageChange(currentPage - 1);
                 }}
-                className={
-                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
-                }
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
               />
             </PaginationItem>
 
@@ -257,14 +269,9 @@ export function PaginationControls({
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  if (currentPage < actualTotalPages)
-                    onPageChange(currentPage + 1);
+                  if (currentPage < actualTotalPages) onPageChange(currentPage + 1);
                 }}
-                className={
-                  currentPage === actualTotalPages
-                    ? "pointer-events-none opacity-50"
-                    : ""
-                }
+                className={currentPage === actualTotalPages ? "pointer-events-none opacity-50" : ""}
               />
             </PaginationItem>
           </PaginationContent>
@@ -273,16 +280,18 @@ export function PaginationControls({
         {onScrollModeToggle && (
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onScrollModeToggle}
-                  className="gap-2"
-                >
-                  <ArrowDownWideNarrow className="h-4 w-4" />
-                  Switch to Infinite Scroll
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onScrollModeToggle}
+                    className="gap-2"
+                  />
+                }
+              >
+                <ArrowDownWideNarrow className="h-4 w-4" />
+                Switch to Infinite Scroll
               </TooltipTrigger>
               <TooltipContent>
                 <p>Toggle between pagination and infinite scroll</p>

@@ -4,7 +4,12 @@ import { checkEmailSpam } from "@/utils";
 
 import { arc } from "d3-shape";
 import { getTextStats, calculateReadability } from "@/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
 import { Button } from "@coldjot/ui/components/button";
 import { Zap } from "lucide-react";
 import { logger } from "@/lib/logger";
@@ -36,9 +41,7 @@ const GAUGE_CONFIG = {
 
 export function EmailAnalysis({ content }: EmailAnalysisProps) {
   // Get readability score and text statistics
-  const { score: readabilityScore, level: readingEase } = calculateReadability(
-    content.text
-  );
+  const { score: readabilityScore, level: readingEase } = calculateReadability(content.text);
   const stats = getTextStats(content.text);
 
   // Get spam analysis with HTML content
@@ -104,10 +107,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
 
     // Calculate position on the arc
     const radius = GAUGE_CONFIG.radius - 8;
-    return [
-      Math.cos(angleInRadians) * radius,
-      Math.sin(angleInRadians) * radius,
-    ];
+    return [Math.cos(angleInRadians) * radius, Math.sin(angleInRadians) * radius];
   };
 
   const markerLocation = calculateMarkerLocation(readabilityScore);
@@ -144,15 +144,12 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
           </svg>
           <div className="absolute bottom-24 left-1/2 -translate-x-1/2 transform text-center">
             <div className="text-5xl font-semibold">{readabilityScore}</div>
-            <div className="text-sm font-medium text-muted-foreground">
-              Readability Score
-            </div>
+            <div className="text-sm font-medium text-muted-foreground">Readability Score</div>
           </div>
 
           <p className="text-sm mx-6 text-muted-foreground">
-            Your readability score is calculated using the Flesch-Kincaid
-            formula, which considers the number of words, sentences, and reading
-            time for your email.
+            Your readability score is calculated using the Flesch-Kincaid formula, which considers
+            the number of words, sentences, and reading time for your email.
           </p>
         </div>
       </div>
@@ -219,23 +216,16 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
           <span className="text-base font-medium">Delivery Score</span>
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    23 credits left
-                  </div>
-                  <div className="h-4 w-4 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-[10px] font-medium text-primary">
-                      ?
-                    </span>
-                  </div>
+              <TooltipTrigger render={<div className="flex items-center gap-1.5" />}>
+                <div className="text-xs font-medium text-muted-foreground">23 credits left</div>
+                <div className="h-4 w-4 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-[10px] font-medium text-primary">?</span>
                 </div>
               </TooltipTrigger>
               <TooltipContent className="w-80">
                 <p className="text-sm">
-                  Test your email deliverability with our AI system. Each test
-                  consumes 1 credit and provides detailed insights about
-                  potential delivery issues.
+                  Test your email deliverability with our AI system. Each test consumes 1 credit and
+                  provides detailed insights about potential delivery issues.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -249,8 +239,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
                 key={i}
                 className="h-full flex-1 shrink-0 rounded-full transition-all duration-300"
                 style={{
-                  backgroundColor:
-                    i < (spamScore / 100) * 40 ? colors.green : colors.gray,
+                  backgroundColor: i < (spamScore / 100) * 40 ? colors.green : colors.gray,
                 }}
               />
             ))}
@@ -263,9 +252,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
             {spamReasons.length > 0 && (
               <>
                 <br />
-                <span className="text-red-500">
-                  Issues found: {spamReasons.join(", ")}
-                </span>
+                <span className="text-red-500">Issues found: {spamReasons.join(", ")}</span>
               </>
             )}
           </span>

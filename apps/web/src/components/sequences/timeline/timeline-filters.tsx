@@ -9,7 +9,13 @@ import { cn } from "@coldjot/ui/lib/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { Badge } from "@coldjot/ui/components/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@coldjot/ui/components/select";
 
 export function TimelineFilters() {
   const router = useRouter();
@@ -77,24 +83,22 @@ export function TimelineFilters() {
       </Select>
 
       <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-[240px] justify-start text-left font-normal",
-              !date && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {date ? format(date, "PPP") : "Filter by date"}
-          </Button>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="outline"
+              className={cn(
+                "w-[240px] justify-start text-left font-normal",
+                !date && "text-muted-foreground"
+              )}
+            />
+          }
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date ? format(date, "PPP") : "Filter by date"}
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={handleDateSelect}
-          />
+          <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
         </PopoverContent>
       </Popover>
 
@@ -107,14 +111,8 @@ export function TimelineFilters() {
 
       {hasFilters && (
         <div className="ml-4 flex items-center gap-2">
-          {currentStatus !== "all" && (
-            <Badge variant="secondary">Status: {currentStatus}</Badge>
-          )}
-          {date && (
-            <Badge variant="secondary">
-              Date: {format(date, "MMM d, yyyy")}
-            </Badge>
-          )}
+          {currentStatus !== "all" && <Badge variant="secondary">Status: {currentStatus}</Badge>}
+          {date && <Badge variant="secondary">Date: {format(date, "MMM d, yyyy")}</Badge>}
         </div>
       )}
     </div>

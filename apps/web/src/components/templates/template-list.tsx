@@ -4,27 +4,28 @@ import { useState, useEffect } from "react";
 import { Template } from "@prisma/client";
 
 import EditTemplateDrawer from "./edit-template-drawer";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
-import { Button } from "@coldjot/ui/components/button";
 import {
-  Edit2,
-  Trash2,
-  FileText,
-  Eye,
-  ScrollText,
-  MoreVertical,
-  Copy,
-} from "lucide-react";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
+import { Button } from "@coldjot/ui/components/button";
+import { Edit2, Trash2, FileText, Eye, ScrollText, MoreVertical, Copy } from "lucide-react";
 import PreviewTemplateDrawer from "./preview-template-drawer";
 import DeleteTemplateDialog from "./delete-template-dialog";
 import { toast } from "sonner";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
 import { PaginationControls } from "@/components/pagination";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useTemplates,
-  useCreateTemplate,
-} from "@/hooks/queries/use-templates";
+import { useTemplates, useCreateTemplate } from "@/hooks/queries/use-templates";
 import { qk } from "@/lib/query/keys";
 
 interface TemplateListProps {
@@ -52,9 +53,7 @@ export default function TemplateList({
 }: TemplateListProps) {
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
-  const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(
-    null
-  );
+  const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(null);
   const qc = useQueryClient();
 
   const { data, isLoading, isFetching } = useTemplates({
@@ -108,12 +107,9 @@ export default function TemplateList({
           <div className="flex justify-center mb-4">
             <ScrollText className="h-12 w-12 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-medium mb-2">
-            Create your first template
-          </h3>
+          <h3 className="text-lg font-medium mb-2">Create your first template</h3>
           <p className="text-muted-foreground mb-4">
-            Start creating email templates to streamline your communication and
-            save time.
+            Start creating email templates to streamline your communication and save time.
           </p>
           <Button onClick={onAddTemplate}>Add Template</Button>
         </div>
@@ -139,9 +135,7 @@ export default function TemplateList({
                       </div>
                     </TableCell>
                     <TableCell>{template.subject}</TableCell>
-                    <TableCell>
-                      {new Date(template.updatedAt).toLocaleDateString()}
-                    </TableCell>
+                    <TableCell>{new Date(template.updatedAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button
@@ -153,21 +147,15 @@ export default function TemplateList({
                         </Button>
 
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
+                          <DropdownMenuTrigger render={<Button variant="ghost" size="icon" />}>
+                            <MoreVertical className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => setEditingTemplate(template)}
-                            >
+                            <DropdownMenuItem onClick={() => setEditingTemplate(template)}>
                               <Edit2 className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDuplicate(template)}
-                            >
+                            <DropdownMenuItem onClick={() => handleDuplicate(template)}>
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>

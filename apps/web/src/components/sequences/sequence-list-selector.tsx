@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, ReactNode } from "react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import { useState, type ReactElement, type ReactNode } from "react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@coldjot/ui/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { Users } from "lucide-react";
 import { EmailList as BaseEmailList } from "@coldjot/types";
@@ -31,9 +38,7 @@ export function SequenceListSelector({
   const allLists = (data?.lists ?? []) as EmailList[];
   // Filter out lists that are already attached to the sequence.
   const lists =
-    excludeIds.length > 0
-      ? allLists.filter((list) => !excludeIds.includes(list.id))
-      : allLists;
+    excludeIds.length > 0 ? allLists.filter((list) => !excludeIds.includes(list.id)) : allLists;
 
   const handleSelectList = (listId: string) => {
     onSelect(listId);
@@ -42,7 +47,7 @@ export function SequenceListSelector({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverTrigger render={trigger as ReactElement} />
       <PopoverContent className="w-[300px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search lists..." />
@@ -51,9 +56,7 @@ export function SequenceListSelector({
             <CommandGroup>
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
-                  <span className="text-sm text-muted-foreground">
-                    Loading lists...
-                  </span>
+                  <span className="text-sm text-muted-foreground">Loading lists...</span>
                 </div>
               ) : lists.length === 0 ? (
                 <div className="flex items-center justify-center p-4">
@@ -65,10 +68,7 @@ export function SequenceListSelector({
                 </div>
               ) : (
                 lists.map((list) => (
-                  <CommandItem
-                    key={list.id}
-                    onSelect={() => handleSelectList(list.id)}
-                  >
+                  <CommandItem key={list.id} onSelect={() => handleSelectList(list.id)}>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <div className="flex flex-col">

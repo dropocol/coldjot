@@ -5,14 +5,16 @@ import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@coldjot/ui/lib/utils";
 import { Button } from "@coldjot/ui/components/button";
-import { Command, CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
-import { DialogTitle } from "@coldjot/ui/components/dialog";
 import {
-  Search,
-  User,
-  Loader2,
-  ArrowRight,
-} from "lucide-react";
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@coldjot/ui/components/command";
+import { DialogTitle } from "@coldjot/ui/components/dialog";
+import { Search, User, Loader2, ArrowRight } from "lucide-react";
 import { SearchResult, SearchResultType } from "@coldjot/types";
 
 import { useContactSearch } from "@/hooks/queries/use-contacts";
@@ -84,8 +86,7 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
     url: `/search?q=${encodeURIComponent(query)}`,
   };
 
-  const displayedResults =
-    results.length > 0 ? [...results.slice(0, 2), viewAllItem] : [];
+  const displayedResults = results.length > 0 ? [...results.slice(0, 2), viewAllItem] : [];
 
   const handleViewAll = () => {
     setOpen(false);
@@ -121,7 +122,7 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
           <DialogTitle>Search</DialogTitle>
         </span>
         <Command
-          className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0"
+          className="**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:font-medium [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0"
           filter={(value, search) => {
             if (value === "view-all") return 1;
             return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
@@ -143,19 +144,13 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
                 <Loader2 className="h-4 w-4 animate-spin" />
               </div>
             ) : results.length === 0 ? (
-              <CommandEmpty className="py-6 text-center text-sm">
-                No results found.
-              </CommandEmpty>
+              <CommandEmpty className="py-6 text-center text-sm">No results found.</CommandEmpty>
             ) : (
               <>
                 {displayedResults.map((item) => (
                   <CommandItem
                     key={item.id}
-                    value={
-                      item.type === "action"
-                        ? "view-all"
-                        : `${item.title} ${item.subtitle}`
-                    }
+                    value={item.type === "action" ? "view-all" : `${item.title} ${item.subtitle}`}
                     onSelect={() => {
                       if (item.type === "action") {
                         handleViewAll();
@@ -177,15 +172,11 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
                     <div className="flex flex-col flex-1 min-w-0">
                       {item.type === "action" ? (
                         <span className="pl-2 flex items-center gap-2">
-                          <span className="font-medium truncate">
-                            {item.title}
-                          </span>
+                          <span className="font-medium truncate">{item.title}</span>
                         </span>
                       ) : item.subtitle ? (
                         <>
-                          <span className="font-medium truncate">
-                            {item.title}
-                          </span>
+                          <span className="font-medium truncate">{item.title}</span>
                           <span className="text-xs text-muted-foreground truncate">
                             {item.subtitle}
                           </span>
@@ -195,9 +186,7 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
                     {item.type === "action" ? (
                       <ArrowRight className="ml-2 h-4 w-4" />
                     ) : (
-                      <kbd className="ml-auto text-xs text-muted-foreground/50">
-                        ↵
-                      </kbd>
+                      <kbd className="ml-auto text-xs text-muted-foreground/50">↵</kbd>
                     )}
                   </CommandItem>
                 ))}

@@ -5,6 +5,7 @@ import { SettingsMessageHandler } from "@/components/settings/settings-message-h
 import { SettingsLayout } from "@/components/settings/settings-layout";
 import ProfileSettings from "@/components/settings/profile-settings";
 import GoogleIntegration from "@/components/settings/google-integration";
+import { toPlain } from "@/lib/serialize";
 
 export default async function ProfileSettingsPage() {
   const session = await auth();
@@ -22,6 +23,10 @@ export default async function ProfileSettingsPage() {
       expires_at: true,
     },
   });
+
+  // Strip Prisma/internal Symbol properties so the object can cross the
+  // Server → Client component boundary (plain POJOs only).
+  const plainAccount = account ? toPlain(account) : null;
 
   return (
     <SettingsLayout>
@@ -43,7 +48,7 @@ export default async function ProfileSettingsPage() {
           {/* <EmailSettings /> */}
           {/* <Separator /> */}
 
-          <GoogleIntegration account={account} />
+          <GoogleIntegration account={plainAccount} />
         </div>
       </div>
     </SettingsLayout>

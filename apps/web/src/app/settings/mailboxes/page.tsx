@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@coldjot/database";
 import { MailboxesSection } from "@/components/mailboxes/mailboxes-section";
 import { SettingsLayout } from "@/components/settings/settings-layout";
+import { toPlain } from "@/lib/serialize";
 
 export default async function MailboxesSettingsPage() {
   const session = await auth();
@@ -25,7 +26,7 @@ export default async function MailboxesSettingsPage() {
 
   return (
     <SettingsLayout>
-      <MailboxesSection initialAccounts={accounts} />
+      <MailboxesSection initialAccounts={toPlain(accounts)} />
     </SettingsLayout>
   );
 }

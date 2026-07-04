@@ -5,7 +5,14 @@ import { Contact } from "@prisma/client";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@coldjot/ui/lib/utils";
 import { Button } from "@coldjot/ui/components/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@coldjot/ui/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { useContactSearch } from "@/hooks/queries/use-contacts";
 
@@ -34,27 +41,27 @@ export function ContactSearch({ selectedContact, onSelect }: Props) {
   return (
     <div className="flex gap-2">
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            <div className="flex items-center truncate">
-              {selectedContact ? (
-                <div className="flex items-center gap-2 truncate">
-                  <span className="truncate">{selectedContact.name}</span>
-                  <span className="text-muted-foreground truncate">
-                    ({selectedContact.email})
-                  </span>
-                </div>
-              ) : (
-                "Search contacts..."
-              )}
-            </div>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full justify-between"
+            />
+          }
+        >
+          <div className="flex items-center truncate">
+            {selectedContact ? (
+              <div className="flex items-center gap-2 truncate">
+                <span className="truncate">{selectedContact.name}</span>
+                <span className="text-muted-foreground truncate">({selectedContact.email})</span>
+              </div>
+            ) : (
+              "Search contacts..."
+            )}
+          </div>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0" align="start">
           <Command shouldFilter={false}>
@@ -67,9 +74,7 @@ export function ContactSearch({ selectedContact, onSelect }: Props) {
               }}
             />
             <CommandList>
-              <CommandEmpty>
-                {isLoading ? "Searching..." : "No contact found"}
-              </CommandEmpty>
+              <CommandEmpty>{isLoading ? "Searching..." : "No contact found"}</CommandEmpty>
               {results.length > 0 && (
                 <CommandGroup>
                   {results.map((contact) => (
@@ -85,15 +90,11 @@ export function ContactSearch({ selectedContact, onSelect }: Props) {
                         <Check
                           className={cn(
                             "h-4 w-4",
-                            selectedContact?.id === contact.id
-                              ? "opacity-100"
-                              : "opacity-0"
+                            selectedContact?.id === contact.id ? "opacity-100" : "opacity-0"
                           )}
                         />
                         <div className="flex flex-col overflow-hidden">
-                          <span className="truncate font-medium">
-                            {contact.name}
-                          </span>
+                          <span className="truncate font-medium">{contact.name}</span>
                           <span className="truncate text-sm text-muted-foreground">
                             {contact.email}
                           </span>
@@ -114,7 +115,6 @@ export function ContactSearch({ selectedContact, onSelect }: Props) {
           onClick={() => {
             onSelect(null);
             setInputValue("");
-            
           }}
           className="shrink-0"
         >

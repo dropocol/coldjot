@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@coldjot/ui/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { List, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -20,10 +27,7 @@ interface ListSelectorProps {
   onListSelected: () => void;
 }
 
-export function ListSelector({
-  sequenceId,
-  onListSelected,
-}: ListSelectorProps) {
+export function ListSelector({ sequenceId, onListSelected }: ListSelectorProps) {
   const [open, setOpen] = useState(false);
 
   const { data } = useLists({ page: 1, limit: 100 });
@@ -43,11 +47,9 @@ export function ListSelector({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <List className="h-4 w-4" />
-          Add from List
-        </Button>
+      <PopoverTrigger render={<Button variant="outline" className="gap-2" />}>
+        <List className="h-4 w-4" />
+        Add from List
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
         <Command>

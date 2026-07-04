@@ -3,6 +3,7 @@ import { prisma } from "@coldjot/database";
 import { Separator } from "@coldjot/ui/components/separator";
 import EmailComposer from "@/components/compose/email-composer";
 import { redirect } from "next/navigation";
+import { toPlain } from "@/lib/serialize";
 
 export default async function ComposePage() {
   const session = await auth();
@@ -31,7 +32,7 @@ export default async function ComposePage() {
         </p>
       </div>
       <Separator />
-      <EmailComposer templates={templates} />
+      <EmailComposer templates={toPlain(templates)} />
     </div>
   );
 }

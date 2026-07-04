@@ -2,7 +2,14 @@ import { useState, useRef } from "react";
 import { Button } from "@coldjot/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { BracesIcon } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@coldjot/ui/components/command";
 
 export interface Placeholder {
   name: string;
@@ -28,10 +35,7 @@ interface PlaceholderButtonProps {
   textareaId?: string;
 }
 
-export function PlaceholderButton({
-  onSelectPlaceholder,
-  textareaId,
-}: PlaceholderButtonProps) {
+export function PlaceholderButton({ onSelectPlaceholder, textareaId }: PlaceholderButtonProps) {
   const [open, setOpen] = useState(false);
   const activeElement = useRef<Element | null>(null);
 
@@ -76,11 +80,9 @@ export function PlaceholderButton({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm">
-          <BracesIcon className="h-4 w-4 mr-2" />
-          Insert Variable
-        </Button>
+      <PopoverTrigger render={<Button variant="outline" size="sm" />}>
+        <BracesIcon className="h-4 w-4 mr-2" />
+        Insert Variable
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
         <Command shouldFilter={true}>
@@ -96,9 +98,7 @@ export function PlaceholderButton({
                 >
                   <div className="flex flex-col">
                     <span className="font-medium">{placeholder.label}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {placeholder.description}
-                    </span>
+                    <span className="text-muted-foreground text-xs">{placeholder.description}</span>
                   </div>
                 </CommandItem>
               ))}

@@ -12,7 +12,12 @@ import { SequenceStatus } from "@coldjot/types";
 import { isSequenceReadyToLaunch } from "@/lib/sequence-utils";
 import { Sparkles, RefreshCw, MailX, TestTube } from "lucide-react";
 import { useSequence } from "@/lib/sequence-context";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
 import { Badge } from "@coldjot/ui/components/badge";
 
 export function SequenceHeader() {
@@ -22,9 +27,7 @@ export function SequenceHeader() {
 
   // Only check readiness for draft sequences to avoid unnecessary calculations
   const isDraft = sequence.status === SequenceStatus.DRAFT;
-  const { isReady } = isDraft
-    ? isSequenceReadyToLaunch(sequence)
-    : { isReady: false };
+  const { isReady } = isDraft ? isSequenceReadyToLaunch(sequence) : { isReady: false };
 
   return (
     <>
@@ -36,14 +39,16 @@ export function SequenceHeader() {
             {sequence.disableSending && (
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge
-                      variant="outline"
-                      className="bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1 px-2"
-                    >
-                      <MailX className="h-3 w-3" />
-                      <span>Sending Disabled</span>
-                    </Badge>
+                  <TooltipTrigger
+                    render={
+                      <Badge
+                        variant="outline"
+                        className="bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1 px-2"
+                      />
+                    }
+                  >
+                    <MailX className="h-3 w-3" />
+                    <span>Sending Disabled</span>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Email sending is currently disabled for this sequence</p>
@@ -54,14 +59,16 @@ export function SequenceHeader() {
             {sequence.testMode && (
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge
-                      variant="outline"
-                      className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1 px-2"
-                    >
-                      <TestTube className="h-3 w-3" />
-                      <span>Test Mode</span>
-                    </Badge>
+                  <TooltipTrigger
+                    render={
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1 px-2"
+                      />
+                    }
+                  >
+                    <TestTube className="h-3 w-3" />
+                    <span>Test Mode</span>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Emails will only be sent to test recipients</p>
@@ -70,9 +77,7 @@ export function SequenceHeader() {
               </TooltipProvider>
             )}
             <span>•</span>
-            <span>
-              {sequence._count?.contacts || sequence.contactCount} contacts
-            </span>
+            <span>{sequence._count?.contacts || sequence.contactCount} contacts</span>
           </div>
         </div>
         <div className="flex gap-3">
@@ -84,27 +89,23 @@ export function SequenceHeader() {
               disabled={isRefreshing}
               title="Refresh sequence status"
             >
-              <RefreshCw
-                className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
           )}
 
           {isDraft && (
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Button
-                      variant="default"
-                      className="gap-2"
-                      onClick={() => setShowLaunchModal(true)}
-                      disabled={!isReady || isRefreshing}
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Launch Sequence
-                    </Button>
-                  </div>
+                <TooltipTrigger render={<span className="inline-flex" />}>
+                  <Button
+                    variant="default"
+                    className="gap-2"
+                    onClick={() => setShowLaunchModal(true)}
+                    disabled={!isReady || isRefreshing}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Launch Sequence
+                  </Button>
                 </TooltipTrigger>
                 {!isReady && (
                   <TooltipContent className="max-w-xs">
@@ -130,10 +131,7 @@ export function SequenceHeader() {
 
       {isDraft && (
         <div className="mt-6 mb-6 max-w-5xl mx-auto">
-          <SequenceSetupChecklist
-            sequence={sequence}
-            onStepComplete={refreshSequence}
-          />
+          <SequenceSetupChecklist sequence={sequence} onStepComplete={refreshSequence} />
         </div>
       )}
 

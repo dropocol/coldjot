@@ -18,8 +18,18 @@ import { $findMatchingParent } from "@lexical/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@coldjot/ui/components/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
 import {
   Bold,
   Italic,
@@ -94,8 +104,7 @@ export function FloatingMenuPlugin(): JSX.Element | null {
       const anchorNode = rangeSelection.anchor.getNode();
       const focusNode = rangeSelection.focus.getNode();
       const linkNode =
-        $findMatchingParent(anchorNode, $isLinkNode) ||
-        $findMatchingParent(focusNode, $isLinkNode);
+        $findMatchingParent(anchorNode, $isLinkNode) || $findMatchingParent(focusNode, $isLinkNode);
 
       if (linkNode) {
         setIsLink(true);
@@ -246,26 +255,16 @@ export function FloatingMenuPlugin(): JSX.Element | null {
           }}
         >
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1">
-                <Type className="h-4 w-4" />
-                <span className="text-xs">{getHeadingText()}</span>
-                <ChevronDown className="h-3 w-3" />
-              </Button>
+            <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="gap-1" />}>
+              <Type className="h-4 w-4" />
+              <span className="text-xs">{getHeadingText()}</span>
+              <ChevronDown className="h-3 w-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => formatHeading("p")}>
-                Normal Text
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => formatHeading("h1")}>
-                Heading 1
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => formatHeading("h2")}>
-                Heading 2
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => formatHeading("h3")}>
-                Heading 3
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => formatHeading("p")}>Normal Text</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => formatHeading("h1")}>Heading 1</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => formatHeading("h2")}>Heading 2</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => formatHeading("h3")}>Heading 3</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -273,18 +272,18 @@ export function FloatingMenuPlugin(): JSX.Element | null {
 
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")
-                  }
-                  className={isBold ? "bg-muted" : ""}
-                  aria-label="Bold"
-                >
-                  <Bold className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")}
+                    className={isBold ? "bg-muted" : ""}
+                    aria-label="Bold"
+                  />
+                }
+              >
+                <Bold className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Bold</p>
@@ -292,18 +291,18 @@ export function FloatingMenuPlugin(): JSX.Element | null {
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")
-                  }
-                  className={isItalic ? "bg-muted" : ""}
-                  aria-label="Italic"
-                >
-                  <Italic className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")}
+                    className={isItalic ? "bg-muted" : ""}
+                    aria-label="Italic"
+                  />
+                }
+              >
+                <Italic className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Italic</p>
@@ -311,18 +310,18 @@ export function FloatingMenuPlugin(): JSX.Element | null {
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")
-                  }
-                  className={isUnderline ? "bg-muted" : ""}
-                  aria-label="Underline"
-                >
-                  <Underline className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")}
+                    className={isUnderline ? "bg-muted" : ""}
+                    aria-label="Underline"
+                  />
+                }
+              >
+                <Underline className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Underline</p>
@@ -332,17 +331,17 @@ export function FloatingMenuPlugin(): JSX.Element | null {
             <div className="w-px h-4 bg-muted mx-1" />
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "left")
-                  }
-                  aria-label="Align left"
-                >
-                  <AlignLeft className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "left")}
+                    aria-label="Align left"
+                  />
+                }
+              >
+                <AlignLeft className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Align Left</p>
@@ -350,17 +349,17 @@ export function FloatingMenuPlugin(): JSX.Element | null {
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "center")
-                  }
-                  aria-label="Align center"
-                >
-                  <AlignCenter className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "center")}
+                    aria-label="Align center"
+                  />
+                }
+              >
+                <AlignCenter className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Align Center</p>
@@ -368,17 +367,17 @@ export function FloatingMenuPlugin(): JSX.Element | null {
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "right")
-                  }
-                  aria-label="Align right"
-                >
-                  <AlignRight className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "right")}
+                    aria-label="Align right"
+                  />
+                }
+              >
+                <AlignRight className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Align Right</p>
@@ -388,16 +387,18 @@ export function FloatingMenuPlugin(): JSX.Element | null {
             <div className="w-px h-4 bg-muted mx-1" />
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleBulletList}
-                  className={isList.ul ? "bg-muted" : ""}
-                  aria-label="Bullet list"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleBulletList}
+                    className={isList.ul ? "bg-muted" : ""}
+                    aria-label="Bullet list"
+                  />
+                }
+              >
+                <List className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Bullet List</p>
@@ -405,16 +406,18 @@ export function FloatingMenuPlugin(): JSX.Element | null {
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleOrderedList}
-                  className={isList.ol ? "bg-muted" : ""}
-                  aria-label="Numbered list"
-                >
-                  <ListOrdered className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleOrderedList}
+                    className={isList.ol ? "bg-muted" : ""}
+                    aria-label="Numbered list"
+                  />
+                }
+              >
+                <ListOrdered className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Numbered List</p>
@@ -422,16 +425,18 @@ export function FloatingMenuPlugin(): JSX.Element | null {
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLinkClick}
-                  className={isLink ? "bg-muted" : ""}
-                  aria-label="Insert link"
-                >
-                  <LinkIcon className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLinkClick}
+                    className={isLink ? "bg-muted" : ""}
+                    aria-label="Insert link"
+                  />
+                }
+              >
+                <LinkIcon className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>{isLink ? "Edit Link" : "Insert Link"}</p>

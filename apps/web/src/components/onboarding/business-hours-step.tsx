@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
 import { Label } from "@coldjot/ui/components/label";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@coldjot/ui/components/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@coldjot/ui/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { TimePicker } from "@coldjot/ui/components/time-picker";
@@ -37,8 +43,7 @@ export function BusinessHoursStep({ onNext, onBack: _onBack }: BusinessHoursStep
 
   const [open, setOpen] = useState(false);
   const save = useMutation({
-    mutationFn: (input: Record<string, unknown>) =>
-      api.post("/api/business-hours", input),
+    mutationFn: (input: Record<string, unknown>) => api.post("/api/business-hours", input),
   });
   const isSaving = save.isPending;
 
@@ -84,16 +89,18 @@ export function BusinessHoursStep({ onNext, onBack: _onBack }: BusinessHoursStep
         <div className="flex items-center justify-between">
           <Label>Timezone</Label>
           <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-[300px] justify-between"
-              >
-                {settings.timezone}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
+            <PopoverTrigger
+              render={
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="w-[300px] justify-between"
+                />
+              }
+            >
+              {settings.timezone}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
               <Command>
@@ -101,17 +108,11 @@ export function BusinessHoursStep({ onNext, onBack: _onBack }: BusinessHoursStep
                 <CommandEmpty>No timezone found.</CommandEmpty>
                 <CommandGroup className="max-h-[300px] overflow-auto">
                   {Intl.supportedValuesOf("timeZone").map((zone) => (
-                    <CommandItem
-                      key={zone}
-                      value={zone}
-                      onSelect={handleTimezoneChange}
-                    >
+                    <CommandItem key={zone} value={zone} onSelect={handleTimezoneChange}>
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          settings.timezone === zone
-                            ? "opacity-100"
-                            : "opacity-0"
+                          settings.timezone === zone ? "opacity-100" : "opacity-0"
                         )}
                       />
                       {zone}
@@ -131,16 +132,11 @@ export function BusinessHoursStep({ onNext, onBack: _onBack }: BusinessHoursStep
                 <Button
                   key={day.value}
                   type="button"
-                  variant={
-                    settings.workDays.includes(day.value)
-                      ? "default"
-                      : "outline"
-                  }
+                  variant={settings.workDays.includes(day.value) ? "default" : "outline"}
                   onClick={() => handleWorkDayToggle(day.value)}
                   className={cn(
                     "flex-1 min-w-[54px]",
-                    settings.workDays.includes(day.value) &&
-                      "bg-foreground text-primary-foreground"
+                    settings.workDays.includes(day.value) && "bg-foreground text-primary-foreground"
                   )}
                 >
                   {day.label}
@@ -160,9 +156,7 @@ export function BusinessHoursStep({ onNext, onBack: _onBack }: BusinessHoursStep
                     onChange={(value) => handleTimeChange("start", value)}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  When your workday typically begins
-                </p>
+                <p className="text-xs text-muted-foreground">When your workday typically begins</p>
               </div>
               <div className="flex flex-col justify-end items-end space-y-2">
                 <div className="flex items-center gap-4">
@@ -172,9 +166,7 @@ export function BusinessHoursStep({ onNext, onBack: _onBack }: BusinessHoursStep
                     onChange={(value) => handleTimeChange("end", value)}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  When your workday typically ends
-                </p>
+                <p className="text-xs text-muted-foreground">When your workday typically ends</p>
               </div>
             </div>
           </div>

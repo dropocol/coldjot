@@ -214,17 +214,17 @@ export function EmailDetailsDrawer({
                         <Button
                           variant="ghost"
                           size="icon"
-                          asChild
                           className="shrink-0"
-                        >
-                          <a
-                            href={link.originalUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
+                          render={
+                            <a
+                              href={link.originalUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          }
+                        />
                       </div>
                     ))}
                   </div>

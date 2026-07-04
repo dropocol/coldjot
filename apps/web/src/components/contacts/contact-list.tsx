@@ -4,7 +4,14 @@ import { useState, useEffect } from "react";
 import { Contact } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import EditContactModal from "./edit-contact-drawer";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
 import { Button } from "@coldjot/ui/components/button";
 import {
   Edit2,
@@ -16,22 +23,32 @@ import {
   Plus,
   User2,
 } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@coldjot/ui/components/alert-dialog";
 
 import Link from "next/link";
 
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
 import { Checkbox } from "@coldjot/ui/components/checkbox";
 import ContactDetailsDrawer from "./contact-details-drawer";
 import { AddToSequenceModal } from "./add-to-sequence-modal";
 import { PaginationControls } from "@/components/pagination";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useContacts,
-  useDeleteContact,
-  ContactsListResponse,
-} from "@/hooks/queries/use-contacts";
+import { useContacts, useDeleteContact, ContactsListResponse } from "@/hooks/queries/use-contacts";
 import { qk } from "@/lib/query/keys";
 
 interface ContactListProps {
@@ -83,15 +100,10 @@ export function ContactList({
   const qc = useQueryClient();
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
-  const [contactToAddToList, setContactToAddToList] =
-    useState<ContactToList | null>(null);
-  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(
-    new Set()
-  );
-  const [selectedContactForDetails, setSelectedContactForDetails] =
-    useState<Contact | null>(null);
-  const [contactToAddToSequence, setContactToAddToSequence] =
-    useState<Contact | null>(null);
+  const [contactToAddToList, setContactToAddToList] = useState<ContactToList | null>(null);
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [selectedContactForDetails, setSelectedContactForDetails] = useState<Contact | null>(null);
+  const [contactToAddToSequence, setContactToAddToSequence] = useState<Contact | null>(null);
 
   // Only fetch when the search query is empty or at least 2 chars (matches the
   // previous behavior of skipping single-character queries).
@@ -213,9 +225,7 @@ export function ContactList({
                       checked={selectedContacts.size === contacts.length}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setSelectedContacts(
-                            new Set(contacts.map((c) => c.id))
-                          );
+                          setSelectedContacts(new Set(contacts.map((c) => c.id)));
                         } else {
                           setSelectedContacts(new Set());
                         }
@@ -233,17 +243,12 @@ export function ContactList({
                     key={contact.id}
                     className="hover:bg-muted/50 cursor-pointer"
                     onClick={(e) => {
-                      if (
-                        !(e.target as HTMLElement).closest(".checkbox-cell")
-                      ) {
+                      if (!(e.target as HTMLElement).closest(".checkbox-cell")) {
                         setSelectedContactForDetails(contact);
                       }
                     }}
                   >
-                    <TableCell
-                      className="checkbox-cell"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <TableCell className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedContacts.has(contact.id)}
                         onCheckedChange={(checked) =>
@@ -278,12 +283,10 @@ export function ContactList({
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger
-                            asChild
                             onClick={(e) => e.stopPropagation()}
+                            render={<Button variant="ghost" size="icon" />}
                           >
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
+                            <MoreHorizontal className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
@@ -350,16 +353,12 @@ export function ContactList({
         />
       )}
 
-      <AlertDialog
-        open={!!deletingContact}
-        onOpenChange={() => setDeletingContact(null)}
-      >
+      <AlertDialog open={!!deletingContact} onOpenChange={() => setDeletingContact(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              contact.
+              This action cannot be undone. This will permanently delete the contact.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

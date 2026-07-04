@@ -21,7 +21,12 @@ import {
   Heading3,
   ImagePlus,
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
 import { Dialog, DialogTrigger } from "@coldjot/ui/components/dialog";
 import { useState } from "react";
 import { $createHeadingNode } from "@lexical/rich-text";
@@ -73,16 +78,18 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
         {/* Heading Buttons */}
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => formatHeading("h1")}
-                aria-label="Heading 1"
-              >
-                <Heading1 className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => formatHeading("h1")}
+                  aria-label="Heading 1"
+                />
+              }
+            >
+              <Heading1 className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Heading 1</p>
@@ -92,16 +99,18 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
 
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => formatHeading("h2")}
-                aria-label="Heading 2"
-              >
-                <Heading2 className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => formatHeading("h2")}
+                  aria-label="Heading 2"
+                />
+              }
+            >
+              <Heading2 className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Heading 2</p>
@@ -111,16 +120,18 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
 
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => formatHeading("h3")}
-                aria-label="Heading 3"
-              >
-                <Heading3 className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => formatHeading("h3")}
+                  aria-label="Heading 3"
+                />
+              }
+            >
+              <Heading3 className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Heading 3</p>
@@ -134,19 +145,23 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
         <TooltipProvider>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <Tooltip>
-              <DialogTrigger asChild>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-shrink-0"
-                    aria-label="Insert image"
-                    onClick={() => setIsInlineImage(false)}
+              <DialogTrigger
+                render={
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-shrink-0"
+                        aria-label="Insert image"
+                        onClick={() => setIsInlineImage(false)}
+                      />
+                    }
                   >
                     <ImageIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-              </DialogTrigger>
+                  </TooltipTrigger>
+                }
+              />
               <TooltipContent>
                 <p>Insert Block Image</p>
               </TooltipContent>
@@ -160,22 +175,26 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <Tooltip>
-              <DialogTrigger asChild>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-shrink-0"
-                    aria-label="Insert inline image"
-                    onClick={() => {
-                      setIsInlineImage(true);
-                      setIsDialogOpen(true);
-                    }}
+              <DialogTrigger
+                render={
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-shrink-0"
+                        aria-label="Insert inline image"
+                        onClick={() => {
+                          setIsInlineImage(true);
+                          setIsDialogOpen(true);
+                        }}
+                      />
+                    }
                   >
                     <ImagePlus className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-              </DialogTrigger>
+                  </TooltipTrigger>
+                }
+              />
               <TooltipContent>
                 <p>Insert Inline Image</p>
               </TooltipContent>
@@ -183,18 +202,20 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
           </Dialog>
 
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => {
-                  // TODO: implement data-variable insertion
-                }}
-                aria-label="Insert data variable"
-              >
-                <Variable className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => {
+                    // TODO: implement data-variable insertion
+                  }}
+                  aria-label="Insert data variable"
+                />
+              }
+            >
+              <Variable className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Insert Data Variable</p>
@@ -202,18 +223,20 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
           </Tooltip>
 
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => {
-                  // TODO: implement button insertion
-                }}
-                aria-label="Insert button"
-              >
-                <SplitSquareVertical className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => {
+                    // TODO: implement button insertion
+                  }}
+                  aria-label="Insert button"
+                />
+              }
+            >
+              <SplitSquareVertical className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Insert Button</p>
@@ -221,23 +244,22 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
           </Tooltip>
 
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => {
-                  if (editorInstance) {
-                    editorInstance.dispatchCommand(
-                      INSERT_HORIZONTAL_RULE_COMMAND,
-                      undefined
-                    );
-                  }
-                }}
-                aria-label="Insert divider"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => {
+                    if (editorInstance) {
+                      editorInstance.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
+                    }
+                  }}
+                  aria-label="Insert divider"
+                />
+              }
+            >
+              <Minus className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Insert Horizontal Divider</p>
@@ -245,18 +267,20 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
           </Tooltip>
 
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => {
-                  // TODO: implement icon insertion
-                }}
-                aria-label="Insert icon"
-              >
-                <Smile className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => {
+                    // TODO: implement icon insertion
+                  }}
+                  aria-label="Insert icon"
+                />
+              }
+            >
+              <Smile className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Insert Icons</p>
@@ -264,18 +288,20 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
           </Tooltip>
 
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => {
-                  // TODO: implement columns insertion
-                }}
-                aria-label="Insert columns"
-              >
-                <Columns className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => {
+                    // TODO: implement columns insertion
+                  }}
+                  aria-label="Insert columns"
+                />
+              }
+            >
+              <Columns className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Insert Columns</p>
@@ -285,20 +311,22 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
           <div className="h-6 w-px bg-muted" />
 
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => {
-                  if (editorInstance) {
-                    editorInstance.dispatchCommand(UNDO_COMMAND, undefined);
-                  }
-                }}
-                aria-label="Undo"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => {
+                    if (editorInstance) {
+                      editorInstance.dispatchCommand(UNDO_COMMAND, undefined);
+                    }
+                  }}
+                  aria-label="Undo"
+                />
+              }
+            >
+              <RotateCcw className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Undo Action</p>
@@ -306,20 +334,22 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
           </Tooltip>
 
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0"
-                onClick={() => {
-                  if (editorInstance) {
-                    editorInstance.dispatchCommand(REDO_COMMAND, undefined);
-                  }
-                }}
-                aria-label="Redo"
-              >
-                <RotateCw className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => {
+                    if (editorInstance) {
+                      editorInstance.dispatchCommand(REDO_COMMAND, undefined);
+                    }
+                  }}
+                  aria-label="Redo"
+                />
+              }
+            >
+              <RotateCw className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>Redo Action</p>

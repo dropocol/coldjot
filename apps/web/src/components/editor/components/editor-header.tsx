@@ -1,7 +1,12 @@
 import { Button } from "@coldjot/ui/components/button";
 import { TabsList, TabsTrigger } from "@coldjot/ui/components/tabs";
 import { Input } from "@coldjot/ui/components/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
 import { cn } from "@coldjot/ui/lib/utils";
 import { Clock, Eye, Save, Send, Pencil } from "lucide-react";
 import { useState } from "react";
@@ -12,11 +17,7 @@ interface EditorHeaderProps {
   onTabChange: (value: string) => void;
 }
 
-export function EditorHeader({
-  title,
-  activeTab,
-  onTabChange,
-}: EditorHeaderProps) {
+export function EditorHeader({ title, activeTab, onTabChange }: EditorHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [templateName, setTemplateName] = useState(title);
 
@@ -26,10 +27,7 @@ export function EditorHeader({
   };
 
   return (
-    <div
-      id="editor-status-bar"
-      className="sticky top-0 z-20 w-full border-b bg-background"
-    >
+    <div id="editor-status-bar" className="sticky top-0 z-20 w-full border-b bg-background">
       <div className="flex items-center justify-between h-14 px-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center group">
@@ -87,10 +85,8 @@ export function EditorHeader({
         <div className="flex items-center gap-2">
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Clock className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger render={<Button variant="outline" size="sm" />}>
+                <Clock className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Schedule send</p>
@@ -98,10 +94,8 @@ export function EditorHeader({
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Eye className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger render={<Button variant="outline" size="sm" />}>
+                <Eye className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Preview email</p>
@@ -109,10 +103,8 @@ export function EditorHeader({
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Save className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger render={<Button variant="outline" size="sm" />}>
+                <Save className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Save template</p>

@@ -6,21 +6,25 @@ import { toast } from "sonner";
 
 import { useRouter } from "next/navigation";
 import { SequenceStatus } from "@coldjot/types";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@coldjot/ui/components/alert-dialog";
 import {
-  useResetSequence,
-  useDeleteSequence,
-} from "@/hooks/queries/use-sequences";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@coldjot/ui/components/alert-dialog";
+import { useResetSequence, useDeleteSequence } from "@/hooks/queries/use-sequences";
 
 interface SequenceDangerZoneProps {
   sequenceId: string;
   onStatusChange?: (newStatus: SequenceStatus) => void;
 }
 
-export function SequenceDangerZone({
-  sequenceId,
-  onStatusChange,
-}: SequenceDangerZoneProps) {
+export function SequenceDangerZone({ sequenceId, onStatusChange }: SequenceDangerZoneProps) {
   // toast() is now imported from sonner;
   const router = useRouter();
   const reset = useResetSequence(sequenceId);
@@ -69,8 +73,8 @@ export function SequenceDangerZone({
           <div>
             <h5 className="text-sm font-medium">Reset Sequence</h5>
             <p className="text-sm text-muted-foreground">
-              Reset the sequence to its initial state. This will clear all
-              progress and allow you to launch the sequence again.
+              Reset the sequence to its initial state. This will clear all progress and allow you to
+              launch the sequence again.
             </p>
           </div>
           <Button
@@ -87,30 +91,22 @@ export function SequenceDangerZone({
           <div>
             <h5 className="text-sm font-medium">Delete Sequence</h5>
             <p className="text-sm text-muted-foreground">
-              Permanently delete this sequence and all its data. This action
-              cannot be undone.
+              Permanently delete this sequence and all its data. This action cannot be undone.
             </p>
           </div>
 
-          <AlertDialog
-            open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-          >
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="destructive"
-                className="min-w-40"
-                disabled={isLoading}
-              >
-                Delete Sequence
-              </Button>
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogTrigger
+              render={<Button variant="destructive" className="min-w-40" disabled={isLoading} />}
+            >
+              Delete Sequence
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the
-                  sequence and all associated data, including:
+                  This action cannot be undone. This will permanently delete the sequence and all
+                  associated data, including:
                 </AlertDialogDescription>
                 <div className="mt-4">
                   <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
@@ -122,9 +118,7 @@ export function SequenceDangerZone({
                 </div>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={isLoading}>
-                  Cancel
-                </AlertDialogCancel>
+                <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDelete}
                   disabled={isLoading}

@@ -1,36 +1,42 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  forwardRef,
-  useImperativeHandle,
-  memo,
-} from "react";
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, memo } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
-import {
-  User,
-  Trash2,
-  MoreHorizontal,
-  SendHorizonal,
-} from "lucide-react";
+import { User, Trash2, MoreHorizontal, SendHorizonal } from "lucide-react";
 import { Button } from "@coldjot/ui/components/button";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@coldjot/ui/components/alert-dialog";
 import { Checkbox } from "@coldjot/ui/components/checkbox";
 import Link from "next/link";
 import { Contact } from "@prisma/client";
 import ContactDetailsDrawer from "@/components/contacts/contact-details-drawer";
 import { PaginationControls } from "@/components/pagination";
 import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 import {
-  useListDetail,
-  useRemoveContactsFromList,
-} from "@/hooks/queries/use-lists";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
+import { useListDetail, useRemoveContactsFromList } from "@/hooks/queries/use-lists";
 
 type EmailListWithContacts = {
   id: string;
@@ -66,23 +72,23 @@ export const ListDetailsView = memo(
     const listId = params?.id ?? "";
 
     const [contactToRemove, setContactToRemove] = useState<string | null>(null);
-    const [selectedContacts, setSelectedContacts] = useState<Set<string>>(
-      new Set()
+    const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+    const [selectedContactForDetails, setSelectedContactForDetails] = useState<Contact | null>(
+      null
     );
-    const [selectedContactForDetails, setSelectedContactForDetails] =
-      useState<Contact | null>(null);
-    const [contactsToAddToSequence, setContactsToAddToSequence] = useState<
-      Contact[]
-    >([]);
+    const [contactsToAddToSequence, setContactsToAddToSequence] = useState<Contact[]>([]);
     const [showSequenceModal, setShowSequenceModal] = useState(false);
-    const [showAddAllToSequenceModal, setShowAddAllToSequenceModal] =
-      useState(false);
+    const [showAddAllToSequenceModal, setShowAddAllToSequenceModal] = useState(false);
 
     // Get pagination values from URL or use defaults
     const page = Number(searchParams.get("page") || "1");
     const limit = Number(searchParams.get("limit") || "10");
 
-    const { data: list, isLoading: loading, refetch } = useListDetail(listId, {
+    const {
+      data: list,
+      isLoading: loading,
+      refetch,
+    } = useListDetail(listId, {
       page,
       limit,
     });
@@ -132,9 +138,7 @@ export const ListDetailsView = memo(
       if (!listData || selectedContacts.size === 0) return;
 
       try {
-        const data = await removeContacts.mutateAsync(
-          Array.from(selectedContacts)
-        );
+        const data = await removeContacts.mutateAsync(Array.from(selectedContacts));
         setSelectedContacts(new Set());
         toast.success(`${data.removed} contacts removed from list`);
       } catch (_error) {
@@ -277,9 +281,7 @@ export const ListDetailsView = memo(
                       }
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setSelectedContacts(
-                            new Set(listData.contacts.map((c) => c.id))
-                          );
+                          setSelectedContacts(new Set(listData.contacts.map((c) => c.id)));
                         } else {
                           setSelectedContacts(new Set());
                         }
@@ -294,10 +296,7 @@ export const ListDetailsView = memo(
               <TableBody>
                 {listData.contacts.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center py-6 text-muted-foreground"
-                    >
+                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                       No contacts in this list
                     </TableCell>
                   </TableRow>
@@ -307,19 +306,12 @@ export const ListDetailsView = memo(
                       key={contact.id}
                       className="hover:bg-muted/50 cursor-pointer"
                       onClick={(e) => {
-                        if (
-                          !(e.target as HTMLElement).closest(
-                            ".checkbox-cell, .action-cell, a"
-                          )
-                        ) {
+                        if (!(e.target as HTMLElement).closest(".checkbox-cell, .action-cell, a")) {
                           setSelectedContactForDetails(contact);
                         }
                       }}
                     >
-                      <TableCell
-                        className="checkbox-cell"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <TableCell className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedContacts.has(contact.id)}
                           onCheckedChange={(checked) =>
@@ -354,12 +346,10 @@ export const ListDetailsView = memo(
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger
-                              asChild
                               onClick={(e) => e.stopPropagation()}
+                              render={<Button variant="ghost" size="icon" />}
                             >
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
+                              <MoreHorizontal className="h-4 w-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
@@ -393,16 +383,13 @@ export const ListDetailsView = memo(
           />
         </div>
 
-        <AlertDialog
-          open={!!contactToRemove}
-          onOpenChange={() => setContactToRemove(null)}
-        >
+        <AlertDialog open={!!contactToRemove} onOpenChange={() => setContactToRemove(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Remove contact from list?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove the contact from this list. The contact will
-                not be deleted from your contacts.
+                This will remove the contact from this list. The contact will not be deleted from
+                your contacts.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

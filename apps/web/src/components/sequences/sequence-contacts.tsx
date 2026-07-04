@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
 import { ContactSearch } from "@/components/search/contact-search-dropdown";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -21,11 +28,21 @@ import {
 } from "lucide-react";
 import { ListSelector } from "@/components/lists/list-selector";
 import { formatDistanceToNow, format } from "date-fns";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
 import type { Contact } from "@coldjot/types";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import type { SequenceContactStatusType } from "@coldjot/types";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
 import { PaginationControls } from "@/components/pagination";
 import { useSequence } from "@/lib/sequence-context";
 import {
@@ -80,8 +97,7 @@ export function SequenceContacts({
     { page, limit },
     { refetchInterval: isActive ? 30_000 : false }
   );
-  const contacts =
-    (data?.contacts as ExtendedSequenceContact[] | undefined) ?? [];
+  const contacts = (data?.contacts as ExtendedSequenceContact[] | undefined) ?? [];
   const totalSteps = data?.totalSteps ?? 0;
   const total = data?.total ?? 0;
 
@@ -125,10 +141,7 @@ export function SequenceContacts({
     }
   };
 
-  const handleStatusUpdate = async (
-    contactId: string,
-    status: SequenceContactStatusType
-  ) => {
+  const handleStatusUpdate = async (contactId: string, status: SequenceContactStatusType) => {
     try {
       await statusMutation.mutateAsync({ contactId, status });
       toast.success("Contact status updated successfully");
@@ -202,10 +215,7 @@ export function SequenceContacts({
     <div className="space-y-4">
       <div className="flex items-center gap-4">
         <div className="flex-1">
-          <ContactSearch
-            selectedContact={selectedContact}
-            onSelect={setSelectedContact}
-          />
+          <ContactSearch selectedContact={selectedContact} onSelect={setSelectedContact} />
         </div>
         <Button
           onClick={() => selectedContact && handleAddContact(selectedContact)}
@@ -284,15 +294,9 @@ export function SequenceContacts({
                     <div className="text-sm">
                       {sequenceContact.startedAt ? (
                         <>
-                          {format(
-                            new Date(sequenceContact.startedAt),
-                            "MMM d, yyyy"
-                          )}
+                          {format(new Date(sequenceContact.startedAt), "MMM d, yyyy")}
                           <div className="text-xs text-muted-foreground">
-                            {format(
-                              new Date(sequenceContact.startedAt),
-                              "h:mm a"
-                            )}
+                            {format(new Date(sequenceContact.startedAt), "h:mm a")}
                           </div>
                         </>
                       ) : (
@@ -303,15 +307,9 @@ export function SequenceContacts({
                   <TableCell>
                     {sequenceContact.nextScheduledAt ? (
                       <div className="text-sm">
-                        {format(
-                          new Date(sequenceContact.nextScheduledAt),
-                          "MMM d, yyyy"
-                        )}
+                        {format(new Date(sequenceContact.nextScheduledAt), "MMM d, yyyy")}
                         <div className="text-xs text-muted-foreground">
-                          {format(
-                            new Date(sequenceContact.nextScheduledAt),
-                            "h:mm a"
-                          )}
+                          {format(new Date(sequenceContact.nextScheduledAt), "h:mm a")}
                         </div>
                       </div>
                     ) : (
@@ -324,12 +322,9 @@ export function SequenceContacts({
                         {sequenceContact.lastProcessedAt ? (
                           <>
                             Last activity{" "}
-                            {formatDistanceToNow(
-                              new Date(sequenceContact.lastProcessedAt),
-                              {
-                                addSuffix: true,
-                              }
-                            )}
+                            {formatDistanceToNow(new Date(sequenceContact.lastProcessedAt), {
+                              addSuffix: true,
+                            })}
                           </>
                         ) : (
                           "No activity yet"
@@ -338,35 +333,26 @@ export function SequenceContacts({
                       {sequenceContact.completedAt && (
                         <div className="text-xs text-muted-foreground">
                           Completed in{" "}
-                          {formatDistanceToNow(
-                            new Date(sequenceContact.completedAt),
-                            {
-                              addSuffix: false,
-                            }
-                          )}
+                          {formatDistanceToNow(new Date(sequenceContact.completedAt), {
+                            addSuffix: false,
+                          })}
                         </div>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={isMutating}
-                        >
-                          {isMutating ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <MoreVertical className="h-4 w-4" />
-                          )}
-                        </Button>
+                      <DropdownMenuTrigger
+                        render={<Button variant="ghost" size="icon" disabled={isMutating} />}
+                      >
+                        {isMutating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <MoreVertical className="h-4 w-4" />
+                        )}
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleSendNow(sequenceContact.id)}
-                        >
+                        <DropdownMenuItem onClick={() => handleSendNow(sequenceContact.id)}>
                           <Send className="h-4 w-4 mr-2" />
                           Send Now
                         </DropdownMenuItem>
@@ -393,9 +379,7 @@ export function SequenceContacts({
                           Mark as Replied
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
-                            handleRemoveContact(sequenceContact.contactId)
-                          }
+                          onClick={() => handleRemoveContact(sequenceContact.contactId)}
                         >
                           <Trash className="h-4 w-4 mr-2" />
                           Remove

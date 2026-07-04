@@ -19,7 +19,15 @@ import { Button } from "@coldjot/ui/components/button";
 import { ScrollArea } from "@coldjot/ui/components/scroll-area";
 import { useSession, signOut } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@coldjot/ui/components/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
 
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -95,10 +103,7 @@ export default function Sidebar() {
 
   const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <h3
-      className={cn(
-        "text-xs font-medium text-muted-foreground px-3 mb-2",
-        isCollapsed && "hidden"
-      )}
+      className={cn("text-xs font-medium text-muted-foreground px-3 mb-2", isCollapsed && "hidden")}
     >
       {children}
     </h3>
@@ -107,7 +112,7 @@ export default function Sidebar() {
   return (
     <div
       className={cn(
-        "relative flex h-full flex-col border-r bg-background transition-all duration-300",
+        "relative flex h-full flex-col bg-neutral-50 dark:bg-background border-r transition-all duration-300",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
@@ -119,11 +124,7 @@ export default function Sidebar() {
             isCollapsed && "justify-center"
           )}
         >
-          <div
-            className={`relative h-8 ${
-              isCollapsed ? "w-20" : "w-24"
-            } overflow-hidden`}
-          >
+          <div className={`relative h-8 ${isCollapsed ? "w-20" : "w-24"} overflow-hidden`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/images/logo.svg"
@@ -151,12 +152,7 @@ export default function Sidebar() {
           className="ml-auto h-8 w-8 transition-all duration-300"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          <ChevronLeft
-            className={cn(
-              "h-4 w-4 transition-all",
-              isCollapsed && "rotate-180"
-            )}
-          />
+          <ChevronLeft className={cn("h-4 w-4 transition-all", isCollapsed && "rotate-180")} />
         </Button>
       </div>
 
@@ -337,10 +333,7 @@ export default function Sidebar() {
                 )}
               />
               <span
-                className={cn(
-                  "transition-all duration-300",
-                  isCollapsed && "hidden w-0 opacity-0"
-                )}
+                className={cn("transition-all duration-300", isCollapsed && "hidden w-0 opacity-0")}
               >
                 {route.label}
               </span>
@@ -353,44 +346,38 @@ export default function Sidebar() {
         <div className="border-t p-3">
           <div className="flex items-center gap-1">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "flex-1 justify-start gap-2 px-2",
+                      isCollapsed && "justify-center"
+                    )}
+                  />
+                }
+              >
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={session.user.image || ""} />
+                  <AvatarFallback>{session.user.name?.[0] || "U"}</AvatarFallback>
+                </Avatar>
+                <span
                   className={cn(
-                    "flex-1 justify-start gap-2 px-2",
-                    isCollapsed && "justify-center"
+                    "truncate transition-all duration-300",
+                    isCollapsed && "hidden w-0 opacity-0"
                   )}
                 >
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={session.user.image || ""} />
-                    <AvatarFallback>
-                      {session.user.name?.[0] || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span
-                    className={cn(
-                      "truncate transition-all duration-300",
-                      isCollapsed && "hidden w-0 opacity-0"
-                    )}
-                  >
-                    {session.user.name}
-                  </span>
-                </Button>
+                  {session.user.name}
+                </span>
               </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-[200px]"
-                side="right"
-                sideOffset={18}
-              >
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => signOut()}
-                  className="text-destructive"
-                >
-                  Sign out
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-[200px]" side="right" sideOffset={18}>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()} className="text-destructive">
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
             <ModeToggle />

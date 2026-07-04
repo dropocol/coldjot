@@ -2,18 +2,51 @@
 
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
 import { Badge } from "@coldjot/ui/components/badge";
 import { toast } from "sonner";
 import { Loader2, Plus, ListPlus, MoreVertical, Trash } from "lucide-react";
 import { format } from "date-fns";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
 import type { EmailList } from "@coldjot/types";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
 import { useSequence } from "@/lib/sequence-context";
 import { SequenceListSelector } from "./sequence-list-selector";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@coldjot/ui/components/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@coldjot/ui/components/alert-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@coldjot/ui/components/pagination";
 import {
   useSequenceLists,
   useAddListToSequence,
@@ -147,9 +180,7 @@ export function SequenceLists() {
                   <TableRow key={list.id}>
                     <TableCell className="font-medium">{list.name}</TableCell>
                     <TableCell>{list._count?.contacts || 0}</TableCell>
-                    <TableCell>
-                      {format(new Date(list.createdAt), "MMM d, yyyy")}
-                    </TableCell>
+                    <TableCell>{format(new Date(list.createdAt), "MMM d, yyyy")}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {list.tags && list.tags.length > 0 ? (
@@ -159,9 +190,7 @@ export function SequenceLists() {
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-muted-foreground text-sm">
-                            No tags
-                          </span>
+                          <span className="text-muted-foreground text-sm">No tags</span>
                         )}
                       </div>
                     </TableCell>
@@ -169,14 +198,16 @@ export function SequenceLists() {
                       <div className="flex items-center justify-end gap-2">
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleSyncList(list.id)}
-                              >
-                                <Loader2 className="h-4 w-4" />
-                              </Button>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleSyncList(list.id)}
+                                />
+                              }
+                            >
+                              <Loader2 className="h-4 w-4" />
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Sync contacts from this list</p>
@@ -185,10 +216,8 @@ export function SequenceLists() {
                         </TooltipProvider>
 
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
+                          <DropdownMenuTrigger render={<Button variant="ghost" size="icon" />}>
+                            <MoreVertical className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
@@ -217,28 +246,24 @@ export function SequenceLists() {
                           e.preventDefault();
                           if (page > 1) setPage(page - 1);
                         }}
-                        className={
-                          page === 1 ? "pointer-events-none opacity-50" : ""
-                        }
+                        className={page === 1 ? "pointer-events-none opacity-50" : ""}
                       />
                     </PaginationItem>
 
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (pageNum) => (
-                        <PaginationItem key={pageNum}>
-                          <PaginationLink
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setPage(pageNum);
-                            }}
-                            isActive={pageNum === page}
-                          >
-                            {pageNum}
-                          </PaginationLink>
-                        </PaginationItem>
-                      )
-                    )}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(pageNum);
+                          }}
+                          isActive={pageNum === page}
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
 
                     <PaginationItem>
                       <PaginationNext
@@ -247,11 +272,7 @@ export function SequenceLists() {
                           e.preventDefault();
                           if (page < totalPages) setPage(page + 1);
                         }}
-                        className={
-                          page === totalPages
-                            ? "pointer-events-none opacity-50"
-                            : ""
-                        }
+                        className={page === totalPages ? "pointer-events-none opacity-50" : ""}
                       />
                     </PaginationItem>
                   </PaginationContent>
@@ -270,9 +291,8 @@ export function SequenceLists() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove List</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove this list from the sequence?
-              Contacts from this list will no longer be automatically added to
-              the sequence.
+              Are you sure you want to remove this list from the sequence? Contacts from this list
+              will no longer be automatically added to the sequence.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

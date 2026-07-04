@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { SequenceStatus, type Sequence } from "@coldjot/types";
 import { SequenceHeader } from "@/components/sequences/sequence-header";
 import { SequenceProvider } from "@/lib/sequence-context";
+import { toPlain } from "@/lib/serialize";
 
 export default async function SequenceLayout({
   children,
@@ -37,12 +38,14 @@ export default async function SequenceLayout({
   // Prepare the sequence object for the provider. The Prisma row satisfies the
   // runtime shape; we cast at this boundary because @coldjot/types uses enums
   // and optional fields (?:) where Prisma yields string literals and `| null`.
-  const typedSequence = {
+  // `toPlain` strips Prisma's non-enumerable / Symbol properties so the object
+  // can cross the Server → Client component boundary.
+  const typedSequence = toPlain({
     ...sequence,
     status: sequence.status as SequenceStatus,
     contactCount: sequence._count.contacts,
     contacts: [],
-  } as unknown as Sequence;
+  }) as unknown as Sequence;
 
   return (
     <SequenceProvider initialSequence={typedSequence}>

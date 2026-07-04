@@ -3,7 +3,12 @@
 import { format, formatDistanceToNow } from "date-fns";
 import { Eye, MousePointerClick, Mail, AlertCircle } from "lucide-react";
 import { Badge } from "@coldjot/ui/components/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
 import type { EmailTracking } from "@/types/email";
 
 interface TimelineItemProps {
@@ -20,10 +25,7 @@ export function TimelineItem({ email, onSelect }: TimelineItemProps) {
   const openEvents = email.events.filter((e) => e.type === "opened");
   const openCount = openEvents.length;
   const clickEvents = email.events.filter((e) => e.type === "clicked");
-  const clickCount = email.links.reduce(
-    (acc, link) => acc + link.clickCount,
-    0
-  );
+  const clickCount = email.links.reduce((acc, link) => acc + link.clickCount, 0);
   const hasReplies = email.events.some((e) => e.type === "replied");
   const hasBounces = email.events.some((e) => e.type === "bounced");
 
@@ -31,15 +33,13 @@ export function TimelineItem({ email, onSelect }: TimelineItemProps) {
   const sortedOpenEvents = [...openEvents].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
-  const firstOpenTime =
-    sortedOpenEvents[sortedOpenEvents.length - 1]?.timestamp;
+  const firstOpenTime = sortedOpenEvents[sortedOpenEvents.length - 1]?.timestamp;
   const latestOpenTime = sortedOpenEvents[0]?.timestamp;
 
   const sortedClickEvents = [...clickEvents].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
-  const firstClickTime =
-    sortedClickEvents[sortedClickEvents.length - 1]?.timestamp;
+  const firstClickTime = sortedClickEvents[sortedClickEvents.length - 1]?.timestamp;
   const latestClickTime = sortedClickEvents[0]?.timestamp;
 
   // Format message ID to be shorter
@@ -63,9 +63,7 @@ export function TimelineItem({ email, onSelect }: TimelineItemProps) {
               <span className="flex items-center gap-1">
                 <span className="text-muted-foreground">
                   To: {email.contact.name}{" "}
-                  <span className="text-muted-foreground/60">
-                    ({email.contact.email})
-                  </span>
+                  <span className="text-muted-foreground/60">({email.contact.email})</span>
                 </span>
 
                 {hasReplies && (
@@ -86,15 +84,11 @@ export function TimelineItem({ email, onSelect }: TimelineItemProps) {
                 )}
               </span>
             ) : (
-              <span className="text-muted-foreground">
-                {email.recipientEmail}
-              </span>
+              <span className="text-muted-foreground">{email.recipientEmail}</span>
             )}
           </div>
           {email.previewText && (
-            <div className="text-sm text-muted-foreground line-clamp-1">
-              {email.previewText}
-            </div>
+            <div className="text-sm text-muted-foreground line-clamp-1">{email.previewText}</div>
           )}
         </div>
 
@@ -102,11 +96,12 @@ export function TimelineItem({ email, onSelect }: TimelineItemProps) {
           <div className="flex items-center justify-end gap-4">
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger asChild className="cursor-pointer">
-                  <div className="flex items-center gap-1">
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{openCount}</span>
-                  </div>
+                <TooltipTrigger
+                  className="cursor-pointer"
+                  render={<div className="flex items-center gap-1" />}
+                >
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{openCount}</span>
                 </TooltipTrigger>
                 <TooltipContent className="space-y-1">
                   <p>Opened {openCount} times</p>
@@ -132,11 +127,9 @@ export function TimelineItem({ email, onSelect }: TimelineItemProps) {
 
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1">
-                    <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{clickCount}</span>
-                  </div>
+                <TooltipTrigger render={<div className="flex items-center gap-1" />}>
+                  <MousePointerClick className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{clickCount}</span>
                 </TooltipTrigger>
                 <TooltipContent className="space-y-1">
                   <p>Clicked {clickCount} times</p>

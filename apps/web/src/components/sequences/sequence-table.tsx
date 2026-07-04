@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
 import {
   Mail,
   Play,
@@ -21,8 +28,18 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
 import { SequenceStatus, SequenceStep } from "@coldjot/types";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
 import { PaginationControls } from "@/components/pagination";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
@@ -72,8 +89,7 @@ export function SequenceTable({
 
   // Table-level mutations (id is passed per-call, not baked into the hook).
   const duplicate = useMutation({
-    mutationFn: (id: string) =>
-      api.post<SequenceType>(`/api/sequences/${id}/duplicate`, {}),
+    mutationFn: (id: string) => api.post<SequenceType>(`/api/sequences/${id}/duplicate`, {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.sequences.all }),
   });
   const setStatus = useMutation({
@@ -111,14 +127,9 @@ export function SequenceTable({
     }
   };
 
-  const handleStatusChange = async (
-    sequenceId: string,
-    currentStatus: SequenceStatus
-  ) => {
+  const handleStatusChange = async (sequenceId: string, currentStatus: SequenceStatus) => {
     const newStatus: SequenceStatus =
-      currentStatus === SequenceStatus.ACTIVE
-        ? SequenceStatus.PAUSED
-        : SequenceStatus.ACTIVE;
+      currentStatus === SequenceStatus.ACTIVE ? SequenceStatus.PAUSED : SequenceStatus.ACTIVE;
     try {
       await setStatus.mutateAsync({ id: sequenceId, status: newStatus });
 
@@ -182,10 +193,7 @@ export function SequenceTable({
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted-foreground/70" />
-                  <Link
-                    href={`/sequences/${sequence.id}`}
-                    className="font-medium hover:underline"
-                  >
+                  <Link href={`/sequences/${sequence.id}`} className="font-medium hover:underline">
                     {sequence.name}
                   </Link>
                 </div>
@@ -210,58 +218,59 @@ export function SequenceTable({
                 <div className="flex items-center justify-end gap-2">
                   <TooltipProvider>
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            handleStatusChange(sequence.id, sequence.status)
-                          }
-                        >
-                          {sequence.status === SequenceStatus.ACTIVE ? (
-                            <Pause className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                        </Button>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleStatusChange(sequence.id, sequence.status)}
+                          />
+                        }
+                      >
+                        {sequence.status === SequenceStatus.ACTIVE ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
                       </TooltipTrigger>
                       <TooltipContent>
-                        {sequence.status === SequenceStatus.ACTIVE
-                          ? "Pause"
-                          : "Resume"}{" "}
-                        sequence
+                        {sequence.status === SequenceStatus.ACTIVE ? "Pause" : "Resume"} sequence
                       </TooltipContent>
                     </Tooltip>
 
                     <DropdownMenu>
                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                        <TooltipTrigger
+                          render={
+                            <DropdownMenuTrigger render={<Button variant="ghost" size="icon" />}>
                               <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </TooltipTrigger>
+                            </DropdownMenuTrigger>
+                          }
+                        />
                         <TooltipContent>More actions</TooltipContent>
                       </Tooltip>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link
-                            href={`/sequences/${sequence.id}/settings`}
-                            className="flex items-center"
-                          >
-                            <Settings2 className="mr-2 h-4 w-4" />
-                            Settings
-                          </Link>
+                        <DropdownMenuItem
+                          render={
+                            <Link
+                              href={`/sequences/${sequence.id}/settings`}
+                              className="flex items-center"
+                            />
+                          }
+                        >
+                          <Settings2 className="mr-2 h-4 w-4" />
+                          Settings
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link
-                            href={`/sequences/${sequence.id}`}
-                            className="flex items-center"
-                          >
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            View Details
-                          </Link>
+                        <DropdownMenuItem
+                          render={
+                            <Link
+                              href={`/sequences/${sequence.id}`}
+                              className="flex items-center"
+                            />
+                          }
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDuplicate(sequence.id)}

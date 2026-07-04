@@ -15,7 +15,12 @@ import {
 } from "lucide-react";
 import { Mailbox, EmailAlias } from "@coldjot/database";
 import { Button } from "@coldjot/ui/components/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
 import { toast } from "sonner";
 
 export type MailboxWithAliases = Mailbox & {
@@ -44,9 +49,7 @@ export function MailboxList({
   onWatchUpdate,
 }: MailboxListProps) {
   // toast() is now imported from sonner;
-  const [expandedAccounts, setExpandedAccounts] = useState<
-    Record<string, boolean>
-  >({});
+  const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({});
 
   const handleToggleExpand = (accountId: string) => {
     setExpandedAccounts((prev) => ({
@@ -98,18 +101,14 @@ export function MailboxList({
                 <Mail className="h-5 w-5 text-muted-foreground" />
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
-                    <span className="font-medium">
-                      {account.name || account.email}
-                    </span>
+                    <span className="font-medium">{account.name || account.email}</span>
                     {!account.isActive && (
                       <span className="rounded-md bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive">
                         Inactive
                       </span>
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {account.email}
-                  </div>
+                  <div className="text-sm text-muted-foreground">{account.email}</div>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -127,11 +126,7 @@ export function MailboxList({
                   variant="ghost"
                   size="icon"
                   onClick={() => handleToggleExpand(account.id)}
-                  title={
-                    expandedAccounts[account.id]
-                      ? "Hide Aliases"
-                      : "Show Aliases"
-                  }
+                  title={expandedAccounts[account.id] ? "Hide Aliases" : "Show Aliases"}
                 >
                   {expandedAccounts[account.id] ? (
                     <ChevronUp className="h-4 w-4" />
@@ -140,10 +135,8 @@ export function MailboxList({
                   )}
                 </Button>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
+                  <DropdownMenuTrigger render={<Button variant="ghost" size="icon" />}>
+                    <MoreVertical className="h-4 w-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem
@@ -162,19 +155,11 @@ export function MailboxList({
                     </DropdownMenuItem>
                     {ENABLE_WATCH_CONTROLS && account.provider === "gmail" && (
                       <>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleWatchUpdate(account.email, "stop")
-                          }
-                        >
+                        <DropdownMenuItem onClick={() => handleWatchUpdate(account.email, "stop")}>
                           <BellOff className="mr-2 h-4 w-4" />
                           Stop Email Watch
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleWatchUpdate(account.email, "start")
-                          }
-                        >
+                        <DropdownMenuItem onClick={() => handleWatchUpdate(account.email, "start")}>
                           <Bell className="mr-2 h-4 w-4" />
                           New Email Watch
                         </DropdownMenuItem>
@@ -196,9 +181,7 @@ export function MailboxList({
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium">Aliases</h4>
                   {account.aliases.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No aliases found
-                    </p>
+                    <p className="text-sm text-muted-foreground">No aliases found</p>
                   ) : (
                     <div className="space-y-2">
                       {account.aliases.map((alias) => (
@@ -207,12 +190,8 @@ export function MailboxList({
                           className="flex items-center justify-between rounded-md border p-2"
                         >
                           <div>
-                            <div className="font-medium">
-                              {alias.name || alias.alias}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {alias.alias}
-                            </div>
+                            <div className="font-medium">{alias.name || alias.alias}</div>
+                            <div className="text-sm text-muted-foreground">{alias.alias}</div>
                           </div>
                         </div>
                       ))}

@@ -306,12 +306,16 @@ function ChecklistCard({
 
       {!isCompleted && (
         <div className="mt-2 self-end">
-          <Button variant="outline" className="h-7 px-3 gap-1 text-xs" asChild>
-            <a href={href} onClick={handleClick}>
-              Setup
-              <ArrowRight className="h-3 w-3 ml-1" />
-            </a>
-          </Button>
+          <Button
+            variant="outline"
+            className="h-7 px-3 gap-1 text-xs"
+            render={
+              <a href={href} onClick={handleClick}>
+                Setup
+                <ArrowRight className="h-3 w-3 ml-1" />
+              </a>
+            }
+          />
         </div>
       )}
     </motion.div>

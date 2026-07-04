@@ -27,7 +27,7 @@
 
 ---
 
-> **Last updated:** plan 14 DONE — all shared config centralized, `@coldjot/ui` extracted with Base UI + sonner + next-themes; full Radix→Base UI migration complete. Plan 10 (BullMQ resilience) committed and **awaiting owner smoke-testing**. Plan 06 deferred to the very end. Plan 12 blocked on plan 10.
+> **Last updated:** plan 14 follow-up — fixed three classes of post-migration runtime errors (nested-`<button>` hydration via an `asChild→render` codemod across 26 files, `MenuGroupContext` missing in Sidebar, Prisma Symbol serialization across 4 Server→Client boundaries). No shadcn components modified. Plan 10 (BullMQ resilience) still **awaiting owner smoke-testing**. Plan 06 deferred to the very end. Plan 12 blocked on plan 10.
 >
 > **Two parallel workstreams** live on two branch chains off `master`:
 >
@@ -334,6 +334,41 @@ Multiple commits on `upgrade/remaining-majors`.
 - Eliminated the "half light, half dark" rendering issue
 
 **Verified:** typecheck 9/9, lint 9/9, build OK, zero runtime errors.
+
+### Follow-up — fix hydration/serialization errors from the Base UI migration
+
+After the migration, three classes of runtime/typecheck errors surfaced and were fixed
+**without touching any shadcn UI component** (only consumer code in `apps/web`):
+
+1. **Nested-`<button>` hydration errors** — Base UI triggers render a `<button>` by
+   default and don't honor Radix's `asChild` (Slot) the same way, so
+   `<XTrigger asChild><Button/></XTrigger>` emitted `<button>` inside `<button>`.
+   - Wrote `scripts/fix-aschild-triggers.ts` (ts-morph AST codemod) to convert every
+     `<XTrigger asChild><Child/></XTrigger>` into the Base UI `render` prop form
+     `<XTrigger render={<Child/>}>…</XTrigger>`. **54 auto-transforms across 26 files.**
+   - Manually fixed 3 nested-trigger chains (`DialogTrigger > TooltipTrigger > Button`
+     in `editor-toolbar.tsx` ×2; `TooltipTrigger > DropdownMenuTrigger > Button` in
+     `sequence-table.tsx`) via composed `render` props, plus 1 dynamic-child popover
+     trigger (`sequence-list-selector.tsx`).
+   - Converted 4 remaining `<Button asChild><Link/a/></Button>` usages to `render`.
+   - Codemod is idempotent and re-runnable: `node --experimental-strip-types --no-warnings scripts/fix-aschild-triggers.ts [--dry-run]`.
+
+2. **`MenuGroupContext` missing** — Base UI's `Menu.GroupLabel` (which `DropdownMenuLabel`
+   maps to) requires a `Menu.Group` ancestor. Wrapped the Sidebar's label in
+   `<DropdownMenuGroup>` (only such usage in the app).
+
+3. **Symbol-property serialization errors** — raw Prisma objects passed Server→Client
+   carry non-enumerable/Symbol props (`nodejs.util.inspect.custom`) that React's RSC
+   serializer rejects. Added `apps/web/src/lib/serialize.ts` (`toPlain()` helper) and
+   applied it at 4 leaking boundaries: `settings/profile`, `compose`,
+   `settings/mailboxes`, `sequences/[id]/layout`.
+
+**Theme palette:** `packages/ui/src/styles/globals.css` updated to the slate palette
+with a monochromatic blue chart scale (user-selected); `components.json` refreshed from
+the latest shadcn restore (style `base-rhea`, baseColor `mist`). No shadcn component
+files were modified.
+
+**Verified:** typecheck 9/9, 0 errors.
 
 ---
 

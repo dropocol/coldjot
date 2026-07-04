@@ -7,15 +7,23 @@ import { EmailList } from "@coldjot/types";
 import { CreateListModal } from "./create-list-modal";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@coldjot/ui/components/dropdown-menu";
 import { useRouter } from "next/navigation";
 import { PaginationControls } from "@/components/pagination";
-import {
-  useLists,
-  useCreateList,
-  useDeleteList,
-} from "@/hooks/queries/use-lists";
+import { useLists, useCreateList, useDeleteList } from "@/hooks/queries/use-lists";
 
 interface EmailListsViewProps {
   searchQuery?: string;
@@ -65,9 +73,7 @@ const EmailListsView = ({
   const lists = (data?.lists ?? []) as EmailListWithCount[];
   const total = data?.total ?? 0;
 
-  const handleCreateList = async (
-    list: Omit<EmailList, "id" | "createdAt" | "updatedAt">
-  ) => {
+  const handleCreateList = async (list: Omit<EmailList, "id" | "createdAt" | "updatedAt">) => {
     try {
       setError(null);
       await createList.mutateAsync({
@@ -77,8 +83,7 @@ const EmailListsView = ({
       });
       toast.success("Email list created successfully");
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to create email list";
+      const errorMessage = err instanceof Error ? err.message : "Failed to create email list";
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -90,8 +95,7 @@ const EmailListsView = ({
       await deleteList.mutateAsync(list.id);
       toast.success("Email list deleted successfully");
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to delete email list";
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete email list";
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -156,9 +160,7 @@ const EmailListsView = ({
                   <TableCell>
                     <div className="font-medium">{list.name}</div>
                     {list.description && (
-                      <div className="text-sm text-muted-foreground">
-                        {list.description}
-                      </div>
+                      <div className="text-sm text-muted-foreground">{list.description}</div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -181,12 +183,10 @@ const EmailListsView = ({
                     <div className="flex items-center justify-end gap-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger
-                          asChild
                           onClick={(e) => e.stopPropagation()}
+                          render={<Button variant="ghost" size="icon" />}
                         >
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          <MoreHorizontal className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem

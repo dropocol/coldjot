@@ -2,13 +2,25 @@ import { useState } from "react";
 
 import { Label } from "@coldjot/ui/components/label";
 import { Button } from "@coldjot/ui/components/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@coldjot/ui/components/select";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
 import { TimePicker } from "@coldjot/ui/components/time-picker";
 import { cn } from "@coldjot/ui/lib/utils";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@coldjot/ui/components/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@coldjot/ui/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { BusinessScheduleEnum } from "@coldjot/types";
 import { updateBusinessHours } from "@/lib/client-actions";
@@ -49,8 +61,7 @@ export function BusinessHoursSettings({
     workDays: initialSettings?.workDays || DEFAULT_BUSINESS_HOURS.workDays,
   });
 
-  const [scheduleType, setScheduleType] =
-    useState<BusinessScheduleType>(initialScheduleType);
+  const [scheduleType, setScheduleType] = useState<BusinessScheduleType>(initialScheduleType);
 
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -101,18 +112,12 @@ export function BusinessHoursSettings({
         // Include necessary fields for both schedule types
         timezone: settings.timezone || DEFAULT_BUSINESS_HOURS.timezone,
         workDays: settings.workDays || DEFAULT_BUSINESS_HOURS.workDays,
-        workHoursStart:
-          settings.workHoursStart || DEFAULT_BUSINESS_HOURS.workHoursStart,
-        workHoursEnd:
-          settings.workHoursEnd || DEFAULT_BUSINESS_HOURS.workHoursEnd,
+        workHoursStart: settings.workHoursStart || DEFAULT_BUSINESS_HOURS.workHoursStart,
+        workHoursEnd: settings.workHoursEnd || DEFAULT_BUSINESS_HOURS.workHoursEnd,
       };
 
       // Use the client action instead of direct fetch
-      const result = await updateBusinessHours(
-        sequenceId,
-        businessHoursData,
-        updateReadinessField
-      );
+      const result = await updateBusinessHours(sequenceId, businessHoursData, updateReadinessField);
 
       // Update local state with the response
       if (result) {
@@ -138,8 +143,8 @@ export function BusinessHoursSettings({
       <div className="border-b pb-3">
         <h3 className="text-lg font-semibold">Business Hours</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Configure when your sequence should be active. This helps ensure
-          emails are sent at appropriate times.
+          Configure when your sequence should be active. This helps ensure emails are sent at
+          appropriate times.
         </p>
       </div>
       <div className="space-y-6">
@@ -171,17 +176,20 @@ export function BusinessHoursSettings({
           <div className="flex items-center justify-between">
             <Label>Timezone</Label>
             <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild className="max-w-md">
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={open}
-                  className="w-full justify-between"
-                  disabled={isLoading}
-                >
-                  {settings.timezone || DEFAULT_BUSINESS_HOURS.timezone}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
+              <PopoverTrigger
+                className="max-w-md"
+                render={
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                    disabled={isLoading}
+                  />
+                }
+              >
+                {settings.timezone || DEFAULT_BUSINESS_HOURS.timezone}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </PopoverTrigger>
               <PopoverContent className="w-[400px] p-0" align="start">
                 <Command>
@@ -189,17 +197,11 @@ export function BusinessHoursSettings({
                   <CommandEmpty>No timezone found.</CommandEmpty>
                   <CommandGroup className="max-h-[300px] overflow-auto">
                     {Intl.supportedValuesOf("timeZone").map((zone) => (
-                      <CommandItem
-                        key={zone}
-                        value={zone}
-                        onSelect={handleTimezoneChange}
-                      >
+                      <CommandItem key={zone} value={zone} onSelect={handleTimezoneChange}>
                         <Check
                           className={cn(
                             "mr-2 h-4 w-4",
-                            settings.timezone === zone
-                              ? "opacity-100"
-                              : "opacity-0"
+                            settings.timezone === zone ? "opacity-100" : "opacity-0"
                           )}
                         />
                         {zone}
@@ -226,15 +228,12 @@ export function BusinessHoursSettings({
                   <Button
                     key={day.value}
                     type="button"
-                    variant={
-                      workDays.includes(day.value) ? "default" : "outline"
-                    }
+                    variant={workDays.includes(day.value) ? "default" : "outline"}
                     onClick={() => handleWorkDayToggle(day.value)}
                     disabled={isLoading}
                     className={cn(
                       "flex-1 min-w-[54px] shadow-none",
-                      workDays.includes(day.value) &&
-                        "bg-foreground text-primary-foreground"
+                      workDays.includes(day.value) && "bg-foreground text-primary-foreground"
                     )}
                   >
                     {day.label}
@@ -256,36 +255,26 @@ export function BusinessHoursSettings({
                 <div className="flex flex-row items-center gap-2">
                   <Label>Start Time</Label>
                   <TimePicker
-                    value={
-                      settings.workHoursStart ||
-                      DEFAULT_BUSINESS_HOURS.workHoursStart
-                    }
+                    value={settings.workHoursStart || DEFAULT_BUSINESS_HOURS.workHoursStart}
                     onChange={(value) => handleTimeChange("start", value)}
                     disabled={isLoading}
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {scheduleType === "business"
-                    ? "Fixed to business hours"
-                    : "Custom start time"}
+                  {scheduleType === "business" ? "Fixed to business hours" : "Custom start time"}
                 </p>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="flex flex-row items-center gap-2">
                   <Label>End Time</Label>
                   <TimePicker
-                    value={
-                      settings.workHoursEnd ||
-                      DEFAULT_BUSINESS_HOURS.workHoursEnd
-                    }
+                    value={settings.workHoursEnd || DEFAULT_BUSINESS_HOURS.workHoursEnd}
                     onChange={(value) => handleTimeChange("end", value)}
                     disabled={isLoading}
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {scheduleType === "business"
-                    ? "Fixed to business hours"
-                    : "Custom end time"}
+                  {scheduleType === "business" ? "Fixed to business hours" : "Custom end time"}
                 </p>
               </div>
             </div>
@@ -293,11 +282,7 @@ export function BusinessHoursSettings({
         </div>
 
         <div className="flex justify-end pt-4">
-          <Button
-            variant="secondary"
-            onClick={handleSaveSettings}
-            disabled={isLoading}
-          >
+          <Button variant="secondary" onClick={handleSaveSettings} disabled={isLoading}>
             {isLoading ? "Saving..." : "Save Schedule Settings"}
           </Button>
         </div>
