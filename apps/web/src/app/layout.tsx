@@ -13,7 +13,7 @@ import { Providers } from "./providers";
 import { QueryProvider } from "@/providers/query-provider";
 import { LayoutContent } from "@/components/layout/layout-content";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
