@@ -1,3 +1,4 @@
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -45,27 +46,28 @@ function Button({
   variant = "default",
   size = "default",
   asChild,
+  children,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & {
   asChild?: boolean
 }) {
-  if (asChild) {
-    return (
-      <ButtonPrimitive
-        data-slot="button"
-        data-variant={variant}
-        data-size={size}
-        className={cn(buttonVariants({ variant, size, className }))}
-        render={(props2: any, state: any) => {
-          const { children, ...childProps } = props
-          return {
-            ...props2,
-            ...childProps,
-            className: cn(buttonVariants({ variant, size }), className, props2.className),
-          }
-        }}
-      />
-    )
+  if (asChild && children) {
+    // asChild backward-compat: clone the single child element, merging our
+    // button variant classes into it. We bypass ButtonPrimitive entirely
+    // (like Radix Slot did) to avoid conflicts with base-ui's internal
+    // button hook when a non-button element is rendered.
+    const child = React.Children.only(children) as React.ReactElement<any>
+    return React.cloneElement(child, {
+      ...props,
+      "data-slot": "button",
+      "data-variant": variant,
+      "data-size": size,
+      className: cn(
+        buttonVariants({ variant, size }),
+        className,
+        (child.props as any).className
+      ),
+    })
   }
   return (
     <ButtonPrimitive
@@ -74,7 +76,9 @@ function Button({
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {children}
+    </ButtonPrimitive>
   )
 }
 
