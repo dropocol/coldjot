@@ -2,7 +2,7 @@
 
 > **Goal:** route handlers become thin Express glue. Business logic moves into `controllers/*` which call the existing libs directly. This is **pure relocation** — no new interfaces, no behavior change.
 >
-> **Branch:** `refactor/mailops-phase2` (off Phase 1 branch)
+> **Sub-branch:** `refactor/mailops/phase-2-controllers` (off `refactor/mailops` after Phase 1 merges)
 > **Estimated effort:** 1 day
 > **Behavior change:** zero. Every endpoint, status code, header, and response body is identical before and after.
 

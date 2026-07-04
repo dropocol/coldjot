@@ -2,7 +2,7 @@
 
 > **Goal:** put the layered skeleton in place **without moving any logic**. New files only; existing code keeps running unchanged. The composition root is created but not yet used by `server.ts`.
 >
-> **Branch:** `refactor/mailops-phase1` (off Phase 0 branch)
+> **Sub-branch:** `refactor/mailops/phase-1-seams` (off `refactor/mailops` after Phase 0 merges)
 > **Estimated effort:** 2–3 days
 > **Behavior change:** zero. No production import path is altered. `tsc` stays green; the new code is exercised only by a wiring test.
 

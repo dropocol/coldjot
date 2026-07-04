@@ -2,7 +2,7 @@
 
 > **Goal:** replace the `ServiceManager.getInstance()` god-object with the plain composition root from Phase 1. Dependencies are passed via constructor; nothing reaches across the codebase for a singleton.
 >
-> **Branch:** `refactor/mailops-phase6` (off Phase 5 branch)
+> **Sub-branch:** `refactor/mailops/phase-6-singleton` (off `refactor/mailops` after Phase 5 merges)
 > **Estimated effort:** 2 days
 > **Behavior change:** zero. The same instances are constructed; they're just wired in one place and passed in, instead of being reached for globally.
 
@@ -219,13 +219,13 @@ grep -rn "ServiceManager" apps/mailops/src        # zero matches
 grep -rn "getInstance" apps/mailops/src           # matches only inside RedisConnection + MemoryMonitor (if you kept them as process-wide singletons)
 ```
 
-### Step 6.6 — Decide on the infra singletons
+### Step 6.6 — Infra singletons — DECIDED: keep all four as singletons
 
-`RedisConnection`, `MemoryMonitor`, `RateLimitService`, `PubSubService` are *currently* singletons. Three options:
-- **(a) Keep as singletons** — they're genuine process-wide resources (one Redis pool, one GC monitor). Acceptable. They're constructed inside `createApp()` and the `getInstance` is called only there.
-- **(b) Convert to plain classes constructed in `createApp()`** — slightly cleaner; the only behavior change is that `RateLimitService` and `PubSubService` lose their global accessor.
+`RedisConnection`, `MemoryMonitor`, `RateLimitService`, `PubSubService` are *currently* singletons. **Decision locked: keep all four as process-wide singletons**, constructed inside `createApp()` with `getInstance()` called only there (not from anywhere else in the codebase).
 
-**Recommend (a) for Redis + MemoryMonitor** (true singletons), **(b) for RateLimitService + PubSubService** (they're domain services that just happen to be stateful). If in doubt, leave all four as singletons for now and revisit in Phase 7.
+Rationale: they're genuine process-wide resources (one Redis pool, one GC monitor, one rate-limit coordinator, one PubSub listener). Converting them to plain classes adds churn without clear value. The key win — removing `ServiceManager.getInstance()` from every processor and route — is already achieved in Steps 6.2–6.3. The infra singletons stay encapsulated in the composition root.
+
+> Phase 7's tests can still inject fakes by constructing the services directly with the fakes (the constructors don't require the singleton path; only the convenience `getInstance()` accessor does).
 
 ## Definition of done
 

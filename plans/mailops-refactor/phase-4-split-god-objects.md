@@ -2,7 +2,7 @@
 
 > **Goal:** break the three largest files into layered, single-responsibility pieces. Each becomes a small domain service orchestrating narrow collaborators.
 >
-> **Branch:** `refactor/mailops-phase4` (off Phase 3 branch)
+> **Sub-branch:** `refactor/mailops/phase-4-split` (off `refactor/mailops` after Phase 3 merges)
 > **Estimated effort:** 5–7 days total (4a: 1–2 days, 4b: 1–2 days, 4c: 3 days)
 > **Behavior change:** intended to be zero. Where current code has *duplicate* paths that already disagree (tracking), the canonical path is picked and the duplicate deleted — Phase 0 characterization tests document which one wins.
 
@@ -137,14 +137,21 @@ Remove `recordEmailOpen`, `recordLinkClick`, `trackEmailEvent`, `updateTrackingS
 
 **Plus:** stray `null;` statement (line 134), unused `createEmailTrackingRecord` private method (line 294), `handleSendEmailError` is just a logger (line 371), `getSentMessageDetails` (line 400).
 
-### SMTP decision (the one place I want your call)
+### SMTP decision — DECIDED: delete, preserve the seam
 
-The SMTP branch (`sendGmailSMTP` at line 216) is unreachable today (`useApi = true` always). Two options:
+The SMTP branch (`sendGmailSMTP` at line 216) is unreachable today (`useApi = true` always). After review, the decision is **locked: delete the SMTP code path** and focus on Gmail. The `useApi` toggle, the `else` branch at line 210, `lib/google/smtp/*` (3 files, ~530 lines), the `sendGmailSMTP` export, and the `nodemailer` dependency all go.
 
-- **(a) Resurrect as real fallback** — wire it back behind `MailTransport`, remove the `useApi` toggle, make Gmail transport throw on auth failure → fall back to SMTP. **Risk:** the SMTP path's tracking integration is sketchy (it returns without writing `EmailTracking`/`EmailEvent`).
-- **(b) Delete honestly** — remove the SMTP branch + `lib/google/smtp/*` (3 files, ~530 lines) + the `sendGmailSMTP` export. **Recommend this.** Dead code pretending to be live is worse than no fallback; if you need SMTP later, it's a clean re-implementation against `MailTransport`.
+**What we preserve for future inbox features:**
 
-**Default in this plan: (b).** If you want (a), say so before this phase starts — it adds ~1 day.
+- **The `MailTransport` interface** (Phase 1). This is the seam. When you add a new provider later (SMTP, Outlook, a send-through-API service), you implement `MailTransport` against it and wire it in `composition-root.ts`. Nothing in `SendEmailServiceImpl` changes.
+- **`lib/email/helper.ts`** — the pure RFC822 message builders (`createEmailMessage`, `createUntrackedMessage`, `generateSenderInfo`). Provider-agnostic; reused by any transport.
+- **`lib/google/gmail/helper.ts`** — `refreshTokenIfNeeded` + `getEmailThreadInfo`. These are reused by `GmailTransport` (4b) and `GmailInboxSource` (4c). Not deleted.
+- **The OAuth token-refresh pattern** — the `MailTransport` interface deliberately exposes `getClient(userId, mailboxId)` so future transports that also use OAuth (Outlook, etc.) follow the same shape.
+
+**What we do NOT preserve:**
+
+- The `nodemailer` XOAUTH2 implementation (`lib/google/smtp/gmail.ts`) — it's Gmail-specific SMTP anyway, not a generic SMTP transport. A future "real SMTP" feature would be written fresh against `MailTransport` (cleaner than resurrecting this).
+- The SMTP message-construction helpers (`lib/google/smtp/helper.ts`) — overlap with `lib/email/helper.ts`; keeping both creates two sources of truth for RFC822 building.
 
 ### Target structure
 
@@ -241,10 +248,12 @@ Notice what's gone: the `useApi` toggle, the SMTP branch, the stray `null;`, the
 ### Definition of done (4b)
 - [ ] `services/domain/send-email.service.ts` ≤ 100 lines.
 - [ ] `adapters/gmail-transport.ts` exists, implements `MailTransport`.
-- [ ] SMTP branch + `lib/google/smtp/*` deleted (assuming option b).
-- [ ] `nodemailer` removed from package.json.
+- [ ] SMTP branch + `lib/google/smtp/*` deleted.
+- [ ] `nodemailer` + `quoted-printable` removed from package.json.
+- [ ] `MailTransport` interface preserved as the future-provider seam (untouched).
+- [ ] `lib/email/helper.ts` + `lib/google/gmail/helper.ts` preserved (reused by transport + inbox source).
 - [ ] No stray `null;`, no unused private methods.
-- [ ] Characterization tests 0a-1/2/3 pass.
+- [ ] Characterization tests Group A (all 5 cases) pass.
 
 ---
 
@@ -384,12 +393,12 @@ The class reads top-to-bottom as a sequence of named steps. Each step is one scr
 
 **Verify:** characterization tests 0c-1/2/3/4 pass. Grep confirms `services/pubsub/handler.ts` is gone.
 
-**4c.7 — Handle the dormant ThreadProcessor.**
-`services/jobs/thread-watch/processor.ts` (846 lines) is commented out in `service-manager.ts:174-175`. It's the polling alternative to PubSub push.
-- **Option (a):** move it under `services/inbox-sync/polling-source.ts` as a second `InboxSource` impl, marked `@deprecated`. Keep it compilable.
-- **Option (b):** delete it. If you ever need polling, write a fresh `PollingInboxSource` against the clean interface — easier than resurrecting 846 lines of pre-refactor code.
+**4c.7 — Handle the dormant ThreadProcessor — DECIDED: delete.**
+`services/jobs/thread-watch/processor.ts` (846 lines) is commented out in `service-manager.ts:174-175` and unreferenced. **Decision locked: delete it outright in Phase 5** (this phase leaves it in place; Phase 5 sweeps dead code).
 
-**Recommend (b).** It's dead today and the new seam makes reimplementation cheap later. Phase 5 deletes it.
+The `InboxSource` interface (Phase 1) is the future seam for any polling implementation. If you later add an IMAP or polling-based inbox, write a fresh `PollingInboxSource` against that interface — cleaner than resurrecting 846 lines of pre-refactor code that talks to the old singletons.
+
+> **No characterization test exists for ThreadProcessor** because it's not running. Phase 0 confirms it has zero live callers. Safe to delete without a pin.
 
 ### Definition of done (4c)
 - [ ] `services/domain/inbox-sync.service.ts` ≤ 150 lines.
@@ -397,7 +406,8 @@ The class reads top-to-bottom as a sequence of named steps. Each step is one scr
 - [ ] `adapters/gmail-inbox-source.ts` exists, implements `InboxSource`.
 - [ ] `services/pubsub/handler.ts` deleted. `services/pubsub/client.ts` calls `InboxSyncService`.
 - [ ] No file in `services/` exceeds ~250 lines.
-- [ ] Characterization tests 0c-1/2/3/4 pass.
+- [ ] Characterization tests Group C (all 8 cases) pass.
+- [ ] `InboxSource` interface preserved as the future-polling seam (untouched).
 
 ---
 
@@ -405,10 +415,11 @@ The class reads top-to-bottom as a sequence of named steps. Each step is one scr
 
 - [ ] No file in `apps/mailops/src/{lib,services}` exceeds ~300 lines (god-objects ≤ ~150).
 - [ ] Three god-objects gone; replaced by small services + pure helpers + adapters.
-- [ ] All Phase 0 characterization tests pass.
+- [ ] All Phase 0 characterization tests pass (Groups A, B, C especially).
 - [ ] `tsc --noEmit` clean; ESLint clean.
 - [ ] The composition root (`composition-root.ts`) wires the new services; `server.ts` still boots unchanged.
-- [ ] SMTP path deleted (option b); nodemailer removed (or — if you chose option (a) — SMTP wired behind `MailTransport` with the toggle removed).
+- [ ] SMTP path deleted; `nodemailer` removed; `MailTransport` seam preserved for future providers.
+- [ ] `InboxSource` seam preserved for future polling/IMAP providers.
 
 ## What to commit
 

@@ -2,7 +2,7 @@
 
 > **Goal:** remove the leftover scaffolding, comment noise, dead files, and stray logs that survived Phases 1–4.
 >
-> **Branch:** `refactor/mailops-phase5` (off Phase 4 branch)
+> **Sub-branch:** `refactor/mailops/phase-5-cleanup` (off `refactor/mailops` after Phase 4 merges)
 > **Estimated effort:** 0.5–1 day
 > **Behavior change:** zero. Everything deleted here is unreachable or already replaced.
 

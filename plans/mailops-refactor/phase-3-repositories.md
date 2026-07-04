@@ -2,7 +2,7 @@
 
 > **Goal:** every Prisma call now lives behind a repository from Phase 1. Domain code depends on `EmailTrackingRepository`, not on `prisma.emailTracking.create(...)`. The repository is *injected* via constructor.
 >
-> **Branch:** `refactor/mailops-phase3` (off Phase 2 branch)
+> **Sub-branch:** `refactor/mailops/phase-3-repos` (off `refactor/mailops` after Phase 2 merges)
 > **Estimated effort:** 3–4 days
 > **Behavior change:** zero. Each Prisma call is moved verbatim into the matching `Prisma*Repository` method (created in Phase 1). Callers swap `prisma.X.op(args)` for `repo.methodName(args)`.
 

@@ -319,7 +319,7 @@ With everything injected and singleton-free, write the tests you actually want (
 | Subtle behavior change in a god-object split slips through | Phase 0 characterization tests must keep passing at every commit. CI gate. |
 | Injecting dependencies makes processor construction verbose | The composition root absorbs all of it; processors stay ≤ ~5 constructor args |
 | PubSub handler has the most embedded business rules | Phase 4c is scheduled last among the three splits and gets the most characterization coverage |
-| SMTP branch removal (4b option b) removes a "fallback" that someone might rely on | Default to option (a) — keep SMTP behind `MailTransport` — unless you confirm it's unused |
+| SMTP branch removal (4b) removes a "fallback" that someone might rely on | **Decided: delete.** The `MailTransport` interface is preserved as the seam for any future provider (SMTP, Outlook, etc.) — adding one later is a clean new impl, not a resurrection. |
 | Refactor takes long enough to conflict with the postponed consolidation | Phase ordering means consolidation can happen *at any point* — even mid-refactor, the seams only help |
 
 ## Definition of done

@@ -78,14 +78,24 @@ The composition root is the only file that constructs real instances and wires t
 
 ## Scope & constraints
 
-- ✅ **In scope:** restructure into layers, extract interfaces, inject dependencies, delete dead code, remove the duplicate tracking surface, split the three god-objects, isolate Prisma behind repositories, introduce characterization tests.
+- ✅ **In scope:** restructure into layers, extract interfaces, inject dependencies, delete dead code, remove the duplicate tracking surface, split the three god-objects, isolate Prisma behind repositories, characterization tests covering **every** feature, permanent test suite with full coverage at the end.
 - ❌ **Out of scope (deliberately):** changing any observable behavior, swapping BullMQ/Prisma/Gmail for alternatives (only the *seams* are added — actual swaps are follow-ups), consolidating into the Next.js app, schema changes.
+
+### Locked decisions
+
+| Decision | Outcome |
+|---|---|
+| SMTP path (`useApi = true` dead branch) | **Delete.** Focus on Gmail. Preserve the `MailTransport` interface as the seam for future providers (SMTP, Outlook, send-through-API). Keep `lib/email/helper.ts` + `lib/google/gmail/helper.ts` (reused). Remove `nodemailer` + `quoted-printable`. |
+| Dormant `ThreadProcessor` (846 lines, commented out) | **Delete** in Phase 5. `InboxSource` interface is the future seam for any polling/IMAP implementation. |
+| Infra singletons (`Redis`, `MemoryMonitor`, `RateLimit`, `PubSub`) | **Keep as process-wide singletons**, constructed inside `createApp()` only. |
+| Phase 0 characterization tests | **Delete** in Phase 7.9 once the permanent suite covers every row in the [Feature → test mapping](./phase-7-test-suite.md#feature--test-mapping). |
 
 ## Verification strategy
 
 Because you can't fully test the live system, every phase is designed to be **mechanically verifiable** before moving on:
 
 1. **`tsc --noEmit` + ESLint clean** after every commit.
-2. **Characterization tests** captured *before* refactoring each god-object: a handful of integration tests that pin current input→output behavior (a fake Gmail response → the rows that land in the DB). Run before AND after the refactor; if the assertions still pass, behavior is preserved.
+2. **Characterization tests** captured *before* any refactor: 15 test files (Groups A–O) pinning current input→output behavior for **every** mailops feature. Run before AND after each phase; if the assertions still pass, behavior is preserved. See [Phase 0 coverage matrix](./phase-0-characterization-tests.md#coverage-matrix).
 3. **Diff discipline:** each commit is one concern, one layer, or one god-object split — never "refactor + behavior change" in the same commit.
 4. **Behavior-preserving markers:** where a method is moved verbatim, the commit message says `move-only`; where logic is genuinely reshaped (rare), it's called out explicitly with a before/after.
+5. **Final coverage:** at the end of Phase 7, every feature has permanent test coverage (unit + adapter + repository + integration). Coverage targets enforced in CI. See [Phase 7 Feature → test mapping](./phase-7-test-suite.md#feature--test-mapping).
