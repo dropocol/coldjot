@@ -15,7 +15,7 @@ import {
   FileUp,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import Papa from "papaparse";
 import {
   useCreateContact,

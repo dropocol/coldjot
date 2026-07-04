@@ -3,7 +3,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 import "./app.css";
-import { Toaster } from "@coldjot/ui/components/toaster";
+import { Toaster } from "@coldjot/ui/components/sonner";
 import { cn } from "@coldjot/ui/lib/utils";
 
 import { auth } from "@/auth";

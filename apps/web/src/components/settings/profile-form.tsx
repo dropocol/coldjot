@@ -7,7 +7,7 @@ import * as z from "zod";
 import { Button } from "@coldjot/ui/components/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@coldjot/ui/components/form";
 import { Input } from "@coldjot/ui/components/input";
-import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
 
@@ -24,7 +24,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ user }: ProfileFormProps) {
-  const { toast } = useToast();
+  // toast() is now imported from sonner;
   const updateUser = useMutation({
     mutationFn: (input: ProfileFormValues) =>
       api.patch("/api/user", input),
@@ -39,16 +39,9 @@ export function ProfileForm({ user }: ProfileFormProps) {
   async function onSubmit(data: ProfileFormValues) {
     try {
       await updateUser.mutateAsync(data);
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
-      });
+      toast.success("Profile updated", { description: "Your profile has been updated successfully." });
     } catch (_error) {
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update profile. Please try again." });
     }
   }
 

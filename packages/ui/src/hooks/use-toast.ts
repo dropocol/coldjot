@@ -15,6 +15,8 @@ type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   action?: ToastActionElement
 }
 
@@ -142,9 +144,9 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+type ToastInput = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+function toast({ ...props }: ToastInput) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -160,10 +162,10 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
-      onOpenChange: (open) => {
+      onOpenChange: (open: boolean) => {
         if (!open) dismiss()
       },
-    },
+    } as any,
   })
 
   return {

@@ -7,7 +7,7 @@ import { SequenceStepList } from "./steps/sequence-step-list";
 import { AddSequenceStep } from "./steps/add-sequence-step";
 import { SequenceStepEditor } from "./steps/sequence-step-editor";
 import { SequenceEmailEditor } from "./editor/sequence-email-editor";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import {
   type SequenceStats as SequenceStatsType,
   type SequenceStep,

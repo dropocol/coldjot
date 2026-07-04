@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Contact } from "@prisma/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/components/sheet";
 import { Button } from "@coldjot/ui/components/button";

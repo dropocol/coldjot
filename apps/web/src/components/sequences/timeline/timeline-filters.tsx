@@ -62,7 +62,7 @@ export function TimelineFilters() {
   // TODO: Confirm if these filters are working
   return (
     <div className="flex items-center gap-2">
-      <Select value={currentStatus} onValueChange={handleStatusChange}>
+      <Select value={currentStatus} onValueChange={(v) => handleStatusChange(v as string)}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Filter by status" />
         </SelectTrigger>

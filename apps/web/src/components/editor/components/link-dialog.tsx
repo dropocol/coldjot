@@ -31,9 +31,6 @@ export function LinkDialog({
     <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
       <DialogContent
         className="sm:max-w-[425px]"
-        onPointerDownOutside={(e) => {
-          e.preventDefault();
-        }}
         onClick={(e) => {
           e.stopPropagation();
         }}

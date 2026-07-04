@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@coldjot/ui/components/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
 import { Trash2 } from "lucide-react";
-import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
 import { qk } from "@/lib/query/keys";
@@ -20,7 +20,7 @@ interface User {
 
 export function UsersClient() {
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-  const { toast } = useToast();
+  // toast() is now imported from sonner;
   const qc = useQueryClient();
 
   // GET /api/admin/users returns a bare array.
@@ -38,16 +38,9 @@ export function UsersClient() {
 
     try {
       await deleteUser.mutateAsync(deleteUserId);
-      toast({
-        title: "Success",
-        description: "User deleted successfully",
-      });
+      toast.success("Success", { description: "User deleted successfully" });
     } catch (_error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete user",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete user" });
     } finally {
       setDeleteUserId(null);
     }

@@ -10,7 +10,7 @@ import { Loader2, Info } from "lucide-react";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { TemplateCommand } from "@/components/templates/template-command";
 import type { EmailData } from "@coldjot/types";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Switch } from "@coldjot/ui/components/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
@@ -283,7 +283,7 @@ export function SequenceEmailEditor({
                       ? "Loading template..."
                       : "Unlink from template"}
                   </Label>
-                  <TooltipProvider delayDuration={300}>
+                  <TooltipProvider delay={300}>
                     <Tooltip>
                       <TooltipTrigger
                         type="button"
@@ -388,7 +388,7 @@ export function SequenceEmailEditor({
 
               {/* DO NOT DELETE THIS */}
               {/* {sequenceId && stepId && (
-                <TooltipProvider delayDuration={300}>
+                <TooltipProvider delay={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button

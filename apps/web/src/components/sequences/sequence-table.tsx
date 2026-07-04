@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { CreateSequenceModal } from "./create-sequence-modal";
 import { useRouter } from "next/navigation";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import Link from "next/link";
 import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
 import { SequenceStatus, SequenceStep } from "@coldjot/types";

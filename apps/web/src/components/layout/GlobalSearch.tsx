@@ -14,7 +14,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { SearchResult, SearchResultType } from "@coldjot/types";
-import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
+
 import { useContactSearch } from "@/hooks/queries/use-contacts";
 
 export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
@@ -117,9 +117,9 @@ export function GlobalSearch({ isCollapsed }: { isCollapsed?: boolean }) {
       </Button>
 
       <CommandDialog open={open} onOpenChange={handleOpenChange}>
-        <VisuallyHidden.Root>
+        <span className="sr-only">
           <DialogTitle>Search</DialogTitle>
-        </VisuallyHidden.Root>
+        </span>
         <Command
           className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0"
           filter={(value, search) => {

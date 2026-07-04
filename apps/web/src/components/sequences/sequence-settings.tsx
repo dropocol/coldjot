@@ -9,7 +9,7 @@ import { Input } from "@coldjot/ui/components/input";
 import { BusinessHoursSettings } from "@/components/sequences/business-hours-settings";
 import { SequenceEmailSettings } from "@/components/sequences/sequence-email-settings";
 import type { MailboxWithRequired } from "@/components/sequences/sequence-email-settings";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import type {
   BusinessHours,
   BusinessScheduleType,

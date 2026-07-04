@@ -2,7 +2,7 @@
 
 import { Template } from "@coldjot/types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { useDeleteTemplate } from "@/hooks/queries/use-templates";
 
 interface Props {

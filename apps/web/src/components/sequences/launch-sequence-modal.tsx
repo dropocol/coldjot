@@ -2,7 +2,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@coldjot/ui/components/dialog";
 import { Button } from "@coldjot/ui/components/button";
-import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
 import { Separator } from "@coldjot/ui/components/separator";
 import { CheckCircle2, AlertCircle, Loader2, Sparkles } from "lucide-react";
@@ -37,18 +37,14 @@ export function LaunchSequenceModal({
     testMode !== undefined ? testMode : sequence.testMode || false;
 
   const launch = useLaunchSequence(actualSequenceId);
-  const { toast } = useToast();
+  // toast() is now imported from sonner;
 
   // Get sequence setup status
   const { steps, isReady } = isSequenceReadyToLaunch(sequence);
 
   const handleLaunch = async () => {
     if (!isReady) {
-      toast({
-        title: "Cannot Launch Sequence",
-        description: "Please complete all setup steps before launching.",
-        variant: "destructive",
-      });
+      toast.error("Cannot Launch Sequence", { description: "Please complete all setup steps before launching." });
       return;
     }
 
@@ -62,16 +58,9 @@ export function LaunchSequenceModal({
       refreshSequence();
 
       onClose();
-      toast({
-        title: "Sequence Launched",
-        description: "Your sequence has been launched successfully",
-      });
+      toast.success("Sequence Launched", { description: "Your sequence has been launched successfully" });
     } catch (_error) {
-      toast({
-        title: "Error",
-        description: "Failed to launch sequence",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to launch sequence" });
     }
   };
 

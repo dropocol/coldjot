@@ -5,7 +5,7 @@ import { Button } from "@coldjot/ui/components/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { List, Users } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { useLists } from "@/hooks/queries/use-lists";
 import { useAddListContactsToSequence } from "@/hooks/queries/use-sequence-contacts";
 

@@ -16,7 +16,7 @@ import {
 import { Mailbox, EmailAlias } from "@coldjot/database";
 import { Button } from "@coldjot/ui/components/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
-import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { toast } from "sonner";
 
 export type MailboxWithAliases = Mailbox & {
   aliases: EmailAlias[];
@@ -43,7 +43,7 @@ export function MailboxList({
   onAliasesRefresh,
   onWatchUpdate,
 }: MailboxListProps) {
-  const { toast } = useToast();
+  // toast() is now imported from sonner;
   const [expandedAccounts, setExpandedAccounts] = useState<
     Record<string, boolean>
   >({});
@@ -58,16 +58,9 @@ export function MailboxList({
   const handleRefreshAliases = async (accountId: string) => {
     try {
       await onAliasesRefresh(accountId);
-      toast({
-        title: "Aliases refreshed",
-        description: "Your email aliases have been updated.",
-      });
+      toast.success("Aliases refreshed", { description: "Your email aliases have been updated." });
     } catch (_error) {
-      toast({
-        title: "Error",
-        description: "Failed to refresh aliases. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to refresh aliases. Please try again." });
     }
   };
 
@@ -82,15 +75,12 @@ export function MailboxList({
       }
 
       await onWatchUpdate(email, action);
-      toast({
-        title: action === "start" ? "Watch Started" : "Watch Stopped",
+      toast.success(action === "start" ? "Watch Started" : "Watch Stopped", {
         description: `Email watch has been ${action === "start" ? "started" : "stopped"} for ${email}`,
       });
     } catch (_error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: `Failed to ${action} watch. Please try again.`,
-        variant: "destructive",
       });
     }
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DragHandleDots2Icon } from "@radix-ui/react-icons";
+import { GripVertical } from "lucide-react";
 import {
   DragDropContext,
   Draggable,
@@ -12,7 +12,7 @@ import { Mail, MoreHorizontal } from "lucide-react";
 import { Badge } from "@coldjot/ui/components/badge";
 import { Button } from "@coldjot/ui/components/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { cn } from "@coldjot/ui/lib/utils";
 import type { SequenceStep } from "@coldjot/types";
 
@@ -96,7 +96,7 @@ export function SequenceStepList({
                       {...provided.dragHandleProps}
                       className="flex-shrink-0 cursor-grab"
                     >
-                      <DragHandleDots2Icon className="h-5 w-5 text-muted-foreground" />
+                      <GripVertical className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">

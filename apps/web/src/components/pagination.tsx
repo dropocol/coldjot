@@ -145,7 +145,7 @@ export function PaginationControls({
           <div className="flex items-center gap-2">
             <Select
               value={pageSize.toString()}
-              onValueChange={(value) => onPageSizeChange(parseInt(value))}
+              onValueChange={(value) => onPageSizeChange(parseInt(String(value)))}
             >
               <SelectTrigger className="h-8 w-[70px]">
                 <SelectValue />
@@ -198,7 +198,7 @@ export function PaginationControls({
         <div className="flex items-center gap-2">
           <Select
             value={pageSize.toString()}
-            onValueChange={(value) => onPageSizeChange(parseInt(value))}
+            onValueChange={(value) => onPageSizeChange(parseInt(String(value)))}
           >
             <SelectTrigger className="h-8 w-[70px]">
               <SelectValue />

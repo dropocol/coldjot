@@ -5,7 +5,7 @@ import { Button } from "@coldjot/ui/components/button";
 import { Plus } from "lucide-react";
 import { SequenceStepEditor } from "./sequence-step-editor";
 import { SequenceEmailEditor } from "../editor/sequence-email-editor";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import type { SequenceStep, StepData, EmailData } from "@coldjot/types";
 import { useCreateStep } from "@/hooks/queries/use-sequence-steps";
 import { useSequence } from "@/lib/sequence-context";

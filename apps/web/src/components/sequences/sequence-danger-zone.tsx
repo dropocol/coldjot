@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
-import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { toast } from "sonner";
 
 import { useRouter } from "next/navigation";
 import { SequenceStatus } from "@coldjot/types";
@@ -21,7 +21,7 @@ export function SequenceDangerZone({
   sequenceId,
   onStatusChange,
 }: SequenceDangerZoneProps) {
-  const { toast } = useToast();
+  // toast() is now imported from sonner;
   const router = useRouter();
   const reset = useResetSequence(sequenceId);
   const deleteSequence = useDeleteSequence();
@@ -34,18 +34,11 @@ export function SequenceDangerZone({
 
       onStatusChange?.(SequenceStatus.DRAFT);
 
-      toast({
-        title: "Success",
-        description: "Sequence has been reset successfully",
-      });
+      toast.success("Success", { description: "Sequence has been reset successfully" });
 
       router.refresh();
     } catch (_error) {
-      toast({
-        title: "Error",
-        description: "Failed to reset sequence",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to reset sequence" });
     }
   };
 
@@ -53,18 +46,11 @@ export function SequenceDangerZone({
     try {
       await deleteSequence.mutateAsync(sequenceId);
 
-      toast({
-        title: "Success",
-        description: "Sequence has been deleted successfully",
-      });
+      toast.success("Success", { description: "Sequence has been deleted successfully" });
 
       router.push("/sequences");
     } catch (_error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete sequence",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete sequence" });
       setIsDeleteDialogOpen(false);
     }
   };

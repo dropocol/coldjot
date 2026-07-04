@@ -13,7 +13,7 @@ import {
   ListPlus,
   Check,
 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
 import { RadioGroup, RadioGroupItem } from "@coldjot/ui/components/radio-group";
@@ -192,7 +192,7 @@ export function AddToListDrawer({
           ) : (
             <RadioGroup
               value={selectedListId || ""}
-              onValueChange={setSelectedListId}
+              onValueChange={(v) => setSelectedListId(v as string)}
               className="w-full"
             >
               <Table>

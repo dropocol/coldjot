@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@coldjot/ui/components/button";
 import { Send, Save, Code, Loader2 } from "lucide-react";
 import { Contact, Template } from "@prisma/client";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Label } from "@coldjot/ui/components/label";
 import { ContactSearch } from "../search/contact-search-dropdown";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
@@ -285,7 +285,7 @@ export default function EmailComposer({ templates }: Props) {
 
         <div>
           <label className="text-sm font-medium">Select Template</label>
-          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+          <Select value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v as string)}>
             <SelectTrigger>
               <SelectValue placeholder="Choose a template" />
             </SelectTrigger>

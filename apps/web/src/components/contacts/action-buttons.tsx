@@ -6,7 +6,7 @@ import { Contact } from "@prisma/client";
 import { useState } from "react";
 import EditContactModal from "./edit-contact-drawer";
 import { useRouter } from "next/navigation";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";

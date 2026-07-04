@@ -12,7 +12,7 @@ import {
   updateOnboardingStep,
   completeOnboarding,
 } from "@/app/actions/onboarding";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { ONBOARDING_STEPS } from "@/lib/constants";
 import { useMailboxCount } from "@/hooks/queries/use-mailboxes";
 

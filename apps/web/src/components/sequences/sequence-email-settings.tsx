@@ -5,7 +5,7 @@ import { Label } from "@coldjot/ui/components/label";
 import { Switch } from "@coldjot/ui/components/switch";
 import { Input } from "@coldjot/ui/components/input";
 import { Button } from "@coldjot/ui/components/button";
-import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
 import { Separator } from "@coldjot/ui/components/separator";
@@ -59,7 +59,7 @@ export function SequenceEmailSettings({
     sequenceMailbox: initialSettings?.sequenceMailbox ?? null,
   });
   const [newEmail, setNewEmail] = useState("");
-  const { toast } = useToast();
+  // toast() is now imported from sonner;
   const _router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { updateReadinessField, updateSequence } = useSequence();
@@ -91,17 +91,10 @@ export function SequenceEmailSettings({
         sequenceMailbox: data.sequenceMailbox,
       }));
 
-      toast({
-        title: "Mailbox updated",
-        description: "The sequence mailbox has been updated",
-      });
+      toast.success("Mailbox updated", { description: "The sequence mailbox has been updated" });
     } catch (error) {
       console.error("Error updating mailbox:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update sequence mailbox",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update sequence mailbox" });
     } finally {
       setIsLoading(false);
     }
@@ -126,17 +119,10 @@ export function SequenceEmailSettings({
         sequenceMailbox: data.sequenceMailbox,
       }));
 
-      toast({
-        title: "Alias updated",
-        description: "The email alias has been updated",
-      });
+      toast.success("Alias updated", { description: "The email alias has been updated" });
     } catch (error) {
       console.error("Error updating alias:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update email alias",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update email alias" });
     } finally {
       setIsLoading(false);
     }
@@ -156,17 +142,10 @@ export function SequenceEmailSettings({
       // Update local state
       setSettings((prev) => ({ ...prev, testMode: checked }));
 
-      toast({
-        title: "Success",
-        description: "Test mode updated successfully",
-      });
+      toast.success("Success", { description: "Test mode updated successfully" });
     } catch (error) {
       console.error("Error updating test mode:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update test mode",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update test mode" });
     } finally {
       setIsLoading(false);
     }
@@ -186,17 +165,10 @@ export function SequenceEmailSettings({
       // Update local state
       setSettings((prev) => ({ ...prev, disableSending: checked }));
 
-      toast({
-        title: "Success",
-        description: "Email sending settings updated successfully",
-      });
+      toast.success("Success", { description: "Email sending settings updated successfully" });
     } catch (error) {
       console.error("Error updating sending settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update email sending settings",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update email sending settings" });
     } finally {
       setIsLoading(false);
     }
@@ -213,19 +185,12 @@ export function SequenceEmailSettings({
         updateSequence
       );
 
-      toast({
-        title: "Success",
-        description: "Test email added successfully",
-      });
+      toast.success("Success", { description: "Test email added successfully" });
 
       return true;
     } catch (error) {
       console.error("Error saving test emails:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save test emails",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to save test emails" });
       return false;
     } finally {
       setIsLoading(false);
@@ -279,7 +244,7 @@ export function SequenceEmailSettings({
             </div>
             <Select
               value={settings.sequenceMailbox?.mailboxId || undefined}
-              onValueChange={handleMailboxChange}
+              onValueChange={(v) => handleMailboxChange(v as string)}
               disabled={isLoading || mailboxes.length === 0}
             >
               <SelectTrigger className="max-w-md">
@@ -321,7 +286,7 @@ export function SequenceEmailSettings({
                 </div>
                 <Select
                   value={settings.sequenceMailbox?.aliasId || "default"}
-                  onValueChange={handleAliasChange}
+                  onValueChange={(v) => handleAliasChange(v as string)}
                   disabled={isLoading}
                 >
                   <SelectTrigger className="max-w-md">

@@ -5,7 +5,7 @@ import { AlertCircle, MoreHorizontal, Users } from "lucide-react";
 import { Button } from "@coldjot/ui/components/button";
 import { EmailList } from "@coldjot/types";
 import { CreateListModal } from "./create-list-modal";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";

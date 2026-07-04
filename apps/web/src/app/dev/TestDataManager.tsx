@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@coldjot/ui/components/card";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import testData from "./data.json";
 import { api } from "@/lib/http/api-client";

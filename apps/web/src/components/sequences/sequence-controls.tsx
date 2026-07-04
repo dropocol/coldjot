@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@coldjot/ui/components/button";
-import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { toast } from "sonner";
 import { PlayIcon, PauseIcon } from "lucide-react";
 import { SequenceStatus } from "@coldjot/types";
 import { useSequenceControl } from "@/hooks/queries/use-sequences";
@@ -20,7 +20,7 @@ export function SequenceControls({
 }: SequenceControlsProps) {
   const [status, setStatus] = useState<SequenceStatus>(initialStatus);
   const control = useSequenceControl(sequenceId);
-  const { toast } = useToast();
+  // toast() is now imported from sonner;
 
   useEffect(() => {
     setStatus(initialStatus);
@@ -37,15 +37,12 @@ export function SequenceControls({
       setStatus(newStatus);
       onStatusChange(newStatus);
 
-      toast({
-        title: "Sequence Updated",
+      toast.success("Sequence Updated", {
         description: `Sequence ${action} successfully`,
       });
     } catch (_error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: `Failed to ${action} sequence`,
-        variant: "destructive",
       });
     }
   };

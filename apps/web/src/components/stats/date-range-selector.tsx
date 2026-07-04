@@ -24,7 +24,7 @@ const DATE_RANGE_OPTIONS = [
 
 export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={(v) => onChange(v as DateRange)}>
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Select time range" />
       </SelectTrigger>

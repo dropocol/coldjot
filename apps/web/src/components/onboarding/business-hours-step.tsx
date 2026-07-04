@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/
 import { Check, ChevronsUpDown } from "lucide-react";
 import { TimePicker } from "@coldjot/ui/components/time-picker";
 import { cn } from "@coldjot/ui/lib/utils";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
 

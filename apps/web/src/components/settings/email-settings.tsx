@@ -7,7 +7,7 @@ import { Input } from "@coldjot/ui/components/input";
 import { Textarea } from "@coldjot/ui/components/textarea";
 import { Button } from "@coldjot/ui/components/button";
 import { Loader2 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
 

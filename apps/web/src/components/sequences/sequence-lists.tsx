@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
 import { Badge } from "@coldjot/ui/components/badge";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Loader2, Plus, ListPlus, MoreVertical, Trash } from "lucide-react";
 import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";

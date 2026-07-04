@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@coldjot/ui/components/button";
-import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { toast } from "sonner";
 import { Mail, X } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@coldjot/ui/components/card";
 import type { Mailbox } from "@prisma/client";
@@ -19,7 +19,7 @@ export function AddMailbox({
   onAccountAdded: _onAccountAdded,
   showCloseButton = false,
 }: AddEmailAccountProps) {
-  const { toast } = useToast();
+  // toast() is now imported from sonner;
   const gmailAuth = useMutation({
     mutationFn: () => api.post<{ url: string }>("/api/mailboxes/gmail/auth", {}),
   });
@@ -30,11 +30,7 @@ export function AddMailbox({
       const { url } = await gmailAuth.mutateAsync();
       window.location.href = url;
     } catch (_error) {
-      toast({
-        title: "Error",
-        description: "Failed to start Gmail authentication",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to start Gmail authentication" });
     }
   };
 

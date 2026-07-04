@@ -4,7 +4,7 @@ import { Label } from "@coldjot/ui/components/label";
 import { Button } from "@coldjot/ui/components/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
 import { TimePicker } from "@coldjot/ui/components/time-picker";
 import { cn } from "@coldjot/ui/lib/utils";
@@ -154,7 +154,7 @@ export function BusinessHoursSettings({
           </div>
           <Select
             value={scheduleType}
-            onValueChange={handleScheduleTypeChange}
+            onValueChange={(v) => handleScheduleTypeChange(v as BusinessScheduleType)}
             disabled={isLoading}
           >
             <SelectTrigger className="max-w-md">

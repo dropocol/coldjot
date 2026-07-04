@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
 import Link from "next/link";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import {
   useContactSearch,
   useDeleteContact,

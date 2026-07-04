@@ -6,7 +6,7 @@ import { Button } from "@coldjot/ui/components/button";
 import { Input } from "@coldjot/ui/components/input";
 import { Label } from "@coldjot/ui/components/label";
 
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useCreateSequence } from "@/hooks/queries/use-sequences";
 

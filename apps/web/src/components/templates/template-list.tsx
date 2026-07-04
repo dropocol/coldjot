@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import PreviewTemplateDrawer from "./preview-template-drawer";
 import DeleteTemplateDialog from "./delete-template-dialog";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 import { PaginationControls } from "@/components/pagination";
 import { useQueryClient } from "@tanstack/react-query";

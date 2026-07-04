@@ -6,7 +6,7 @@ import { ScrollArea } from "@coldjot/ui/components/scroll-area";
 import { Separator } from "@coldjot/ui/components/separator";
 import { Button } from "@coldjot/ui/components/button";
 import { Copy } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { cn } from "@coldjot/ui/lib/utils";
 

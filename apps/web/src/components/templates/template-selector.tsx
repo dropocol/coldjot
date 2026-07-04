@@ -26,7 +26,7 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
   };
 
   return (
-    <Select onValueChange={handleSelect}>
+    <Select onValueChange={(v) => handleSelect(v as string)}>
       <SelectTrigger className="w-[200px]">
         <SelectValue placeholder="Select a template" />
       </SelectTrigger>

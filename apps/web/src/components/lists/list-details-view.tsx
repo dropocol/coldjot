@@ -16,7 +16,7 @@ import {
   SendHorizonal,
 } from "lucide-react";
 import { Button } from "@coldjot/ui/components/button";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";

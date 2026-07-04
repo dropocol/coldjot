@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@coldjot/ui/components/sheet";
 import { Button } from "@coldjot/ui/components/button";
 import { Loader2, SendHorizonal, Search, Users, Check } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Contact } from "@prisma/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
 import { Input } from "@coldjot/ui/components/input";
@@ -219,7 +219,7 @@ export function AddToSequenceModal({
           ) : (
             <RadioGroup
               value={selectedSequenceId}
-              onValueChange={setSelectedSequenceId}
+              onValueChange={(v) => setSelectedSequenceId(v as string)}
               className="w-full"
             >
               <Table>

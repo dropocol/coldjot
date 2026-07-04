@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@coldjot/ui/components/card";
 import { Button } from "@coldjot/ui/components/button";
 import { Input } from "@coldjot/ui/components/input";

@@ -19,7 +19,7 @@ import { EmailAnalysis } from "./components/email-analysis";
 import { Tabs, TabsContent } from "@coldjot/ui/components/tabs";
 import { Button } from "@coldjot/ui/components/button";
 import { Wand2 } from "lucide-react";
-import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { toast } from "sonner";
 import { api } from "@/lib/http/api-client";
 
 // Sample improved text for development
@@ -53,7 +53,7 @@ export function EmailEditor() {
   );
   const [activeTab, setActiveTab] = useState("design");
   const [isImproving, setIsImproving] = useState(false);
-  const { toast } = useToast();
+  // toast() is now imported from sonner;
 
   const handleEditorReference = (editor: LexicalEditor) => {
     setEditorInstance(editor);
@@ -82,11 +82,7 @@ export function EmailEditor() {
   // Function to improve email readability using API
   const improveReadability = async () => {
     if (!editorContent.text.trim()) {
-      toast({
-        title: "Empty Content",
-        description: "Please write some content before improving readability.",
-        variant: "destructive",
-      });
+      toast.error("Empty Content", { description: "Please write some content before improving readability." });
       return;
     }
 
@@ -132,18 +128,10 @@ export function EmailEditor() {
           html: improvedText, // This will be converted to proper HTML by the editor
         }));
 
-        toast({
-          title: "Success",
-          description:
-            "Email content has been improved for better readability.",
-        });
+        toast.success("Success", { description: "Email content has been improved for better readability." });
       }
     } catch (_error) {
-      toast({
-        title: "Error",
-        description: "Failed to improve email readability. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to improve email readability. Please try again." });
     } finally {
       setIsImproving(false);
     }

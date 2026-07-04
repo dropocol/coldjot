@@ -50,16 +50,19 @@ export function TimePicker({ value, onChange, disabled }: TimePickerProps) {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className={cn(
-            "w-[140px] justify-start text-left font-normal",
-            !value && "text-muted-foreground"
-          )}
-          disabled={disabled}
-        >
-          <Clock className="mr-2 h-4 w-4" />
+      <PopoverTrigger
+        render={
+          <Button
+            variant="outline"
+            className={cn(
+              "w-[140px] justify-start text-left font-normal",
+              !value && "text-muted-foreground"
+            )}
+            disabled={disabled}
+          />
+        }
+      >
+        <Clock className="mr-2 h-4 w-4" />
           {formattedValue ? (
             <span>
               {displayHours}:{minutes.toString().padStart(2, "0")} {period}
@@ -67,7 +70,6 @@ export function TimePicker({ value, onChange, disabled }: TimePickerProps) {
           ) : (
             <span>Pick a time</span>
           )}
-        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
         <ScrollArea className="h-[280px]">

@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/compon
 import { Button } from "@coldjot/ui/components/button";
 import { EmailList } from "@coldjot/types";
 import { User, Trash2, Mail } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 interface ListDetailsDrawerProps {

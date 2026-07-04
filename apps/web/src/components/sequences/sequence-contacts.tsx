@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
 import { ContactSearch } from "@/components/search/contact-search-dropdown";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import {
   Loader2,
   UserPlus,

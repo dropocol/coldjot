@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Contact } from "@prisma/client";
 import { Button } from "@coldjot/ui/components/button";
 import { Input } from "@coldjot/ui/components/input";

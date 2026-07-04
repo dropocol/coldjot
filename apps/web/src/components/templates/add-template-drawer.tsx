@@ -7,7 +7,7 @@ import { Button } from "@coldjot/ui/components/button";
 import { Input } from "@coldjot/ui/components/input";
 import { Label } from "@coldjot/ui/components/label";
 import { Loader2 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { Template } from "@coldjot/types";
 import { useCreateTemplate } from "@/hooks/queries/use-templates";
