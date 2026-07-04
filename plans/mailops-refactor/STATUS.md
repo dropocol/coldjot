@@ -1,6 +1,7 @@
 # Mailops Refactor — Status
 
 > Sub-plan tracker. Update this as each phase ships. Detailed step-by-step in each phase doc.
+> **Picking up mid-phase?** Read [`HANDOFF.md`](./HANDOFF.md) first — it has the resume steps + solved pitfalls.
 >
 > **Legend:** ⬜ Not started · 🟡 In progress · 🟢 Code done, awaiting verification · ✅ Done · ⏸️ Blocked/Deferred
 
@@ -8,14 +9,14 @@
 
 | Phase | Doc | Status | Sub-branch | Effort |
 |---|---|---|---|---|
-| 0 | [characterization tests](./phase-0-characterization-tests.md) | ⬜ Not started | `refactor/mailops/phase-0-tests` | 2–3 days |
-| 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ⬜ Not started | `refactor/mailops/phase-1-seams` | 2–3 days |
-| 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ⬜ Not started | `refactor/mailops/phase-2-controllers` | 1 day |
-| 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ⬜ Not started | `refactor/mailops/phase-3-repos` | 3–4 days |
-| 4 | [split three god-objects](./phase-4-split-god-objects.md) | ⬜ Not started | `refactor/mailops/phase-4-split` | 5–7 days |
-| 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops/phase-5-cleanup` | 0.5–1 day |
-| 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops/phase-6-singleton` | 2 days |
-| 7 | [real test suite](./phase-7-test-suite.md) | ⬜ Not started | `refactor/mailops/phase-7-tests` | 3–4 days |
+| 0 | [characterization tests](./phase-0-characterization-tests.md) | 🟡 **In progress** — 3/15 groups, 23 cases passing | `refactor/mailops-phase-0-tests` | 2–3 days |
+| 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ⬜ Not started | `refactor/mailops-phase-1-seams` | 2–3 days |
+| 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ⬜ Not started | `refactor/mailops-phase-2-controllers` | 1 day |
+| 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ⬜ Not started | `refactor/mailops-phase-3-repos` | 3–4 days |
+| 4 | [split three god-objects](./phase-4-split-god-objects.md) | ⬜ Not started | `refactor/mailops-phase-4-split` | 5–7 days |
+| 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |
+| 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
+| 7 | [real test suite](./phase-7-test-suite.md) | ⬜ Not started | `refactor/mailops-phase-7-tests` | 3–4 days |
 
 **Estimated total:** ~19–25 days of focused work. Each phase is independently shippable.
 
@@ -42,19 +43,19 @@
 
 **Base branch:** `refactor/mailops` (created off `upgrade/remaining-majors`; the plan docs are committed there at `9bf70cb`).
 
-Each phase is a **sub-branch** off the previous phase's sub-branch (or off `refactor/mailops` for Phase 0). Sub-branches use the `refactor/mailops/phase-N-<short>` naming scheme:
+Each phase is a **sub-branch** off the previous phase's sub-branch (or off `refactor/mailops` for Phase 0). Sub-branches use the **hyphen** scheme `refactor/mailops-phase-N-<short>` (git does not allow a branch to be both a leaf and a directory prefix, so `refactor/mailops/phase-N` is rejected — use hyphens):
 
 ```
 upgrade/remaining-majors
-  └─ refactor/mailops                       ← base; plan docs live here
-       └─ refactor/mailops/phase-0-tests
-            └─ refactor/mailops/phase-1-seams
-                 └─ refactor/mailops/phase-2-controllers
-                      └─ refactor/mailops/phase-3-repos
-                           └─ refactor/mailops/phase-4-split
-                                └─ refactor/mailops/phase-5-cleanup
-                                     └─ refactor/mailops/phase-6-singleton
-                                          └─ refactor/mailops/phase-7-tests
+  └─ refactor/mailops                            ← base; plan docs live here
+       └─ refactor/mailops-phase-0-tests         ← CURRENT (3/15 groups done)
+            └─ refactor/mailops-phase-1-seams
+                 └─ refactor/mailops-phase-2-controllers
+                      └─ refactor/mailops-phase-3-repos
+                           └─ refactor/mailops-phase-4-split
+                                └─ refactor/mailops-phase-5-cleanup
+                                     └─ refactor/mailops-phase-6-singleton
+                                          └─ refactor/mailops-phase-7-tests
 ```
 
 **Operating rules:**
