@@ -13,7 +13,10 @@
       "@/*": ["./src/*"],
       "@/auth": ["./auth.ts"],
       "@/lib": ["./src/lib/*"],
-      "@/env": ["./src/env.ts"]
+      "@/env": ["./src/env.ts"],
+      "@coldjot/ui/components/*": ["../../packages/ui/src/components/*"],
+      "@coldjot/ui/hooks/*": ["../../packages/ui/src/hooks/*"],
+      "@coldjot/ui/lib/*": ["../../packages/ui/src/lib/*"]
     },
     "noImplicitAny": false
   },

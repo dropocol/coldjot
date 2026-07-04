@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Button } from "@coldjot/ui";
-import { Card } from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import { Label } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Card } from "@coldjot/ui/components/card";
+import { Input } from "@coldjot/ui/components/input";
+import { Label } from "@coldjot/ui/components/label";
 import {
   FileSpreadsheet,
   Plus,
@@ -14,7 +14,7 @@ import {
   Upload,
   FileUp,
 } from "lucide-react";
-import { Alert, AlertDescription } from "@coldjot/ui";
+import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
 import { toast } from "react-hot-toast";
 import Papa from "papaparse";
 import {

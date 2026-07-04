@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/components/sheet";
+import { Button } from "@coldjot/ui/components/button";
 import { EmailList } from "@coldjot/types";
 import { User, Trash2, Mail } from "lucide-react";
 import { toast } from "react-hot-toast";

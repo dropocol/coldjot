@@ -1,0 +1,78 @@
+/*
+ * Web app-specific CSS overrides.
+ *
+ * The shared design system (Tailwind + tokens + animations + content scanning)
+ * comes from @coldjot/ui/globals.css, imported via globals.css in layout.tsx.
+ * This file holds ONLY app-specific overrides that don't belong in the shared
+ * package.
+ *
+ * @reference is required because this is a secondary CSS file using @apply.
+ */
+@reference "./globals.css";
+
+/* Editor (TipTap / Lexical) */
+.prose {
+  max-width: none;
+}
+
+.prose p {
+  margin: 0;
+}
+
+.ProseMirror {
+  min-height: 200px;
+  padding: 1rem;
+  outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap-link-dialog {
+  z-index: 100;
+}
+
+/* Radix popper z-index (app-level override) */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
+/* Command dialog animations */
+@layer components {
+  .cmd-dialog-overlay {
+    @apply animate-in fade-in-0;
+  }
+
+  .cmd-dialog-content {
+    @apply animate-in fade-in-0 zoom-in-95;
+  }
+
+  .cmd-dialog-exit {
+    @apply animate-out fade-out-0 zoom-out-95;
+  }
+}
+
+[cmdk-dialog] {
+  @apply transition-all duration-200;
+}
+
+[cmdk-overlay] {
+  @apply transition-opacity duration-200;
+}
+
+[cmdk-content] {
+  @apply transition-all duration-200;
+}
+
+[cmdk-group] {
+  @apply transition-opacity duration-200;
+}
+
+[cmdk-item] {
+  @apply transition-colors duration-200;
+}

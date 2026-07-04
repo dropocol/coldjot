@@ -3,17 +3,10 @@
 import * as React from "react";
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@coldjot/ui";
-import { DialogTitle } from "@coldjot/ui";
+import { cn } from "@coldjot/ui/lib/utils";
+import { Button } from "@coldjot/ui/components/button";
+import { Command, CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import { DialogTitle } from "@coldjot/ui/components/dialog";
 import {
   Search,
   User,

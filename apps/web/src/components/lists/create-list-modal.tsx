@@ -1,16 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import { Label } from "@coldjot/ui";
-import { Textarea } from "@coldjot/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@coldjot/ui/components/dialog";
+import { Button } from "@coldjot/ui/components/button";
+import { Input } from "@coldjot/ui/components/input";
+import { Label } from "@coldjot/ui/components/label";
+import { Textarea } from "@coldjot/ui/components/textarea";
 import { EmailList } from "@coldjot/types";
 
 interface CreateListModalProps {

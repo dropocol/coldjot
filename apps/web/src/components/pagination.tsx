@@ -1,28 +1,9 @@
 "use client";
 
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@coldjot/ui";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  TooltipProvider,
-} from "@coldjot/ui";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@coldjot/ui/components/pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
+import { Button } from "@coldjot/ui/components/button";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@coldjot/ui/components/tooltip";
 import { ArrowDownWideNarrow, Loader2, ListEnd } from "lucide-react";
 
 interface PaginationControlsProps {

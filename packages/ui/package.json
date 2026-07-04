@@ -2,37 +2,23 @@
     "name": "@coldjot/ui",
     "version": "0.0.0",
     "private": true,
-    "sideEffects": [
-        "**/*.css"
-    ],
-    "main": "./src/index.ts",
-    "module": "./src/index.ts",
-    "types": "./src/index.ts",
+    "type": "module",
     "exports": {
-        ".": {
-            "types": "./src/index.ts",
-            "import": "./src/index.ts"
-        },
-        "./styles.css": "./src/styles.css",
-        "./components.json": "./components.json"
+        "./globals.css": "./src/styles/globals.css",
+        "./postcss.config": "./postcss.config.mjs",
+        "./lib/*": "./src/lib/*.ts",
+        "./components/*": "./src/components/*.tsx",
+        "./hooks/*": "./src/hooks/*.ts"
     },
-    "files": [
-        "dist/**",
-        "src/**",
-        "components.json"
-    ],
     "scripts": {
-        "dev": "echo 'no build step — source consumed directly by apps'",
-        "build": "echo 'no build step — source consumed directly by apps'",
-        "build:prod": "echo 'no build step — source consumed directly by apps'",
         "lint": "eslint \"src/**/*.{ts,tsx}\"",
-        "clean": "rimraf .turbo node_modules dist",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "clean": "rimraf .turbo node_modules"
     },
     "engines": {
         "node": ">=24"
     },
-    "peerDependencies": {
+    "dependencies": {
         "@hookform/resolvers": "^5.4.0",
         "@radix-ui/react-alert-dialog": "^1.1.2",
         "@radix-ui/react-avatar": "^1.1.1",
@@ -58,21 +44,18 @@
         "clsx": "^2.1.1",
         "cmdk": "^1.0.0",
         "lucide-react": "^1.23.0",
-        "next": "^16.0.0",
-        "react": "^19.0.0",
         "react-day-picker": "^10.0.1",
-        "react-dom": "^19.0.0",
         "react-hook-form": "^7.54.2",
         "react-resizable-panels": "^4.12.0",
         "recharts": "^3.0.0",
-        "tailwind-merge": "^3.0.0",
+        "tailwind-merge": "^3.6.0",
         "vaul": "^1.1.2",
-        "zod": "^4.0.0"
+        "zod": "^4.4.3"
     },
-    "dependencies": {
-        "class-variance-authority": "^0.7.1",
-        "clsx": "^2.1.1",
-        "tailwind-merge": "^3.6.0"
+    "peerDependencies": {
+        "next": "^16.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0"
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4.3.2",
@@ -84,7 +67,8 @@
         "react-dom": "^19.0.0",
         "rimraf": "^6.1.3",
         "tailwindcss": "^4.3.2",
-        "tsup": "^8.5.1",
+        "tw-animate-css": "^1.4.0",
+        "shadcn": "^4.13.0",
         "typescript": "^6.0.3"
     }
 }

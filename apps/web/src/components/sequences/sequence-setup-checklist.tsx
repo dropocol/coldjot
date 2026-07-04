@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@coldjot/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@coldjot/ui/components/card";
 import {
   CheckCircle2,
   Circle,
@@ -22,15 +16,15 @@ import {
   AlertCircle,
   CheckCheck,
 } from "lucide-react";
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 
-import { cn } from "@coldjot/ui";
+import { cn } from "@coldjot/ui/lib/utils";
 import { Sequence } from "@coldjot/types";
 import {
   isSequenceReadyToLaunch,
   getSequenceSetupProgress,
 } from "@/lib/sequence-utils";
-import { Badge } from "@coldjot/ui";
+import { Badge } from "@coldjot/ui/components/badge";
 
 import { useSequence } from "@/lib/sequence-context";
 import { motion, AnimatePresence } from "framer-motion";

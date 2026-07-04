@@ -1,52 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@coldjot/ui";
-import { Badge } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import { Badge } from "@coldjot/ui/components/badge";
 import { toast } from "react-hot-toast";
 import { Loader2, Plus, ListPlus, MoreVertical, Trash } from "lucide-react";
 import { format } from "date-fns";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@coldjot/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
 import type { EmailList } from "@coldjot/types";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@coldjot/ui";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 import { useSequence } from "@/lib/sequence-context";
 import { SequenceListSelector } from "./sequence-list-selector";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@coldjot/ui";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@coldjot/ui";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@coldjot/ui/components/pagination";
 import {
   useSequenceLists,
   useAddListToSequence,

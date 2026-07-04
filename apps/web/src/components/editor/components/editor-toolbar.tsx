@@ -1,4 +1,4 @@
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 import {
   LexicalEditor,
   UNDO_COMMAND,
@@ -21,13 +21,8 @@ import {
   Heading3,
   ImagePlus,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@coldjot/ui";
-import { Dialog, DialogTrigger } from "@coldjot/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import { Dialog, DialogTrigger } from "@coldjot/ui/components/dialog";
 import { useState } from "react";
 import { $createHeadingNode } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";

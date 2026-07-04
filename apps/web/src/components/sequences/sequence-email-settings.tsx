@@ -1,22 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Label } from "@coldjot/ui";
-import { Switch } from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import { useToast } from "@coldjot/ui";
+import { Label } from "@coldjot/ui/components/label";
+import { Switch } from "@coldjot/ui/components/switch";
+import { Input } from "@coldjot/ui/components/input";
+import { Button } from "@coldjot/ui/components/button";
+import { useToast } from "@coldjot/ui/hooks/use-toast";
 import { Trash2 } from "lucide-react";
-import { Alert, AlertDescription } from "@coldjot/ui";
-import { Separator } from "@coldjot/ui";
+import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
+import { Separator } from "@coldjot/ui/components/separator";
 import { useRouter } from "next/navigation";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@coldjot/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
 import type { EmailAlias } from "@coldjot/types";
 import { attachMailbox, updateSequenceSettings } from "@/lib/client-actions";
 import { useSequence } from "@/lib/sequence-context";

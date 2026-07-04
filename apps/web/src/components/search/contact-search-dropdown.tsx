@@ -3,21 +3,10 @@
 import { useState, useEffect } from "react";
 import { Contact } from "@prisma/client";
 import { Check, ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@coldjot/ui";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@coldjot/ui";
+import { cn } from "@coldjot/ui/lib/utils";
+import { Button } from "@coldjot/ui/components/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { useContactSearch } from "@/hooks/queries/use-contacts";
 
 interface Props {

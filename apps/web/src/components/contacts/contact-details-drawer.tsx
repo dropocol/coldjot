@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@coldjot/ui";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/components/sheet";
 import { Contact } from "@prisma/client";
 import { Mail, Calendar } from "lucide-react";
 

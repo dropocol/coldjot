@@ -1,16 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 import { ContactSearch } from "@/components/search/contact-search-dropdown";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@coldjot/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
 import { toast } from "react-hot-toast";
 import {
   Loader2,
@@ -28,21 +21,11 @@ import {
 } from "lucide-react";
 import { ListSelector } from "@/components/lists/list-selector";
 import { formatDistanceToNow, format } from "date-fns";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@coldjot/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
 import type { Contact } from "@coldjot/types";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import type { SequenceContactStatusType } from "@coldjot/types";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@coldjot/ui";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 import { PaginationControls } from "@/components/pagination";
 import { useSequence } from "@/lib/sequence-context";
 import {

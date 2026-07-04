@@ -15,39 +15,18 @@ import {
   MoreHorizontal,
   SendHorizonal,
 } from "lucide-react";
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 import { toast } from "react-hot-toast";
 import { PageHeader } from "@/components/layout/PageHeader";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@coldjot/ui";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@coldjot/ui";
-import { Checkbox } from "@coldjot/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
+import { Checkbox } from "@coldjot/ui/components/checkbox";
 import Link from "next/link";
 import { Contact } from "@prisma/client";
 import ContactDetailsDrawer from "@/components/contacts/contact-details-drawer";
 import { PaginationControls } from "@/components/pagination";
 import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@coldjot/ui";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 import {
   useListDetail,
   useRemoveContactsFromList,

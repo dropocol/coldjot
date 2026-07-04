@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
 import { SequenceControls } from "@/components/sequences/sequence-controls";
 import { SequenceNav } from "@/components/sequences/sequence-nav";
@@ -12,13 +12,8 @@ import { SequenceStatus } from "@coldjot/types";
 import { isSequenceReadyToLaunch } from "@/lib/sequence-utils";
 import { Sparkles, RefreshCw, MailX, TestTube } from "lucide-react";
 import { useSequence } from "@/lib/sequence-context";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@coldjot/ui";
-import { Badge } from "@coldjot/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import { Badge } from "@coldjot/ui/components/badge";
 
 export function SequenceHeader() {
   const router = useRouter();

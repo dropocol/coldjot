@@ -1,15 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
 import {
   Mail,
   Play,
@@ -28,18 +21,8 @@ import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
 import { SequenceStatus, SequenceStep } from "@coldjot/types";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@coldjot/ui";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@coldjot/ui";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
 import { PaginationControls } from "@/components/pagination";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";

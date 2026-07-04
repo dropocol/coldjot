@@ -1,12 +1,7 @@
 "use client";
 
 import { Copy } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@coldjot/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
 
 interface CopyButtonProps {
   textToCopy: string;

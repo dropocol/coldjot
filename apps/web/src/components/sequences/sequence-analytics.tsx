@@ -1,10 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@coldjot/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@coldjot/ui/components/card";
 import { api } from "@/lib/http/api-client";
 import { qk } from "@/lib/query/keys";
 

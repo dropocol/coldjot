@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@coldjot/ui";
-import { useToast } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { useToast } from "@coldjot/ui/hooks/use-toast";
 import { Mail, X } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@coldjot/ui";
+import { Card, CardContent, CardHeader } from "@coldjot/ui/components/card";
 import type { Mailbox } from "@prisma/client";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";

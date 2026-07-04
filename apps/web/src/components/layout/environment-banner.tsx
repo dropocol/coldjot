@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@coldjot/ui";
+import { cn } from "@coldjot/ui/lib/utils";
 
 const environmentConfig = {
   development: {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 import { Mail } from "lucide-react";
 import { CreateSequenceModal } from "./create-sequence-modal";
 import { useRouter } from "next/navigation";

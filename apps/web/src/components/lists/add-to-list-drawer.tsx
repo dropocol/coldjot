@@ -1,16 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@coldjot/ui/components/sheet";
+import { Input } from "@coldjot/ui/components/input";
+import { Button } from "@coldjot/ui/components/button";
 
 import { Prisma } from "@prisma/client";
 import {
@@ -22,17 +15,10 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@coldjot/ui";
-import { RadioGroup, RadioGroupItem } from "@coldjot/ui";
-import { Label } from "@coldjot/ui";
-import { cn } from "@coldjot/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import { RadioGroup, RadioGroupItem } from "@coldjot/ui/components/radio-group";
+import { Label } from "@coldjot/ui/components/label";
+import { cn } from "@coldjot/ui/lib/utils";
 import { useLists, useAddContactsToList } from "@/hooks/queries/use-lists";
 import { ApiError } from "@/lib/http/api-client";
 

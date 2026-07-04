@@ -1,14 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@coldjot/ui/components/card";
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import testData from "./data.json";

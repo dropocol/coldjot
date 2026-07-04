@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 
-import { Toaster } from "@coldjot/ui";
+import "./globals.css";
+import "./app.css";
+import { Toaster } from "@coldjot/ui/components/toaster";
 
 import { auth } from "@/auth";
 
-import "./globals.css";
 import { Providers } from "./providers";
 import { QueryProvider } from "@/providers/query-provider";
 import { LayoutContent } from "@/components/layout/layout-content";

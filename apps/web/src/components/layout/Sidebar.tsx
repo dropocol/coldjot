@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@coldjot/ui";
+import { cn } from "@coldjot/ui/lib/utils";
 import {
   Home,
   Users,
@@ -15,18 +15,11 @@ import {
   Calendar,
 } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
-import { ScrollArea } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { ScrollArea } from "@coldjot/ui/components/scroll-area";
 import { useSession, signOut } from "next-auth/react";
-import { Avatar, AvatarFallback, AvatarImage } from "@coldjot/ui";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@coldjot/ui";
+import { Avatar, AvatarFallback, AvatarImage } from "@coldjot/ui/components/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
 

@@ -1,16 +1,10 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import { useToast } from "@coldjot/ui";
-import { Alert, AlertDescription } from "@coldjot/ui";
-import { Separator } from "@coldjot/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@coldjot/ui/components/dialog";
+import { Button } from "@coldjot/ui/components/button";
+import { useToast } from "@coldjot/ui/hooks/use-toast";
+import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
+import { Separator } from "@coldjot/ui/components/separator";
 import { CheckCircle2, AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { SequenceStatus } from "@coldjot/types";
 import { isSequenceReadyToLaunch } from "@/lib/sequence-utils";

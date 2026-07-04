@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { Plus, SendHorizonal, ListPlus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { LocalSearch } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
+import { LocalSearch } from "@coldjot/ui/components/local-search";
+import { Button } from "@coldjot/ui/components/button";
 import { ContactList } from "../../components/contacts/contact-list";
-import { Separator } from "@coldjot/ui";
+import { Separator } from "@coldjot/ui/components/separator";
 import AddContactModal from "@/components/contacts/add-contact-drawer";
 import { Contact } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";

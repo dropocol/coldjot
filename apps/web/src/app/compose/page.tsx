@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
-import { Separator } from "@coldjot/ui";
+import { Separator } from "@coldjot/ui/components/separator";
 import EmailComposer from "@/components/compose/email-composer";
 import { redirect } from "next/navigation";
 

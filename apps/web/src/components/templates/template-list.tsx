@@ -4,15 +4,8 @@ import { useState, useEffect } from "react";
 import { Template } from "@prisma/client";
 
 import EditTemplateDrawer from "./edit-template-drawer";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import { Button } from "@coldjot/ui/components/button";
 import {
   Edit2,
   Trash2,
@@ -25,12 +18,7 @@ import {
 import PreviewTemplateDrawer from "./preview-template-drawer";
 import DeleteTemplateDialog from "./delete-template-dialog";
 import { toast } from "react-hot-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@coldjot/ui";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 import { PaginationControls } from "@/components/pagination";
 import { useQueryClient } from "@tanstack/react-query";
 import {

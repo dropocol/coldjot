@@ -1,13 +1,8 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import { Label } from "@coldjot/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@coldjot/ui/components/dialog";
+import { Input } from "@coldjot/ui/components/input";
+import { Button } from "@coldjot/ui/components/button";
+import { Label } from "@coldjot/ui/components/label";
 
 interface LinkDialogProps {
   open: boolean;

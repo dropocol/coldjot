@@ -1,11 +1,11 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Separator } from "@coldjot/ui";
+import { Separator } from "@coldjot/ui/components/separator";
 import { User, Mail, Calendar } from "lucide-react";
 
 import ActionButtons from "../../../components/contacts/action-buttons";
-import { Card, CardContent, CardHeader, CardTitle } from "@coldjot/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@coldjot/ui/components/card";
 import CopyButton from "@/components/common/copy";
 import { Contact } from "@prisma/client";
 import { useContact } from "@/hooks/queries/use-contacts";

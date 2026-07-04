@@ -16,10 +16,10 @@ import { EditorToolbar } from "./components/editor-toolbar";
 import { EditorContent } from "./components/editor-content";
 import { EditorReference } from "./components/editor-reference";
 import { EmailAnalysis } from "./components/email-analysis";
-import { Tabs, TabsContent } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
+import { Tabs, TabsContent } from "@coldjot/ui/components/tabs";
+import { Button } from "@coldjot/ui/components/button";
 import { Wand2 } from "lucide-react";
-import { useToast } from "@coldjot/ui";
+import { useToast } from "@coldjot/ui/hooks/use-toast";
 import { api } from "@/lib/http/api-client";
 
 // Sample improved text for development

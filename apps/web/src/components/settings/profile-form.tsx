@@ -4,18 +4,10 @@ import { User } from "next-auth";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import * as z from "zod";
-import { Button } from "@coldjot/ui";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import { useToast } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@coldjot/ui/components/form";
+import { Input } from "@coldjot/ui/components/input";
+import { useToast } from "@coldjot/ui/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
 

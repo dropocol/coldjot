@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { TimelineItem } from "./timeline-item";
 import { EmailDetailsDrawer } from "./email-details-drawer";
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 import Link from "next/link";
 import type { EmailTracking } from "@/types/email";
 import { useTimeline } from "@/hooks/queries/use-timeline";

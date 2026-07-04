@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@coldjot/ui";
-import { ScrollArea } from "@coldjot/ui";
-import { Separator } from "@coldjot/ui";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/components/sheet";
+import { ScrollArea } from "@coldjot/ui/components/scroll-area";
+import { Separator } from "@coldjot/ui/components/separator";
 
 export default function PreviewEmail({
   content,

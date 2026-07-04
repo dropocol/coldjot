@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Separator } from "@coldjot/ui";
+import { Separator } from "@coldjot/ui/components/separator";
 import TestDataManager from "./TestDataManager";
 
 export default async function DevPage() {

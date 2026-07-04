@@ -1,15 +1,10 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import { Label } from "@coldjot/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@coldjot/ui/components/dialog";
+import { Button } from "@coldjot/ui/components/button";
+import { Input } from "@coldjot/ui/components/input";
+import { Label } from "@coldjot/ui/components/label";
 
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";

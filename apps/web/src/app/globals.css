@@ -1,75 +1,9 @@
-@import "tailwindcss";
-@import "@coldjot/ui/styles.css";
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-.prose {
-  max-width: none;
-}
-
-.prose p {
-  margin: 0;
-}
-
-.ProseMirror {
-  min-height: 200px;
-  padding: 1rem;
-  outline: none;
-}
-
-.ProseMirror p.is-editor-empty:first-child::before {
-  color: #adb5bd;
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-}
-
-.tiptap-link-dialog {
-  z-index: 100;
-}
-
-[data-radix-popper-content-wrapper] {
-  z-index: 100 !important;
-}
-
-@layer components {
-  .cmd-dialog-overlay {
-    @apply animate-in fade-in-0;
-  }
-
-  .cmd-dialog-content {
-    @apply animate-in fade-in-0 zoom-in-95;
-  }
-
-  .cmd-dialog-exit {
-    @apply animate-out fade-out-0 zoom-out-95;
-  }
-}
-
-[cmdk-dialog] {
-  @apply transition-all duration-200;
-}
-
-[cmdk-overlay] {
-  @apply transition-opacity duration-200;
-}
-
-[cmdk-content] {
-  @apply transition-all duration-200;
-}
-
-[cmdk-group] {
-  @apply transition-opacity duration-200;
-}
-
-[cmdk-item] {
-  @apply transition-colors duration-200;
-}
+/*
+ * Web app root CSS entry.
+ *
+ * The entire Tailwind + design system setup lives in @coldjot/ui/globals.css.
+ * This file simply imports it so it's the CSS entry point for this app.
+ * App-specific overrides live in app.css (imported in layout.tsx alongside
+ * this file).
+ */
+@import "@coldjot/ui/globals.css";

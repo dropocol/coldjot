@@ -3,16 +3,10 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import { Label } from "@coldjot/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@coldjot/ui/components/card";
+import { Button } from "@coldjot/ui/components/button";
+import { Input } from "@coldjot/ui/components/input";
+import { Label } from "@coldjot/ui/components/label";
 import {
   Loader2,
   Search,
@@ -21,15 +15,8 @@ import {
   UserPlus,
   CheckCircle,
 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@coldjot/ui";
-import { Badge } from "@coldjot/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import { Badge } from "@coldjot/ui/components/badge";
 import { api } from "@/lib/http/api-client";
 import { useCreateContact } from "@/hooks/queries/use-contacts";
 

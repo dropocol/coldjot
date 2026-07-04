@@ -1,5 +1,5 @@
-import { Card } from "@coldjot/ui";
-import { cn } from "@coldjot/ui";
+import { Card } from "@coldjot/ui/components/card";
+import { cn } from "@coldjot/ui/lib/utils";
 import { LucideIcon } from "lucide-react";
 
 interface StatsCardProps {

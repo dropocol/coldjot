@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
-import { Separator } from "@coldjot/ui";
+import { Separator } from "@coldjot/ui/components/separator";
 import { SettingsMessageHandler } from "@/components/settings/settings-message-handler";
 import { SettingsLayout } from "@/components/settings/settings-layout";
 import ProfileSettings from "@/components/settings/profile-settings";

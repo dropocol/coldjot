@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useToast } from "@coldjot/ui";
+import { useToast } from "@coldjot/ui/hooks/use-toast";
 
 export function SettingsMessageHandler() {
   const router = useRouter();

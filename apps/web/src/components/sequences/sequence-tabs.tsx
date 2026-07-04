@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs, TabsList, TabsTrigger } from "@coldjot/ui";
+import { Tabs, TabsList, TabsTrigger } from "@coldjot/ui/components/tabs";
 
 interface SequenceTabsProps {
   activeTab: string;

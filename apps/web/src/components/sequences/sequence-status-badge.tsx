@@ -1,4 +1,4 @@
-import { Badge } from "@coldjot/ui";
+import { Badge } from "@coldjot/ui/components/badge";
 
 interface SequenceStatusBadgeProps {
   status: string;

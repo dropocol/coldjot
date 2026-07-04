@@ -1,15 +1,10 @@
 "use client";
 
 import { format, formatDistanceToNow } from "date-fns";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@coldjot/ui";
-import { ScrollArea } from "@coldjot/ui";
-import { Separator } from "@coldjot/ui";
-import { Badge } from "@coldjot/ui";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/components/sheet";
+import { ScrollArea } from "@coldjot/ui/components/scroll-area";
+import { Separator } from "@coldjot/ui/components/separator";
+import { Badge } from "@coldjot/ui/components/badge";
 import {
   Eye,
   MousePointerClick,
@@ -20,7 +15,7 @@ import {
 } from "lucide-react";
 import type { EmailTracking } from "@/types/email";
 
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 
 interface EmailDetailsDrawerProps {
   email: EmailTracking | null;

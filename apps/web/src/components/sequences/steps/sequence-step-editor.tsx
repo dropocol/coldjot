@@ -1,25 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import { Label } from "@coldjot/ui";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/components/sheet";
+import { Button } from "@coldjot/ui/components/button";
+import { Input } from "@coldjot/ui/components/input";
+import { Label } from "@coldjot/ui/components/label";
 import type { StepData } from "@coldjot/types";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@coldjot/ui";
-import { Textarea } from "@coldjot/ui";
-import { RadioGroup, RadioGroupItem } from "@coldjot/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
+import { Textarea } from "@coldjot/ui/components/textarea";
+import { RadioGroup, RadioGroupItem } from "@coldjot/ui/components/radio-group";
 import { Loader2, Mail } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 

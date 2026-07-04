@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 import { Plus } from "lucide-react";
 import AddTemplateModal from "./add-template-drawer";
 import { Template } from "@coldjot/types";

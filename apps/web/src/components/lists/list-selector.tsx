@@ -1,20 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@coldjot/ui";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { List, Users } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useLists } from "@/hooks/queries/use-lists";

@@ -4,15 +4,8 @@ import { useState, useEffect } from "react";
 import { Contact } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import EditContactModal from "./edit-contact-drawer";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import { Button } from "@coldjot/ui/components/button";
 import {
   Edit2,
   Trash2,
@@ -23,27 +16,13 @@ import {
   Plus,
   User2,
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@coldjot/ui";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
 
 import Link from "next/link";
 
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@coldjot/ui";
-import { Checkbox } from "@coldjot/ui";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import { Checkbox } from "@coldjot/ui/components/checkbox";
 import ContactDetailsDrawer from "./contact-details-drawer";
 import { AddToSequenceModal } from "./add-to-sequence-modal";
 import { PaginationControls } from "@/components/pagination";

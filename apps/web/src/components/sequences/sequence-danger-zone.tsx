@@ -1,22 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
-import { useToast } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { useToast } from "@coldjot/ui/hooks/use-toast";
 
 import { useRouter } from "next/navigation";
 import { SequenceStatus } from "@coldjot/types";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@coldjot/ui";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@coldjot/ui/components/alert-dialog";
 import {
   useResetSequence,
   useDeleteSequence,

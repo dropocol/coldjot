@@ -9,16 +9,11 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { Mail, MoreHorizontal } from "lucide-react";
-import { Badge } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@coldjot/ui";
+import { Badge } from "@coldjot/ui/components/badge";
+import { Button } from "@coldjot/ui/components/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 import { toast } from "react-hot-toast";
-import { cn } from "@coldjot/ui";
+import { cn } from "@coldjot/ui/lib/utils";
 import type { SequenceStep } from "@coldjot/types";
 
 interface Props {

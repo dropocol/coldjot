@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { LocalSearch } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import { Separator } from "@coldjot/ui";
+import { LocalSearch } from "@coldjot/ui/components/local-search";
+import { Button } from "@coldjot/ui/components/button";
+import { Separator } from "@coldjot/ui/components/separator";
 import EmailListsView from "@/components/lists/email-list";
 import { usePagination } from "@/hooks/use-pagination";
 

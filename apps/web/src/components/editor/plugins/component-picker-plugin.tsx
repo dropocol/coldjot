@@ -9,13 +9,8 @@ import {
   createCommand,
 } from "lexical";
 import { useEffect, useState } from "react";
-import { Button } from "@coldjot/ui";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@coldjot/ui/components/dialog";
 import { $createDraggableBlockNode } from "../nodes/draggable-block-node";
 
 export const INSERT_COMPONENT_COMMAND = createCommand(

@@ -1,19 +1,14 @@
 "use client";
 
 import { Template } from "@coldjot/types";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@coldjot/ui";
-import { ScrollArea } from "@coldjot/ui";
-import { Separator } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/components/sheet";
+import { ScrollArea } from "@coldjot/ui/components/scroll-area";
+import { Separator } from "@coldjot/ui/components/separator";
+import { Button } from "@coldjot/ui/components/button";
 import { Copy } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
-import { cn } from "@coldjot/ui";
+import { cn } from "@coldjot/ui/lib/utils";
 
 export default function PreviewTemplateDrawer({
   template,

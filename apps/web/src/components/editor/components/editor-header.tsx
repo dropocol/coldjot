@@ -1,13 +1,8 @@
-import { Button } from "@coldjot/ui";
-import { TabsList, TabsTrigger } from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@coldjot/ui";
-import { cn } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { TabsList, TabsTrigger } from "@coldjot/ui/components/tabs";
+import { Input } from "@coldjot/ui/components/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import { cn } from "@coldjot/ui/lib/utils";
 import { Clock, Eye, Save, Send, Pencil } from "lucide-react";
 import { useState } from "react";
 

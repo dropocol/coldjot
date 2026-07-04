@@ -14,14 +14,9 @@ import {
   PowerOff,
 } from "lucide-react";
 import { Mailbox, EmailAlias } from "@coldjot/database";
-import { Button } from "@coldjot/ui";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@coldjot/ui";
-import { useToast } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
+import { useToast } from "@coldjot/ui/hooks/use-toast";
 
 export type MailboxWithAliases = Mailbox & {
   aliases: EmailAlias[];

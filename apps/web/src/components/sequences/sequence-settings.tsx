@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@coldjot/ui";
-import { Label } from "@coldjot/ui";
-import { Input } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Label } from "@coldjot/ui/components/label";
+import { Input } from "@coldjot/ui/components/input";
 
 import { BusinessHoursSettings } from "@/components/sequences/business-hours-settings";
 import { SequenceEmailSettings } from "@/components/sequences/sequence-email-settings";

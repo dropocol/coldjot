@@ -1,5 +1,5 @@
-import { Button } from "@coldjot/ui";
-import { Card } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Card } from "@coldjot/ui/components/card";
 import { CheckCircle2, Mail, Clock, Users, ArrowRight } from "lucide-react";
 
 interface FinalSetupStepProps {

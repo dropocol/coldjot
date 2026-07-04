@@ -2,20 +2,9 @@
 
 import { useState } from "react";
 
-import { Button } from "@coldjot/ui";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@coldjot/ui";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { FileText } from "lucide-react";
 import { useTemplates } from "@/hooks/queries/use-templates";
 

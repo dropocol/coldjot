@@ -1,21 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
+import { Button } from "@coldjot/ui/components/button";
 import { Send, Save, Code, Loader2 } from "lucide-react";
 import { Contact, Template } from "@prisma/client";
 import { toast } from "react-hot-toast";
-import { Label } from "@coldjot/ui";
+import { Label } from "@coldjot/ui/components/label";
 import { ContactSearch } from "../search/contact-search-dropdown";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
-import { Input } from "@coldjot/ui";
+import { Input } from "@coldjot/ui/components/input";
 import {
   useCreateDraft,
   useSendDraft,

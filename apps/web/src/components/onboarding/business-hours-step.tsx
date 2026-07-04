@@ -1,23 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@coldjot/ui";
-import { Label } from "@coldjot/ui";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@coldjot/ui";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Label } from "@coldjot/ui/components/label";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@coldjot/ui/components/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { TimePicker } from "@coldjot/ui";
-import { cn } from "@coldjot/ui";
+import { TimePicker } from "@coldjot/ui/components/time-picker";
+import { cn } from "@coldjot/ui/lib/utils";
 import { toast } from "react-hot-toast";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";

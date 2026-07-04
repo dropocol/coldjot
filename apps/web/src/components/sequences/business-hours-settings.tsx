@@ -1,31 +1,15 @@
 import { useState } from "react";
 
-import { Label } from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@coldjot/ui";
+import { Label } from "@coldjot/ui/components/label";
+import { Button } from "@coldjot/ui/components/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "react-hot-toast";
 import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
-import { TimePicker } from "@coldjot/ui";
-import { cn } from "@coldjot/ui";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@coldjot/ui";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@coldjot/ui";
+import { TimePicker } from "@coldjot/ui/components/time-picker";
+import { cn } from "@coldjot/ui/lib/utils";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@coldjot/ui/components/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { BusinessScheduleEnum } from "@coldjot/types";
 import { updateBusinessHours } from "@/lib/client-actions";
 import { useSequence } from "@/lib/sequence-context";

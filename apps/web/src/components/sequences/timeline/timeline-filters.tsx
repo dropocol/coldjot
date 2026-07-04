@@ -2,24 +2,14 @@
 
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@coldjot/ui";
-import { Calendar } from "@coldjot/ui";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@coldjot/ui";
-import { cn } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
+import { Calendar } from "@coldjot/ui/components/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
+import { cn } from "@coldjot/ui/lib/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, X } from "lucide-react";
-import { Badge } from "@coldjot/ui";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@coldjot/ui";
+import { Badge } from "@coldjot/ui/components/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
 
 export function TimelineFilters() {
   const router = useRouter();

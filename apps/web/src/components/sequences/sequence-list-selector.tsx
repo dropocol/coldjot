@@ -1,19 +1,8 @@
 "use client";
 
 import { useState, ReactNode } from "react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@coldjot/ui";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@coldjot/ui";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@coldjot/ui/components/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@coldjot/ui/components/popover";
 import { Users } from "lucide-react";
 import { EmailList as BaseEmailList } from "@coldjot/types";
 import { useLists } from "@/hooks/queries/use-lists";

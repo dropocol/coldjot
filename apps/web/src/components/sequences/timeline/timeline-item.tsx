@@ -2,13 +2,8 @@
 
 import { format, formatDistanceToNow } from "date-fns";
 import { Eye, MousePointerClick, Mail, AlertCircle } from "lucide-react";
-import { Badge } from "@coldjot/ui";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@coldjot/ui";
+import { Badge } from "@coldjot/ui/components/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
 import type { EmailTracking } from "@/types/email";
 
 interface TimelineItemProps {

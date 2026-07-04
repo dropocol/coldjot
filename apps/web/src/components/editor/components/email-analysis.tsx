@@ -4,13 +4,8 @@ import { checkEmailSpam } from "@/utils";
 
 import { arc } from "d3-shape";
 import { getTextStats, calculateReadability } from "@/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@coldjot/ui";
-import { Button } from "@coldjot/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
+import { Button } from "@coldjot/ui/components/button";
 import { Zap } from "lucide-react";
 import { logger } from "@/lib/logger";
 

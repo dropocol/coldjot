@@ -1,17 +1,12 @@
 "use client";
 
 import { Contact } from "@prisma/client";
-import { Alert, AlertDescription } from "@coldjot/ui";
+import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
 import { AlertCircle } from "lucide-react";
-import { ScrollArea } from "@coldjot/ui";
+import { ScrollArea } from "@coldjot/ui/components/scroll-area";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { replacePlaceholders, validatePlaceholders } from "@/lib/placeholders";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@coldjot/ui";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/components/sheet";
 
 interface PreviewPaneProps {
   subject: string;

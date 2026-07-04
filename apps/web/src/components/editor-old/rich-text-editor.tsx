@@ -5,7 +5,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Button } from "@coldjot/ui";
+import { Button } from "@coldjot/ui/components/button";
 import {
   Bold,
   Italic,
@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { PlaceholderButton } from "@/components/email/placeholder-button";
 import { LinkDialog } from "../editor/components/link-dialog";
-import { cn } from "@coldjot/ui";
+import { cn } from "@coldjot/ui/lib/utils";
 
 interface RichTextEditorProps {
   initialContent: string;
