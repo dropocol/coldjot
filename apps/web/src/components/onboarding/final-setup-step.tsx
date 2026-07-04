@@ -49,7 +49,7 @@ export function FinalSetupStep({ onComplete, onBack: _onBack }: FinalSetupStepPr
         ))}
       </div>
 
-      <Card className="p-6 bg-neutral-50 border-primary/10 shadow-none">
+      <Card className="p-6 bg-muted/50 border-primary/10 shadow-none">
         <div className="space-y-4">
           <h3 className="font-semibold">Next Steps</h3>
           <ul className="space-y-2 text-sm">

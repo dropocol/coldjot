@@ -82,7 +82,7 @@ export function SequenceSetupChecklist({
         "w-full shadow-2xl shadow-slate-900/20 border transition-all duration-300",
         className,
         {
-          "border-primary/20 bg-slate-50/50": !isReady,
+          "border-primary/20 bg-muted/50/50": !isReady,
           "border-emerald-500/50": isReady,
         }
       )}
@@ -241,7 +241,7 @@ function ChecklistCard({
         "flex flex-col p-3 rounded-md transition-all cursor-pointer",
         {
           "bg-emerald-50/50 border border-emerald-200": isCompleted,
-          "bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm":
+          "bg-background border border-border hover:border-border hover:shadow-sm":
             !isCompleted,
         }
       )}
@@ -257,14 +257,14 @@ function ChecklistCard({
             "flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center",
             {
               "bg-emerald-100": isCompleted,
-              "bg-slate-100": !isCompleted,
+              "bg-muted": !isCompleted,
             }
           )}
         >
           <Icon
             className={cn("h-5 w-5", {
               "text-emerald-600": isCompleted,
-              "text-slate-500": !isCompleted,
+              "text-muted-foreground": !isCompleted,
             })}
           />
         </div>

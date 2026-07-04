@@ -238,7 +238,7 @@ export function FloatingMenuPlugin(): JSX.Element | null {
       {createPortal(
         <div
           ref={menuRef}
-          className="absolute z-50 flex items-center gap-1 p-1 bg-white border rounded-md shadow-md"
+          className="absolute z-50 flex items-center gap-1 p-1 bg-background border rounded-md shadow-md"
           style={{
             top: `${position.y - 40}px`,
             left: `${position.x - 150}px`,
@@ -269,7 +269,7 @@ export function FloatingMenuPlugin(): JSX.Element | null {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="w-px h-4 bg-gray-200 mx-1" />
+          <div className="w-px h-4 bg-muted mx-1" />
 
           <TooltipProvider>
             <Tooltip>
@@ -329,7 +329,7 @@ export function FloatingMenuPlugin(): JSX.Element | null {
               </TooltipContent>
             </Tooltip>
 
-            <div className="w-px h-4 bg-gray-200 mx-1" />
+            <div className="w-px h-4 bg-muted mx-1" />
 
             <Tooltip>
               <TooltipTrigger asChild>
@@ -385,7 +385,7 @@ export function FloatingMenuPlugin(): JSX.Element | null {
               </TooltipContent>
             </Tooltip>
 
-            <div className="w-px h-4 bg-gray-200 mx-1" />
+            <div className="w-px h-4 bg-muted mx-1" />
 
             <Tooltip>
               <TooltipTrigger asChild>

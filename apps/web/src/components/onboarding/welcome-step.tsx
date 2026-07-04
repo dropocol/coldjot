@@ -86,15 +86,15 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className={`group col-span-1 flex flex-col rounded-xl border border-slate-200 p-1 shadow-sm ${feature.colSpan}`}
+              className={`group col-span-1 flex flex-col rounded-xl border border-border p-1 shadow-sm ${feature.colSpan}`}
             >
-              <div className="flex flex-1 flex-col justify-between gap-3 rounded-lg p-4 bg-gray-50 border border-slate-100">
+              <div className="flex flex-1 flex-col justify-between gap-3 rounded-lg p-4 bg-muted/50 border border-border">
                 <div className="aspect-[4/1]">
                   <feature.icon className={`h-6 w-6 ${feature.iconColor}`} />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="font-medium text-gray-900">{feature.title}</h3>
-                  <p className="text-sm text-gray-600">{feature.description}</p>
+                  <h3 className="font-medium text-foreground">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground">{feature.description}</p>
                 </div>
               </div>
             </div>

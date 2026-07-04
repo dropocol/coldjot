@@ -111,7 +111,7 @@ export function TimelineItem({ email, onSelect }: TimelineItemProps) {
                 <TooltipContent className="space-y-1">
                   <p>Opened {openCount} times</p>
                   {firstOpenTime && (
-                    <p className="text-xs text-white">
+                    <p className="text-xs text-primary-foreground">
                       First:{" "}
                       {formatDistanceToNow(new Date(firstOpenTime), {
                         addSuffix: true,
@@ -119,7 +119,7 @@ export function TimelineItem({ email, onSelect }: TimelineItemProps) {
                     </p>
                   )}
                   {latestOpenTime && (
-                    <p className="text-xs text-white">
+                    <p className="text-xs text-primary-foreground">
                       Latest:{" "}
                       {formatDistanceToNow(new Date(latestOpenTime), {
                         addSuffix: true,

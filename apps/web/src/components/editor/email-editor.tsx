@@ -209,20 +209,20 @@ export function EmailEditor() {
               </TabsContent>
 
               <TabsContent value="code">
-                <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
-                  <p className="text-gray-500">Code view coming soon...</p>
+                <div className="bg-background rounded-md shadow-sm border p-4 mb-6">
+                  <p className="text-muted-foreground">Code view coming soon...</p>
                 </div>
               </TabsContent>
 
               <TabsContent value="preview">
-                <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
-                  <p className="text-gray-500">Preview coming soon...</p>
+                <div className="bg-background rounded-md shadow-sm border p-4 mb-6">
+                  <p className="text-muted-foreground">Preview coming soon...</p>
                 </div>
               </TabsContent>
 
               <TabsContent value="settings">
-                <div className="bg-white rounded-md shadow-sm border p-4 mb-6">
-                  <p className="text-gray-500">Settings coming soon...</p>
+                <div className="bg-background rounded-md shadow-sm border p-4 mb-6">
+                  <p className="text-muted-foreground">Settings coming soon...</p>
                 </div>
               </TabsContent>
             </div>
@@ -231,7 +231,7 @@ export function EmailEditor() {
       </div>
 
       {/* Analysis Panel */}
-      <div className="w-[400px] border-l bg-white flex flex-col h-screen sticky top-0">
+      <div className="w-[400px] border-l bg-background flex flex-col h-screen sticky top-0">
         <div className="flex-1 px-6 py-4 overflow-y-auto overflow-x-hidden">
           <EmailAnalysis content={editorContent} />
         </div>

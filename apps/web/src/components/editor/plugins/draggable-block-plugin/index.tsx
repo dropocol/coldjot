@@ -34,7 +34,7 @@ export default function DraggableBlockPlugin({
       targetLineRef={targetLineRef as React.RefObject<HTMLElement>}
       menuComponent={
         <div ref={menuRef} className="draggable-block-menu">
-          <Grip className="h-4 w-4 text-gray-500" />
+          <Grip className="h-4 w-4 text-muted-foreground" />
         </div>
       }
       targetLineComponent={

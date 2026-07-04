@@ -41,21 +41,21 @@ export function EmailDetails({
   const [showAdditionalFields, setShowAdditionalFields] = useState(false);
 
   return (
-    <div className="bg-white rounded-md shadow-sm border mb-6 overflow-hidden">
+    <div className="bg-background rounded-md shadow-sm border mb-6 overflow-hidden">
       {/* Header with toggle */}
       <div
-        className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer border-b"
+        className="flex items-center justify-between px-4 py-3 bg-muted/50 cursor-pointer border-b"
         onClick={() => setShowDetails(!showDetails)}
       >
         <div className="flex items-center gap-2">
-          <Mail className="h-4 w-4 text-gray-500" />
-          <h3 className="font-medium text-sm text-gray-700">Email Details</h3>
+          <Mail className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-medium text-sm text-foreground/70">Email Details</h3>
         </div>
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
           {showDetails ? (
-            <ChevronUp className="h-4 w-4 text-gray-500" />
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-gray-500" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           )}
         </Button>
       </div>
@@ -71,20 +71,20 @@ export function EmailDetails({
       >
         <div className="overflow-hidden">
           <div className="grid grid-cols-[100px_1fr] gap-4 mb-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <User className="h-4 w-4" />
               <span>Name</span>
             </div>
             <Input
               value={fromName}
               onChange={(e) => setFromName(e.target.value)}
-              className="border-gray-200"
+              className="border-border"
               placeholder="Sender Name"
             />
           </div>
 
           <div className="grid grid-cols-[100px_1fr] gap-4 mb-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Mail className="h-4 w-4" />
               <span>From</span>
             </div>
@@ -92,51 +92,51 @@ export function EmailDetails({
               <Input
                 value={fromEmail}
                 onChange={(e) => setFromEmail(e.target.value)}
-                className="border-gray-200"
+                className="border-border"
                 placeholder="From email"
               />
-              <span className="ml-2 text-sm text-gray-500">
+              <span className="ml-2 text-sm text-muted-foreground">
                 @mail.zeeshankhan.me
               </span>
             </div>
           </div>
 
           <div className="grid grid-cols-[100px_1fr] gap-4 mb-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Reply className="h-4 w-4" />
               <span>Reply</span>
             </div>
             <Input
               value={replyTo}
               onChange={(e) => setReplyTo(e.target.value)}
-              className="border-gray-200"
+              className="border-border"
               placeholder="Optional reply email"
             />
           </div>
 
           <div className="grid grid-cols-[100px_1fr] gap-4 mb-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <MessageSquare className="h-4 w-4" />
               <span>Subject</span>
             </div>
             <Input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="border-gray-200"
+              className="border-border"
               placeholder="Subject line"
             />
           </div>
 
           {showAdditionalFields && (
             <div className="grid grid-cols-[100px_1fr] gap-4 mb-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Eye className="h-4 w-4" />
                 <span>Preview</span>
               </div>
               <Input
                 value={previewText}
                 onChange={(e) => setPreviewText(e.target.value)}
-                className="border-gray-200"
+                className="border-border"
                 placeholder="Optional preview text"
               />
             </div>
@@ -150,7 +150,7 @@ export function EmailDetails({
                 e.stopPropagation();
                 setShowAdditionalFields(!showAdditionalFields);
               }}
-              className="text-xs text-gray-500"
+              className="text-xs text-muted-foreground"
             >
               {showAdditionalFields
                 ? "Hide optional fields"

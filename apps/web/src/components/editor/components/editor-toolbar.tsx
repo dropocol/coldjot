@@ -68,7 +68,7 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
   };
 
   return (
-    <div className="sticky top-[64px] z-30 bg-white border rounded-full shadow-sm mb-0">
+    <div className="sticky top-[64px] z-30 bg-background border rounded-full shadow-sm mb-0">
       <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto">
         {/* Heading Buttons */}
         <TooltipProvider>
@@ -128,7 +128,7 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
           </Tooltip>
         </TooltipProvider>
 
-        <div className="h-6 w-px bg-gray-200" />
+        <div className="h-6 w-px bg-muted" />
 
         {/* Component Buttons */}
         <TooltipProvider>
@@ -282,7 +282,7 @@ export function EditorToolbar({ editorInstance }: EditorToolbarProps) {
             </TooltipContent>
           </Tooltip>
 
-          <div className="h-6 w-px bg-gray-200" />
+          <div className="h-6 w-px bg-muted" />
 
           <Tooltip>
             <TooltipTrigger asChild>

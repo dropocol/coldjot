@@ -136,7 +136,7 @@ export const SequenceStats = ({ stats }: SequenceStatsProps) => {
     //   value: stats.unsubscribed || 0,
     //   subValue: formatRate(stats.unsubscribed, stats.sentEmails),
     //   icon: Ban,
-    //   color: "text-gray-500",
+    //   color: "text-muted-foreground",
     //   showProgress: true,
     // },
     // {

@@ -8,11 +8,9 @@
         "moduleResolution": "bundler",
         "noEmit": true,
         "paths": {
-            "@coldjot/ui/components/*": ["./src/components/*"],
-            "@coldjot/ui/hooks/*": ["./src/hooks/*"],
-            "@coldjot/ui/lib/*": ["./src/lib/*"]
+            "@coldjot/ui/*": ["./src/*"]
         }
     },
-    "include": ["src/**/*"],
+    "include": ["."],
     "exclude": ["node_modules", "dist"]
 }

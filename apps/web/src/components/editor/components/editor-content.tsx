@@ -48,7 +48,7 @@ export function EditorContent() {
         <div className="flex items-center gap-2 p-2">
           <button
             onClick={handleExport}
-            className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+            className="px-3 py-1 text-xs bg-muted hover:bg-muted text-foreground/70 rounded-md transition-colors"
             title="Copy HTML content to clipboard"
           >
             Export HTML

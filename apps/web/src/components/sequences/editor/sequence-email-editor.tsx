@@ -357,7 +357,7 @@ export function SequenceEmailEditor({
               </div> */}
 
               <div className="flex-1 overflow-y-auto p-6 bg-muted/30">
-                <div className="p-4 bg-white rounded-lg">
+                <div className="p-4 bg-background rounded-lg">
                   <div className="text-sm text-muted-foreground">
                     <p>To: Example Contact &lt;example@google.com&gt;</p>
                     <p>Subject: {subject || "(No Subject)"}</p>

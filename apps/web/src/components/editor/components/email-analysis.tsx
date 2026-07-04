@@ -144,12 +144,12 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
           </svg>
           <div className="absolute bottom-24 left-1/2 -translate-x-1/2 transform text-center">
             <div className="text-5xl font-semibold">{readabilityScore}</div>
-            <div className="text-sm font-medium text-gray-500">
+            <div className="text-sm font-medium text-muted-foreground">
               Readability Score
             </div>
           </div>
 
-          <p className="text-sm mx-6 text-gray-500">
+          <p className="text-sm mx-6 text-muted-foreground">
             Your readability score is calculated using the Flesch-Kincaid
             formula, which considers the number of words, sentences, and reading
             time for your email.
@@ -157,13 +157,13 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
         </div>
       </div>
 
-      {/* <p className="text-sm text-gray-500">
+      {/* <p className="text-sm text-muted-foreground">
         Your readability score is calculated using the Flesch-Kincaid formula,
         which considers the number of words, sentences, and reading time for
         your email.
       </p> */}
 
-      <div className="h-px bg-gray-200" />
+      <div className="h-px bg-muted" />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-5">
@@ -171,16 +171,16 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
           <div className="flex items-center gap-2">
             <span className="text-xl font-medium">{stats.totalWords}</span>
           </div>
-          <span className="pb-2 text-sm text-gray-500">Word Count</span>
-          <div className="h-px bg-gray-200" />
+          <span className="pb-2 text-sm text-muted-foreground">Word Count</span>
+          <div className="h-px bg-muted" />
         </div>
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <span className="text-xl font-medium">{stats.totalSentences}</span>
           </div>
-          <span className="pb-2 text-sm text-gray-500">Sentence Count</span>
-          <div className="h-px bg-gray-200" />
+          <span className="pb-2 text-sm text-muted-foreground">Sentence Count</span>
+          <div className="h-px bg-muted" />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -200,16 +200,16 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
               />
             </svg>
           </div>
-          <span className="pb-2 text-sm text-gray-500">Reading Ease</span>
-          <div className="h-px bg-gray-200" />
+          <span className="pb-2 text-sm text-muted-foreground">Reading Ease</span>
+          <div className="h-px bg-muted" />
         </div>
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <span className="text-xl font-medium">{readTime} sec</span>
           </div>
-          <span className="pb-2 text-sm text-gray-500">Read Time</span>
-          <div className="h-px bg-gray-200" />
+          <span className="pb-2 text-sm text-muted-foreground">Read Time</span>
+          <div className="h-px bg-muted" />
         </div>
       </div>
 
@@ -221,7 +221,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1.5">
-                  <div className="text-xs font-medium text-gray-500">
+                  <div className="text-xs font-medium text-muted-foreground">
                     23 credits left
                   </div>
                   <div className="h-4 w-4 rounded-full bg-primary/10 flex items-center justify-center">
@@ -258,7 +258,7 @@ export function EmailAnalysis({ content }: EmailAnalysisProps) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             {spamStatus}
             {spamReasons.length > 0 && (
               <>

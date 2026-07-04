@@ -65,7 +65,7 @@ export function StatsGrid({ stats }: StatsGridProps) {
     //   title: "Unsubscribed",
     //   value: stats.unsubscribed,
     //   icon: Ban,
-    //   color: "text-gray-500",
+    //   color: "text-muted-foreground",
     //   percentage: (stats.unsubscribed / (stats.sentEmails || 1)) * 100,
     //   showProgress: true,
     // },

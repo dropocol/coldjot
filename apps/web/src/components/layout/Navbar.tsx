@@ -8,7 +8,7 @@ export default function Navbar() {
   const loading = status === "loading";
 
   return (
-    <nav className="bg-white shadow-lg">
+    <nav className="bg-background shadow-lg">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
           <div className="flex">
@@ -20,19 +20,19 @@ export default function Navbar() {
               <div className="ml-10 flex items-center space-x-4">
                 <Link
                   href="/contacts"
-                  className="text-gray-700 hover:text-gray-900"
+                  className="text-foreground/70 hover:text-foreground"
                 >
                   Contacts
                 </Link>
                 <Link
                   href="/templates"
-                  className="text-gray-700 hover:text-gray-900"
+                  className="text-foreground/70 hover:text-foreground"
                 >
                   Templates
                 </Link>
                 <Link
                   href="/compose"
-                  className="text-gray-700 hover:text-gray-900"
+                  className="text-foreground/70 hover:text-foreground"
                 >
                   Compose
                 </Link>
@@ -42,13 +42,13 @@ export default function Navbar() {
 
           <div className="flex items-center">
             {loading ? (
-              <div className="animate-pulse h-8 w-24 bg-gray-200 rounded"></div>
+              <div className="animate-pulse h-8 w-24 bg-muted rounded"></div>
             ) : session ? (
               <div className="flex items-center space-x-4">
-                <span className="text-gray-700">{session.user?.name}</span>
+                <span className="text-foreground/70">{session.user?.name}</span>
                 <button
                   onClick={() => signOut()}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                  className="bg-destructive text-primary-foreground px-4 py-2 rounded-md hover:bg-destructive/90"
                 >
                   Sign Out
                 </button>
@@ -56,7 +56,7 @@ export default function Navbar() {
             ) : (
               <button
                 onClick={() => signIn("google")}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
               >
                 Sign In with Google
               </button>

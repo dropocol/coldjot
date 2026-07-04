@@ -183,7 +183,7 @@ export function ContactSetupStep({ onNext, onBack: _onBack }: ContactSetupStepPr
                 <Card
                   key={method.id}
                   className={`p-4 flex items-center gap-2 shadow-none hover:bg-accent cursor-pointer transition-colors ${
-                    selectedMethod === method.id ? "border-gray-400" : ""
+                    selectedMethod === method.id ? "border-border" : ""
                   }`}
                   onClick={() => setSelectedMethod(method.id)}
                 >
@@ -249,7 +249,7 @@ export function ContactSetupStep({ onNext, onBack: _onBack }: ContactSetupStepPr
 
           {selectedMethod === "csv" && (
             <div className="space-y-4">
-              <Card className="p-8 border-dashed shadow-none border-slate-300">
+              <Card className="p-8 border-dashed shadow-none border-border">
                 <div className="flex flex-col items-center justify-center gap-4">
                   <div className="p-4 rounded-full bg-primary/10">
                     <FileUp className="h-8 w-8 text-primary" />

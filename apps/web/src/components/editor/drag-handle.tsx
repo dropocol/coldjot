@@ -25,14 +25,14 @@ export function DragHandle({
     >
       <button
         type="button"
-        className="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100 transition-colors"
+        className="flex h-6 w-6 items-center justify-center rounded hover:bg-muted transition-colors"
         onClick={onAddClick}
       >
-        <Plus className="h-4 w-4 text-gray-600" />
+        <Plus className="h-4 w-4 text-muted-foreground" />
       </button>
       <button
         type="button"
-        className="flex h-6 w-6 cursor-grab items-center justify-center rounded hover:bg-gray-100 transition-colors"
+        className="flex h-6 w-6 cursor-grab items-center justify-center rounded hover:bg-muted transition-colors"
         onDragStart={onDragStart}
         draggable
       >
@@ -42,7 +42,7 @@ export function DragHandle({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="text-gray-600"
+          className="text-muted-foreground"
         >
           <path
             d="M4 4.5A1.5 1.5 0 1 1 4 1.5a1.5 1.5 0 0 1 0 3zm0 5A1.5 1.5 0 1 1 4 6.5a1.5 1.5 0 0 1 0 3zm0 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm8-10A1.5 1.5 0 1 1 12 1.5a1.5 1.5 0 0 1 0 3zm0 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"

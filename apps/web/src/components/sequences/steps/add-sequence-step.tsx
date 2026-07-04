@@ -60,7 +60,7 @@ export function AddSequenceStep({ sequenceId, steps }: AddSequenceStepProps) {
     <>
       <Button
         onClick={() => setActiveDrawer("step")}
-        className="w-full h-12 bg-neutral-50 rounded-lg hover:bg-neutral-100 hover:border hover:border-gray-300"
+        className="w-full h-12 bg-muted/50 rounded-lg hover:bg-muted hover:border hover:border-border"
         variant="secondary"
       >
         <Plus className="h-4 w-4 max-w-full mr-2" />

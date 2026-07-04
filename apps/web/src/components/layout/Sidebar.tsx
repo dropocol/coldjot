@@ -106,7 +106,7 @@ export default function Sidebar() {
   return (
     <div
       className={cn(
-        "relative flex h-full flex-col border-r bg-white transition-all duration-300",
+        "relative flex h-full flex-col border-r bg-background transition-all duration-300",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
@@ -196,16 +196,16 @@ export default function Sidebar() {
                 key={route.href}
                 href={route.href}
                 className={cn(
-                  "flex items-center gap-x-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-all hover:bg-gray-100 h-8",
-                  "text-gray-500 hover:text-gray-900",
-                  pathname === route.href && "bg-gray-100 text-gray-900",
+                  "flex items-center gap-x-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-all hover:bg-muted h-8",
+                  "text-muted-foreground hover:text-foreground",
+                  pathname === route.href && "bg-muted text-foreground",
                   isCollapsed && "justify-center px-2"
                 )}
               >
                 <route.icon
                   className={cn(
                     "h-5 w-5 flex-shrink-0",
-                    pathname === route.href ? "text-gray-900" : "text-gray-500"
+                    pathname === route.href ? "text-foreground" : "text-muted-foreground"
                   )}
                 />
                 <span
@@ -226,9 +226,9 @@ export default function Sidebar() {
             <Link
               href={apolloRoute.href}
               className={cn(
-                "flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-gray-100",
-                "text-gray-500 hover:text-gray-900 group",
-                pathname === apolloRoute.href && "bg-gray-100 text-gray-900",
+                "flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-muted",
+                "text-muted-foreground hover:text-foreground group",
+                pathname === apolloRoute.href && "bg-muted text-foreground",
                 isCollapsed && "justify-center px-2"
               )}
             >
@@ -237,8 +237,8 @@ export default function Sidebar() {
                   className={cn(
                     "h-5 w-5 flex-shrink-0",
                     pathname === apolloRoute.href
-                      ? "text-gray-900"
-                      : "text-gray-500"
+                      ? "text-foreground"
+                      : "text-muted-foreground"
                   )}
                 />
                 <apolloRoute.secondaryIcon className="h-3 w-3 absolute -right-1 -bottom-1 text-primary" />
@@ -256,9 +256,9 @@ export default function Sidebar() {
             <Link
               href={searchRoute.href}
               className={cn(
-                "flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-gray-100",
-                "text-gray-500 hover:text-gray-900",
-                pathname === searchRoute.href && "bg-gray-100 text-gray-900",
+                "flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-muted",
+                "text-muted-foreground hover:text-foreground",
+                pathname === searchRoute.href && "bg-muted text-foreground",
                 isCollapsed && "justify-center px-2"
               )}
             >
@@ -266,8 +266,8 @@ export default function Sidebar() {
                 className={cn(
                   "h-5 w-5 flex-shrink-0",
                   pathname === searchRoute.href
-                    ? "text-gray-900"
-                    : "text-gray-500"
+                    ? "text-foreground"
+                    : "text-muted-foreground"
                 )}
               />
               {!isCollapsed && (
@@ -289,16 +289,16 @@ export default function Sidebar() {
                 key={route.href}
                 href={route.href}
                 className={cn(
-                  "flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-gray-100",
-                  "text-gray-500 hover:text-gray-900",
-                  pathname === route.href && "bg-gray-100 text-gray-900",
+                  "flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-muted",
+                  "text-muted-foreground hover:text-foreground",
+                  pathname === route.href && "bg-muted text-foreground",
                   isCollapsed && "justify-center px-2"
                 )}
               >
                 <route.icon
                   className={cn(
                     "h-5 w-5 flex-shrink-0",
-                    pathname === route.href ? "text-gray-900" : "text-gray-500"
+                    pathname === route.href ? "text-foreground" : "text-muted-foreground"
                   )}
                 />
                 <span
@@ -323,16 +323,16 @@ export default function Sidebar() {
               key={route.href}
               href={route.href}
               className={cn(
-                "flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-gray-100",
-                "text-gray-500 hover:text-gray-900",
-                pathname === route.href && "bg-gray-100 text-gray-900",
+                "flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-muted",
+                "text-muted-foreground hover:text-foreground",
+                pathname === route.href && "bg-muted text-foreground",
                 isCollapsed && "justify-center px-2"
               )}
             >
               <route.icon
                 className={cn(
                   "h-5 w-5 flex-shrink-0",
-                  pathname === route.href ? "text-gray-900" : "text-gray-500"
+                  pathname === route.href ? "text-foreground" : "text-muted-foreground"
                 )}
               />
               <span

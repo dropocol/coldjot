@@ -50,7 +50,7 @@ export function SequenceStatusBadge({ status }: SequenceStatusBadgeProps) {
       );
     default:
       return (
-        <Badge variant="outline" className="bg-gray-100">
+        <Badge variant="outline" className="bg-muted">
           {status}
         </Badge>
       );

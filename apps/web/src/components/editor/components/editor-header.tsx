@@ -28,7 +28,7 @@ export function EditorHeader({
   return (
     <div
       id="editor-status-bar"
-      className="sticky top-0 z-20 w-full border-b bg-white"
+      className="sticky top-0 z-20 w-full border-b bg-background"
     >
       <div className="flex items-center justify-between h-14 px-4">
         <div className="flex items-center gap-4">
@@ -50,21 +50,21 @@ export function EditorHeader({
                 onClick={() => setIsEditing(true)}
               >
                 <span className="text-lg mr-2">😔</span>
-                <h1 className="text-base text-gray-900 truncate max-w-[200px] group-hover:text-gray-600">
+                <h1 className="text-base text-foreground truncate max-w-[200px] group-hover:text-muted-foreground">
                   {templateName}
                 </h1>
-                <Pencil className="h-3.5 w-3.5 ml-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Pencil className="h-3.5 w-3.5 ml-2 text-muted-foreground/70 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             )}
           </div>
 
-          <div className="h-6 w-px bg-gray-100" />
+          <div className="h-6 w-px bg-muted" />
 
           <TabsList className="bg-transparent p-0 h-14">
             <TabsTrigger
               value="design"
               className={cn(
-                "rounded-none border-b-2 border-transparent px-3 h-full text-sm font-medium hover:text-gray-600 transition-colors data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none",
+                "rounded-none border-b-2 border-transparent px-3 h-full text-sm font-medium hover:text-muted-foreground transition-colors data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none",
                 activeTab === "design" && "border-primary text-primary"
               )}
               onClick={() => onTabChange("design")}
@@ -74,7 +74,7 @@ export function EditorHeader({
             <TabsTrigger
               value="details"
               className={cn(
-                "rounded-none border-b-2 border-transparent px-3 h-full text-sm font-medium hover:text-gray-600 transition-colors data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none",
+                "rounded-none border-b-2 border-transparent px-3 h-full text-sm font-medium hover:text-muted-foreground transition-colors data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none",
                 activeTab === "details" && "border-primary text-primary"
               )}
               onClick={() => onTabChange("details")}
