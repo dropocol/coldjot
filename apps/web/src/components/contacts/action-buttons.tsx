@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import { Mail, Edit2, Trash2, ListPlus, MoreHorizontal } from "lucide-react";
 import { Contact } from "@prisma/client";
 import { useState } from "react";
@@ -16,13 +16,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@coldjot/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@coldjot/ui";
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
 import { useDeleteContact } from "@/hooks/queries/use-contacts";
 

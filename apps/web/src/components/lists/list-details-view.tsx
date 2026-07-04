@@ -15,7 +15,7 @@ import {
   MoreHorizontal,
   SendHorizonal,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import { toast } from "react-hot-toast";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
@@ -25,7 +25,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@coldjot/ui";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,8 +35,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@coldjot/ui";
+import { Checkbox } from "@coldjot/ui";
 import Link from "next/link";
 import { Contact } from "@prisma/client";
 import ContactDetailsDrawer from "@/components/contacts/contact-details-drawer";
@@ -47,7 +47,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@coldjot/ui";
 import {
   useListDetail,
   useRemoveContactsFromList,

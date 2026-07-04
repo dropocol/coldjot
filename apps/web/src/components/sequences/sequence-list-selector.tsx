@@ -8,12 +8,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@coldjot/ui";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@coldjot/ui";
 import { Users } from "lucide-react";
 import { EmailList as BaseEmailList } from "@coldjot/types";
 import { useLists } from "@/hooks/queries/use-lists";

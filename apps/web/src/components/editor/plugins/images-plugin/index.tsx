@@ -41,15 +41,15 @@ import {
   ImageNode,
   ImagePayload,
 } from "../../nodes/image-node";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import {
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
 
 export type InsertImagePayload = Readonly<ImagePayload>;
 

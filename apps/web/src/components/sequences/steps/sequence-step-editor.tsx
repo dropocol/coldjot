@@ -6,10 +6,10 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
 import type { StepData } from "@coldjot/types";
 import {
   Select,
@@ -17,9 +17,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+} from "@coldjot/ui";
+import { Textarea } from "@coldjot/ui";
+import { RadioGroup, RadioGroupItem } from "@coldjot/ui";
 import { Loader2, Mail } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 

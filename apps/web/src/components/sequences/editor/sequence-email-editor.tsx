@@ -6,23 +6,23 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
+import { Checkbox } from "@coldjot/ui";
 import { Loader2, Info } from "lucide-react";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { TemplateCommand } from "@/components/templates/template-command";
 import type { EmailData } from "@coldjot/types";
 import { toast } from "react-hot-toast";
-import { Switch } from "@/components/ui/switch";
+import { Switch } from "@coldjot/ui";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@coldjot/ui";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,8 +32,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
+} from "@coldjot/ui";
+import { cn } from "@coldjot/ui";
 import { api } from "@/lib/http/api-client";
 
 interface SequenceEmailEditorProps {

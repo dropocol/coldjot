@@ -3,11 +3,11 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@coldjot/ui";
 import type { SearchResult, SearchResultType } from "@coldjot/types";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@coldjot/ui";
 
 import {
   User,
@@ -25,7 +25,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@coldjot/ui";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import {

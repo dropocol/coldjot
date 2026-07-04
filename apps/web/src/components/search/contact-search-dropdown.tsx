@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { Contact } from "@prisma/client";
 import { Check, ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import {
   Command,
   CommandEmpty,
@@ -12,12 +12,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@coldjot/ui";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@coldjot/ui";
 import { useContactSearch } from "@/hooks/queries/use-contacts";
 
 interface Props {

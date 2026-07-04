@@ -9,8 +9,8 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import { Zap } from "lucide-react";
 import { logger } from "@/lib/logger";
 

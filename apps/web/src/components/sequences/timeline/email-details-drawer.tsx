@@ -6,10 +6,10 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+} from "@coldjot/ui";
+import { ScrollArea } from "@coldjot/ui";
+import { Separator } from "@coldjot/ui";
+import { Badge } from "@coldjot/ui";
 import {
   Eye,
   MousePointerClick,
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import type { EmailTracking } from "@/types/email";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 
 interface EmailDetailsDrawerProps {
   email: EmailTracking | null;

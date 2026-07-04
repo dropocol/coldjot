@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import { Card } from "@coldjot/ui";
 import {
   BarChart3,
   Mail,
@@ -8,7 +8,7 @@ import {
   Eye,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@coldjot/ui";
 
 interface SequenceStatsProps {
   stats: {

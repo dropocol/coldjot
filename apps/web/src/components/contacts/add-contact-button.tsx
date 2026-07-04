@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import { useState } from "react";
 import AddContactModal from "./add-contact-drawer";
 import { Contact } from "@prisma/client";

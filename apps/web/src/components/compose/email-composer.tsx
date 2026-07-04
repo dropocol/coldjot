@@ -7,15 +7,15 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import { Send, Save, Code, Loader2 } from "lucide-react";
 import { Contact, Template } from "@prisma/client";
 import { toast } from "react-hot-toast";
-import { Label } from "@/components/ui/label";
+import { Label } from "@coldjot/ui";
 import { ContactSearch } from "../search/contact-search-dropdown";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
-import { Input } from "@/components/ui/input";
+import { Input } from "@coldjot/ui";
 import {
   useCreateDraft,
   useSendDraft,

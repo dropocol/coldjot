@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import {
   Table,
   TableBody,
@@ -9,7 +9,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@coldjot/ui";
 import {
   Mail,
   Play,
@@ -33,13 +33,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@coldjot/ui";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@coldjot/ui";
 import { PaginationControls } from "@/components/pagination";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";

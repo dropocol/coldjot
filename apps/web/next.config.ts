@@ -7,6 +7,7 @@
 import "./src/env";
 
 const nextConfig = {
+  transpilePackages: ["@coldjot/ui"],
   distDir: ".next",
   experimental: {
     serverActions: {

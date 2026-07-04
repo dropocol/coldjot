@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import { ContactSearch } from "@/components/search/contact-search-dropdown";
 import {
   Table,
@@ -10,7 +10,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@coldjot/ui";
 import { toast } from "react-hot-toast";
 import {
   Loader2,
@@ -33,7 +33,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@coldjot/ui";
 import type { Contact } from "@coldjot/types";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import type { SequenceContactStatusType } from "@coldjot/types";
@@ -42,7 +42,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@coldjot/ui";
 import { PaginationControls } from "@/components/pagination";
 import { useSequence } from "@/lib/sequence-context";
 import {

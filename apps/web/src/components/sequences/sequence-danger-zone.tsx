@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@coldjot/ui";
+import { useToast } from "@coldjot/ui";
 
 import { useRouter } from "next/navigation";
 import { SequenceStatus } from "@coldjot/types";
@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@coldjot/ui";
 import {
   useResetSequence,
   useDeleteSequence,

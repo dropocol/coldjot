@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@coldjot/ui";
 
 interface DragHandleProps {
   onAddClick?: () => void;

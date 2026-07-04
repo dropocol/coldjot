@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@coldjot/ui";
 import EditContactForm from "@/components/contacts/edit-contact-form";
 
 export default async function EditContactPage({

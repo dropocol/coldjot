@@ -9,7 +9,7 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { Card } from "@/components/ui/card";
+import { Card } from "@coldjot/ui";
 import type { ChartData } from "@/types/stats";
 import { format } from "date-fns";
 

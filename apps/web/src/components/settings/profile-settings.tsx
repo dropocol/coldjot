@@ -1,7 +1,7 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@coldjot/ui";
+import { Avatar, AvatarFallback, AvatarImage } from "@coldjot/ui";
 
 export default function ProfileSettings({ user }) {
   return (

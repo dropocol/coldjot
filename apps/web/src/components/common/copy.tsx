@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@coldjot/ui";
 
 interface CopyButtonProps {
   textToCopy: string;

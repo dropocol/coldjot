@@ -11,8 +11,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import {
   Edit2,
   Trash2,
@@ -32,7 +32,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@coldjot/ui";
 
 import Link from "next/link";
 
@@ -42,8 +42,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@coldjot/ui";
+import { Checkbox } from "@coldjot/ui";
 import ContactDetailsDrawer from "./contact-details-drawer";
 import { AddToSequenceModal } from "./add-to-sequence-modal";
 import { PaginationControls } from "@/components/pagination";

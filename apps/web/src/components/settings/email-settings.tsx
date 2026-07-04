@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Textarea } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import { Plus } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@coldjot/ui";
 import { MailboxList, type MailboxWithAliases } from "./mailbox-list";
 import { AddMailbox } from "./add-mailbox";
 import type { Mailbox } from "@coldjot/database";

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@coldjot/ui";
+import { useToast } from "@coldjot/ui";
 import { PlayIcon, PauseIcon } from "lucide-react";
 import { SequenceStatus } from "@coldjot/types";
 import { useSequenceControl } from "@/hooks/queries/use-sequences";

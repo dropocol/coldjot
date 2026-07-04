@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@coldjot/ui";
 import {
   Table,
   TableBody,
@@ -15,9 +15,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Checkbox } from "@coldjot/ui";
 import { Search, Loader2 } from "lucide-react";
 import { Contact } from "@prisma/client";
 import { useContacts } from "@/hooks/queries/use-contacts";

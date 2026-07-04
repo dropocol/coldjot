@@ -10,7 +10,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@coldjot/ui";
 import { toast } from "react-hot-toast";
 import { useDeleteTemplate } from "@/hooks/queries/use-templates";
 

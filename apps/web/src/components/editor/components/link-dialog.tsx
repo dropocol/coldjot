@@ -4,10 +4,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+} from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
 
 interface LinkDialogProps {
   open: boolean;

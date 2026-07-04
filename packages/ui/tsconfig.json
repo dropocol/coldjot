@@ -1,0 +1,16 @@
+{
+    "extends": "@coldjot/tsconfig/library.json",
+    "compilerOptions": {
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "jsx": "react-jsx",
+        "lib": ["dom", "dom.iterable", "es2023"],
+        "moduleResolution": "bundler",
+        "noEmit": true,
+        "paths": {
+            "@/*": ["./src/*"]
+        }
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
+}

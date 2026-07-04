@@ -8,21 +8,21 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
+} from "@coldjot/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
   TooltipProvider,
-} from "@/components/ui/tooltip";
+} from "@coldjot/ui";
 import { ArrowDownWideNarrow, Loader2, ListEnd } from "lucide-react";
 
 interface PaginationControlsProps {

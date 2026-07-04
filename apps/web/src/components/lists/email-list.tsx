@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { AlertCircle, MoreHorizontal, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import { EmailList } from "@coldjot/types";
 import { CreateListModal } from "./create-list-modal";
 import { toast } from "react-hot-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@coldjot/ui";
 import {
   Table,
   TableBody,
@@ -14,13 +14,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@coldjot/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@coldjot/ui";
 import { useRouter } from "next/navigation";
 import { PaginationControls } from "@/components/pagination";
 import {

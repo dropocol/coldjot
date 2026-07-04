@@ -5,9 +5,9 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+} from "@coldjot/ui";
+import { ScrollArea } from "@coldjot/ui";
+import { Separator } from "@coldjot/ui";
 
 export default function PreviewEmail({
   content,

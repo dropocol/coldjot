@@ -11,8 +11,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import {
   Edit2,
   Trash2,
@@ -30,7 +30,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@coldjot/ui";
 import { PaginationControls } from "@/components/pagination";
 import { useQueryClient } from "@tanstack/react-query";
 import {

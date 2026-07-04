@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { LocalSearch } from "@/components/ui/local-search";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { LocalSearch } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
+import { Separator } from "@coldjot/ui";
 import { SequenceTable } from "@/components/sequences/sequence-table";
 import { SequenceStatus, SequenceStep } from "@coldjot/types";
 import { usePagination } from "@/hooks/use-pagination";

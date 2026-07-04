@@ -1,6 +1,6 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 export function Navigation() {
   return (
     <nav className="flex items-center space-x-4 lg:space-x-6">

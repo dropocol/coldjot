@@ -5,7 +5,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@coldjot/ui";
 import { Contact } from "@prisma/client";
 import { Mail, Calendar } from "lucide-react";
 

@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@coldjot/ui";
 import { BracesIcon } from "lucide-react";
 import {
   Command,
@@ -13,7 +13,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@coldjot/ui";
 
 export interface Placeholder {
   name: string;

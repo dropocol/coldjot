@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import { Contact } from "@prisma/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
 import { Loader2 } from "lucide-react";
 import { useUpdateContact } from "@/hooks/queries/use-contacts";
 

@@ -4,7 +4,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@coldjot/ui";
 import { api } from "@/lib/http/api-client";
 import { qk } from "@/lib/query/keys";
 

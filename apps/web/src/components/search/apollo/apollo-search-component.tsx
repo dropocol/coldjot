@@ -9,10 +9,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
 import {
   Loader2,
   Search,
@@ -28,8 +28,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+} from "@coldjot/ui";
+import { Badge } from "@coldjot/ui";
 import { api } from "@/lib/http/api-client";
 import { useCreateContact } from "@/hooks/queries/use-contacts";
 

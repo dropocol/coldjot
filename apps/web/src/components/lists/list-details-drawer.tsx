@@ -6,8 +6,8 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import { EmailList } from "@coldjot/types";
 import { User, Trash2, Mail } from "lucide-react";
 import { toast } from "react-hot-toast";

@@ -8,9 +8,9 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+} from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 
 import { Prisma } from "@prisma/client";
 import {
@@ -29,10 +29,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+} from "@coldjot/ui";
+import { RadioGroup, RadioGroupItem } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
+import { cn } from "@coldjot/ui";
 import { useLists, useAddContactsToList } from "@/hooks/queries/use-lists";
 import { ApiError } from "@/lib/http/api-client";
 

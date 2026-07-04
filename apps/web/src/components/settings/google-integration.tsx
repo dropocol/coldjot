@@ -1,7 +1,7 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import { signIn, signOut } from "next-auth/react";
 import { CheckCircle2, XCircle } from "lucide-react";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import {
   Table,
   TableBody,
@@ -9,8 +9,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+} from "@coldjot/ui";
+import { Badge } from "@coldjot/ui";
 import { toast } from "react-hot-toast";
 import { Loader2, Plus, ListPlus, MoreVertical, Trash } from "lucide-react";
 import { format } from "date-fns";
@@ -19,14 +19,14 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@coldjot/ui";
 import type { EmailList } from "@coldjot/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@coldjot/ui";
 import { useSequence } from "@/lib/sequence-context";
 import { SequenceListSelector } from "./sequence-list-selector";
 import {
@@ -38,7 +38,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@coldjot/ui";
 import {
   Pagination,
   PaginationContent,
@@ -46,7 +46,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
+} from "@coldjot/ui";
 import {
   useSequenceLists,
   useAddListToSequence,

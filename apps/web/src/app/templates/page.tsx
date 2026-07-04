@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { LocalSearch } from "@/components/ui/local-search";
-import { Button } from "@/components/ui/button";
+import { LocalSearch } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import TemplateList from "@/components/templates/template-list";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@coldjot/ui";
 import AddTemplateDrawer from "@/components/templates/add-template-drawer";
 import { Template } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";

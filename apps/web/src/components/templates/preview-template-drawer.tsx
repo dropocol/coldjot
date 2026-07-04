@@ -6,14 +6,14 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
+} from "@coldjot/ui";
+import { ScrollArea } from "@coldjot/ui";
+import { Separator } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import { Copy } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
-import { cn } from "@/lib/utils";
+import { cn } from "@coldjot/ui";
 
 export default function PreviewTemplateDrawer({
   template,

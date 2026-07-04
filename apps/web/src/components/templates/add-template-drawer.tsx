@@ -7,10 +7,10 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";

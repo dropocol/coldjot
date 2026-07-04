@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@coldjot/ui";
+import { Skeleton } from "@coldjot/ui";
 import { StatsChart } from "./stats-chart";
 import type { ChartData } from "@/types/stats";
 

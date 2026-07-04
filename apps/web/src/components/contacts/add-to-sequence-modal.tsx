@@ -8,8 +8,8 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+} from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import { Loader2, SendHorizonal, Search, Users, Check } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Contact } from "@prisma/client";
@@ -20,13 +20,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+} from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { Badge } from "@coldjot/ui";
+import { cn } from "@coldjot/ui";
 
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@coldjot/ui";
+import { Label } from "@coldjot/ui";
 import { useSequences } from "@/hooks/queries/use-sequences";
 import {
   useAddContactToSequence,

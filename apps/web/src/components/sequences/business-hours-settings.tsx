@@ -1,31 +1,31 @@
 import { useState } from "react";
 
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Label } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@coldjot/ui";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "react-hot-toast";
 import type { BusinessHours, BusinessScheduleType } from "@coldjot/types";
-import { TimePicker } from "@/components/ui/time-picker";
-import { cn } from "@/lib/utils";
+import { TimePicker } from "@coldjot/ui";
+import { cn } from "@coldjot/ui";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-} from "@/components/ui/command";
+} from "@coldjot/ui";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@coldjot/ui";
 import { BusinessScheduleEnum } from "@coldjot/types";
 import { updateBusinessHours } from "@/lib/client-actions";
 import { useSequence } from "@/lib/sequence-context";

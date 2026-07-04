@@ -1,7 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@coldjot/ui";
 import { TimelineSection } from "@/components/sequences/timeline/timeline-section";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";

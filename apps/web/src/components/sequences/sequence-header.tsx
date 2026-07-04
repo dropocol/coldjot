@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
 import { SequenceControls } from "@/components/sequences/sequence-controls";
 import { SequenceNav } from "@/components/sequences/sequence-nav";
@@ -17,8 +17,8 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
+} from "@coldjot/ui";
+import { Badge } from "@coldjot/ui";
 
 export function SequenceHeader() {
   const router = useRouter();

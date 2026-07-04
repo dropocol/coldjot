@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Progress } from "@/components/ui/progress";
+import { Progress } from "@coldjot/ui";
 
 interface OnboardingLayoutProps {
   children: ReactNode;

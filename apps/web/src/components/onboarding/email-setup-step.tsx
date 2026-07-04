@@ -1,13 +1,13 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button } from "@coldjot/ui";
+import { Card } from "@coldjot/ui";
 import { Mail, AlertCircle, Loader2, CheckCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@coldjot/ui";
 import { toast } from "react-hot-toast";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { cn } from "@/lib/utils";
+import { cn } from "@coldjot/ui";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
 

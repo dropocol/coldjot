@@ -1,14 +1,14 @@
 // "use client";
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "@coldjot/ui";
+import { Button } from "@coldjot/ui";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@coldjot/ui";
 
 import { signIn } from "@/auth";
 

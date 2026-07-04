@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
 import {
   ChevronDown,
   ChevronUp,
@@ -10,7 +10,7 @@ import {
   MessageSquare,
   Eye,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@coldjot/ui";
 
 interface EmailDetailsProps {
   fromName: string;

@@ -4,7 +4,7 @@ import { User } from "next-auth";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import * as z from "zod";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import {
   Form,
   FormControl,
@@ -13,9 +13,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+} from "@coldjot/ui";
+import { Input } from "@coldjot/ui";
+import { useToast } from "@coldjot/ui";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
 

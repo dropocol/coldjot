@@ -14,14 +14,14 @@ import {
   PowerOff,
 } from "lucide-react";
 import { Mailbox, EmailAlias } from "@coldjot/database";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
+} from "@coldjot/ui";
+import { useToast } from "@coldjot/ui";
 
 export type MailboxWithAliases = Mailbox & {
   aliases: EmailAlias[];

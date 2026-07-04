@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import { Plus } from "lucide-react";
 import { SequenceStepEditor } from "./sequence-step-editor";
 import { SequenceEmailEditor } from "../editor/sequence-email-editor";

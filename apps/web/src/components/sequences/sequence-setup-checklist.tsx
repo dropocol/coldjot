@@ -7,7 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@coldjot/ui";
 import {
   CheckCircle2,
   Circle,
@@ -22,15 +22,15 @@ import {
   AlertCircle,
   CheckCheck,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@coldjot/ui";
 import { Sequence } from "@coldjot/types";
 import {
   isSequenceReadyToLaunch,
   getSequenceSetupProgress,
 } from "@/lib/sequence-utils";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@coldjot/ui";
 
 import { useSequence } from "@/lib/sequence-context";
 import { motion, AnimatePresence } from "framer-motion";

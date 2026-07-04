@@ -9,13 +9,13 @@ import {
   createCommand,
 } from "lexical";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@coldjot/ui";
 import { $createDraggableBlockNode } from "../nodes/draggable-block-node";
 
 export const INSERT_COMPONENT_COMMAND = createCommand(

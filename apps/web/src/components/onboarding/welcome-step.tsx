@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@coldjot/ui";
 import {
   ArrowRight,
   Mail,
