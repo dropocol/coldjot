@@ -36,7 +36,7 @@ export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
           }
         </SelectValue>
       </SelectTrigger>
-      <SelectContent side="bottom" alignItemWithTrigger={false}>
+      <SelectContent side="bottom" alignItemWithTrigger={false} className="p-1">
         {DATE_RANGE_OPTIONS.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}

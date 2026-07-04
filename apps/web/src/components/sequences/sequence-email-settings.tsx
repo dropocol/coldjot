@@ -256,7 +256,7 @@ export function SequenceEmailSettings({
                     : "Select a mailbox"}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent side="bottom" alignItemWithTrigger={false}>
+              <SelectContent side="bottom" alignItemWithTrigger={false} className="p-1">
                 {mailboxes.length === 0 ? (
                   <div className="p-2 text-sm text-muted-foreground">
                     No mailboxes available
@@ -298,7 +298,7 @@ export function SequenceEmailSettings({
                         : "Use default email"}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent side="bottom" alignItemWithTrigger={false}>
+                  <SelectContent side="bottom" alignItemWithTrigger={false} className="p-1">
                     <SelectItem value="default">Use default email</SelectItem>
                     {selectedMailbox.aliases.map((alias) => (
                       <SelectItem key={alias.id} value={alias.id}>

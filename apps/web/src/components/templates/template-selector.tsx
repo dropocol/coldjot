@@ -33,7 +33,7 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
       <SelectTrigger className="w-[200px]">
         <SelectValue placeholder="Select a template" />
       </SelectTrigger>
-      <SelectContent side="bottom" alignItemWithTrigger={false}>
+      <SelectContent side="bottom" alignItemWithTrigger={false} className="p-1">
         {templates.map((template) => (
           <SelectItem key={template.id} value={template.id}>
             {template.name}

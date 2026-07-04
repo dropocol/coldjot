@@ -169,7 +169,7 @@ export function BusinessHoursSettings({
             <SelectTrigger className="max-w-md">
               <SelectValue placeholder="Select schedule type" />
             </SelectTrigger>
-            <SelectContent side="bottom" alignItemWithTrigger={false}>
+            <SelectContent side="bottom" alignItemWithTrigger={false} className="p-1">
               <SelectItem value="business">Business Hours</SelectItem>
               <SelectItem value="custom">Custom Schedule</SelectItem>
             </SelectContent>

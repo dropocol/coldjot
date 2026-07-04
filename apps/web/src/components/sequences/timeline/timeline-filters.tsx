@@ -83,7 +83,7 @@ export function TimelineFilters() {
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Filter by status" />
         </SelectTrigger>
-        <SelectContent side="bottom" alignItemWithTrigger={false}>
+        <SelectContent side="bottom" alignItemWithTrigger={false} className="p-1">
           <SelectItem value="all">All Emails</SelectItem>
           <SelectItem value="sent">Sent</SelectItem>
           <SelectItem value="opened">Opened</SelectItem>

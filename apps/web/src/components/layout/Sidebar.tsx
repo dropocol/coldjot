@@ -220,7 +220,10 @@ export default function Sidebar() {
                   />
                   <route.icon
                     className={cn(
-                      "size-[18px] shrink-0 text-foreground transition-colors",
+                      "size-[18px] shrink-0 transition-colors",
+                      isActive
+                        ? "text-foreground"
+                        : "text-muted-foreground group-hover:text-foreground"
                     )}
                     strokeWidth={isActive ? 2.25 : 2}
                   />
@@ -358,7 +361,10 @@ export default function Sidebar() {
                 />
                 <route.icon
                   className={cn(
-                    "size-[18px] shrink-0 text-foreground transition-colors",
+                    "size-[18px] shrink-0 transition-colors",
+                    isActive
+                      ? "text-foreground"
+                      : "text-muted-foreground group-hover:text-foreground"
                   )}
                   strokeWidth={isActive ? 2.25 : 2}
                 />
