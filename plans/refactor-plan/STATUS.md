@@ -27,7 +27,7 @@
 
 ---
 
-> **Last updated:** plan 14 follow-up — fixed three classes of post-migration runtime errors (nested-`<button>` hydration via an `asChild→render` codemod across 26 files, `MenuGroupContext` missing in Sidebar, Prisma Symbol serialization across 4 Server→Client boundaries). No shadcn components modified. Plan 10 (BullMQ resilience) still **awaiting owner smoke-testing**. Plan 06 deferred to the very end. Plan 12 blocked on plan 10.
+> **Last updated:** plan 14 follow-up — continued fixing post-migration issues in consumer code only: `nativeButton={false}` on Button-as-link (4 sites), Select value→label resolution via `items` prop (5 selects) + raw-value fix, Select opens below trigger + inner `p-1` padding (10 sites), sidebar icon/design refresh. No shadcn components modified. Earlier: nested-`<button>` hydration codemod across 26 files, `MenuGroupContext` fix, Prisma Symbol serialization across 4 Server→Client boundaries. Plan 10 (BullMQ resilience) still **awaiting owner smoke-testing**. Plan 06 deferred to the very end. Plan 12 blocked on plan 10.
 >
 > **Two parallel workstreams** live on two branch chains off `master`:
 >
@@ -365,8 +365,43 @@ After the migration, three classes of runtime/typecheck errors surfaced and were
 
 **Theme palette:** `packages/ui/src/styles/globals.css` updated to the slate palette
 with a monochromatic blue chart scale (user-selected); `components.json` refreshed from
-the latest shadcn restore (style `base-rhea`, baseColor `mist`). No shadcn component
-files were modified.
+the latest shadcn restore (style `base-maia`). No shadcn component files were modified.
+
+**Verified:** typecheck 9/9, 0 errors.
+
+### Follow-up — Select behavior, Button `nativeButton`, sidebar polish
+
+Continued fixing post-migration issues in consumer code only (no shadcn components
+modified) across commits `79a9fb7`…`ddb3338`:
+
+4. **`nativeButton` warning on `Button` rendering links** — Base UI's `Button` defaults
+   to `nativeButton={true}`, expecting the `render` element to be a native `<button>`.
+   The 4 `<Button render={<a>/<Link>}>` sites (sequence-setup-checklist, sequence-list,
+   timeline/recent-emails, timeline/email-details-drawer) logged a console warning.
+   Added `nativeButton={false}` at each.
+
+5. **Select showing raw value instead of label** — Base UI's `Select.Value` renders the
+   raw value by default (unlike Radix, which rendered the matched item's children).
+   Triggers were showing `last_30_days`, template IDs, etc. instead of the human label.
+   Fixed via the `items` prop on `Select.Root` (value→label map, Base UI's idiomatic
+   resolver) across: `date-range-selector`, `timeline-filters`, `business-hours-settings`,
+   `template-selector`, `email-composer`. (`sequence-email-settings` already used a
+   function-as-child formatter.)
+
+6. **Select dropdowns opening above the trigger** — the shadcn default
+   `alignItemWithTrigger={true}` flips the popup above when aligning the selected item.
+   Set `side="bottom" alignItemWithTrigger={false}` on every `<SelectContent>` (10 sites)
+   so dropdowns consistently open below.
+
+7. **Select content inner padding** — the shadcn `SelectContent` Popup lacked the `p-1`
+   inner padding that `DropdownMenuContent` has, so items looked cramped against the
+   panel edges. Added `className="p-1"` to all 10 `<SelectContent>` usages (consumer-side,
+   to avoid modifying the shadcn component).
+
+8. **Sidebar redesign** — modernized icons (Home→LayoutGrid, Sequences→Workflow,
+   Timeline→CalendarDays, Templates→SquarePen, Lists→Mails, Contacts→Contact,
+   Settings→Settings2, collapse ChevronLeft→ChevronsLeft) with smaller `size-[18px]`
+   icons, an active-state left accent bar, tighter spacing, and theme-token background.
 
 **Verified:** typecheck 9/9, 0 errors.
 
