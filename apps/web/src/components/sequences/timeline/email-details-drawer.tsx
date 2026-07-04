@@ -215,6 +215,7 @@ export function EmailDetailsDrawer({
                           variant="ghost"
                           size="icon"
                           className="shrink-0"
+                          nativeButton={false}
                           render={
                             <a
                               href={link.originalUrl}

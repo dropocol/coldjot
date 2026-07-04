@@ -309,6 +309,7 @@ function ChecklistCard({
           <Button
             variant="outline"
             className="h-7 px-3 gap-1 text-xs"
+            nativeButton={false}
             render={
               <a href={href} onClick={handleClick}>
                 Setup

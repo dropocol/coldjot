@@ -54,7 +54,7 @@ export function RecentEmails({ userId }: RecentEmailsProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Recent Emails</h2>
-          <Button variant="outline" render={<Link href="/timeline" />}>
+          <Button variant="outline" nativeButton={false} render={<Link href="/timeline" />}>
             View All
           </Button>
         </div>

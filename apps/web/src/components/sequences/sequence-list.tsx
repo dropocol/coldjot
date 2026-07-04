@@ -104,7 +104,12 @@ function SequenceListItem({ sequence }: { sequence: Sequence }) {
             initialStatus={status}
             onStatusChange={handleStatusChange}
           />
-          <Button variant="outline" size="sm" render={<Link href={`/sequences/${sequence.id}`} />}>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href={`/sequences/${sequence.id}`} />}
+          >
             View
           </Button>
         </div>
