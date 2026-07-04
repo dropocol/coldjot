@@ -217,14 +217,15 @@ export function makeFakePrisma(): FakePrisma {
   }
 
   function handleFindUnique(model: ModelName, args: any): Row | null {
-    record(model, "findUnique", args);
+    record(model, "findUnique", args ?? {});
     const where = args.where ?? {};
-    // findUnique is by unique field
     for (const [field, value] of Object.entries(where)) {
       const m = stores[model].uniques.get(field);
       if (m) {
         const id = m.get(String(value));
-        if (id) return applyIncludes(stores[model].rows.get(id)!, args, model);
+        if (id) {
+          return applyIncludes(stores[model].rows.get(id)!, args, model);
+        }
       }
     }
     return null;
@@ -265,13 +266,53 @@ export function makeFakePrisma(): FakePrisma {
   }
 
   function handleCount(model: ModelName, args: any): number {
-    record(model, "count", args);
+    record(model, "count", args ?? {});
     const where = args?.where ?? {};
     let n = 0;
     for (const row of stores[model].rows.values()) {
       if (matchesWhere(row, where)) n++;
     }
     return n;
+  }
+
+  function handleUpsert(model: ModelName, args: any): Row {
+    record(model, "upsert", args ?? {});
+    const where = args.where ?? {};
+    const id = resolveByWhere(model, where);
+    if (id) {
+      const row = stores[model].rows.get(id)!;
+      const update = args.update?.data ?? args.update ?? {};
+      Object.assign(row, update);
+      return row;
+    }
+    // Create path — use `create.data` if present, else `create` itself.
+    const createData = args.create?.data ?? args.create ?? {};
+    return seedRow(model, { ...createData, ...(where.id ? { id: where.id } : {}) });
+  }
+
+  function handleDelete(model: ModelName, args: any): Row {
+    record(model, "delete", args ?? {});
+    const where = args.where ?? {};
+    const id = resolveByWhere(model, where);
+    if (id) {
+      const row = stores[model].rows.get(id)!;
+      stores[model].rows.delete(id);
+      return row;
+    }
+    throw new Error(`FakePrisma: delete on missing ${model}`);
+  }
+
+  function handleDeleteMany(model: ModelName, args: any): { count: number } {
+    record(model, "deleteMany", args ?? {});
+    const where = args.where ?? {};
+    let count = 0;
+    for (const [id, row] of [...stores[model].rows.entries()]) {
+      if (matchesWhere(row, where)) {
+        stores[model].rows.delete(id);
+        count++;
+      }
+    }
+    return { count };
   }
 
   // ---- helpers ---------------------------------------------------------
@@ -418,9 +459,15 @@ export function makeFakePrisma(): FakePrisma {
               return handleFindFirst(m, args ?? {});
             case "findMany":
               return handleFindMany(m, args ?? {});
-            case "count":
-              return handleCount(m, args ?? {});
-            case "aggregate":
+                case "count":
+                  return handleCount(m, args ?? {});
+                case "upsert":
+                  return handleUpsert(m, args ?? {});
+                case "delete":
+                  return handleDelete(m, args ?? {});
+                case "deleteMany":
+                  return handleDeleteMany(m, args ?? {});
+                case "aggregate":
               // Minimal shape so callers reading fields don't crash.
               record(m, "aggregate", args ?? {});
               return { _count: {} };

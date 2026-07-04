@@ -39,6 +39,8 @@ const holder = vi.hoisted(() => ({
   gmailResponses: {} as GmailResponses,
   fakeGmailHolder: { current: null as FakeGmail | null },
   stats: vi.fn(async () => ({})) as Mock,
+  // Token-refresh mock return value (used by PubSub handler tests).
+  refreshTokenResult: "fake-access-token" as string | null,
 }));
 
 // A lazy prisma proxy so vi.mock("@coldjot/database") can return an object
@@ -67,6 +69,17 @@ vi.mock("@/lib/google", () => ({
     },
   },
   sendGmailSMTP: vi.fn(async () => ({ messageId: "smtp-1", threadId: "smtp-thr-1" })),
+}));
+
+// Mock the gmail helper so PubSubHandler's token-refresh + thread-info
+// calls don't hit the real Google API. Tests can override via
+// ctx.setRefreshTokenResult(...).
+holder.refreshTokenResult = "fake-access-token";
+vi.mock("@/lib/google/gmail/helper", () => ({
+  refreshTokenIfNeeded: vi.fn(async () => holder.refreshTokenResult),
+  setOAuth2Credentials: vi.fn(),
+  validateGmailCredentials: vi.fn(),
+  getEmailThreadInfo: vi.fn(async () => ({ threadHeaders: { messageId: "<t@test>" } })),
 }));
 vi.mock("@/lib/stats", () => ({ updateSequenceStats: holder.stats }));
 
