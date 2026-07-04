@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { Separator } from "@coldjot/ui/components/separator";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { PageHeader } from "@/components/layout/page-header";
 import ApolloSearch from "@/components/search/apollo/apollo-search-component";
 import { redirect } from "next/navigation";
 

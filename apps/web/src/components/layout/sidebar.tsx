@@ -31,7 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@coldjot/ui/components/dropdown-menu";
 
-import { GlobalSearch } from "@/components/layout/GlobalSearch";
+import { GlobalSearch } from "@/components/layout/global-search";
 import { ModeToggle } from "@/components/mode-toggle";
 
 const _composeRoute = {
@@ -103,6 +103,16 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { data: session } = useSession();
 
+  /**
+   * A nav item is active when the current path matches its href exactly,
+   * or is nested under it. Home ("/") is exact-match only so it doesn't
+   * light up on every route.
+   */
+  const isRouteActive = (href: string) =>
+    href === "/"
+      ? pathname === "/"
+      : pathname === href || pathname.startsWith(href + "/");
+
   const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <h3
       className={cn(
@@ -117,7 +127,7 @@ export default function Sidebar() {
   return (
     <div
       className={cn(
-        "relative flex h-full flex-col border-r bg-background transition-all duration-300",
+        "relative flex h-full flex-col border-r bg-accent/10 transition-all duration-300",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
@@ -197,7 +207,7 @@ export default function Sidebar() {
             <SectionTitle>Management</SectionTitle>
 
             {managementRoutes.map((route) => {
-              const isActive = pathname === route.href;
+              const isActive = isRouteActive(route.href);
               return (
                 <Link
                   key={route.href}
@@ -339,7 +349,7 @@ export default function Sidebar() {
       <div className="px-3 py-2">
         <div className="space-y-2">
           {otherRoutes.map((route) => {
-            const isActive = pathname === route.href;
+            const isActive = isRouteActive(route.href);
             return (
               <Link
                 key={route.href}

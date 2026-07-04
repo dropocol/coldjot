@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-import Sidebar from "./Sidebar";
+import Sidebar from "./sidebar";
 import type { Session } from "next-auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";

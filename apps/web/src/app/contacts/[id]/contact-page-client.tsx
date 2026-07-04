@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader } from "@/components/layout/PageHeader";
+import { PageHeader } from "@/components/layout/page-header";
 import { Separator } from "@coldjot/ui/components/separator";
 import { User, Mail, Calendar } from "lucide-react";
 

@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { PageHeader } from "@/components/layout/page-header";
 import { Separator } from "@coldjot/ui/components/separator";
 import type { SearchResult, SearchResultType } from "@coldjot/types";
 import { Input } from "@coldjot/ui/components/input";

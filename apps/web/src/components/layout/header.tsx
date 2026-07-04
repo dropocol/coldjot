@@ -1,6 +1,6 @@
 "use client";
 
-import { GlobalSearch } from "./GlobalSearch";
+import { GlobalSearch } from "./global-search";
 import { useSession } from "next-auth/react";
 
 export function Header() {

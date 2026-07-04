@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { Metadata } from "next";
 import { useParams } from "next/navigation";
 import { ListDetailsView } from "@/components/lists/list-details-view";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@coldjot/ui/components/button";
 import { SendHorizonal, Trash2 } from "lucide-react";
 import { Separator } from "@coldjot/ui/components/separator";

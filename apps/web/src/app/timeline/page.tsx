@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader } from "@/components/layout/PageHeader";
+import { PageHeader } from "@/components/layout/page-header";
 import { Separator } from "@coldjot/ui/components/separator";
 import { TimelineSection } from "@/components/sequences/timeline/timeline-section";
 import { useSession } from "next-auth/react";

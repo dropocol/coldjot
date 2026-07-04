@@ -5,7 +5,7 @@ import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { User, Trash2, MoreHorizontal, SendHorizonal } from "lucide-react";
 import { Button } from "@coldjot/ui/components/button";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   Table,
   TableBody,
