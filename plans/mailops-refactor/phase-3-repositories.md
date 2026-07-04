@@ -12,8 +12,8 @@ Phase 1 wrote the interfaces + Prisma impls by *copying* the existing calls. Pha
 
 After Phase 3:
 - `grep -r "prisma\." apps/mailops/src` returns matches only inside `repositories/prisma/*` and `composition-root.ts`.
-- Domain code (controllers, processors, lib services) is DB-agnostic. You could swap Prisma for Drizzle by writing new impls in `repositories/drizzle/*` and changing one line in `composition-root.ts`.
-- Phase 0 characterization tests can inject the in-memory fake prisma *without module mocking* — just construct the service with `new FakeEmailTrackingRepository()`.
+- Domain code (controllers, processors, lib services) is DB-agnostic — it depends on repository interfaces, not on `@prisma/client`. **Prisma remains the only ORM**; the point is separation of concerns and testability, not replacing Prisma.
+- Phase 0 characterization tests can inject the in-memory fake repository *without module mocking* — just construct the service with `new FakeEmailTrackingRepository()`.
 
 ## Migration strategy
 

@@ -1,6 +1,8 @@
 # Mailops Refactor Plan
 
-> **Behavior-preserving structural refactor** of `apps/mailops`. Compartmentalize the monolith into layered, replaceable units (transport, repository, domain service, job, controller). No functionality changes — output of every code path stays identical. Each layer sits behind an interface so any one piece (Gmail adapter, Prisma, BullMQ, the tracking module) can be swapped later without rippling through the rest.
+> **Behavior-preserving structural refactor** of `apps/mailops`. Compartmentalize the monolith into layered, replaceable units (transport, repository, domain service, job, controller). No functionality changes — output of every code path stays identical. Each layer sits behind an interface so the codebase is testable (inject fakes in tests) and cleanly separated (domain logic doesn't know Prisma/HTTP/BullMQ details).
+>
+> **Prisma stays the only database layer.** The repository *interfaces* are a seam for testability and separation of concerns — there is one implementation each (`Prisma*Repository`), and no second ORM (no Drizzle, no raw-SQL layer) is planned or implied.
 
 ## Read this first
 
@@ -35,17 +37,18 @@ A standalone Express + BullMQ service that *works* but is hard to reason about, 
 
 ## The guiding principle
 
-> **Layered + injected, not singleton + global.** Every external concern (Gmail API, SMTP, Prisma, Redis, BullMQ, clock) lives behind a narrow interface and is *passed in* to the thing that uses it. The job processors become thin orchestrators that call domain services, which call repositories, which call Prisma. Routes become thin HTTP adapters that call controllers, which call services. Nothing reaches across layers for a concrete dependency.
+> **Layered + injected, not singleton + global.** Every external concern (Gmail API, Prisma, Redis, BullMQ, clock) lives behind a narrow interface and is *passed in* to the thing that uses it. The job processors become thin orchestrators that call domain services, which call repositories, which call Prisma. Routes become thin HTTP adapters that call controllers, which call services. Nothing reaches across layers for a concrete dependency.
 
-This is what makes each piece *individually replaceable*:
+The primary wins are **testability** (inject fakes — no module mocking) and **separation of concerns** (domain code says "mark as sent", not "run a Prisma update with a nested events.create"). The same seams *also* make individual pieces replaceable if you ever choose to — but that's a side benefit, not the goal:
 
-| Want to replace… | What changes |
+| If, in the future, you wanted to change… | What the seam lets you do |
 |---|---|
-| Gmail API with another provider | Implement `MailTransport` against the new provider. Nothing else moves. |
-| Prisma with Drizzle/raw SQL | Implement the repository interfaces. Services don't know. |
-| BullMQ with DB-as-queue (the postponed `mailops-consolidation` plan) | The domain services already don't talk to BullMQ — only the thin `*Processor` wrappers do. |
-| The tracking module | `TrackingService` interface is the only thing consumers import. |
-| PubSub push with polling | `InboxSyncService` interface has two impls already (PubSub active, ThreadWatch dormant). Pick one. |
+| Gmail API → another send provider | Add a second `MailTransport` impl. Nothing else moves. |
+| BullMQ → DB-as-queue (the postponed `mailops-consolidation` plan) | The domain services already don't talk to BullMQ — only the thin `*Processor` wrappers do. |
+| PubSub push → polling | `InboxSource` interface; add a second impl. |
+| The tracking module internals | `TrackingService` interface is the only thing consumers import. |
+
+> **Note on the database layer:** Prisma 7 is and remains the only ORM. The repository interfaces are *not* a step toward Drizzle or raw SQL — they exist purely so domain services don't import `@prisma/client` directly and tests can inject in-memory fakes. One interface, one Prisma implementation, permanently.
 
 ## Target layering
 
@@ -79,7 +82,7 @@ The composition root is the only file that constructs real instances and wires t
 ## Scope & constraints
 
 - ✅ **In scope:** restructure into layers, extract interfaces, inject dependencies, delete dead code, remove the duplicate tracking surface, split the three god-objects, isolate Prisma behind repositories, characterization tests covering **every** feature, permanent test suite with full coverage at the end.
-- ❌ **Out of scope (deliberately):** changing any observable behavior, swapping BullMQ/Prisma/Gmail for alternatives (only the *seams* are added — actual swaps are follow-ups), consolidating into the Next.js app, schema changes.
+- ❌ **Out of scope (deliberately):** changing any observable behavior, swapping BullMQ/Prisma/Gmail for alternatives (only the *seams* are added — no second ORM is planned; Prisma 7 stays the sole database layer), consolidating into the Next.js app, schema changes.
 
 ### Locked decisions
 
