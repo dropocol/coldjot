@@ -166,7 +166,7 @@ export function PaginationControls({
               <SelectTrigger className="h-8 w-[70px]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom" alignItemWithTrigger={false}>
                 {PAGE_SIZE_OPTIONS.map((size) => (
                   <SelectItem key={size} value={size.toString()}>
                     {size}
@@ -219,7 +219,7 @@ export function PaginationControls({
             <SelectTrigger className="h-8 w-[70px]">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="bottom" alignItemWithTrigger={false}>
               {PAGE_SIZE_OPTIONS.map((size) => (
                 <SelectItem key={size} value={size.toString()}>
                   {size}

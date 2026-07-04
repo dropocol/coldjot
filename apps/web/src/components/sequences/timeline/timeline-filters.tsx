@@ -68,11 +68,22 @@ export function TimelineFilters() {
   // TODO: Confirm if these filters are working
   return (
     <div className="flex items-center gap-2">
-      <Select value={currentStatus} onValueChange={(v) => handleStatusChange(v as string)}>
+      <Select
+        value={currentStatus}
+        onValueChange={(v) => handleStatusChange(v as string)}
+        items={{
+          all: "All Emails",
+          sent: "Sent",
+          opened: "Opened",
+          clicked: "Clicked",
+          replied: "Replied",
+          bounced: "Bounced",
+        }}
+      >
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Filter by status" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent side="bottom" alignItemWithTrigger={false}>
           <SelectItem value="all">All Emails</SelectItem>
           <SelectItem value="sent">Sent</SelectItem>
           <SelectItem value="opened">Opened</SelectItem>

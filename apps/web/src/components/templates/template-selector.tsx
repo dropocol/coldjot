@@ -26,11 +26,14 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
   };
 
   return (
-    <Select onValueChange={(v) => handleSelect(v as string)}>
+    <Select
+      onValueChange={(v) => handleSelect(v as string)}
+      items={Object.fromEntries(templates.map((t) => [t.id, t.name]))}
+    >
       <SelectTrigger className="w-[200px]">
         <SelectValue placeholder="Select a template" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent side="bottom" alignItemWithTrigger={false}>
         {templates.map((template) => (
           <SelectItem key={template.id} value={template.id}>
             {template.name}

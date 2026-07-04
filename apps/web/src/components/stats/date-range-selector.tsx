@@ -22,13 +22,21 @@ const DATE_RANGE_OPTIONS = [
   { value: "all_time", label: "All Time" },
 ] as const;
 
+const LABEL_BY_VALUE = Object.fromEntries(
+  DATE_RANGE_OPTIONS.map((o) => [o.value, o.label])
+) as Record<DateRange, string>;
+
 export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v as DateRange)}>
       <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Select time range" />
+        <SelectValue placeholder="Select time range">
+          {(val: string | null) =>
+            val ? (LABEL_BY_VALUE[val as DateRange] ?? val) : "Select time range"
+          }
+        </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent side="bottom" alignItemWithTrigger={false}>
         {DATE_RANGE_OPTIONS.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}

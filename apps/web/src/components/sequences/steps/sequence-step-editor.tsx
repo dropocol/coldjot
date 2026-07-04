@@ -157,7 +157,7 @@ export function SequenceStepEditor({
                                 <SelectTrigger className="w-[120px]">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent side="bottom" alignItemWithTrigger={false}>
                                   <SelectItem value="minutes">
                                     minutes
                                   </SelectItem>

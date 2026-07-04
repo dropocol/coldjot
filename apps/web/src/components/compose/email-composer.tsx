@@ -285,11 +285,15 @@ export default function EmailComposer({ templates }: Props) {
 
         <div>
           <label className="text-sm font-medium">Select Template</label>
-          <Select value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v as string)}>
+          <Select
+            value={selectedTemplate}
+            onValueChange={(v) => setSelectedTemplate(v as string)}
+            items={Object.fromEntries(templates.map((t) => [t.id, t.name]))}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Choose a template" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="bottom" alignItemWithTrigger={false}>
               {templates.map((template) => (
                 <SelectItem key={template.id} value={template.id}>
                   {template.name}

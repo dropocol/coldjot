@@ -161,11 +161,15 @@ export function BusinessHoursSettings({
             value={scheduleType}
             onValueChange={(v) => handleScheduleTypeChange(v as BusinessScheduleType)}
             disabled={isLoading}
+            items={{
+              business: "Business Hours",
+              custom: "Custom Schedule",
+            }}
           >
             <SelectTrigger className="max-w-md">
               <SelectValue placeholder="Select schedule type" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="bottom" alignItemWithTrigger={false}>
               <SelectItem value="business">Business Hours</SelectItem>
               <SelectItem value="custom">Custom Schedule</SelectItem>
             </SelectContent>
