@@ -1,32 +1,12 @@
-/*
- * @coldjot/ui — shared design system CSS (the single Tailwind v4 entry point).
- *
- * This file is imported by every consuming app in its root layout:
- *   import "@coldjot/ui/globals.css";
- *
- * It owns: @import "tailwindcss", the animation framework, @source directives
- * (scanning apps + this package), @custom-variant, @theme, :root/.dark tokens,
- * and base resets. Apps do NOT need their own globals.css for Tailwind.
- *
- * Pattern adapted from the official shadcn monorepo sample. The @source paths
- * are relative to this file's location (packages/ui/src/styles/).
- */
-
-/* ── Tailwind + animation framework ────────────────────────────────────── */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* ── Dark mode ─────────────────────────────────────────────────────────── */
 @custom-variant dark (&:is(.dark *));
-
-/* ── Content sources ───────────────────────────────────────────────────── */
-/* Tell Tailwind v4 to scan the consuming apps + this package for class
-   usage so the generated CSS includes every class actually used. */
 @source "../../../apps/**/*.{ts,tsx}";
+@source "../../../components/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
 
-/* ── Theme tokens ──────────────────────────────────────────────────────── */
 @theme inline {
     --font-heading: var(--font-sans);
     --color-sidebar-ring: var(--sidebar-ring);
@@ -70,7 +50,6 @@
     --font-sans: var(--font-sans);
 }
 
-/* ── Light theme (neutral base color, oklch) ───────────────────────────── */
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.153 0.006 107.1);
@@ -106,7 +85,6 @@
     --sidebar-ring: oklch(0.737 0.021 106.9);
 }
 
-/* ── Dark theme ────────────────────────────────────────────────────────── */
 .dark {
     --background: oklch(0.153 0.006 107.1);
     --foreground: oklch(0.988 0.003 106.5);
@@ -141,16 +119,14 @@
     --sidebar-ring: oklch(0.58 0.031 107.3);
 }
 
-/* ── Base resets ───────────────────────────────────────────────────────── */
 @layer base {
-    * {
-        @apply border-border outline-ring/50;
+  * {
+    @apply border-border outline-ring/50;
     }
-    body {
-        @apply bg-background text-foreground;
+  body {
+    @apply bg-background text-foreground;
     }
-    button:not(:disabled),
-    [role="button"]:not(:disabled) {
-        cursor: pointer;
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
     }
 }
