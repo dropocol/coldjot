@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@coldjot/ui/components/avat
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@coldjot/ui/components/dropdown-menu";
 
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
+import { ModeToggle } from "@/components/mode-toggle";
 
 const _composeRoute = {
   label: "Compose",
@@ -350,47 +351,50 @@ export default function Sidebar() {
 
       {session?.user && (
         <div className="border-t p-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start gap-2 px-2",
-                  isCollapsed && "justify-center"
-                )}
-              >
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={session.user.image || ""} />
-                  <AvatarFallback>
-                    {session.user.name?.[0] || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <span
+          <div className="flex items-center gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
                   className={cn(
-                    "truncate transition-all duration-300",
-                    isCollapsed && "hidden w-0 opacity-0"
+                    "flex-1 justify-start gap-2 px-2",
+                    isCollapsed && "justify-center"
                   )}
                 >
-                  {session.user.name}
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-[200px]"
-              side="right"
-              sideOffset={18}
-            >
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => signOut()}
-                className="text-red-600"
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={session.user.image || ""} />
+                    <AvatarFallback>
+                      {session.user.name?.[0] || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span
+                    className={cn(
+                      "truncate transition-all duration-300",
+                      isCollapsed && "hidden w-0 opacity-0"
+                    )}
+                  >
+                    {session.user.name}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-[200px]"
+                side="right"
+                sideOffset={18}
               >
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => signOut()}
+                  className="text-destructive"
+                >
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <ModeToggle />
+          </div>
         </div>
       )}
     </div>

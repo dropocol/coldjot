@@ -2,6 +2,17 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Override accordion keyframes to use Base UI's CSS var name
+   (--accordion-panel-height) instead of Radix's (--radix-accordion-content-height). */
+@keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--accordion-panel-height, auto); }
+}
+@keyframes accordion-up {
+    from { height: var(--accordion-panel-height, auto); }
+    to { height: 0; }
+}
+
 @custom-variant dark (&:is(.dark *));
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../../../components/**/*.{ts,tsx}";
