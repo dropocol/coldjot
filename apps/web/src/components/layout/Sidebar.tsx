@@ -4,15 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@coldjot/ui/lib/utils";
 import {
-  Home,
-  Users,
-  FileText,
-  Mail,
-  Settings,
-  ChevronLeft,
+  LayoutGrid,
+  Workflow,
+  CalendarDays,
+  SquarePen,
+  Mails,
+  Contact,
+  Settings2,
+  ChevronsLeft,
   Search,
   Sparkles,
-  Calendar,
+  Mail,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
@@ -42,33 +44,33 @@ const _composeRoute = {
 const managementRoutes = [
   {
     label: "Home",
-    icon: Home,
+    icon: LayoutGrid,
     href: "/",
   },
   {
     label: "Sequences",
-    icon: Sparkles, // Assuming Sparkles icon is suitable; replace with appropriate icon if needed
+    icon: Workflow,
     href: "/sequences",
   },
   {
     label: "Timeline",
-    icon: Calendar,
+    icon: CalendarDays,
     href: "/timeline",
   },
 
   {
     label: "Templates",
-    icon: FileText,
+    icon: SquarePen,
     href: "/templates",
   },
   {
     label: "Lists",
-    icon: Mail, // Assuming Mail icon is suitable; replace with appropriate icon if needed
+    icon: Mails,
     href: "/lists",
   },
   {
     label: "Contacts",
-    icon: Users,
+    icon: Contact,
     href: "/contacts",
   },
 ];
@@ -76,7 +78,7 @@ const managementRoutes = [
 const otherRoutes = [
   {
     label: "Settings",
-    icon: Settings,
+    icon: Settings2,
     href: "/settings/profile",
   },
 ];
@@ -103,7 +105,10 @@ export default function Sidebar() {
 
   const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <h3
-      className={cn("text-xs font-medium text-muted-foreground px-3 mb-2", isCollapsed && "hidden")}
+      className={cn(
+        "px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70",
+        isCollapsed && "hidden"
+      )}
     >
       {children}
     </h3>
@@ -112,7 +117,7 @@ export default function Sidebar() {
   return (
     <div
       className={cn(
-        "relative flex h-full flex-col bg-neutral-50 dark:bg-background border-r transition-all duration-300",
+        "relative flex h-full flex-col border-r bg-background transition-all duration-300",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
@@ -149,10 +154,13 @@ export default function Sidebar() {
         <Button
           variant="ghost"
           size="icon"
-          className="ml-auto h-8 w-8 transition-all duration-300"
+          className="ml-auto h-7 w-7 text-muted-foreground hover:text-foreground"
           onClick={() => setIsCollapsed(!isCollapsed)}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <ChevronLeft className={cn("h-4 w-4 transition-all", isCollapsed && "rotate-180")} />
+          <ChevronsLeft
+            className={cn("size-4 transition-transform duration-300", isCollapsed && "rotate-180")}
+          />
         </Button>
       </div>
 
@@ -188,33 +196,48 @@ export default function Sidebar() {
           <div className="space-y-2">
             <SectionTitle>Management</SectionTitle>
 
-            {managementRoutes.map((route) => (
-              <Link
-                key={route.href}
-                href={route.href}
-                className={cn(
-                  "flex items-center gap-x-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-all hover:bg-muted h-8",
-                  "text-muted-foreground hover:text-foreground",
-                  pathname === route.href && "bg-muted text-foreground",
-                  isCollapsed && "justify-center px-2"
-                )}
-              >
-                <route.icon
+            {managementRoutes.map((route) => {
+              const isActive = pathname === route.href;
+              return (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  title={isCollapsed ? route.label : undefined}
                   className={cn(
-                    "h-5 w-5 flex-shrink-0",
-                    pathname === route.href ? "text-foreground" : "text-muted-foreground"
-                  )}
-                />
-                <span
-                  className={cn(
-                    "transition-all duration-300",
-                    isCollapsed && "hidden w-0 opacity-0"
+                    "group relative flex h-8 items-center gap-x-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors",
+                    isActive
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    isCollapsed && "justify-center px-0"
                   )}
                 >
-                  {route.label}
-                </span>
-              </Link>
-            ))}
+                  {/* Active accent bar */}
+                  <span
+                    className={cn(
+                      "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary transition-opacity",
+                      isActive ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <route.icon
+                    className={cn(
+                      "size-[18px] shrink-0 transition-colors",
+                      isActive
+                        ? "text-foreground"
+                        : "text-muted-foreground group-hover:text-foreground"
+                    )}
+                    strokeWidth={isActive ? 2.25 : 2}
+                  />
+                  <span
+                    className={cn(
+                      "truncate transition-all duration-200",
+                      isCollapsed && "hidden w-0 opacity-0"
+                    )}
+                  >
+                    {route.label}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
 
           {/* Tools Section */}
@@ -315,30 +338,47 @@ export default function Sidebar() {
       {/* System Section */}
       <div className="px-3 py-2">
         <div className="space-y-2">
-          {otherRoutes.map((route) => (
-            <Link
-              key={route.href}
-              href={route.href}
-              className={cn(
-                "flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-muted",
-                "text-muted-foreground hover:text-foreground",
-                pathname === route.href && "bg-muted text-foreground",
-                isCollapsed && "justify-center px-2"
-              )}
-            >
-              <route.icon
+          {otherRoutes.map((route) => {
+            const isActive = pathname === route.href;
+            return (
+              <Link
+                key={route.href}
+                href={route.href}
+                title={isCollapsed ? route.label : undefined}
                 className={cn(
-                  "h-5 w-5 flex-shrink-0",
-                  pathname === route.href ? "text-foreground" : "text-muted-foreground"
+                  "group relative flex h-8 items-center gap-x-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors",
+                  isActive
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  isCollapsed && "justify-center px-0"
                 )}
-              />
-              <span
-                className={cn("transition-all duration-300", isCollapsed && "hidden w-0 opacity-0")}
               >
-                {route.label}
-              </span>
-            </Link>
-          ))}
+                <span
+                  className={cn(
+                    "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary transition-opacity",
+                    isActive ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                <route.icon
+                  className={cn(
+                    "size-[18px] shrink-0 transition-colors",
+                    isActive
+                      ? "text-foreground"
+                      : "text-muted-foreground group-hover:text-foreground"
+                  )}
+                  strokeWidth={isActive ? 2.25 : 2}
+                />
+                <span
+                  className={cn(
+                    "truncate transition-all duration-200",
+                    isCollapsed && "hidden w-0 opacity-0"
+                  )}
+                >
+                  {route.label}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
