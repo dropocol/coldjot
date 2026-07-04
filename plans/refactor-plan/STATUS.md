@@ -1,10 +1,38 @@
 # Refactor Plan — Status
 
-> **Last updated:** consolidation decision (postponed — see below); plan 06 deferred to the very end; **plans 10 + 12 are the next active plans**. Plan 07 (frontend react-query consolidation) code complete; plan 02 code-done; plan 08 done. This file tracks the 12-plan refactor (`00-overview.md` → `12-testing-strategy.md`).
+> **Quick reference:** see the table below for the status of every plan at a glance. Detailed per-plan notes follow in the "Plan-by-plan status" section.
+>
+> **Legend:** ✅ Done · 🟢 Code done, operator action needed · 🟡 Code done, awaiting verification · ⏸️ Blocked/Deferred · ⬜ Not started
+
+## At-a-glance status
+
+| # | Plan | Status | Notes |
+|---|---|---|---|
+| [01](./01-security-idor-authorization.md) | IDOR + authorization layer | ✅ **DONE** | committed `fa69382` |
+| [02](./02-security-secrets-credentials.md) | Rotate secrets + encrypt OAuth tokens | 🟢 **CODE DONE — 2 operator steps left** | rotate secret values; run `wipe-oauth-tokens.ts` + re-login Gmail |
+| [03](./03-security-mailops-auth-cors.md) | Service auth + CORS allowlist | ✅ **DONE** | committed `fd6c416` |
+| [04](./04-security-input-validation.md) | zod validation across API routes | ✅ **DONE** | committed `a2629d5` |
+| [05](./05-security-tracking-webhook.md) | Fix no-op tracking + open redirect | ✅ **DONE** | committed `42941ae` |
+| [06](./06-database-schema.md) | Indexes, cascade/soft-delete, migration hygiene | ⏸️ **DEFERRED — last** | owner decision: do at the very end; needs DB backup + staging |
+| [07](./07-frontend-data-fetching.md) | Consolidate on react-query | ✅ **DONE** | whole web app on typed `api` + react-query; ~50 components migrated |
+| [08](./08-frontend-code-quality.md) | Remove console.log/any, dead code, lint | ✅ **DONE** | `any` 76→0; lint 0 errors / 0 warnings; all rules `error` |
+| [09](./09-backend-logging-pii.md) | Redact PII/tokens from logs | ✅ **DONE** | committed `70b3b74` |
+| [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | 🟡 **CODE DONE — awaiting smoke-test** | committed `e2e2e77`; DLQ `:`-naming bug fixed in plan 13 |
+| [11](./11-tooling-config-dependencies.md) | Align deps, consolidate env, eslint config | ✅ **SUPERSEDED** | covered by the dependency-upgrade pass |
+| [12](./12-testing-strategy.md) | Testing baseline | ⏸️ **BLOCKED on plan 10 smoke-test** | start only after plan 10 verified |
+| [13](./13-monorepo-scripts-devexperience.md) | Monorepo scripts, Turbo, dev-experience cleanup | ✅ **DONE** | committed `945b08c` + `3d9969b`; build/typecheck/lint green |
+| [14](./14-centralize-shared-config-ui.md) | Centralize config + extract `packages/ui` + Radix→Base UI | ✅ **DONE** | `@coldjot/tsconfig`, `@coldjot/eslint-config`, `@coldjot/ui` (base-ui), sonner, next-themes, prettier |
+
+**Totals:** 10 done · 1 awaiting owner action (02) · 1 awaiting smoke-test (10) · 2 blocked/deferred (06, 12) · 1 superseded (11) — **0 not started.**
+
+---
+
+> **Last updated:** plan 14 DONE — all shared config centralized, `@coldjot/ui` extracted with Base UI + sonner + next-themes; full Radix→Base UI migration complete. Plan 10 (BullMQ resilience) committed and **awaiting owner smoke-testing**. Plan 06 deferred to the very end. Plan 12 blocked on plan 10.
+>
 > **Two parallel workstreams** live on two branch chains off `master`:
 >
 > - **Security/quality refactor** → `refactor/old-code-update` (plans 01, 03, 04, 05, 09, + part of 11)
-> - **Dependency modernization + plan 08** → `upgrade/remaining-majors` (built on top of `refactor/old-code-update`; supersedes most of plan 11; also completed plan 08)
+> - **Dependency modernization + plans 08, 13, 14** → `upgrade/remaining-majors` (built on top of `refactor/old-code-update`; supersedes most of plan 11; also completed plans 08, 13, 14)
 >
 > Read `../HANDOFF.md` for the deploy-blocking operational items (env tokens, secret rotation, DB migrations).
 >
@@ -12,7 +40,7 @@
 >
 > `plans/mailops-consolidation/` was evaluated and **deliberately postponed** (not adopted now; may revisit in the future). Consequences:
 >
-> - **Plan 10 (BullMQ resilience) is NOT moot** — it's the next active coding plan. BullMQ stays in production for now, so hardening it (retries, backoff, DLQ, idempotency) is real, valuable work.
+> - **Plan 10 (BullMQ resilience) is NOT moot** — BullMQ stays in production for now, so hardening it (retries, backoff, DLQ, idempotency) is real, valuable work.
 > - **Plan 03 (service auth + CORS) stays load-bearing** — the web↔mailops internal auth boundary remains.
 > - Do **not** start any consolidation work; revisit the decision later.
 
@@ -32,9 +60,11 @@
 | [07](./07-frontend-data-fetching.md)       | Consolidate on react-query                      | ✅ **DONE**                               | `upgrade/remaining-majors` — see the plan-07 section below. The whole web app now fetches via the typed `api` client + react-query hooks; the hand-rolled `sequence-context` is backed by react-query; ~50 components/pages migrated. `tsc --noEmit` clean, web ESLint 0/0, `next build` passes.                                                                                                                                                                                                                |
 | [08](./08-frontend-code-quality.md)        | Remove console.log/any, dead code, lint         | ✅ **DONE**                               | all `console.log` removed; `any` 76→0; unused-vars 335→0; exhaustive-deps 10→0; duplicated `transformEmailData` extracted; dead toolbar files deleted; stale step-reorder TODO resolved. **All ESLint rules now `error`** (no-explicit-any, no-unused-vars, rules-of-hooks, exhaustive-deps, useless-catch, prefer-const, preserve-caught-error, etc.). Web lint fully clean: 0 errors / 0 warnings                                                                                                             |
 | [09](./09-backend-logging-pii.md)          | Redact PII/tokens from logs                     | ✅ **DONE**                               | `refactor/old-code-update` (`70b3b74`); pino call-site refactor + pino 10 in upgrade chain                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| [10](./10-backend-job-resilience.md)       | BullMQ retries/backoff/DLQ                      | 🔴 **NEXT ACTIVE PLAN**                  | consolidation postponed → BullMQ stays in prod → plan 10 is real. NOT moot.                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| [10](./10-backend-job-resilience.md)       | BullMQ retries/backoff/DLQ                      | 🟡 **CODE DONE — awaiting smoke-test**    | committed `e2e2e77`; DLQ `:`-naming bug fixed in plan 13. Smoke-test: force 5x failure → confirm job lands in `<name>-dl` and is visible in Bull-Board.                                                                                                                                                                                                                                                                                                                                                          |
 | [11](./11-tooling-config-dependencies.md)  | Align deps, consolidate env, eslint config      | ✅ **SUPERSEDED**                         | fully covered by the dependency-upgrade pass (see below) — every dep is now latest                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| [12](./12-testing-strategy.md)             | Testing baseline                                | 🟡 **AFTER 10**                          | do once plan 10 lands                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| [12](./12-testing-strategy.md)             | Testing baseline                                | ⏸️ **BLOCKED on plan 10 smoke-test**      | start only after plan 10 verified working                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [13](./13-monorepo-scripts-devexperience.md) | Monorepo scripts, Turbo, dev-experience cleanup | ✅ **DONE**                               | `upgrade/remaining-majors` (`945b08c` + `3d9969b`). Fixed broken root `dev`/`build`/`start`/`db:*` scripts; rewrote Turbo config; removed dead deps; unified env loading; added `typecheck`/`lint` aggregates; one-command web+mailops dev.                                                                                                                                                                                                                                                                       |
+| [14](./14-centralize-shared-config-ui.md)  | Centralize config + extract `packages/ui` + Radix→Base UI | ✅ **DONE**                    | `upgrade/remaining-majors`. Half A: `@coldjot/tsconfig`, `@coldjot/eslint-config`, `.prettierrc`. Half B: `@coldjot/ui` with all 37 shadcn components (base-nova style, Base UI), shared globals.css with oklch theme, next-themes dark mode, sonner toast. Full Radix→Base UI migration with backward-compat `asChild` shims. 146 hardcoded color classes → theme tokens. See the plan-14 section below.                                                                                                          |
 
 
 ---
@@ -232,13 +262,80 @@ Code path: AES-256-GCM field crypto + Prisma `$extends` encrypt-on-write / decry
 
 ## How to continue in a new chat
 
-1. **Branches:** `refactor/old-code-update` (security) is the base; `upgrade/remaining-majors` (deps) is stacked on top. Merge order: security first, then deps — or merge `upgrade/remaining-majors` directly (it contains both).
+1. **Branches:** `refactor/old-code-update` (security) is the base; `upgrade/remaining-majors` (deps + plans 13/14) is stacked on top. Merge order: security first, then deps — or merge `upgrade/remaining-majors` directly (it contains both).
 2. **Pick up where this left off:**
   - To continue the **security** work: plan 02 is code-done (you just run the wipe + re-login + rotate values — see "Plan 02 — operator runbook" below). Plan 06 (DB schema) is **deferred to the very end** (owner decision).
-  - To continue **quality** work: **plan 10 (BullMQ resilience) is the next active plan** (consolidation was postponed, so BullMQ is still in prod — hardening it is real work). Then **plan 12 (testing)**. Plans 07 and 08 are fully done.
-  - **Plan 07 is done** — see the plan-07 completion section below for what landed and the carryover smoke-tests.
+  - To continue **quality** work: **plan 10 (BullMQ resilience)** is code-done and awaiting smoke-test. Then **plan 12 (testing)**. Plans 07, 08, 13, and 14 are fully done.
+  - **Plans 13 + 14 are done** — monorepo scripts cleaned up, shared config centralized, `@coldjot/ui` extracted with Base UI + sonner.
 3. **Read first:** `00-overview.md` for the full audit, then the specific plan doc. Each plan doc is self-contained with file:line refs and verification checklists.
-4. **Verify before merging:** `tsc --noEmit` + `npm run build` in both apps; smoke-test the auth boundary (401 without token), IDOR (403/404 cross-tenant), and tracking (event recorded).
+4. **Verify before merging:** `npm run typecheck` + `npm run lint` + `npm run build`; smoke-test the auth boundary (401 without token), IDOR (403/404 cross-tenant), tracking (event recorded), and the UI (Sheets, Dialogs, Tooltips, Selects, dark mode toggle).
+
+---
+
+## ✅ Plan 13 — Monorepo scripts, Turbo & dev-experience cleanup — DONE
+
+Committed `945b08c` + `3d9969b` on `upgrade/remaining-majors`.
+
+**Root scripts fixed (was partly broken):**
+- `build` was a no-op (`turbo run build:development` — no package defined it) → now `turbo run build`.
+- `start` was a no-op → now `turbo run start`.
+- `db:migrate`/`db:push`/`db:reset` ran `dotenv -e .env` against a nonexistent root `.env` → now delegate to the `@coldjot/database` workspace.
+- New: `npm run dev` runs web + mailops only; `npm run dev:all` includes package watchers; `npm run typecheck` / `npm run lint` / `npm run clean` aggregates.
+
+**Turbo rewired:** correct `globalEnv`/`globalPassThroughEnv`; `db:deploy` no longer a build side-effect; consistent caching.
+
+**Dead deps removed:** axios, concurrently, nodemon, react-day-picker/react-intersection-observer/@hookform/resolvers (from mailops), fs-extra, dotenv-cli. 6 lint packages moved to devDependencies.
+
+**Env loading unified:** web now uses the same zod-at-runtime pattern as mailops.
+
+**Also fixed:** latent plan-10 DLQ naming bug (`<name>:dl` → `<name>-dl`; BullMQ rejects `:`).
+
+---
+
+## ✅ Plan 14 — Centralize shared config + extract `@coldjot/ui` + Radix→Base UI — DONE
+
+Multiple commits on `upgrade/remaining-majors`.
+
+### Half A — Shared config packages
+
+- **`@coldjot/tsconfig`** — `base.json` / `library.json` / `app.json` presets; all 4 workspace tsconfigs now extend them.
+- **`@coldjot/eslint-config`** — `base()` / `next()` / `types()` presets; all 4 workspace eslint configs collapsed to ~3 lines each.
+- **Root `.prettierrc.json` + `.prettierignore`** — the `format` script now has an actual config.
+
+### Half B — `@coldjot/ui` design system package
+
+**Architecture (following the official shadcn monorepo sample):**
+- Subpath exports: `@coldjot/ui/components/button`, `@coldjot/ui/lib/utils`, `@coldjot/ui/hooks/use-toast`, `@coldjot/ui/globals.css`
+- No build step — source consumed directly by apps via `transpilePackages`
+- `globals.css` owns everything: `@import "tailwindcss"` + `tw-animate-css` + `shadcn/tailwind.css` + `@source` directives + `@theme inline` + `:root`/`.dark` tokens + base resets
+- Apps import via `@import "@coldjot/ui/globals.css"` (clean, no relative paths)
+
+**Theme adopted from shadcn sample:**
+- `oklch()` color tokens (light + dark) with your custom blue-gray palette
+- Sidebar tokens, chart tokens, expanded radius scale
+- `next-themes` for dark mode (class-based, system default, `d` keyboard hotkey + visible sun/moon toggle in sidebar)
+- Fonts: Inter (sans) + Geist Mono (mono) via `next/font/google`
+
+**Full Radix UI → Base UI migration:**
+- All 37+ components reinstalled from the `base-nova` registry style
+- Structural changes: `Overlay→Backdrop`, `Content→Popup`, `Viewport→List`, `Trigger→Tab`, `Portal > Positioner > Popup` for overlays
+- `asChild → render` prop throughout
+- Data attributes modernized: `data-[state=open] → data-open`, etc.
+- All `@radix-ui/*` and `radix-ui` deps removed; `@base-ui/react` is the sole primitive dep
+- **Backward-compat shims:** all 5 trigger wrappers + Button + DropdownMenuItem + TooltipProvider accept the old `asChild`/`delayDuration` props and translate internally (so 67 consumer-side `asChild` usages keep working without touching 33+ files)
+
+**Toast → sonner:**
+- All 47 files migrated from `react-hot-toast` + `useToast` hook → `sonner`
+- `toast({title, description, variant})` → `toast.success/error(title, {description})`
+- Removed `react-hot-toast` dependency
+
+**Dark mode fix:**
+- 146 hardcoded color classes (`bg-white`, `text-gray-500`, `bg-gray-100`, etc.) replaced with semantic theme tokens (`bg-background`, `text-muted-foreground`, `bg-muted`)
+- Eliminated the "half light, half dark" rendering issue
+
+**Verified:** typecheck 9/9, lint 9/9, build OK, zero runtime errors.
+
+---
 
 ## Quick verification commands (Node 24)
 
@@ -248,21 +345,19 @@ npm install --legacy-peer-deps --ignore-scripts
 npm approve-scripts @prisma/client @prisma/engines prisma
 npx prisma generate --schema=packages/database/prisma/schema.prisma
 
-# Typecheck
-(cd packages/types && npx tsc --noEmit)
-(cd packages/database && npx tsc --noEmit)
-(cd apps/mailops && npx tsc --noEmit)
-(cd apps/web && npx tsc --noEmit)
+# Typecheck (all workspaces via turbo)
+npm run typecheck
 
-# Build per-package (the root `npm run build` runs `turbo run build:development`,
-# which no package defines — a separate turbo-config gap. Build workspaces directly:)
-(cd packages/types && npm run build)        # DTS build fixed (ignoreDeprecations)
-(cd packages/database && npm run build)
-(cd apps/mailops && npm run build)
-(cd apps/web && MAILOPS_SERVICE_TOKEN=<token> APP_ENV=development npx next build)
+# Build (all workspaces via turbo)
+npm run build
 
-# Lint (web is now fully clean: 0 errors / 0 warnings; mailops clean)
-(cd apps/web && npx eslint .)
-(cd apps/mailops && npx eslint .)
+# Lint (all workspaces via turbo)
+npm run lint
+
+# Dev (web + mailops in one command)
+npm run dev
+
+# Format
+npm run format
 ```
 
