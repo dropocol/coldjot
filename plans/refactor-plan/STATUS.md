@@ -9,25 +9,26 @@
 | # | Plan | Status | Notes |
 |---|---|---|---|
 | [01](./01-security-idor-authorization.md) | IDOR + authorization layer | ✅ **DONE** | committed `fa69382` |
-| [02](./02-security-secrets-credentials.md) | Rotate secrets + encrypt OAuth tokens | 🟢 **CODE DONE — 2 operator steps left** | rotate secret values; run `wipe-oauth-tokens.ts` + re-login Gmail |
+| [02](./02-security-secrets-credentials.md) | Rotate secrets + encrypt OAuth tokens | 🟢 **CODE DONE — operator steps in `notes/plan-02-operator-steps.md`** | rotate secret values; run `wipe-oauth-tokens.ts` + re-login Gmail; verify `enc1:` ciphertext |
 | [03](./03-security-mailops-auth-cors.md) | Service auth + CORS allowlist | ✅ **DONE** | committed `fd6c416` |
 | [04](./04-security-input-validation.md) | zod validation across API routes | ✅ **DONE** | committed `a2629d5` |
 | [05](./05-security-tracking-webhook.md) | Fix no-op tracking + open redirect | ✅ **DONE** | committed `42941ae` |
-| [06](./06-database-schema.md) | Indexes, cascade/soft-delete, migration hygiene | ⏸️ **DEFERRED — last** | owner decision: do at the very end; needs DB backup + staging |
+| [06](./06-database-schema.md) | Indexes, cascade/soft-delete, migration hygiene | 🟢 **CODE DONE — applied to dev DB; prod pending** | safe subset applied to local dev DB successfully. Prod apply via the runbook in `notes/plan-06-apply-migration.md`. Soft-delete / EmailEvent.userId / squash deferred. See "Plan 06" section below. |
 | [07](./07-frontend-data-fetching.md) | Consolidate on react-query | ✅ **DONE** | whole web app on typed `api` + react-query; ~50 components migrated |
 | [08](./08-frontend-code-quality.md) | Remove console.log/any, dead code, lint | ✅ **DONE** | `any` 76→0; lint 0 errors / 0 warnings; all rules `error` |
 | [09](./09-backend-logging-pii.md) | Redact PII/tokens from logs | ✅ **DONE** | committed `70b3b74` |
-| [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | 🟡 **CODE DONE — awaiting smoke-test** | committed `e2e2e77`; DLQ `:`-naming bug fixed in plan 13 |
+| [10](./10-backend-job-resilience.md) | BullMQ retries/backoff/DLQ | 🟡 **CODE DONE — smoke-test runbook in `notes/plan-10-smoke-test.md`** | committed `e2e2e77`; DLQ `:`-naming bug fixed in plan 13 |
 | [11](./11-tooling-config-dependencies.md) | Align deps, consolidate env, eslint config | ✅ **SUPERSEDED** | covered by the dependency-upgrade pass |
-| [12](./12-testing-strategy.md) | Testing baseline | ⏸️ **BLOCKED on plan 10 smoke-test** | start only after plan 10 verified |
 | [13](./13-monorepo-scripts-devexperience.md) | Monorepo scripts, Turbo, dev-experience cleanup | ✅ **DONE** | committed `945b08c` + `3d9969b`; build/typecheck/lint green |
 | [14](./14-centralize-shared-config-ui.md) | Centralize config + extract `packages/ui` + Radix→Base UI | ✅ **DONE** | `@coldjot/tsconfig`, `@coldjot/eslint-config`, `@coldjot/ui` (base-ui), sonner, next-themes, prettier |
 
-**Totals:** 10 done · 1 awaiting owner action (02) · 1 awaiting smoke-test (10) · 2 blocked/deferred (06, 12) · 1 superseded (11) — **0 not started.**
+**Totals:** 10 done · 2 with operator runbooks in `notes/` (02, 10) · 1 applied to dev DB / prod pending (06) · 1 superseded (11) — **0 not started.**
+
+> 📋 **Testing** has its own dedicated plan area now: [`../testing/README.md`](../testing/README.md). The baseline (Vitest + Playwright + CI, formerly "plan 12" here) lives at [`../testing/01-testing-baseline.md`](../testing/01-testing-baseline.md).
 
 ---
 
-> **Last updated:** plan 14 follow-up — continued fixing post-migration issues in consumer code only: `nativeButton={false}` on Button-as-link (4 sites), Select value→label resolution via `items` prop (5 selects) + raw-value fix, Select opens below trigger + inner `p-1` padding (10 sites), sidebar icon/design refresh. No shadcn components modified. Earlier: nested-`<button>` hydration codemod across 26 files, `MenuGroupContext` fix, Prisma Symbol serialization across 4 Server→Client boundaries. Plan 10 (BullMQ resilience) still **awaiting owner smoke-testing**. Plan 06 deferred to the very end. Plan 12 blocked on plan 10.
+> **Last updated:** plan 06 — safe subset code-done on `upgrade/remaining-majors` and **applied successfully to the local dev DB**. Hand-written migration `20260704185631_plan06_indexes_cascade_emailtracking_user_fk` (7 missing indexes, `EmailTracking.userId` FK, explicit cascade policy — no behavior change), verified byte-for-byte against `prisma migrate diff`. Prod apply still pending — runbook in `notes/plan-06-apply-migration.md`. Soft-deletes / `EmailEvent.userId` / tenant-isolation `$extends` / connection-pool tuning / migration squash deliberately deferred. Earlier: plan 14 follow-up — continued fixing post-migration issues in consumer code only: `nativeButton={false}` on Button-as-link (4 sites), Select value→label resolution via `items` prop (5 selects) + raw-value fix, Select opens below trigger + inner `p-1` padding (10 sites), sidebar icon/design refresh. No shadcn components modified. Earlier still: nested-`<button>` hydration codemod across 26 files, `MenuGroupContext` fix, Prisma Symbol serialization across 4 Server→Client boundaries. Plan 10 (BullMQ resilience) code-done; **smoke-test runbook** in `notes/plan-10-smoke-test.md`. Plan 02 operator runbook in `notes/plan-02-operator-steps.md`. Testing now lives in its own plan area: [`../testing/`](../testing/).
 >
 > **Two parallel workstreams** live on two branch chains off `master`:
 >
@@ -52,17 +53,16 @@
 | #                                          | Plan                                            | Status                                   | Where                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ------------------------------------------ | ----------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [01](./01-security-idor-authorization.md)  | IDOR + authorization layer                      | ✅ **DONE**                               | `refactor/old-code-update` (`fa69382`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| [02](./02-security-secrets-credentials.md) | Rotate secrets + encrypt OAuth tokens           | 🟢 **CODE DONE — 2 operator steps left** | 02a: git history audited (clean); .gitignore consolidated; boot-time zod validation; Prisma query-logging locked down. 02b: AES-256-GCM field crypto + Prisma `$extends` encrypt-on-write/decrypt-on-read on `Mailbox`/`Account` token fields; wipe script written. **You must:** (1) rotate the actual secret values in their dashboards, (2) run `wipe-oauth-tokens.ts` (DRY_RUN=0) + re-login Gmail so tokens are stored encrypted. `ENCRYPTION_KEY` rotation needs the dual-key path (`ENCRYPTION_KEY_OLD`) |
+| [02](./02-security-secrets-credentials.md) | Rotate secrets + encrypt OAuth tokens           | 🟢 **CODE DONE — operator steps in `notes/plan-02-operator-steps.md`** | 02a: git history audited (clean); .gitignore consolidated; boot-time zod validation; Prisma query-logging locked down. 02b: AES-256-GCM field crypto + Prisma `$extends` encrypt-on-write/decrypt-on-read on `Mailbox`/`Account` token fields; wipe script written (crypto module exceeds plan: `enc1:` versioned prefix, `isEncrypted()` guard, dual-key rotation support). **No code gaps.** Operator runbook (rotate secrets, wipe, re-login, verify, optional file cleanup) in `notes/plan-02-operator-steps.md`. |
 | [03](./03-security-mailops-auth-cors.md)   | Service auth + CORS allowlist                   | ✅ **DONE**                               | `refactor/old-code-update` (`fd6c416`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | [04](./04-security-input-validation.md)    | zod validation across API routes                | ✅ **DONE**                               | `refactor/old-code-update` (`a2629d5`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | [05](./05-security-tracking-webhook.md)    | Fix no-op tracking + open redirect              | ✅ **DONE**                               | `refactor/old-code-update` (`42941ae`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| [06](./06-database-schema.md)              | Indexes, cascade/soft-delete, migration hygiene | ⏸️ **DEFERRED — last**                   | owner decision: do at the very end once everything else is satisfactory. Needs DB backup + staging (destructive) when started.                                                                                                                                                                                                                                                                                                                                                                                  |
+| [06](./06-database-schema.md)              | Indexes, cascade/soft-delete, migration hygiene | 🟢 **CODE DONE — applied to dev DB; prod pending** | `upgrade/remaining-majors`. Migration `20260704185631_plan06_indexes_cascade_emailtracking_user_fk` written by hand and verified byte-for-byte against `prisma migrate diff --from-empty --to-schema`. **Applied successfully to local dev DB.** Prod apply via the runbook in `notes/plan-06-apply-migration.md`. See the plan-06 section below.                                                                                                                                                                                                                                                                                                                                            |
 | [07](./07-frontend-data-fetching.md)       | Consolidate on react-query                      | ✅ **DONE**                               | `upgrade/remaining-majors` — see the plan-07 section below. The whole web app now fetches via the typed `api` client + react-query hooks; the hand-rolled `sequence-context` is backed by react-query; ~50 components/pages migrated. `tsc --noEmit` clean, web ESLint 0/0, `next build` passes.                                                                                                                                                                                                                |
 | [08](./08-frontend-code-quality.md)        | Remove console.log/any, dead code, lint         | ✅ **DONE**                               | all `console.log` removed; `any` 76→0; unused-vars 335→0; exhaustive-deps 10→0; duplicated `transformEmailData` extracted; dead toolbar files deleted; stale step-reorder TODO resolved. **All ESLint rules now `error`** (no-explicit-any, no-unused-vars, rules-of-hooks, exhaustive-deps, useless-catch, prefer-const, preserve-caught-error, etc.). Web lint fully clean: 0 errors / 0 warnings                                                                                                             |
 | [09](./09-backend-logging-pii.md)          | Redact PII/tokens from logs                     | ✅ **DONE**                               | `refactor/old-code-update` (`70b3b74`); pino call-site refactor + pino 10 in upgrade chain                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| [10](./10-backend-job-resilience.md)       | BullMQ retries/backoff/DLQ                      | 🟡 **CODE DONE — awaiting smoke-test**    | committed `e2e2e77`; DLQ `:`-naming bug fixed in plan 13. Smoke-test: force 5x failure → confirm job lands in `<name>-dl` and is visible in Bull-Board.                                                                                                                                                                                                                                                                                                                                                          |
+| [10](./10-backend-job-resilience.md)       | BullMQ retries/backoff/DLQ                      | 🟡 **CODE DONE — smoke-test runbook in `notes/plan-10-smoke-test.md`**    | committed `e2e2e77`; DLQ `:`-naming bug fixed in plan 13. **Smoke-test:** 6 tests in `notes/plan-10-smoke-test.md` cover retry/backoff, DLQ naming, stall detection, idempotency, schedule-failure surfacing, and Bull-Board access. Pass criteria at the end of the runbook.                                                                                                                                                                                                                                                                                                                                                          |
 | [11](./11-tooling-config-dependencies.md)  | Align deps, consolidate env, eslint config      | ✅ **SUPERSEDED**                         | fully covered by the dependency-upgrade pass (see below) — every dep is now latest                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| [12](./12-testing-strategy.md)             | Testing baseline                                | ⏸️ **BLOCKED on plan 10 smoke-test**      | start only after plan 10 verified working                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | [13](./13-monorepo-scripts-devexperience.md) | Monorepo scripts, Turbo, dev-experience cleanup | ✅ **DONE**                               | `upgrade/remaining-majors` (`945b08c` + `3d9969b`). Fixed broken root `dev`/`build`/`start`/`db:*` scripts; rewrote Turbo config; removed dead deps; unified env loading; added `typecheck`/`lint` aggregates; one-command web+mailops dev.                                                                                                                                                                                                                                                                       |
 | [14](./14-centralize-shared-config-ui.md)  | Centralize config + extract `packages/ui` + Radix→Base UI | ✅ **DONE**                    | `upgrade/remaining-majors`. Half A: `@coldjot/tsconfig`, `@coldjot/eslint-config`, `.prettierrc`. Half B: `@coldjot/ui` with all 37 shadcn components (base-nova style, Base UI), shared globals.css with oklch theme, next-themes dark mode, sonner toast. Full Radix→Base UI migration with backward-compat `asChild` shims. 146 hardcoded color classes → theme tokens. See the plan-14 section below.                                                                                                          |
 
@@ -220,8 +220,23 @@ Full detail in `../HANDOFF.md`. Summary:
   - Run `DATABASE_URL=… node --import tsx packages/database/scripts/wipe-oauth-tokens.ts` (first with `DRY_RUN=1` to preview, then `DRY_RUN=0` to wipe plaintext tokens).
   - Re-authenticate Gmail. New tokens are stored AES-256-GCM encrypted.
   - To later verify: `SELECT access_token FROM "Mailbox" LIMIT 5;` should show `enc1:…` strings, not `ya29.…`.
-4. **DB migrations (plan 06)** — **DEFERRED to the very end** (owner decision). Will be picked up once everything else is satisfactory. Needs a DB backup + staging before any destructive work:
-  - Add missing indexes (`Session.userId`, `Template.userId`, `Draft.contactId`/`templateId`, `EmailEvent.contactId`/`sequenceId`), explicit cascade policy, optional soft-deletes.
+4. **DB migrations (plan 06)** — **CODE DONE; applied to dev DB; prod pending.**
+   Migration `20260704185631_plan06_indexes_cascade_emailtracking_user_fk` was
+   written by hand, verified byte-for-byte against
+   `prisma migrate diff --from-empty --to-schema`, and **applied successfully to
+   the local dev DB**. It is additive + behavior-preserving (7 missing indexes,
+   the missing `EmailTracking.userId` FK, and re-declares every
+   previously-implicit FK rule explicitly — no behavior change). To apply to
+   **production**, follow the runbook in `notes/plan-06-apply-migration.md`:
+   - Back up the DB (`pg_dump -Fc`).
+   - Verify no orphaned `EmailTracking.userId` rows (the FK add will fail if any):
+     `SELECT COUNT(*) FROM "EmailTracking" et LEFT JOIN "User" u ON u.id = et."userId" WHERE u.id IS NULL;`
+     — clean up until it returns 0.
+   - `prisma migrate deploy` on **staging** first, run the verification queries
+     from `06-database-schema.md`, then deploy to production.
+   - **Soft-deletes, the `EmailEvent.userId` denormalization, the
+     tenant-isolation `$extends`, and the migration squash are deferred**
+     (deliberately — they are invasive).
 
 ---
 
@@ -252,10 +267,89 @@ Code path: AES-256-GCM field crypto + Prisma `$extends` encrypt-on-write / decry
 
 ---
 
+## 🟢 Plan 06 — DB schema hardening — CODE DONE; applied to dev DB; prod pending
+
+Plan 06's **safe, behavior-preserving subset** is code-complete on
+`upgrade/remaining-majors` and **applied successfully to the local dev DB**.
+The migration was written by hand and verified byte-for-byte against what
+`prisma migrate diff --from-empty --to-schema` emits, so it will not drift.
+
+### What landed
+
+1. **7 missing indexes** (Step 1): `Session.userId`, `Template.userId`,
+   `Draft.{userId,contactId,templateId}`, `EmailEvent.{contactId,sequenceId}`.
+2. **`EmailTracking.userId → User` FK** (Step 4a): the column already existed
+   but had no FK constraint — rows could be orphaned. Now `onDelete: Cascade`,
+   consistent with `Contact`/`Sequence`/`Template`/`Mailbox`.
+3. **Explicit cascade policy** (Step 2): every previously-implicit FK rule is
+   now declared explicitly. **No behavior change** — each DROP+ADD
+   re-establishes the SAME policy already in the DB (verified by walking the
+   full migration history; e.g. `EmailTracking.contactId` was `SET NULL`, not
+   the Prisma-default `Restrict`, so the schema now says `SetNull` to match).
+4. **Schema anomaly cleanup** (Step 5): removed the commented-out duplicate
+   `Template` relation block in `EmailTracking`; kept `templateId` co-located
+   with its relation.
+5. **`User.EmailTracking`** back-relation added (was missing — required by the
+   new FK).
+
+### Migration
+
+`packages/database/prisma/migrations/20260704185631_plan06_indexes_cascade_emailtracking_user_fk/migration.sql`
+
+### ✅ Verified
+
+- `prisma format` + `prisma validate` pass.
+- `prisma generate` succeeds.
+- Monorepo `typecheck` 9/9 green; `lint` 0 errors.
+- Every constraint + index in the hand-written migration matches
+  `prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script`
+  exactly (constraint names, columns, `ON DELETE` policies).
+- **Applied successfully to the local dev DB.**
+
+### ▶️ Production apply (operator)
+
+Follow the runbook in `notes/plan-06-apply-migration.md`. Summary:
+
+```bash
+# 1. Back up.
+pg_dump -Fc "$DATABASE_URL" > pre-plan06.dump
+
+# 2. Verify no orphaned EmailTracking.userId rows (else the FK add fails):
+psql "$DATABASE_URL" -c 'SELECT COUNT(*) FROM "EmailTracking" et
+  LEFT JOIN "User" u ON u.id = et."userId" WHERE u.id IS NULL;'
+# → must be 0; clean up first if not.
+
+# 3. Staging first:
+DATABASE_URL=<staging> npx prisma migrate deploy
+
+# 4. Run the verification queries from 06-database-schema.md §Verification.
+
+# 5. Production:
+DATABASE_URL=<prod> npx prisma migrate deploy
+```
+
+### ⏸️ Deferred (deliberately NOT done — invasive / destructive)
+
+- **Soft deletes** (`deletedAt` on `User`, `Sequence`, `Contact`, `Mailbox`,
+  `Template`, `EmailList`) + the global `$extends` query interceptor + a
+  hard-delete admin/GDPR flow.
+- **`EmailEvent.userId`** denormalized column + backfill.
+- **Tenant-isolation Prisma `$extends`** (defense-in-depth).
+- **Connection-pool tuning** (`connection_limit` / PgBouncer).
+- **Migration squash** (97 → baseline).
+
+---
+
 ## 🟡 Deferred (lower-risk, do later)
 
-- **Plan 06 (DB schema / indexes / cascade / soft-delete):** deliberately deferred to the very end (owner decision). Will be the last refactor to land — needs a DB backup + staging since it's destructive. Not blocking deploy.
-- **Plan 12 (testing baseline):** runs right after plan 10. Scaffolding + security regression tests first.
+- **Plan 06 — soft-delete subset:** the safe, behavior-preserving subset of
+  plan 06 is **code-done and applied to the local dev DB** (migration
+  `20260704185631_*` — 7 indexes, `EmailTracking.userId` FK, explicit cascades;
+  verified byte-for-byte against `prisma migrate diff`). **Prod apply still
+  pending** — runbook in `notes/plan-06-apply-migration.md`. **Still deferred:**
+  `deletedAt` soft-deletes, the `EmailEvent.userId` denormalized column +
+  backfill, the tenant-isolation Prisma `$extends`, connection-pool tuning, and
+  the migration squash. **Testing** has its own dedicated plan area now: [`../testing/`](../testing/) — formerly tracked here as "plan 12".
 - `**@tiptap/*`** is at v3 and still actively imported by 6 components (`compose`, `sequences`, `templates` via `editor-old/rich-text-editor.tsx`). Plan 11's editor consolidation (Lexical vs TipTap) is still open — migrating those callers to Lexical would let `editor-old/` and the TipTap deps be deleted.
 
 ---
@@ -264,8 +358,8 @@ Code path: AES-256-GCM field crypto + Prisma `$extends` encrypt-on-write / decry
 
 1. **Branches:** `refactor/old-code-update` (security) is the base; `upgrade/remaining-majors` (deps + plans 13/14) is stacked on top. Merge order: security first, then deps — or merge `upgrade/remaining-majors` directly (it contains both).
 2. **Pick up where this left off:**
-  - To continue the **security** work: plan 02 is code-done (you just run the wipe + re-login + rotate values — see "Plan 02 — operator runbook" below). Plan 06 (DB schema) is **deferred to the very end** (owner decision).
-  - To continue **quality** work: **plan 10 (BullMQ resilience)** is code-done and awaiting smoke-test. Then **plan 12 (testing)**. Plans 07, 08, 13, and 14 are fully done.
+  - To continue the **security** work: plan 02 is code-done (you just run the wipe + re-login + rotate values — see "Plan 02 — operator runbook" below). Plan 06 is **code-done and applied to dev DB** (prod apply via `notes/plan-06-apply-migration.md` — see the plan-06 section below).
+  - To continue **quality** work: **plan 10 (BullMQ resilience)** is code-done; smoke-test runbook in `notes/plan-10-smoke-test.md` (6 tests + pass criteria). Plans 07, 08, 13, and 14 are fully done. **Testing** has its own plan area now ([`../testing/`](../testing/)).
   - **Plans 13 + 14 are done** — monorepo scripts cleaned up, shared config centralized, `@coldjot/ui` extracted with Base UI + sonner.
 3. **Read first:** `00-overview.md` for the full audit, then the specific plan doc. Each plan doc is self-contained with file:line refs and verification checklists.
 4. **Verify before merging:** `npm run typecheck` + `npm run lint` + `npm run build`; smoke-test the auth boundary (401 without token), IDOR (403/404 cross-tenant), tracking (event recorded), and the UI (Sheets, Dialogs, Tooltips, Selects, dark mode toggle).

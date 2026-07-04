@@ -84,7 +84,7 @@ Captured in commit messages; repeating here for visibility:
 - **Plan 07 (frontend data-fetching consolidation on react-query):** large, incremental — untouched.
 - **Plan 08 remainder:** ~130 `console.log` remain in **component** files (UI debug logs, lower risk than the API/token logs which are all cleaned). Re-enable the disabled ESLint rules (`no-explicit-any`, `exhaustive-deps`, `rules-of-hooks`) phased to `warn` then `error`.
 - **Plan 10 (BullMQ retries/DLQ/idempotency):** untouched. Note: if you proceed with the **mailops consolidation** (`plans/mailops-consolidation/`), plan 10 becomes moot.
-- **Plan 12 (testing baseline):** untouched.
+- **Testing baseline:** now lives in its own plan area at [`testing/`](./testing/README.md) (formerly tracked as `refactor-plan/12`). Untouched.
 
 ---
 

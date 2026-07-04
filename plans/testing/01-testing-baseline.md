@@ -1,8 +1,10 @@
-# Plan 12 — Establish a Testing Baseline
+# Testing Baseline — Establish Automated Test Coverage
 
 > **Severity:** 🟢 LOW (but high leverage — every other plan is safer to do with tests in place)
 > **Effort:** Large (ongoing; ~2 days for the initial scaffolding, then incremental)
-> **Depends on:** Ideally lands after plans 01–05 so the security fixes are testable. Do the scaffolding first regardless.
+> **Depends on:** Ideally lands after `plans/refactor-plan/01–05` so the security fixes are testable. Do the scaffolding first regardless.
+>
+> **Origin:** Moved here from `plans/refactor-plan/12-testing-strategy.md` so testing has its own dedicated plan area. Sub-plans for additional testing work (e2e, CI hardening, coverage targets) will live alongside this one in `plans/testing/`.
 
 ---
 
@@ -15,7 +17,7 @@ The codebase has **essentially no automated tests**:
 - No CI pipeline is visible in the repo (no `.github/workflows/` directory was listed in the root scan).
 - `packages/types` and `packages/database` have no tests.
 
-Every refactor in plans 01–11 is therefore being done **blind** — you can't confirm you didn't break something without manual clicking. This is especially dangerous for the security changes (IDOR fixes, auth middleware) where a regression silently reintroduces a vulnerability.
+Every refactor in the security/quality plans is therefore being done **blind** — you can't confirm you didn't break something without manual clicking. This is especially dangerous for the security changes (IDOR fixes, auth middleware) where a regression silently reintroduces a vulnerability.
 
 ---
 
@@ -23,7 +25,7 @@ Every refactor in plans 01–11 is therefore being done **blind** — you can't 
 
 1. A working test runner in each app/package, wired into `turbo run test`.
 2. A **CI pipeline** that runs lint + typecheck + tests on every PR.
-3. **Security regression tests** for the fixes in plans 01, 03, 05 (these are the highest-value tests to write first).
+3. **Security regression tests** for the fixes in `plans/refactor-plan/01`, `03`, `05` (these are the highest-value tests to write first).
 4. Unit-test coverage for the shared utilities introduced by the other plans (`crypto`, `parseBody`, `requireAuth`, redaction helpers).
 5. A small set of **smoke/e2e tests** covering the critical user flow: connect mailbox → create sequence → add contact → launch → email sends → tracking records.
 6. A documented testing convention so new code comes with tests.
@@ -110,7 +112,7 @@ Provide a helper `packages/database/src/test-db.ts` that exports a `prisma` clie
 
 ### Step 6 — Write the security regression tests (highest priority)
 
-These directly verify the fixes in plans 01, 03, 05. Each is a small, fast test.
+These directly verify the fixes in `plans/refactor-plan/01`, `03`, `05`. Each is a small, fast test.
 
 **IDOR tests (plan 01):**
 ```ts

@@ -271,7 +271,7 @@ Repeat the same shape for: list PATCH (`/api/lists/<B_LIST>` with `contacts:["<C
 
 ### Automated
 
-- Add an integration test per IDOR (see plan 12) using two fake sessions asserting the foreign-id case returns 403/404.
+- Add an integration test per IDOR (see [`../testing/01-testing-baseline.md`](../testing/01-testing-baseline.md)) using two fake sessions asserting the foreign-id case returns 403/404.
 
 ### Lint/regression
 

@@ -31,6 +31,7 @@ model User {
     businessHours   BusinessHours[]
     Mailbox         Mailbox[]
     SequenceMailbox SequenceMailbox[]
+    EmailTracking   EmailTracking[]
 }
 
 model Account {
@@ -59,6 +60,8 @@ model Session {
     userId       String
     expires      DateTime
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
 }
 
 model Contact {
@@ -100,6 +103,8 @@ model Template {
     drafts        Draft[]
     SequenceStep  SequenceStep[]
     EmailTracking EmailTracking[]
+
+    @@index([userId])
 }
 
 model Draft {
@@ -116,7 +121,11 @@ model Draft {
 
     user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-    template Template @relation(fields: [templateId], references: [id])
+    template Template @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+    @@index([userId])
+    @@index([contactId])
+    @@index([templateId])
 }
 
 model EmailList {
@@ -186,7 +195,7 @@ model SequenceStep {
     createdAt        DateTime  @default(now())
     updatedAt        DateTime  @updatedAt
     templateId       String?
-    Template         Template? @relation(fields: [templateId], references: [id])
+    Template         Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
     sequence         Sequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
 
     @@index([sequenceId])
@@ -213,8 +222,8 @@ model SequenceContact {
     failureCount Int     @default(0)
     lastError    String?
 
-    sequence Sequence @relation("SequenceToContact", fields: [sequenceId], references: [id])
-    contact  Contact  @relation("ContactToSequence", fields: [contactId], references: [id])
+    sequence Sequence @relation("SequenceToContact", fields: [sequenceId], references: [id], onDelete: Restrict)
+    contact  Contact  @relation("ContactToSequence", fields: [contactId], references: [id], onDelete: Restrict)
 
     @@unique([sequenceId, contactId])
     @@index([sequenceId])
@@ -294,7 +303,6 @@ model EmailTracking {
     // New fields
     subject String @default("")
     // previewText String? // Email preview text
-    // templateId  String? // Reference to the template used
 
     // BullMQ job id that produced this row — used by the email processor's
     // idempotency guard (plan 10). Nullable: pre-existing rows predate the
@@ -304,11 +312,10 @@ model EmailTracking {
     // Relations
     links      TrackedLink[]
     events     EmailEvent[]
-    contact    Contact?      @relation(fields: [contactId], references: [id])
-    sequence   Sequence?     @relation(fields: [sequenceId], references: [id])
-    // template Template?     @relation(fields: [templateId], references: [id])
-    // @@index([templateId])
-    Template   Template?     @relation(fields: [templateId], references: [id])
+    contact    Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+    sequence   Sequence?     @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
+    Template   Template?     @relation(fields: [templateId], references: [id], onDelete: SetNull)
+    user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
     templateId String?
 
     @@index([messageId])
@@ -331,13 +338,15 @@ model EmailEvent {
     contactId  String?
     sequenceId String?
 
-    Contact  Contact?      @relation(fields: [contactId], references: [id])
-    Sequence Sequence?     @relation(fields: [sequenceId], references: [id])
+    Contact  Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+    Sequence Sequence?     @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
     tracking EmailTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
 
     @@index([trackingId])
     @@index([type])
     @@index([timestamp])
+    @@index([contactId])
+    @@index([sequenceId])
 }
 
 // -----------------------------------------
@@ -394,8 +403,8 @@ model EmailThread {
     updatedAt      DateTime  @updatedAt
 
     user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    sequence Sequence @relation(fields: [sequenceId], references: [id])
-    contact  Contact  @relation(fields: [contactId], references: [id])
+    sequence Sequence @relation(fields: [sequenceId], references: [id], onDelete: Restrict)
+    contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Restrict)
 
     @@index([threadId])
     @@index([sequenceId])
@@ -476,7 +485,7 @@ model SequenceMailbox {
 
     sequence Sequence    @relation("SequenceToMailbox", fields: [sequenceId], references: [id], onDelete: Cascade)
     mailbox  Mailbox     @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
-    alias    EmailAlias? @relation(fields: [aliasId], references: [id])
+    alias    EmailAlias? @relation(fields: [aliasId], references: [id], onDelete: SetNull)
     user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([sequenceId])

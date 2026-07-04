@@ -38,7 +38,7 @@ Verified-unused / misplaced deps found in the script/`package.json` audit:
 **`apps/web` — dead/misplaced:**
 - `concurrently` — listed in `dependencies` but **not used** by any script or source file (web runs a single Next process; Turbo handles concurrency at the monorepo level).
 - `axios` — still in `dependencies` but **zero imports** after plan 07 (everything now goes through the typed `api-client` + react-query).
-- `jest`, `sinon`, `@types/jest`, `@types/sinon` — present in `dependencies` but web has **no tests yet** (plan 12 is blocked). These belong in `devDependencies` and only once tests exist; for now they're dead weight in the prod install.
+- `jest`, `sinon`, `@types/jest`, `@types/sinon` — present in `dependencies` but web has **no tests yet** (testing baseline is blocked — see [`../testing/01-testing-baseline.md`](../testing/01-testing-baseline.md)). These belong in `devDependencies` and only once tests exist; for now they're dead weight in the prod install.
 - `@eslint/eslintrc`, `@eslint/js`, `@typescript-eslint/eslint-plugin`, `@typescript-eslint/parser`, `eslint-plugin-react-hooks`, `typescript-eslint` — **all in `dependencies`**, should be `devDependencies`. (Lint config is dev-only.)
 - `fs-extra` + `@types/fs-extra` — verify usage; if only used by a one-off script, move to `devDependencies`.
 - Stale duplicate ESLint config: `apps/web/.eslintrc.json` (legacy, all rules `off`) **and** `apps/web/eslint.config.js` (flat config, the real one). The `.eslintrc.json` is dead — ESLint 10 with a flat config present ignores it, but it's confusing and should be deleted.
@@ -215,12 +215,12 @@ Key changes:
 - Remove scripts `dev-2`, `dev:debug-2` (nodemon-based, superseded by `dev`).
 - Bump `tsx` `^4.7.0` → `^4.19.2` (match web).
 - Bump `rimraf` `^6.1.3` (already latest) — keep.
-- Move testing deps to `devDependencies` (they're currently in `dependencies`): `@types/jest`, `sinon`, `@types/sinon`. Keep `jest`/`@types/jest` if mailops has tests; if plan 12 hasn't added mailops tests yet, these can stay as devDeps ready for plan 12.
+- Move testing deps to `devDependencies` (they're currently in `dependencies`): `@types/jest`, `sinon`, `@types/sinon`. Keep `jest`/`@types/jest` if mailops has tests; if the testing baseline ([`../testing/01-testing-baseline.md`](../testing/01-testing-baseline.md)) hasn't added mailops tests yet, these can stay as devDeps ready for it.
 
 **`apps/web/package.json`:**
 - Remove from `dependencies`: `axios` (zero imports post-plan-07), `concurrently` (unused).
 - Move from `dependencies` → `devDependencies`: `@eslint/eslintrc`, `@eslint/js`, `@typescript-eslint/eslint-plugin`, `@typescript-eslint/parser`, `eslint-plugin-react-hooks`, `typescript-eslint`.
-- Move `jest`, `sinon`, `@types/jest`, `@types/sinon` from `dependencies` → `devDependencies` (or remove entirely until plan 12 lands tests — your call; moving is the safe minimum).
+- Move `jest`, `sinon`, `@types/jest`, `@types/sinon` from `dependencies` → `devDependencies` (or remove entirely until the testing baseline ([`../testing/01-testing-baseline.md`](../testing/01-testing-baseline.md)) lands tests — your call; moving is the safe minimum).
 - Verify `fs-extra` usage; if only used by a script, move to `devDependencies`.
 - Delete `apps/web/.eslintrc.json` (dead legacy config; the flat `eslint.config.js` is authoritative under ESLint 10).
 
