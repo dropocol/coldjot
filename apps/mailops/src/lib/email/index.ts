@@ -1,4 +1,3 @@
-import { prisma } from "@coldjot/database";
 import { randomUUID } from "crypto";
 import { logger } from "@/lib/log";
 import { addTrackingToEmail } from "@/lib/tracking";
@@ -21,6 +20,8 @@ import {
 import { EmailTrackingStatusEnum } from "@coldjot/types";
 import { getEmailThreadInfo } from "@/lib/google/helper";
 import { sendGmailSMTP, gmailClientService } from "@/lib/google";
+import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
+import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
 
 interface SentMessageInfo {
   messageId: string;
@@ -34,7 +35,9 @@ export class EmailService {
   // -----------------------------------------
   // -----------------------------------------
 
-  constructor() {}
+  constructor(
+    private readonly emailTracking: EmailTrackingRepository = new PrismaEmailTrackingRepository()
+  ) {}
 
   // -----------------------------------------
   // -----------------------------------------
@@ -256,30 +259,23 @@ export class EmailService {
   ): Promise<void> {
     logger.info("📝 Updating email tracking record");
 
-    await prisma.emailTracking.update({
-      where: {
-        id: trackingId,
-      },
-      data: {
+    await this.emailTracking.markSent(
+      trackingId,
+      {
         messageId: trackedResponse.id || undefined,
         threadId: trackedResponse.threadId || undefined,
-        status: EmailTrackingStatusEnum.SENT,
-        subject: options.subject,
-        events: {
-          create: {
-            type: EmailEventEnum.SENT,
-            sequenceId: options.sequenceId,
-            contactId: options.contactId,
-            metadata: {
-              messageId: trackedResponse.id || "",
-              ...metadata,
-              threadId: trackedResponse.threadId || "",
-              stepId: options.stepId,
-            },
-          },
-        },
+        untrackedMessageId: metadata?.untrackedMessageId,
       },
-    });
+      options.subject,
+      options.sequenceId,
+      options.contactId,
+      {
+        messageId: trackedResponse.id || "",
+        ...metadata,
+        threadId: trackedResponse.threadId || "",
+        stepId: options.stepId,
+      }
+    );
 
     logger.info("✅ Email tracking record updated");
   }
@@ -298,34 +294,19 @@ export class EmailService {
   ): Promise<void> {
     logger.info("📝 Creating email tracking record");
 
-    await prisma.emailTracking.create({
-      data: {
-        id: emailId,
-        messageId: trackedResponse.id || undefined,
-        threadId: options.threadId || undefined,
-        hash: emailId,
-        status: EmailTrackingStatusEnum.SENT,
-        userId: options.userId,
-        sequenceId: options.sequenceId,
-        contactId: options.contactId,
-        stepId: options.stepId,
-        metadata: {
-          email: options.to,
-        },
-        sentAt: new Date(),
-        events: {
-          create: {
-            type: EmailEventEnum.SENT,
-            sequenceId: options.sequenceId,
-            contactId: options.contactId,
-            metadata: {
-              messageId: trackedResponse.id || "",
-              threadId: options.threadId || "",
-              stepId: options.stepId,
-            },
-          },
-        },
-      },
+    await this.emailTracking.createPending({
+      id: emailId,
+      hash: emailId,
+      userId: options.userId,
+      sequenceId: options.sequenceId,
+      stepId: options.stepId,
+      contactId: options.contactId,
+      subject: options.subject,
+      status: EmailTrackingStatusEnum.SENT,
+      messageId: trackedResponse.id || undefined,
+      threadId: options.threadId || undefined,
+      sentAt: new Date(),
+      metadata: { email: options.to } as any,
     });
 
     logger.info("✅ Email tracking record created");

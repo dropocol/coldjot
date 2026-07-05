@@ -29,16 +29,20 @@ import { replacePlaceholders, validatePlaceholders } from "@/lib/placeholders";
 import { getSequenceMailboxWithId } from "@/lib/mailbox";
 import { gmailClientService } from "@/lib/google";
 import { determineEmailSubject } from "@/lib/email-subject";
+import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
+import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
   private serviceManager = ServiceManager.getInstance();
   private jobManager = this.serviceManager.getJobManager();
 
   private scheduleGenerator: ScheduleGenerator;
+  private readonly emailTracking: EmailTrackingRepository;
 
   constructor(queue: Queue) {
     super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL));
     this.scheduleGenerator = scheduleGenerator;
+    this.emailTracking = new PrismaEmailTrackingRepository();
   }
 
   protected async process(job: Job<EmailJob>): Promise<void> {
@@ -68,10 +72,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     try {
       // Idempotency guard (plan 10): if a sent row already exists for this
       // BullMQ job, a retry is re-running an already-successful send — skip.
-      const alreadySent = await prisma.emailTracking.findFirst({
-        where: { jobId, status: EmailTrackingStatusEnum.SENT },
-        select: { id: true },
-      });
+      const alreadySent = await this.emailTracking.findSentByJobId(jobId);
       if (alreadySent) {
         logger.info({ jobId }, "📧 Email already sent for this job, skipping (idempotency)");
         return { success: true };

@@ -21,7 +21,9 @@ export class PrismaEmailTrackingRepository implements EmailTrackingRepository {
     // lib/email/index.ts:301 + lib/tracking/index.ts:66
     const row = await prisma.emailTracking.create({
       data: {
-        id: input.id,
+        // Only include id when provided (Prisma generates one otherwise;
+        // passing undefined would shadow the generated id in our test fake).
+        ...(input.id ? { id: input.id } : {}),
         hash: input.hash,
         userId: input.userId,
         sequenceId: input.sequenceId,
@@ -160,6 +162,19 @@ export class PrismaEmailTrackingRepository implements EmailTrackingRepository {
             metadata: metadata as any,
           },
         },
+      },
+    });
+  }
+
+  async incrementOpenStatus(hash: string, setOpenedAt: boolean): Promise<void> {
+    // lib/tracking/index.ts:110 — standalone recordEmailOpen: increment only,
+    // no nested event (the OPENED event is created separately by the caller).
+    await prisma.emailTracking.update({
+      where: { hash },
+      data: {
+        status: "opened",
+        openCount: { increment: 1 },
+        openedAt: setOpenedAt ? new Date() : undefined,
       },
     });
   }
