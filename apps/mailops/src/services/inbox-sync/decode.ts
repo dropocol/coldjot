@@ -38,12 +38,12 @@ export function sanitizeData(data: any): any {
   return sanitized;
 }
 
-export function isValidNotification(data: any): data is DecodedNotification {
+export function isValidNotification(data: unknown): data is DecodedNotification {
+  if (typeof data !== "object" || data === null) return false;
+  const obj = data as Record<string, unknown>;
   return (
-    typeof data === "object" &&
-    data !== null &&
-    typeof data.emailAddress === "string" &&
-    (typeof data.historyId === "number" || typeof data.historyId === "string")
+    typeof obj.emailAddress === "string" &&
+    (typeof obj.historyId === "number" || typeof obj.historyId === "string")
   );
 }
 
