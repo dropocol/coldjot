@@ -14,7 +14,7 @@
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ✅ **Done** — interfaces + Prisma impls + createApp() + wiring test + lint rule | `refactor/mailops-phase-1-seams` (merged) | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ✅ **Done** — route files thinned, logic moved to controllers/ | `refactor/mailops-phase-2-controllers` (merged) | 1 day |
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ✅ **Done** — 10/10 aggregates migrated (3.1–3.10), merged `--no-ff` (`4d6571d`). 102/102 tests green. Lint-rule promotion deferred to Phase 4 (8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth). | `refactor/mailops-phase-3-repos` (merged) | 3–4 days |
-| 4 | [split three god-objects](./phase-4-split-god-objects.md) | 🟡 In progress — 4a (tracking) + 4b (email) merged `--no-ff` (`44e55df`, `40fe9d2`); 4c (pubsub) next | `refactor/mailops-phase-4b-email` (merged) | 5–7 days |
+| 4 | [split three god-objects](./phase-4-split-god-objects.md) | ✅ **Done** — 4a (tracking) + 4b (email) + 4c (pubsub) all merged `--no-ff` (`44e55df`, `40fe9d2`, <4c-merge>). 98/98 tests green; tsc clean; 0 errors / 260 warnings | `refactor/mailops-phase-4c-pubsub` (merged) | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
 | 7 | [real test suite](./phase-7-test-suite.md) | ⬜ Not started | `refactor/mailops-phase-7-tests` | 3–4 days |
@@ -278,11 +278,11 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 
 ## Phase 4 progress — split three god-objects
 
-**Goal:** break `lib/tracking/index.ts`, `lib/email/index.ts`, `services/pubsub/handler.ts` into layered, single-responsibility pieces. See [phase-4-split-god-objects.md](./phase-4-split-god-objects.md). Do 4a → 4b → 4c in order. **4a + 4b are merged**; only **4c (pubsub)** remains.
+**Goal:** break `lib/tracking/index.ts`, `lib/email/index.ts`, `services/pubsub/handler.ts` into layered, single-responsibility pieces. See [phase-4-split-god-objects.md](./phase-4-split-god-objects.md). **Done — 4a (tracking) + 4b (email) + 4c (pubsub) all merged.**
 
-**Sub-branches:** `refactor/mailops-phase-4-split` (4a, merged `--no-ff` at `44e55df`) and `refactor/mailops-phase-4b-email` (4b, merged `--no-ff` at `40fe9d2`) into `refactor/mailops`. **Current HEAD of `refactor/mailops`: `7b87b2d`.**
+**Sub-branches:** `refactor/mailops-phase-4-split` (4a, merged `--no-ff` at `44e55df`), `refactor/mailops-phase-4b-email` (4b, merged `--no-ff` at `40fe9d2`), and `refactor/mailops-phase-4c-pubsub` (4c, merged `--no-ff`) into `refactor/mailops`.
 
-**Baseline (verified post-4b merge):** `npm test -w mailops` → 16 files / **98 tests passing**. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → **clean**. `npm run lint -w mailops` → **0 errors, 271 warnings** (7 are `@coldjot/database` residuals — see "Lint stance" below).
+**Baseline (verified post-4c merge):** `npm test -w mailops` → 16 files / **98 tests passing**. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → **clean**. `npm run lint -w mailops` → **0 errors, 260 warnings** (7 domain-code `@coldjot/database` residuals — see "Lint stance" below).
 
 ### Step tracker
 
@@ -296,7 +296,13 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 | 4b.1 | Extract GmailTransport (`adapters/gmail-transport.ts`); move getSentDetails body | ✅ done | `85fb7ad` |
 | 4b.2+4b.3 | Extract `SendEmailServiceImpl`; migrate EmailProcessor + composition-root | ✅ done | `e5532d7` |
 | 4b.4 | Delete EmailService + `lib/google/smtp/*` + nodemailer; clean lib/tracking barrel | ✅ done | `8cb9f92` |
-| 4c.1–4c.7 | Split `services/pubsub/handler.ts` → GmailInboxSource + InboxSync pipeline | ⬜ Not started | — |
+| 4c.1 | Extract `GmailInboxSource` (adapters/gmail-inbox-source.ts); handler delegates | ✅ done | `ec7a009` |
+| 4c.2 | Extract `classify.ts` (predicates + determineNotificationType + history-gap); utils/email re-exports | ✅ done | `325ce1b` |
+| 4c.3 | Extract `states.ts` (nextContactStatus) | ✅ done | `72b4baa` |
+| 4c.4 | Extract `apply-classification.ts` (dedupe processBounce + processReply) | ✅ done | `7b8f760` |
+| 4c.5 | Write `InboxSyncServiceImpl` (flat orchestrator); Group C tests point at it | ✅ done | `d5e57fa` |
+| 4c.6 | Swap client.ts + composition-root + routes/pubsub.ts to InboxSyncServiceImpl; delete handler.ts + helper.ts; extract decode/records helpers | ✅ done | `39339fd` |
+| 4c.7 | ThreadProcessor left alone (Phase 5 deletes it) | ✅ done (no-op) | — |
 
 ### What 4a produced
 
@@ -338,50 +344,57 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 5. **`SendEmailService` interface moved** from its own 9-line file into `send-email.service.ts` (interface + impl together, matching how 4a organized tracking.service.ts).
 6. **`lib/tracking/helper.ts` still dead** (`generateTrackingMetadata`, zero callers). Phase 5 sweeps it.
 
-### Resume guide — Phase 4c (pubsub) is the ONLY remaining step in Phase 4
+### Resume guide — Phase 4 is DONE; Phase 5 is next
 
-**Where we are:** 4a + 4b merged into `refactor/mailops` (HEAD `7b87b2d`). The only Phase 4 work left is **4c** — splitting `services/pubsub/handler.ts` (1,308 lines) + `services/pubsub/helper.ts` (454 lines) into a pipeline. After 4c, Phase 4 is done and the lint rule can be promoted.
-
-**Target structure (per [phase-4-split-god-objects.md §4c](./phase-4-split-god-objects.md)):**
-```
-adapters/gmail-inbox-source.ts        GmailInboxSource implements InboxSource (already defined in adapters/inbox-source.ts)
-services/inbox-sync/classify.ts       pure predicates (reply / bounce / original / external)
-services/inbox-sync/states.ts         SequenceContact status transitions per classification
-services/inbox-sync/apply-classification.ts   writes EmailEvent + updates SequenceContact + stats
-services/domain/inbox-sync.service.ts InboxSyncServiceImpl — flat orchestrator (~150 lines)
-```
-Then delete `services/pubsub/handler.ts` + `services/pubsub/helper.ts`; `services/pubsub/client.ts:48` swaps `new PubSubHandler()` → `InboxSyncServiceImpl`. The composition root (`composition-root.ts:181`) already wraps `PubSubHandler` behind the `InboxSyncService` interface — swap the impl.
-
-**7 steps (move-only until 4c.5, the only synthesis step):**
-1. **4c.1** — Extract `GmailInboxSource` (move `getValidAccessToken`/`fetchGmailHistory`/`fetchMessageDetails` verbatim). Update Group C tests to mock `InboxSource` instead of global `fetch`.
-2. **4c.2** — Extract pure classification to `classify.ts` (predicates from `utils/email.ts` + `determineNotificationType` + `calculateHistoryGap`/`isLargeHistoryGap` from `helper.ts`). Re-export from `utils/email.ts` for backwards compat.
-3. **4c.3** — Extract status transitions to `states.ts` (`nextContactStatus`).
-4. **4c.4** — Extract `applyClassification` (dedupe `processBounce` + `processReply`).
-5. **4c.5** — Write `InboxSyncServiceImpl` (the flat orchestrator). **Riskiest step.**
-6. **4c.6** — Swap `pubsub/client.ts` to `InboxSyncService`; delete `handler.ts` + `helper.ts`.
-7. **4c.7** — ThreadProcessor is left alone (Phase 5 deletes it).
-
-**Safety net:** Group C characterization tests (8 cases, `__tests__/characterization/pubsub-handler.test.ts`) pin: reply → REPLIED event + contact update + stats; bounce → BOUNCED + contact update + stats; original message → no event; already-processed → skipped; large history gap → HISTORY_GAP record; missing EmailWatch/Mailbox/token → returns early. They mock `fetch` globally + `@/lib/google/gmail/helper`'s `refreshTokenIfNeeded` via `test-context.ts` — update the wiring in 4c.1 to mock `InboxSource` instead.
-
-**Start 4c in a fresh chat:**
+**Where we are:** 4a + 4b + 4c all merged into `refactor/mailops`. All three god-objects (`lib/tracking`, `lib/email`, `services/pubsub/handler`) are split into small services + pure helpers + adapters. Phase 4 is complete. **Phase 5 (dead code cleanup) is next** — it deletes the dormant ThreadProcessor, `lib/tracking/helper.ts`, the `utils/email.ts` re-export shim (once thread-watch is gone), and the `pubsub-handler.test.ts`/`__tests__` cruft that only the legacy class needed.
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
-git checkout refactor/mailops                          # 4a+4b merged; HEAD 7b87b2d
-git pull                                               # (if remote exists) confirm up to date
-npm test -w mailops                                    # must show 16 files / 98 tests passing
-npx tsc --noEmit -p apps/mailops/tsconfig.json         # must be clean
-npm run lint -w mailops                                # 0 errors, 271 warnings expected
+git checkout refactor/mailops
+npm test -w mailops                                    # 16 files / 98 tests passing
+npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
+npm run lint -w mailops                                # 0 errors, 260 warnings
 
-git checkout -b refactor/mailops-phase-4c-pubsub       # new branch off refactor/mailops tip
+git checkout -b refactor/mailops-phase-5-cleanup       # branch off refactor/mailops tip
 ```
-Then open [phase-4-split-god-objects.md §4c](./phase-4-split-god-objects.md) and start at **4c.1**. Tell the agent: *"Read plans/mailops-refactor/STATUS.md (Phase 4 progress section) and plans/mailops-refactor/phase-4-split-god-objects.md §4c, then do Phase 4c."*
+Then open [phase-5-dead-code-cleanup.md](./phase-5-dead-code-cleanup.md).
 
-**Verification after each 4c step:** `npm test -w mailops` (must stay 98/98) + `npx tsc --noEmit -p apps/mailops/tsconfig.json` (must stay clean). One commit per step. When all 7 steps are done, merge `--no-ff` into `refactor/mailops`, then promote `no-restricted-imports` from `warn` → `error` in `eslint.config.js` (the 7 residual `@coldjot/database` files all become legitimate after the tx-client paths collapse / `sequenceHealth` decision lands — verify before flipping).
+### What 4c produced
 
-### Lint stance (Phase 4 residuals)
+**Final structure (all under `apps/mailops/src/`):**
+```
+adapters/gmail-inbox-source.ts        (183) GmailInboxSource implements InboxSource — Gmail REST + OAuth
+services/inbox-sync/classify.ts        (285) pure predicates + determineNotificationType + history-gap math
+services/inbox-sync/states.ts           (28) nextContactStatus (REPLY→REPLIED, BOUNCE→BOUNCED, else null)
+services/inbox-sync/apply-classification.ts (114) EmailEvent write + SequenceContact terminal + stats (deduped bounce/reply)
+services/inbox-sync/records.ts         (144) dedupe + watch-history writes (repo-injected)
+services/inbox-sync/decode.ts           (66) decodeNotification + sanitizeData (pure)
+services/domain/inbox-sync.service.ts  (388) InboxSyncServiceImpl — flat orchestrator
+```
 
-7 files still import `@coldjot/database` directly (down from Phase 3's 8 — 4b removed `lib/google/smtp/gmail.ts`):
+**Deleted:** `services/pubsub/handler.ts` (1,308 lines — the `PubSubHandler` god-class) + `services/pubsub/helper.ts` (454 lines — the standalone-fn stopgap from Phase 3.9). The pubsub dir now contains only `client.ts` (the GCP push-subscription service).
+
+**Call sites swapped:** `routes/pubsub.ts` (the real runtime webhook) + `composition-root.ts` (wired behind `InboxSyncService`, repos constructor-injected) + `services/pubsub/client.ts` (dropped the dead `messageHandler` field — push subscription never read it).
+
+**`utils/email.ts` is now a re-export shim** for the 5 inbox-sync predicates (canonical home: `classify.ts`). It stays only because `services/jobs/thread-watch/processor.ts` imports them via the `@/utils` barrel — Phase 5 deletes thread-watch, then this shim can go too.
+
+**Test wiring unchanged:** the Group C characterization tests (8 cases) still mock global `fetch` + `@/lib/google/gmail/helper`'s `refreshTokenIfNeeded` + `@coldjot/database`. They characterize `InboxSyncServiceImpl` end-to-end through those same boundaries — the only edit was swapping `new PubSubHandler()` → `new InboxSyncServiceImpl()`.
+
+### Key decisions made during 4c (read before resuming)
+
+1. **`GmailInboxSource` calls the same globals the tests mock**, so 4c.1–4c.4 needed zero test edits. The plan suggested updating the Group C tests to mock `InboxSource` directly in 4c.1; turned out unnecessary — `InboxSource` is implemented against the same `fetch` + `refreshTokenIfNeeded` the harness stubs. The single test edit landed in 4c.5 (the constructor swap), not 4c.1.
+2. **`determineNotificationType` is pure via injection.** The canonical classifier in `classify.ts` takes `hasOriginalForThread: (threadId) => Promise<boolean>` as a parameter so the module stays free of repo imports. The orchestrator binds it to `processedMessageRepo.hasOriginalForThread`. The 4c.2 wrapper in `helper.ts` (now deleted) preserved the old 3-arg signature for the live handler until 4c.5.
+3. **`applyClassification` takes `{ change, deps }`** (not the plan's `{ change, emailThread, repos }`). The thread lookup happens inside the function (matches the originals) so the orchestrator's per-message loop doesn't need a separate `emailThread.findByThread` call before dispatch. The orchestrator passes `emailEvent`/`sequenceContact`/`emailThread` repos via `deps`.
+4. **The `updateSequenceStatuses` second pass is dropped** (the orchestrator doesn't call it). It was a provable no-op: for BOUNCE/REPLY, `applyClassification` already marks the contact terminal → `canUpdateSequenceContact` returns false; for ORIGINAL/MESSAGE_ADDED, `nextContactStatus` returns null. It never updated a row. Group C cases 1 + 2 (which exercise both paths) pass unchanged.
+5. **`utils/email.ts` re-exports rather than moves.** The plan offered "leave + re-export OR move" — chose move (canonical home `classify.ts`) with a re-export shim, because thread-watch still imports the predicates via the `@/utils` barrel and Phase 5 deletes thread-watch. New code imports from `@/services/inbox-sync/classify`.
+6. **`processHistory` preserves the null/throwing-fetch → `handleLargeHistoryGap` fallback.** The original treated a missing history response the same as a large gap; `InboxSyncServiceImpl` does too (try/catch around `inboxSource.fetchHistory` + a null check, both → `handleLargeHistoryGap`).
+7. **`P2002` (unique-constraint) tolerance in `createProcessedMessageRecord`** is preserved — the helper swallows `error.code === "P2002"` (message already recorded) and re-throws everything else. Matched the original's `Prisma.PrismaClientKnownRequestError` check; the new version checks `.code` directly (the fakes set `.code`).
+8. **`InboxSyncServiceImpl` is 388 lines, not ≤150** (the plan's aspirational target). The bulk is the constructor's 8 default-Prisma params + the rich file-logging the original carried + 6 flat orchestration methods. Factored `records.ts` + `decode.ts` out to keep it under 400 and the pipeline readable. Further reduction would mean stripping logging (behavior change) or splitting the constructor (premature) — deferred. The god-object's 1,308 → 388 (+ 6 small modules) is the win.
+9. **The lint rule did NOT flip to `error`** after 4c. The 7 domain-code residuals are unchanged (none were 4c scope): `thread-watch/processor.ts` is now the only "Phase 4c sweep" candidate left, and 4c.7 deliberately left it for Phase 5. The rule flips after Phase 5 deletes thread-watch + Phase 7 collapses the `$transaction` tx-client paths.
+
+### Lint stance (Phase 4 residuals — unchanged by 4c)
+
+7 domain-code files still import `@coldjot/database` directly (down from Phase 3's 8 — 4b removed `lib/google/smtp/gmail.ts`; 4c removed none since none were 4c scope):
 
 ```
 controllers/sequence.controller.ts          ← sequenceHealth (monitor-only; Phase 5/6 decision)
@@ -389,20 +402,20 @@ lib/stats/index.ts                          ← $transaction tx client (Phase 7 
 services/domain/tracking.service.ts         ← $transaction tx client in handleLinkClick (Phase 7)
 services/jobs/schedule/processor.ts         ← sequenceHealth in resetSequence (same as controller)
 services/jobs/sequence/helper.ts            ← sequenceHealth in resetSequence (same as controller)
-services/jobs/thread-watch/processor.ts     ← emailEvent + sequenceContact (3.2/3.5 misses; Phase 4c/7 sweep)
+services/jobs/thread-watch/processor.ts     ← emailEvent + sequenceContact (3.2/3.5 misses; Phase 5 deletes the file)
 services/monitor/service.ts                 ← sequenceStats.create in init (Phase 6 unwinds ServiceManager)
 ```
-None of these are 4c scope. The rule flips to `error` **after** 4c merges AND the tx-client paths are addressed. Don't flip it mid-4c.
+The rule flips to `error` **after** Phase 5 deletes thread-watch AND Phase 7 collapses the tx-client paths. Don't flip it before then — it would break the build on these 7 files. (The Prisma repo impls under `repositories/prisma/**` import `@coldjot/database` legitimately — they're the ORM layer — and the eslint rule already ignores them.)
 
 ---
 
 ## Resume guide
 
-> **Phase 0 is done** — the "Recommended order for the remaining groups" table below is preserved as reference but all 15 groups shipped. **For active work, use the [Phase 4 progress → Resume guide](#resume-guide--phase-4c-pubsub-is-the-only-remaining-step-in-phase-4) above instead.**
+> **Phase 0 + Phase 4 are done.** Phase 5 (dead code cleanup) is the next active phase — see [phase-5-dead-code-cleanup.md](./phase-5-dead-code-cleanup.md). The "Recommended order for the remaining groups" table below is preserved as Phase-0 reference only.
 
 ### Get back to a green state
 
-The current working branch is `refactor/mailops` (Phase 0–3 + Phase 4a + 4b merged). All phase sub-branches are merged; you do not need to checkout an old one.
+The current working branch is `refactor/mailops` (Phase 0–3 + Phase 4a + 4b + 4c merged). All phase sub-branches are merged; you do not need to checkout an old one.
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"

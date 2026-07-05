@@ -8,7 +8,6 @@ import {
 import { logger } from "@/lib/log";
 import { env } from "@/config/env";
 import { PUBSUB_CONFIG } from "@/config/pubsub/constants";
-import { PubSubHandler } from "./handler";
 import path from "path";
 import fs from "fs";
 
@@ -27,7 +26,6 @@ export class PubSubService {
   private static instance: PubSubService;
   private pubSubClient: PubSub | null = null;
   private subscription!: Subscription;
-  private messageHandler: PubSubHandler | null = null;
   private isListening: boolean = false;
   private readonly enabled: boolean;
 
@@ -45,7 +43,6 @@ export class PubSubService {
     try {
       const config = this.initializeConfig();
       this.pubSubClient = new PubSub(config);
-      this.messageHandler = new PubSubHandler();
 
       logger.info(
         {
