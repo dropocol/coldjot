@@ -13,7 +13,7 @@
 | 0 | [characterization tests](./phase-0-characterization-tests.md) | ✅ **Done** — 15/15 groups, 100 cases passing | `refactor/mailops-phase-0-tests` (merged) | 2–3 days |
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ✅ **Done** — interfaces + Prisma impls + createApp() + wiring test + lint rule | `refactor/mailops-phase-1-seams` (merged) | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ✅ **Done** — route files thinned, logic moved to controllers/ | `refactor/mailops-phase-2-controllers` (merged) | 1 day |
-| 3 | [repositories isolate Prisma](./phase-3-repositories.md) | 🟢 **Code done** — 10/10 aggregates migrated (3.1–3.10 done), 102/102 tests green, unmerged. Lint-rule promotion deferred to Phase 4 (8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth). | `refactor/mailops-phase-3-repos` | 3–4 days |
+| 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ✅ **Done** — 10/10 aggregates migrated (3.1–3.10), merged `--no-ff` (`4d6571d`). 102/102 tests green. Lint-rule promotion deferred to Phase 4 (8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth). | `refactor/mailops-phase-3-repos` (merged) | 3–4 days |
 | 4 | [split three god-objects](./phase-4-split-god-objects.md) | ⬜ Not started | `refactor/mailops-phase-4-split` | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
@@ -29,12 +29,12 @@ Sub-branches use the **hyphen** scheme `refactor/mailops-phase-N-<short>` (git r
 
 ```
 upgrade/remaining-majors
-  └─ refactor/mailops                            ← base; plan docs live here
+  └─ refactor/mailops                            ← base; plan docs live here; CURRENT HEAD
        └─ refactor/mailops-phase-0-tests         (merged — 15/15 groups)
             └─ refactor/mailops-phase-1-seams         (merged)
                  └─ refactor/mailops-phase-2-controllers (merged)
-                      └─ refactor/mailops-phase-3-repos ← CURRENT (6/10 aggregates done; unmerged)
-                           └─ refactor/mailops-phase-4-split
+                      └─ refactor/mailops-phase-3-repos (merged — 10/10 aggregates; lint promotion deferred to Phase 4)
+                           └─ refactor/mailops-phase-4-split  ← NEXT
                                 └─ refactor/mailops-phase-5-cleanup
                                      └─ refactor/mailops-phase-6-singleton
                                           └─ refactor/mailops-phase-7-tests
@@ -163,7 +163,7 @@ All four architectural decisions are settled — don't re-litigate:
 
 **Goal:** every `prisma.*` call lives behind a repository. Domain code depends on `*Repository` interfaces, not `@coldjot/database`. See [phase-3-repositories.md](./phase-3-repositories.md).
 
-**Sub-branch:** `refactor/mailops-phase-3-repos` (off `refactor/mailops`, **unmerged**).
+**Sub-branch:** `refactor/mailops-phase-3-repos` (off `refactor/mailops`, **merged `--no-ff` at `4d6571d`**).
 
 **Run:** `npm test -w mailops` → 16 files / 102 tests. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → clean. `npm run lint -w mailops` → 0 errors (8 `@coldjot/database` warnings remain — all Phase 4/5 residuals; see below).
 
@@ -181,7 +181,7 @@ All four architectural decisions are settled — don't re-litigate:
 | 3.8 | EmailThread | ✅ done | `b9ff61d` |
 | 3.9 | EmailWatch + EmailWatchHistory + ProcessedMessage + pubsub's deferred SequenceContact/EmailThread/Mailbox | ✅ done | `af04e84` |
 | 3.10 | Template + Contact + EmailList + ListSyncRecord | ✅ done | `f58b80c` |
-| final | promote `no-restricted-imports` warn → error; merge to `refactor/mailops` | ⏸️ **Deferred to Phase 4** — 8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth (not 3.x scope) | — |
+| final | promote `no-restricted-imports` warn → error; merge to `refactor/mailops` | ⏸️ **Merge done** (`4d6571d`); **lint promotion deferred to Phase 4** — 8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth (not 3.x scope) | `4d6571d` |
 
 ### What's been migrated (3.1–3.10 — ALL aggregates done)
 
@@ -263,12 +263,15 @@ For each remaining aggregate (3.7–3.10):
 
 ### Resume commands
 
+Phase 3 is **done and merged**. To start Phase 4:
+
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
-git checkout refactor/mailops-phase-3-repos
+git checkout refactor/mailops                         # Phase 3 merged here at 4d6571d
 npm test -w mailops                                   # 102/102 passing
 npx tsc --noEmit -p apps/mailops/tsconfig.json        # clean
-# Next: Step 3.7 (Mailbox). See "Files still importing @coldjot/database" above.
+git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mailops tip
+# Next: Phase 4 (split three god-objects). See phase-4-split-god-objects.md.
 ```
 
 ---
