@@ -1,10 +1,12 @@
 /**
- * Group A — EmailService.sendEmail characterization tests.
+ * Group A — email-send characterization tests.
  *
- * Pins the CURRENT behavior of lib/email/index.ts so the Phase 4b refactor
- * (extract SendEmailServiceImpl + GmailTransport) can be proven non-breaking.
- *
- * Source: lib/email/index.ts (EmailService.sendEmail, lines 46–242).
+ * Originally pinned lib/email/index.ts's EmailService.sendEmail. After Phase
+ * 4b these cases exercise SendEmailServiceImpl.send (services/domain/) — the
+ * Gmail-API-only orchestrator. The SMTP branch, stray null, unused private
+ * methods, and handleSendEmailError are all gone; behavior is otherwise
+ * identical (disableSending shortcut, 1s delay, untracked-copy block,
+ * TOKEN_EXPIRED throw).
  */
 import { vi } from "vitest";
 import { setupTestContext, wasCalledWith } from "@/__tests__/helpers/test-context";
@@ -85,7 +87,7 @@ function baseOptions(overrides: Partial<SendEmailOptions> = {}): SendEmailOption
   } as SendEmailOptions;
 }
 
-describe("[Group A] EmailService.sendEmail", () => {
+describe("[Group A] SendEmailServiceImpl.send", () => {
   // ---- Case 1: tracked send (happy path) -------------------------------
 
   it("case 1: tracked happy-path send writes EmailTracking(SENT) + EmailEvent(SENT), inserts untracked, deletes original, bumps stats", async () => {

@@ -7,9 +7,10 @@
  * solely by `__tests__/wiring.test.ts`. Production boots exactly as it did in
  * Phase 0.
  *
- * Phase 4 swaps the existing-class adapters (EmailService, TrackingService,
- * PubSubHandler) for new impls that take their dependencies via constructor
- * injection. Until then, the wrappers here bridge method-name mismatches.
+ * Phase 4 swaps the existing-class adapters for new impls that take their
+ * dependencies via constructor injection. 4a replaced TrackingService; 4b
+ * replaced EmailService with SendEmailServiceImpl (Gmail-API only — SMTP
+ * path deleted). PubSubHandler is still the legacy class until 4c.
  */
 
 // Infra singletons (kept as process-wide singletons — locked decision).

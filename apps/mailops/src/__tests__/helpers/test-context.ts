@@ -75,7 +75,6 @@ vi.mock("@/lib/google", () => ({
       return holder.fakeGmailHolder.current.gmail;
     },
   },
-  sendGmailSMTP: vi.fn(async () => ({ messageId: "smtp-1", threadId: "smtp-thr-1" })),
 }));
 
 // Mock the gmail helper so PubSubHandler's token-refresh + thread-info
