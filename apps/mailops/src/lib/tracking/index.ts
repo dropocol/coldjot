@@ -2,19 +2,11 @@ import {
   EmailTrackingMetadata,
   EmailTracking,
   EmailTrackingEnum,
-  EmailEventEnum,
 } from "@coldjot/types";
 import { nanoid } from "nanoid";
-import { updateSequenceStats } from "@/lib/stats";
-import type { Prisma } from "@prisma/client";
-import { EmailEventType, EmailEventMetadata } from "@coldjot/types";
 import { logger } from "@/lib/log";
 import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 import { PrismaTrackedLinkRepository } from "@/repositories/prisma/prisma-tracked-link.repo";
-import { PrismaLinkClickRepository } from "@/repositories/prisma/prisma-link-click.repo";
-import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
-import { prisma } from "@coldjot/database";
 
 // The TrackingService class + singleton moved to services/domain/ in 4a.2.
 // Re-exported here under the legacy names so existing
@@ -34,13 +26,11 @@ export {
   wrapLinksWithTracking,
 } from "./link-wrap";
 
-// Module-level repository singletons (stopgap until Phase 4a collapses the
-// standalone functions into the TrackingService class).
+// Module-level repository singletons (stopgap until Phase 4a.5 moves
+// createEmailTracking onto the TrackingService and the addTrackingToEmail
+// caller picks up the pure version directly).
 const emailTrackingRepo = new PrismaEmailTrackingRepository();
-const emailEventRepo = new PrismaEmailEventRepository();
 const trackedLinkRepo = new PrismaTrackedLinkRepository();
-const linkClickRepo = new PrismaLinkClickRepository();
-const sequenceStatsRepo = new PrismaSequenceStatsRepository();
 
 export async function createEmailTracking(
   metadata: EmailTrackingMetadata
@@ -128,99 +118,11 @@ export async function createEmailTracking(
   }
 }
 
-export async function recordEmailOpen(hash: string): Promise<void> {
-  try {
-    const emailTracking = await emailTrackingRepo.findByHash(hash);
-
-    if (!emailTracking) {
-      throw new Error("No tracking event found");
-    }
-
-    // Check for existing open event
-    const existingOpenEvent = await emailEventRepo.findFirstByTrackingAndType(
-      emailTracking.id,
-      EmailEventEnum.OPENED
-    );
-
-    // Always increment the open count on the tracking event
-    await emailTrackingRepo.incrementOpenStatus(hash, !existingOpenEvent);
-
-    // Only create an email event and update stats if this is the first open
-    if (!existingOpenEvent) {
-      await emailEventRepo.create({
-        trackingId: emailTracking.id,
-        type: EmailEventEnum.OPENED,
-        sequenceId: emailTracking.sequenceId,
-        contactId: emailTracking.contactId,
-        metadata: {
-          isFirstOpen: true,
-          openCount: 1,
-        } as any,
-      });
-
-      // Update sequence stats only for unique opens
-      if (emailTracking.sequenceId && emailTracking.contactId) {
-        await updateSequenceStats(
-          emailTracking.sequenceId,
-          EmailEventEnum.OPENED,
-          emailTracking.contactId,
-          { isUniqueOpen: true }
-        );
-      }
-    }
-  } catch (error) {
-    console.error("Error recording email open:", error);
-    throw error;
-  }
-}
-
-export async function recordLinkClick(linkId: string): Promise<void> {
-  try {
-    const trackedLink = await trackedLinkRepo.findWithTracking(linkId);
-
-    if (!trackedLink || !trackedLink.emailTracking) {
-      throw new Error("No tracked link found");
-    }
-
-    // Create click record and update click count in a transaction
-    await prisma.$transaction(async (prisma) => {
-      // Create click record
-      await prisma.linkClick.create({
-        data: {
-          trackedLinkId: linkId,
-          timestamp: new Date(),
-        },
-      });
-
-      // Increment click count
-      await prisma.trackedLink.update({
-        where: { id: linkId },
-        data: {
-          clickCount: {
-            increment: 1,
-          },
-          updatedAt: new Date(),
-        },
-      });
-    });
-
-    // Always update stats for clicks as we want to track all clicks
-    // TODO: fix this
-    if (
-      trackedLink.emailTracking.sequenceId &&
-      trackedLink.emailTracking.contactId
-    ) {
-      // await updateSequenceStats(
-      //   trackedLink.emailTracking.sequenceId!,
-      //   EmailEventEnum.CLICKED,
-      //   trackedLink.emailTracking.contactId!
-      // );
-    }
-  } catch (error) {
-    console.error("Error recording link click:", error);
-    throw error;
-  }
-}
+// 4a.4: dead standalone exports deleted here — recordEmailOpen,
+// recordLinkClick, getEmailEvents, getSequenceEvents. All had zero live
+// callers (the route controller uses trackingService.{handleEmailOpen,
+// handleLinkClick,trackEmailEvent} from services/domain/). recordEmailOpen
+// was pinned by characterization case 4; that case is deleted alongside.
 
 export async function createTrackedLink(
   emailTrackingId: string,
@@ -249,7 +151,6 @@ export async function createTrackedLink(
 // wrapper is deleted alongside the standalone dead exports.
 import {
   addTrackingToEmail as addTrackingToEmailImpl,
-  wrapLinksWithTracking as wrapLinksWithTrackingImpl,
 } from "./link-wrap";
 import { generateTrackingPixel as generateTrackingPixelLocal } from "./pixel";
 
@@ -269,36 +170,6 @@ export async function addTrackingToEmail(
       }`
     );
   }
-}
-
-export async function getEmailEvents(trackingId: string) {
-  return await emailEventRepo.listByTracking(trackingId);
-}
-
-export async function getSequenceEvents(
-  sequenceId: string,
-  timeframe?: { start: Date; end: Date }
-) {
-  // Note: the original included { Contact: true }; the repo's listByTracking
-  // doesn't cover this shape. Keep this on prisma directly until Phase 4
-  // introduces a richer event-listing method.
-  const where = {
-    sequenceId,
-    ...(timeframe && {
-      timestamp: {
-        gte: timeframe.start,
-        lte: timeframe.end,
-      },
-    }),
-  };
-
-  return await prisma.emailEvent.findMany({
-    where,
-    orderBy: { timestamp: "desc" },
-    include: {
-      Contact: true,
-    },
-  });
 }
 
 // 4a.3: the dead standalone `trackEmailEvent` (inline rate math) and

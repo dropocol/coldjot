@@ -21,8 +21,6 @@ const ctx = setupTestContext();
 
 import {
   createEmailTracking,
-  recordEmailOpen,
-  recordLinkClick,
   TrackingService,
 } from "@/lib/tracking";
 import {
@@ -206,47 +204,8 @@ describe("[Group B] Tracking — TrackingService class", () => {
 });
 
 describe("[Group B] Tracking — standalone functions", () => {
-  // ---- Case 4: recordEmailOpen (standalone) ----------------------------
-
-  it("case 4: recordEmailOpen standalone — first open creates OPENED event + stats; mirrors TrackingService.handleEmailOpen", async () => {
-    ctx.fake.seed(
-      "emailTracking",
-      {
-        id: TRACKING_ID,
-        hash: HASH,
-        openCount: 0,
-        openedAt: null,
-        status: "sent",
-        sequenceId: SEQ_ID,
-        contactId: CONTACT_ID,
-      },
-      ["hash"]
-    );
-
-    await recordEmailOpen(HASH);
-
-    // openCount incremented + status set to "opened" (note: lowercase string,
-    // not the enum — pinned current behavior of the standalone fn)
-    expect(
-      wasCalledWith(ctx, "emailTracking", "update", {
-        where: { hash: HASH },
-        data: { status: "opened", openCount: { increment: 1 } },
-      })
-    ).toBe(true);
-
-    const opened = [...ctx.fake.stores.emailEvent.rows.values()].find(
-      (e) => e.type === EmailEventEnum.OPENED
-    );
-    expect(opened).toBeDefined();
-    expect(opened?.metadata).toMatchObject({ isFirstOpen: true });
-
-    expect(ctx.stats).toHaveBeenCalledWith(
-      SEQ_ID,
-      EmailEventEnum.OPENED,
-      CONTACT_ID,
-      { isUniqueOpen: true }
-    );
-  });
+  // 4a.4: case 4 (recordEmailOpen standalone) deleted — the fn was dead
+  // (zero live callers) and is removed from lib/tracking in this step.
 
   // ---- Case 5: createEmailTracking happy + missing-field --------------
 
