@@ -4,21 +4,27 @@ import {
   EmailTrackingEnum,
   EmailEventEnum,
   EmailTrackingStatusEnum,
-  AppUrlEnum,
 } from "@coldjot/types";
 import { nanoid } from "nanoid";
-import { getBaseUrl } from "@/utils";
 import { updateSequenceStats } from "@/lib/stats";
 import type { Prisma } from "@prisma/client";
 import { EmailEventType, EmailEventMetadata } from "@coldjot/types";
 import { logger } from "@/lib/log";
-import { ProcessingJobEnum } from "@coldjot/types";
 import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
 import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 import { PrismaTrackedLinkRepository } from "@/repositories/prisma/prisma-tracked-link.repo";
 import { PrismaLinkClickRepository } from "@/repositories/prisma/prisma-link-click.repo";
 import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
 import { prisma } from "@coldjot/database";
+
+// Pure helpers (moved to their own modules in 4a.1; re-exported here so
+// existing `from "@/lib/tracking"` imports keep resolving).
+export { generateTrackingPixel } from "./pixel";
+export { calculateRates } from "./stats";
+export {
+  addTrackingToEmail as addTrackingToEmailPure,
+  wrapLinksWithTracking,
+} from "./link-wrap";
 
 // Module-level repository singletons (stopgap until Phase 4a collapses the
 // standalone functions into the TrackingService class).
@@ -27,6 +33,7 @@ const emailEventRepo = new PrismaEmailEventRepository();
 const trackedLinkRepo = new PrismaTrackedLinkRepository();
 const linkClickRepo = new PrismaLinkClickRepository();
 const sequenceStatsRepo = new PrismaSequenceStatsRepository();
+
 export async function createEmailTracking(
   metadata: EmailTrackingMetadata
 ): Promise<EmailTracking> {
@@ -72,8 +79,6 @@ export async function createEmailTracking(
         stepId: metadata.stepId,
         contactId: metadata.contactId,
       },
-      openCount: 0,
-      createdAt: new Date(),
     };
 
     const trackingEvent = await emailTrackingRepo.createPending({
@@ -99,7 +104,7 @@ export async function createEmailTracking(
       hash,
       metadata: { ...metadata, hash },
       type: EmailTrackingEnum.SEQUENCE,
-      pixel: generateTrackingPixel(hash),
+      pixel: generateTrackingPixelLocal(hash),
       wrappedLinks: true,
       trackingId: trackingEvent.id, // Add tracking ID for link association
     };
@@ -229,122 +234,29 @@ export async function createTrackedLink(
   }
 }
 
+// NOTE: the public `addTrackingToEmail` keeps its original (no-callback)
+// signature for backwards compat during the 4a migration. It delegates to the
+// pure version, binding the createLink callback to the module-level repo
+// singleton. 4a.5 moves the live caller onto the TrackingService and this
+// wrapper is deleted alongside the standalone dead exports.
+import {
+  addTrackingToEmail as addTrackingToEmailImpl,
+  wrapLinksWithTracking as wrapLinksWithTrackingImpl,
+} from "./link-wrap";
+import { generateTrackingPixel as generateTrackingPixelLocal } from "./pixel";
+
 export async function addTrackingToEmail(
   content: string,
   tracking: EmailTracking
 ): Promise<string> {
   try {
-    if (!content || !tracking) {
-      throw new Error("Content and tracking information are required");
-    }
-
-    let trackedContent = content;
-
-    logger.info("🔄 Adding tracking to email content");
-
-    if (tracking.wrappedLinks) {
-      trackedContent = await wrapLinksWithTracking(
-        trackedContent,
-        tracking.hash!,
-        tracking.id!
-      );
-    }
-
-    // Add development tracking link
-    if (process.env.NODE_ENV === "development") {
-      const baseUrl = getBaseUrl(AppUrlEnum.TRACKING);
-      const trackingUrl = new URL(`${baseUrl}/api/track/${tracking.hash}`);
-      const devTrackingInfo = `
-        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px;">
-          <p><strong>Development Tracking Info:</strong></p>
-          <p>Tracking Hash: ${tracking.hash}</p>
-          <p>Tracking URL: ${trackingUrl.toString()}</p>
-          <p>Email: ${tracking.metadata.email}</p>
-          <p>Tracking ID: ${tracking.id}</p>
-        </div>
-      `;
-      trackedContent = devTrackingInfo + trackedContent;
-    }
-
-    trackedContent += tracking.pixel;
-
-    return trackedContent;
+    return await addTrackingToEmailImpl(content, tracking, (id, url) =>
+      createTrackedLink(id, url)
+    );
   } catch (error) {
     console.error("Error adding tracking to email:", error);
     throw new Error(
       `Failed to add tracking to email: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-  }
-}
-
-function generateTrackingPixel(hash: string): string {
-  try {
-    if (!hash) {
-      throw new Error("Hash is required for tracking pixel generation");
-    }
-
-    const baseUrl = getBaseUrl(AppUrlEnum.TRACKING);
-    const trackingUrl = new URL(`${baseUrl}/api/track/${hash}.png`);
-    return `<img src="${trackingUrl.toString()}" alt="" style="display:none" width="1" height="1" />`;
-  } catch (error) {
-    console.error("Error generating tracking pixel:", error);
-    throw new Error(
-      `Failed to generate tracking pixel: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-  }
-}
-
-async function wrapLinksWithTracking(
-  content: string,
-  hash: string,
-  trackingId: string
-): Promise<string> {
-  try {
-    console.log("content", content);
-    console.log("hash", hash);
-    console.log("trackingId", trackingId);
-
-    if (!content || !hash || !trackingId) {
-      throw new Error(
-        "Content, hash, and tracking ID are required for link tracking"
-      );
-    }
-
-    const baseUrl = getBaseUrl(AppUrlEnum.TRACKING);
-    const trackingBaseUrl = `${baseUrl}/api/track/${hash}/click`;
-
-    // Use async replace to handle link creation
-    const promises: Promise<string>[] = [];
-    const matches: { match: string; url: string }[] = [];
-
-    // Find all links and store them
-    content.replace(
-      /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi,
-      (match, quote, url) => {
-        if (url.trim()) {
-          matches.push({ match, url });
-        }
-        return match;
-      }
-    );
-
-    // Create tracked links for all URLs
-    for (const { match, url } of matches) {
-      const linkId = await createTrackedLink(trackingId, url);
-      const trackingUrl = new URL(trackingBaseUrl);
-      trackingUrl.searchParams.set("lid", linkId); // Use link ID instead of URL
-      content = content.replace(match, `<a href="${trackingUrl.toString()}"`);
-    }
-
-    return content;
-  } catch (error) {
-    console.error("Error in link tracking:", error);
-    throw new Error(
-      `Failed to wrap links with tracking: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );
@@ -506,7 +418,7 @@ export async function trackEmailEvent(
 }
 
 // Helper function to safely calculate rates
-const calculateRates = (stats: {
+const calculateRatesLocal = (stats: {
   totalEmails: number | null;
   sentEmails: number | null;
   openedEmails: number | null;
@@ -544,7 +456,7 @@ export async function updateTrackingStats(
   switch (type) {
     case EmailEventEnum.SENT:
       updates.sentEmails = (stats.sentEmails ?? 0) + 1;
-      const sentRates = calculateRates({
+      const sentRates = calculateRatesLocal({
         ...stats,
         sentEmails: (stats.sentEmails ?? 0) + 1,
       });
@@ -553,7 +465,7 @@ export async function updateTrackingStats(
 
     case EmailEventEnum.OPENED:
       updates.openedEmails = (stats.openedEmails ?? 0) + 1;
-      const openRates = calculateRates({
+      const openRates = calculateRatesLocal({
         ...stats,
         openedEmails: (stats.openedEmails ?? 0) + 1,
       });
@@ -562,7 +474,7 @@ export async function updateTrackingStats(
 
     case EmailEventEnum.CLICKED:
       updates.clickedEmails = (stats.clickedEmails ?? 0) + 1;
-      const clickRates = calculateRates({
+      const clickRates = calculateRatesLocal({
         ...stats,
         clickedEmails: (stats.clickedEmails ?? 0) + 1,
       });
@@ -571,7 +483,7 @@ export async function updateTrackingStats(
 
     case EmailEventEnum.REPLIED:
       updates.repliedEmails = (stats.repliedEmails ?? 0) + 1;
-      const replyRates = calculateRates({
+      const replyRates = calculateRatesLocal({
         ...stats,
         repliedEmails: (stats.repliedEmails ?? 0) + 1,
       });
@@ -580,7 +492,7 @@ export async function updateTrackingStats(
 
     case EmailEventEnum.BOUNCED:
       updates.bouncedEmails = (stats.bouncedEmails ?? 0) + 1;
-      const bounceRates = calculateRates({
+      const bounceRates = calculateRatesLocal({
         ...stats,
         bouncedEmails: (stats.bouncedEmails ?? 0) + 1,
       });
