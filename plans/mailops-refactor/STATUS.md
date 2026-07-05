@@ -16,7 +16,7 @@
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ✅ **Done** — 10/10 aggregates migrated (3.1–3.10), merged `--no-ff` (`4d6571d`). 102/102 tests green. Lint-rule promotion deferred to Phase 4 (8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth). | `refactor/mailops-phase-3-repos` (merged) | 3–4 days |
 | 4 | [split three god-objects](./phase-4-split-god-objects.md) | ✅ **Done** — 4a (tracking) + 4b (email) + 4c (pubsub) all merged `--no-ff` (`44e55df`, `40fe9d2`, `0bc50fa`). 98/98 tests green; tsc clean; 0 errors / 260 warnings | `refactor/mailops-phase-4c-pubsub` (merged) | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ✅ **Done** — 5 files deleted, console sweep, deps pruned. 98/98 tests green; tsc clean; 0 errors / 244 warnings | `refactor/mailops-phase-5-cleanup` (merged) | 0.5–1 day |
-| 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
+| 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ✅ **Done** — ServiceManager deleted (297 lines); composition root owns the full graph; controllers → factories; routes → `makeRouter(app)`. 98/98 tests green; tsc clean; 0 errors / 242 warnings | `refactor/mailops-phase-6-singleton` (merged) | 2 days |
 | 7 | [real test suite](./phase-7-test-suite.md) | ⬜ Not started | `refactor/mailops-phase-7-tests` | 3–4 days |
 
 **Estimated total:** ~19–25 days of focused work. Each phase is independently shippable.
@@ -471,13 +471,82 @@ Then open [phase-6-kill-service-manager.md](./phase-6-kill-service-manager.md).
 
 ---
 
+## Phase 6 progress — kill the ServiceManager singleton
+
+**Goal:** replace the `ServiceManager.getInstance()` god-object with the plain composition root from Phase 1. See [phase-6-kill-service-manager.md](./phase-6-kill-service-manager.md). **Done — all 6 steps merged.**
+
+**Sub-branch:** `refactor/mailops-phase-6-singleton` (merged `--no-ff` into `refactor/mailops`).
+
+**Baseline (verified post-Phase-6 merge):** `npm test -w mailops` → 16 files / **98 tests passing**. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → **clean**. `npm run lint -w mailops` → **0 errors, 242 warnings** (was 244 after Phase 5).
+
+### Scope correction vs. the plan doc
+
+The plan doc listed **3** `ServiceManager.getInstance()` callers (sequence controller, email processor, server.ts). The code had **~15**, including `JobManager` + `MonitoringService` (took SM in their constructors), `BaseProcessor.onFailed` (reached for SM on every failed job across all 5 processors), `routes/pubsub.ts` (`PubSubService.getInstance()` + `new InboxSyncServiceImpl()` at module level), `lib/bull-board` (signature took SM), the standalone `GmailClientService` + `ScheduleGenerator` singletons (carried `TODO(phase-6)`), and 3 more controllers (health, metrics) the doc didn't mention. The locked decisions still held; the step ordering absorbed the missed callers.
+
+### Step tracker
+
+| Step | What | Status | Commit |
+|---|---|---|---|
+| 6.1 | JobManager + MonitoringService take the queues map, not ServiceManager | ✅ done | `e26d17f` |
+| 6.2 | BaseProcessor takes the DLQ map via constructor | ✅ done | `1770965` |
+| 6.3 | Inject JobManager into processors; kill GmailClientService + ScheduleGenerator singletons | ✅ done | `720270a` |
+| 6.4 | Controllers → factories; routes → `makeRouter(app)`; server.ts uses createApp(); delete ServiceManager | ✅ done | `c0718bb` |
+| 6.5 | Update wiring test; remove dead SM mocks; clear stale TODO(phase-6) markers | ✅ done | `f62890c` |
+| 6.6 | Kill utils/email re-export shim; resolve MessageDetails + MailboxWithAliases name collisions | ✅ done | `79e5101` |
+
+### What 6.4 produced (the big merge)
+
+**`composition-root.ts` now owns the full app graph:** infra singletons + queues + DLQs + JobManager + processors + MonitoringService + repos + domain services + controllers. `buildQueues()` moved verbatim from ServiceManager. `initializeApp(app)` boots memory monitor + PubSub + watch cleanup (the body of the old `ServiceManager.initialize()`); `shutdownApp(app)` is the old `ServiceManager.shutdown()` (same order: PubSub → monitor → processors → queues → DLQs → Redis → watch cleanup). The `App` interface gained `queues`, `dlQueues`, `processors`, `monitoring`, `redisClient`, and all 5 controllers; dropped `serviceManager`.
+
+**Controllers → factory functions:** `createSequenceController`, `createHealthController`, `createMetricsController`, `createMailboxController`, `createListController` — each takes its deps (jobManager / monitoring / repos / rateLimit / redis / queues) instead of constructing module-level singletons.
+
+**Routes → factories:** `makeSequenceRouter(controller)`, `makeHealthRouter`, `makeMetricsRouter`, `makeMailboxRouter`, `makeListsRouter`, `makePubsubRouter(inboxSync)`, `makeRouter(app)`. The pubsub route's eager `pubsubService.initialize()` is gone (it was a duplicate of what `initializeApp()` already does).
+
+**`lib/bull-board`:** `mountBullBoard(queues: Queue[])` — takes the queues list directly (was `ServiceManager`).
+
+**`server.ts`:** `createApp()` → `initializeApp()` → `makeRouter(app)`. SIGTERM/SIGINT → `shutdownApp(app)`.
+
+**Deleted:** `services/service-manager.ts` (297 lines) + `createServiceManager` factory.
+
+### Key decisions made during Phase 6 (read before resuming)
+
+1. **`JobManager(queues)` + `MonitoringService(queues, sequenceStatsRepo?)`** hold the queues map directly (both only used SM for `getQueue()`). This reorders a latent bug: SM's constructor built the JobManager before `initializeQueues()` populated the queues; it worked only because `initialize()` ran before any job add. The new SM (during 6.1–6.3) constructs JobManager inside `initializeQueues()`; the final composition root builds queues first, then JobManager.
+2. **`BaseProcessor.onFailed` takes the DLQ map via constructor** (4th param, default `new Map()`). Inherited by all 5 processors. Empty map in tests → no DLQ copy (the DLQ path was never asserted on).
+3. **`EmailProcessor` had a dead `jobManager` field** (declared, never read) — deleted in 6.3. The other 3 processors (Schedule/Sequence/Contact) actually use `jobManager.addEmailJob(...)` → now a required constructor param.
+4. **`GmailClientService` + `ScheduleGenerator` converted from `getInstance()` singletons to plain exported instances** (private constructor + getInstance → public constructor + `export const x = new X()`). The classes are stateless aside from config; the singleton *pattern* (process-wide one instance via getInstance) is what's killed, not the existence of a shared instance. The 4 locked infra singletons (Redis/MemoryMonitor/RateLimit/PubSub) + FileLogger keep `getInstance()` — genuine process-wide resources, owned inside `createApp()`.
+5. **`MonitoringService.sequenceStatsRepo`** moved off the module-level singleton into a constructor param with Prisma default (the last module-level repo singleton in a service).
+6. **`launchSequence` + `runSchedule` stay placeholders** ("not wired") — wiring them to real impls is Phase 7 scope. They don't block the ServiceManager kill (no production caller routes through `app.launchSequence` yet).
+7. **The `utils/email.ts` re-export shim** was still load-bearing in Phase 5 — `adapters/gmail-inbox-source.ts` imported `isReplyMessage` via `@/utils/email` (the STATUS doc's "thread-watch is the only consumer" claim was wrong). Fixed the import to `@/services/inbox-sync/classify` then deleted the shim.
+8. **Two name collisions resolved:** `MessageDetails` was defined in both `@coldjot/types` (pubsub.ts — the rich inbox-sync shape) and `adapters/mail-transport.ts` (the minimal sent-message-details shape) — renamed the local one to `SentMessageDetails`. `MailboxWithAliases` was in both `@coldjot/types` (the all-optional web DTO) and `repositories/mailbox.repo.ts` (the concrete-column DAO) — renamed the local one to `MailboxWithAliasesRecord`.
+
+### Lint stance (Phase 6 residuals)
+
+The `no-restricted-imports` rule did NOT flip to `error`. The 6 `@coldjot/database` residuals from Phase 4 are unchanged — `sequenceHealth` (monitor-only), the `$transaction` tx clients (`lib/stats`, `services/domain/tracking.service.ts`), and the `resetSequence` paths. None were Phase 6 scope. The rule flips after Phase 7 collapses the tx-client paths and folds `sequenceHealth` into a repo.
+
+### Resume guide — Phase 6 is DONE; Phase 7 is next
+
+**Where we are:** Phases 0–6 all merged into `refactor/mailops`. **Phase 7 (real test suite) is next** — it replaces the Phase 0 characterization tests with a permanent suite organized by layer, and is where `launchSequence` / `runSchedule` finally get wired to real impls.
+
+```bash
+cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
+git checkout refactor/mailops
+npm test -w mailops                                    # 16 files / 98 tests passing
+npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
+npm run lint -w mailops                                # 0 errors, 242 warnings
+
+git checkout -b refactor/mailops-phase-7-tests         # branch off refactor/mailops tip
+```
+Then open [phase-7-test-suite.md](./phase-7-test-suite.md).
+
+---
+
 ## Resume guide
 
-> **Phases 0–5 are done.** Phase 6 (kill ServiceManager singleton) is the next active phase — see [phase-6-kill-service-manager.md](./phase-6-kill-service-manager.md). The "Recommended order for the remaining groups" table below is preserved as Phase-0 reference only.
+> **Phases 0–6 are done.** Phase 7 (real test suite) is the next active phase — see [phase-7-test-suite.md](./phase-7-test-suite.md). The "Recommended order for the remaining groups" table below is preserved as Phase-0 reference only.
 
 ### Get back to a green state
 
-The current working branch is `refactor/mailops` (Phases 0–5 merged). All phase sub-branches are merged; you do not need to checkout an old one.
+The current working branch is `refactor/mailops` (Phases 0–6 merged). All phase sub-branches are merged; you do not need to checkout an old one.
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
@@ -486,7 +555,7 @@ git checkout refactor/mailops
 # Sanity check — all green:
 npm test -w mailops                                   # 16 files / 98 tests pass
 npx tsc --noEmit -p apps/mailops/tsconfig.json        # clean
-npm run lint -w mailops                               # 0 errors, 271 warnings
+npm run lint -w mailops                               # 0 errors, 242 warnings
 ```
 
 ### Recommended order for the remaining groups
