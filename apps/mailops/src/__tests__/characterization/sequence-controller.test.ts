@@ -37,7 +37,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/services/service-manager", () => ({
   ServiceManager: class {
     static getInstance() {
-      return { getJobManager: () => ({ addSequenceJob: mocks.addSequenceJob }) };
+      return {
+        getJobManager: () => ({ addSequenceJob: mocks.addSequenceJob }),
+        // Phase 6.1: MonitoringService(queues) — empty map; MonitoringService
+        // itself is mocked below so the queues arg is never read.
+        getQueues: () => new Map(),
+      };
     }
   },
 }));

@@ -7,22 +7,40 @@ import {
   QueueMetrics,
 } from "@coldjot/types";
 import { logger } from "@/lib/log";
-import { ServiceManager } from "@/services/service-manager";
 import { DEFAULT_ALERT_CONFIG } from "@/config";
 import os from "os";
 import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
-
-const sequenceStatsRepo = new PrismaSequenceStatsRepository();
+import type { SequenceStatsRepository } from "@/repositories/sequence-stats.repo";
 import { Queue, QueueEvents } from "bullmq";
 
+/**
+ * Phase 6.1: MonitoringService no longer takes the ServiceManager — it only
+ * ever used it for `getQueue(name)` to read queue job counts. It now holds the
+ * queues map directly, plus a constructor-injected SequenceStatsRepository
+ * (default Prisma impl) instead of the module-level singleton.
+ */
 export class MonitoringService {
   private defaultAlertConfig: AlertConfig = DEFAULT_ALERT_CONFIG;
-  private serviceManager: ServiceManager;
+  private queues: Map<string, Queue>;
+  private sequenceStatsRepo: SequenceStatsRepository;
   private checkIntervals: Map<string, NodeJS.Timeout> = new Map();
   private queueEvents: Map<string, QueueEvents> = new Map();
 
-  constructor(serviceManager: ServiceManager) {
-    this.serviceManager = serviceManager;
+  constructor(
+    queues: Map<string, Queue>,
+    sequenceStatsRepo: SequenceStatsRepository = new PrismaSequenceStatsRepository()
+  ) {
+    this.queues = queues;
+    this.sequenceStatsRepo = sequenceStatsRepo;
+  }
+
+  /** Look up a queue by name (throws if missing). */
+  private queue(name: string): Queue {
+    const queue = this.queues.get(name);
+    if (!queue) {
+      throw new Error(`Queue ${name} not initialized`);
+    }
+    return queue;
   }
 
   async startMonitoring(
@@ -64,7 +82,7 @@ export class MonitoringService {
   }
 
   private async initializeSequenceStats(sequenceId: string): Promise<void> {
-    const existingStats = await sequenceStatsRepo.getBySequence(sequenceId);
+    const existingStats = await this.sequenceStatsRepo.getBySequence(sequenceId);
 
     if (!existingStats) {
       // The monitor initializes a richer row (uniqueOpens, failedEmails, etc.)
@@ -100,7 +118,7 @@ export class MonitoringService {
   ): Promise<SequenceHealth> {
     try {
       // Get sequence stats
-      const stats = await sequenceStatsRepo.getBySequence(sequenceId);
+      const stats = await this.sequenceStatsRepo.getBySequence(sequenceId);
 
       if (!stats) {
         await this.initializeSequenceStats(sequenceId);
@@ -163,12 +181,8 @@ export class MonitoringService {
   }
 
   async getSystemMetrics(): Promise<SystemMetrics> {
-    const sequenceQueue = this.serviceManager.getQueue("sequence-processing");
-    const emailQueue = this.serviceManager.getQueue("email-sending");
-
-    if (!sequenceQueue || !emailQueue) {
-      throw new Error("Required queues not initialized");
-    }
+    const sequenceQueue = this.queue("sequence-processing");
+    const emailQueue = this.queue("email-sending");
 
     const [sequenceJobCounts, emailJobCounts] = await Promise.all([
       sequenceQueue.getJobCounts(),
@@ -193,12 +207,8 @@ export class MonitoringService {
   }
 
   private async getQueueMetrics(sequenceId?: string): Promise<QueueMetrics> {
-    const sequenceQueue = this.serviceManager.getQueue("sequence-processing");
-    const emailQueue = this.serviceManager.getQueue("email-sending");
-
-    if (!sequenceQueue || !emailQueue) {
-      throw new Error("Required queues not initialized");
-    }
+    const sequenceQueue = this.queue("sequence-processing");
+    const emailQueue = this.queue("email-sending");
 
     const [sequenceCounts, emailCounts] = await Promise.all([
       sequenceQueue.getJobCounts(),

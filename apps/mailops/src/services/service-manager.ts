@@ -13,7 +13,7 @@ import { JOB_DEFAULTS } from "@/config/queue/policy";
 // Core services
 import { MemoryMonitor } from "./core/memory/monitor";
 import { RateLimitService } from "./core/rate-limit/service";
-import { JobManager, createJobManager } from "./jobs/job-manager";
+import { JobManager } from "./jobs/job-manager";
 
 // Import processors directly
 import { BaseProcessor } from "./jobs/base-processor";
@@ -32,7 +32,7 @@ export class ServiceManager {
   private redisConnection: RedisConnection;
   private memoryMonitor: MemoryMonitor | null = null;
   private rateLimitService: RateLimitService | null = null;
-  private jobManager: JobManager;
+  private jobManager: JobManager | null = null;
   private queues: Map<string, Queue>;
   private dlQueues: Map<string, Queue>;
   private processors: Map<string, ProcessorType>;
@@ -44,7 +44,6 @@ export class ServiceManager {
     this.queues = new Map();
     this.dlQueues = new Map();
     this.processors = new Map();
-    this.jobManager = createJobManager(this);
     this.watchCleanupService = new WatchCleanupService();
     this.pubSubService = PubSubService.getInstance();
   }
@@ -126,6 +125,11 @@ export class ServiceManager {
       }
 
       logger.info(`✅ Initialized ${queueEntries.length} queues`);
+
+      // Phase 6.1: JobManager now holds the queues map directly (instead of a
+      // back-reference to ServiceManager). It must be constructed AFTER the
+      // queues are populated.
+      this.jobManager = new JobManager(this.queues);
     } catch (error) {
       logger.error({ err: error }, "❌ Error initializing queues");
       throw error;
@@ -213,6 +217,15 @@ export class ServiceManager {
   }
 
   /**
+   * All primary queues as a Map — Phase 6.1 bridge so JobManager and
+   * MonitoringService can be constructed with the queues they need (instead of
+   * a ServiceManager back-reference). Removed in 6.4 when createApp() owns this.
+   */
+  public getQueues(): Map<string, Queue> {
+    return this.queues;
+  }
+
+  /**
    * Get the paired dead-letter queue for a queue name (e.g. for "email-sending"
    * returns the "email-sending-dl" queue). Used by BaseProcessor when a job
    * exhausts its retries.
@@ -286,6 +299,11 @@ export class ServiceManager {
    * Get the job manager instance
    */
   public getJobManager(): JobManager {
+    if (!this.jobManager) {
+      throw new Error(
+        "JobManager not initialized — call initialize() before getJobManager()."
+      );
+    }
     return this.jobManager;
   }
 }

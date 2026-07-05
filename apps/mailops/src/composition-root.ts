@@ -160,7 +160,11 @@ export function createApp(): App {
   const pubsub = PubSubService.getInstance();
   const watchCleanup = new WatchCleanupService();
   const serviceManager = ServiceManager.getInstance();
-  const jobManager = serviceManager.getJobManager();
+  // Phase 6.1: JobManager now holds the queues map directly. createApp() does
+  // not call ServiceManager.initialize() (which is what populates the queues),
+  // so the wiring test sees an empty map — that's fine; it only asserts the
+  // reference is non-null. server.ts runs initialize() at boot.
+  const jobManager = new JobManager(serviceManager.getQueues());
 
   // ---- Domain services ---------------------------------------------------
   // Phase 4b: SendEmailServiceImpl replaces the EmailService class — same

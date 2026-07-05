@@ -5,7 +5,8 @@ import { ok, serverError, type ControllerResult } from "./utils";
 
 // Initialize services
 const serviceManager = ServiceManager.getInstance();
-const monitoringService = new MonitoringService(serviceManager);
+// Phase 6.1 bridge: MonitoringService takes the queues map directly.
+const monitoringService = new MonitoringService(serviceManager.getQueues());
 
 export async function getSystemMetrics(): Promise<ControllerResult> {
   try {

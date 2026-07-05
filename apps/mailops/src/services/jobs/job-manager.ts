@@ -3,26 +3,32 @@ import { logger } from "@/lib/log";
 import { QUEUE_NAMES } from "@/config";
 import { JOB_RETRY, JOB_DEFAULTS } from "@/config/queue/policy";
 import type { ProcessingJob, EmailJob } from "@coldjot/types";
-import { ServiceManager } from "../service-manager";
 
+/**
+ * Phase 6.1: JobManager no longer takes the ServiceManager — it only ever used
+ * it for `getQueue(name)`. It now holds the queues map directly, so the queues
+ * must be created BEFORE the JobManager is constructed (the composition root
+ * handles this; ServiceManager was already implicitly ordered that way because
+ * `initialize()` runs before any job add).
+ */
 export class JobManager {
-  private serviceManager: ServiceManager;
+  constructor(private readonly queues: Map<string, Queue>) {}
 
-  constructor(serviceManager: ServiceManager) {
-    this.serviceManager = serviceManager;
+  /** Look up a queue by name (throws if missing). */
+  private queue(name: string): Queue {
+    const queue = this.queues.get(name);
+    if (!queue) {
+      throw new Error(`Queue ${name} not initialized`);
+    }
+    return queue;
   }
 
   /**
    * Add a sequence processing job to the queue
    */
   public async addSequenceJob(job: ProcessingJob): Promise<Job> {
-    const queue = this.serviceManager.getQueue(QUEUE_NAMES.SEQUENCE);
-    if (!queue) {
-      throw new Error("Sequence queue not initialized");
-    }
-
     logger.info(`Adding sequence job to queue`);
-    return await queue.add(QUEUE_NAMES.SEQUENCE, job, {
+    return await this.queue(QUEUE_NAMES.SEQUENCE).add(QUEUE_NAMES.SEQUENCE, job, {
       ...JOB_DEFAULTS,
       attempts: JOB_RETRY.attempts,
       backoff: JOB_RETRY.backoff,
@@ -33,10 +39,7 @@ export class JobManager {
    * Add an email job to the queue
    */
   public async addEmailJob(job: EmailJob): Promise<Job> {
-    const queue = this.serviceManager.getQueue(QUEUE_NAMES.EMAIL);
-    if (!queue) {
-      throw new Error("Email queue not initialized");
-    }
+    logger.info("Adding email job to queue");
 
     logger.info("Adding email job to queue");
 
@@ -58,7 +61,7 @@ export class JobManager {
       );
     }
 
-    return await queue.add(QUEUE_NAMES.EMAIL, job, {
+    return await this.queue(QUEUE_NAMES.EMAIL).add(QUEUE_NAMES.EMAIL, job, {
       delay,
       ...JOB_DEFAULTS,
       attempts: JOB_RETRY.attempts,
@@ -70,11 +73,7 @@ export class JobManager {
    * Get job counts for a specific queue
    */
   public async getJobCounts(queueName: string) {
-    const queue = this.serviceManager.getQueue(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not initialized`);
-    }
-    return await queue.getJobCounts();
+    return await this.queue(queueName).getJobCounts();
   }
 
   /**
@@ -84,21 +83,14 @@ export class JobManager {
     queueName: string,
     jobId: string
   ): Promise<Job | undefined> {
-    const queue = this.serviceManager.getQueue(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not initialized`);
-    }
-    return await queue.getJob(jobId);
+    return await this.queue(queueName).getJob(jobId);
   }
 
   /**
    * Remove a job from a queue
    */
   public async removeJob(queueName: string, jobId: string): Promise<void> {
-    const queue = this.serviceManager.getQueue(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not initialized`);
-    }
+    const queue = this.queue(queueName);
     const job = await queue.getJob(jobId);
     if (job) {
       await job.remove();
@@ -106,10 +98,3 @@ export class JobManager {
     }
   }
 }
-
-// Export factory function
-export const createJobManager = (
-  serviceManager: ServiceManager
-): JobManager => {
-  return new JobManager(serviceManager);
-};

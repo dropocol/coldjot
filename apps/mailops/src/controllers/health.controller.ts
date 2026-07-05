@@ -7,7 +7,8 @@ import { ok, serverError, type ControllerResult } from "./utils";
 // TODO : recheck this file
 // Initialize services
 const serviceManager = ServiceManager.getInstance();
-const monitoringService = new MonitoringService(serviceManager);
+// Phase 6.1 bridge: MonitoringService takes the queues map directly.
+const monitoringService = new MonitoringService(serviceManager.getQueues());
 const redis = new Redis({
   host: process.env.REDIS_HOST || "localhost",
   port: parseInt(process.env.REDIS_PORT || "6379"),

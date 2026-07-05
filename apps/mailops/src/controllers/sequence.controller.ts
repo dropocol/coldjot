@@ -26,8 +26,9 @@ const businessHoursRepo = new PrismaBusinessHoursRepository();
 const serviceManager = ServiceManager.getInstance();
 const jobManager = serviceManager.getJobManager();
 
-// Update monitoring service to use schedule service
-const monitoringService = new MonitoringService(serviceManager);
+// Phase 6.1 bridge: MonitoringService takes the queues map directly. Replaced
+// by a factory function in 6.4.
+const monitoringService = new MonitoringService(serviceManager.getQueues());
 
 const DEFAULT_BUSINESS_HOURS: BusinessHours = {
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
