@@ -14,7 +14,7 @@
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ✅ **Done** — interfaces + Prisma impls + createApp() + wiring test + lint rule | `refactor/mailops-phase-1-seams` (merged) | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ✅ **Done** — route files thinned, logic moved to controllers/ | `refactor/mailops-phase-2-controllers` (merged) | 1 day |
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ✅ **Done** — 10/10 aggregates migrated (3.1–3.10), merged `--no-ff` (`4d6571d`). 102/102 tests green. Lint-rule promotion deferred to Phase 4 (8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth). | `refactor/mailops-phase-3-repos` (merged) | 3–4 days |
-| 4 | [split three god-objects](./phase-4-split-god-objects.md) | 🟡 In progress — 4a (tracking) merged `--no-ff` (`44e55df`); 4b (email) + 4c (pubsub) next | `refactor/mailops-phase-4-split` (4a merged) | 5–7 days |
+| 4 | [split three god-objects](./phase-4-split-god-objects.md) | 🟡 In progress — 4a (tracking) + 4b (email) merged; 4c (pubsub) next | `refactor/mailops-phase-4b-email` (4b done, merging) | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
 | 7 | [real test suite](./phase-7-test-suite.md) | ⬜ Not started | `refactor/mailops-phase-7-tests` | 3–4 days |
@@ -293,7 +293,9 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 | 4a.3 | Delete dead standalone `trackEmailEvent` + `updateTrackingStats` + cases 6/6b/7 | ✅ done | `3cdb926` |
 | 4a.4 | Delete remaining dead standalones (recordEmailOpen/recordLinkClick/getEmailEvents/getSequenceEvents) + case 4 | ✅ done | `b00d7f2` |
 | 4a.5 | Migrate `createEmailTracking` → `TrackingServiceImpl.createTracking`; update EmailProcessor + cases 5a/5b | ✅ done | `2c898dc` |
-| 4b.1–4b.4 | Split `lib/email/index.ts` → GmailTransport + SendEmailServiceImpl; delete SMTP path | ⬜ Not started | — |
+| 4b.1 | Extract GmailTransport (`adapters/gmail-transport.ts`); move getSentDetails body | ✅ done | `85fb7ad` |
+| 4b.2+4b.3 | Extract `SendEmailServiceImpl`; migrate EmailProcessor + composition-root | ✅ done | `e5532d7` |
+| 4b.4 | Delete EmailService + `lib/google/smtp/*` + nodemailer; clean lib/tracking barrel | ✅ done | (this branch) |
 | 4c.1–4c.7 | Split `services/pubsub/handler.ts` → GmailInboxSource + InboxSync pipeline | ⬜ Not started | — |
 
 ### What 4a produced
@@ -317,18 +319,36 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 5. **`lib/tracking/helper.ts` is dead** (`generateTrackingMetadata` has zero callers). Left in place — Phase 5 sweeps dead code. Its `console.log` is the only `console.*` in the tracking directory outside the two shim `console.error`s in `index.ts`.
 6. **Lint count unchanged at 8** `@coldjot/database` warnings. Composition changed: `lib/tracking/index.ts` dropped out; `services/domain/tracking.service.ts` joined (the `$transaction` tx-client for `handleLinkClick`). Promoting `no-restricted-imports` to `error` still waits for the tx-client paths to collapse (now planned as a later Phase 4/7 sweep) + SMTP deletion in 4b.
 
+### What 4b produced
+
+**`adapters/gmail-transport.ts` (87 lines)** — `GmailTransport implements MailTransport`. Each method fetches its own client via `gmailClientService.getClient(userId, mailboxId)` (option a in the plan); the client service caches OAuth tokens so the per-call cost is one cache lookup. `send`/`insert`/`delete`/`getSentDetails` carry `(userId, mailboxId)` so the transport is self-contained. `getSentMessageDetails` body moved here verbatim.
+
+**`services/domain/send-email.service.ts` (245 lines)** — interface + `SendEmailServiceImpl`. The body is the Gmail-API path only: `useApi` toggle, SMTP branch, the stray `null;`, the unused `createEmailTrackingRecord`, and `handleSendEmailError` (a one-line logger) are all gone. Constructor takes `(transport, emailTracking repo, trackedLink repo)` with Prisma/Gmail defaults. Uses the pure `addTrackingToEmail` (link-wrap) with `trackedLink.create` injected as the `createLink` callback.
+
+**Deleted:** `lib/email/index.ts` (entire file — `EmailService` class + singleton), `lib/google/smtp/{gmail,helper,nodemailer}.ts` (~530 lines), `sendGmailSMTP`/`smtp/helper` re-exports, `nodemailer` + `quoted-printable` (+ types) from package.json. `lib/tracking/index.ts` collapsed to a clean 24-line barrel (the no-callback `addTrackingToEmail` shim + `createTrackedLink` + the `trackedLinkRepo` singleton + their two `console.error`s all gone — the live caller uses the pure version now).
+
+**Lint:** `@coldjot/database` warnings **8 → 7** (`lib/google/smtp/gmail.ts` gone); total warnings **304 → 271**. Group A characterization (5 cases, all 5 event-types + disableSending + auth-failure + delay + empty-html) passes against `SendEmailServiceImpl.send` unchanged.
+
+### Key decisions made during 4b (read before resuming)
+
+1. **`MailTransport` methods take `(userId, mailboxId)`** so the transport fetches its own client per call (option a). The orchestrator still calls `transport.getClient` once for the helpers that need a raw gmail handle (`getEmailThreadInfo`, `createUntrackedMessage` — they predate the transport and take a `gmail` arg).
+2. **Fake-gmail memoization:** `test-context.ts` now reuses ONE fake gmail per test (mirroring the real client cache), and `fake-gmail.ts` reads canned responses LAZILY (at call time, not construction). Without both, Phase 4b's per-method `getClient` calls each returned a fresh fake with its own empty `calls` array, AND test-time response overrides weren't picked up. Tests now assert the full `["send","get","get","insert","delete"]` sequence again.
+3. **`SendEmailServiceImpl.recordSentEvent` is `async` and awaited** (not fire-and-forget) to preserve the exact timing of the original `await this.createEmailEvent(...)` — the `disableSending` path's stats call must resolve before `send` returns (Group A case 2 asserts on `ctx.stats`).
+4. **`lib/email/helper.ts` stays standalone** — the pure RFC822 builders (`createEmailMessage`, `createUntrackedMessage`, `generateSenderInfo`) are imported by `SendEmailServiceImpl` from `@/lib/email/helper`. Only `lib/email/index.ts` (the class) was deleted.
+5. **`SendEmailService` interface moved** from its own 9-line file into `send-email.service.ts` (interface + impl together, matching how 4a organized tracking.service.ts).
+6. **`lib/tracking/helper.ts` still dead** (`generateTrackingMetadata`, zero callers). Phase 5 sweeps it.
+
 ### Resume commands
 
-4a is **done** (5 commits on `refactor/mailops-phase-4-split`, not yet merged). To continue with 4b:
+4b is **done** on `refactor/mailops-phase-4b-email`. To continue with 4c:
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
-git checkout refactor/mailops-phase-4-split         # already has 4a
-npm test -w mailops                                   # 98/98 passing
-npx tsc --noEmit -p apps/mailops/tsconfig.json        # clean
-# Next: 4b — split lib/email/index.ts. See phase-4-split-god-objects.md §4b.
-# 4b deletes lib/google/smtp/*, removes nodemailer, and migrates the
-# addTrackingToEmail caller (which lets lib/tracking/index.ts drop its shim).
+git checkout refactor/mailops                          # after 4b merges
+npm test -w mailops                                    # 98/98 passing
+npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
+# Next: 4c — split services/pubsub/handler.ts (the biggest god-object, 1,308
+# lines). See phase-4-split-god-objects.md §4c. 7 steps; the riskiest split.
 ```
 
 ---
