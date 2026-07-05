@@ -1,17 +1,19 @@
 /**
  * Group B — tracking characterization tests.
  *
- * Pins the CURRENT behavior of lib/tracking/index.ts so the Phase 4a refactor
+ * Pins the CURRENT behavior of the tracking surface so the Phase 4a refactor
  * (collapse the duplicate standalone fns + TrackingService class into one
  * TrackingServiceImpl) can be proven non-breaking.
  *
- * Two parallel surfaces exist today and BOTH are pinned here so we know
- * whether they agree (they likely don't, in the rate-math path):
- *   - standalone fns: recordEmailOpen, recordLinkClick, createEmailTracking,
- *     trackEmailEvent, updateTrackingStats
- *   - TrackingService class: handleEmailOpen, handleLinkClick, trackEmailEvent
- *
- * Source: lib/tracking/index.ts (lines 17–805).
+ * Two parallel surfaces existed before 4a; BOTH were pinned originally. After
+ * 4a.3 the dead standalone `trackEmailEvent` + `updateTrackingStats` (the two
+ * divergent rate-math paths, zero live callers) were deleted, and the cases
+ * that pinned them (6, 6b, 7) were deleted alongside — they pinned dead code,
+ * not behavior. Remaining cases:
+ *   - TrackingService class: handleEmailOpen, handleLinkClick (live route path)
+ *   - standalone fns still present: recordEmailOpen (case 4), createEmailTracking
+ *     (cases 5a/5b). recordEmailOpen is itself dead (4a.4 deletes it + case 4);
+ *     createEmailTracking moves onto the service in 4a.5.
  */
 import { setupTestContext, wasCalledWith } from "@/__tests__/helpers/test-context";
 
@@ -21,8 +23,6 @@ import {
   createEmailTracking,
   recordEmailOpen,
   recordLinkClick,
-  trackEmailEvent,
-  updateTrackingStats,
   TrackingService,
 } from "@/lib/tracking";
 import {
@@ -279,155 +279,4 @@ describe("[Group B] Tracking — standalone functions", () => {
     ).rejects.toThrow(/Missing required metadata fields/);
   });
 
-  // ---- Case 6: trackEmailEvent rate math (canary) ---------------------
-
-  it("case 6: trackEmailEvent — pins the inline rate math for all five event types", async () => {
-    // For each event type, seed an existing SequenceStats row + tracking row,
-    // run trackEmailEvent, and assert the prisma.sequenceStats.update payload.
-    const baseStats = {
-      id: "stats-1",
-      sequenceId: SEQ_ID,
-      totalEmails: 4,
-      sentEmails: 4,
-      openedEmails: 2,
-      clickedEmails: 1,
-      repliedEmails: 0,
-      bouncedEmails: 0,
-    };
-
-    const cases: Array<{
-      type: EmailEventEnum;
-      expectFields: Partial<{
-        sentEmails: number;
-        openedEmails: number;
-        clickedEmails: number;
-        repliedEmails: number;
-        bouncedEmails: number;
-        openRate: number;
-        clickRate: number;
-        replyRate: number;
-        bounceRate: number;
-      }>;
-    }> = [
-      // SENT: sentEmails 4→5; rates recomputed with denominator (sentEmails+1)=5
-      {
-        type: EmailEventEnum.SENT,
-        expectFields: {
-          sentEmails: 5,
-          openRate: (2 / 5) * 100,
-          clickRate: (1 / 5) * 100,
-          replyRate: 0,
-          bounceRate: 0,
-        },
-      },
-      // OPENED: openedEmails 2→3; openRate = (3/4)*100
-      {
-        type: EmailEventEnum.OPENED,
-        expectFields: { openedEmails: 3, openRate: (3 / 4) * 100 },
-      },
-      // CLICKED: clickedEmails 1→2; clickRate = (2/4)*100
-      {
-        type: EmailEventEnum.CLICKED,
-        expectFields: { clickedEmails: 2, clickRate: (2 / 4) * 100 },
-      },
-      // REPLIED: repliedEmails 0→1; replyRate = (1/4)*100
-      {
-        type: EmailEventEnum.REPLIED,
-        expectFields: { repliedEmails: 1, replyRate: (1 / 4) * 100 },
-      },
-      // BOUNCED: bouncedEmails 0→1; bounceRate = (1/4)*100
-      {
-        type: EmailEventEnum.BOUNCED,
-        expectFields: { bouncedEmails: 1, bounceRate: (1 / 4) * 100 },
-      },
-    ];
-
-    for (const c of cases) {
-      ctx.reset();
-      ctx.fake.seed("emailTracking", {
-        id: TRACKING_ID,
-        sequenceId: SEQ_ID,
-        contactId: CONTACT_ID,
-      });
-      // sequenceStats has a unique constraint on sequenceId in Prisma;
-      // register it so findUnique({ where: { sequenceId } }) resolves.
-      ctx.fake.seed("sequenceStats", baseStats, ["sequenceId"]);
-
-      await trackEmailEvent(TRACKING_ID, c.type, undefined, {
-        email: "r@e.com",
-        userId: USER_ID,
-        sequenceId: SEQ_ID,
-        contactId: CONTACT_ID,
-      });
-
-      const updateCall = ctx.fake.calls.find(
-        (call) =>
-          call.model === "sequenceStats" && call.op === "update"
-      );
-      expect(updateCall, `no stats update for ${c.type}`).toBeDefined();
-      for (const [field, expected] of Object.entries(c.expectFields)) {
-        expect(
-          updateCall!.args.data[field],
-          `${c.type}: ${field} expected ${expected}`
-        ).toBeCloseTo(expected as number, 5);
-      }
-    }
-  });
-
-  it("case 6b: trackEmailEvent — when no SequenceStats row exists, creates an initial stats row", async () => {
-    ctx.fake.seed("emailTracking", {
-      id: TRACKING_ID,
-      sequenceId: SEQ_ID,
-      contactId: CONTACT_ID,
-    });
-    // No sequenceStats seeded.
-
-    await trackEmailEvent(TRACKING_ID, EmailEventEnum.SENT, undefined, {
-      email: "r@e.com",
-      userId: USER_ID,
-      sequenceId: SEQ_ID,
-      contactId: CONTACT_ID,
-    });
-
-    // A new sequenceStats row is created with sentEmails: 1
-    const created = ctx.fake.calls.find(
-      (c) => c.model === "sequenceStats" && c.op === "create"
-    );
-    expect(created).toBeDefined();
-    expect(created!.args.data.sentEmails).toBe(1);
-  });
-
-  // ---- Case 7: updateTrackingStats parity ------------------------------
-
-  it("case 7: updateTrackingStats — pins the calculateRates-based path (parity vs trackEmailEvent)", async () => {
-    // Note: calculateRates uses denominator = max(sentEmails + 1, 1) for ALL
-    // event types (not just SENT). trackEmailEvent uses sentEmails+1 only for
-    // SENT and sentEmails for others. This test pins the actual difference.
-    ctx.fake.seed(
-      "sequenceStats",
-      {
-        id: "stats-1",
-        sequenceId: SEQ_ID,
-        totalEmails: 4,
-        sentEmails: 4,
-        openedEmails: 2,
-        clickedEmails: 1,
-        repliedEmails: 0,
-        bouncedEmails: 0,
-      },
-      ["sequenceId"]
-    );
-
-    await updateTrackingStats(SEQ_ID, EmailEventEnum.OPENED);
-
-    const updateCall = ctx.fake.calls.find(
-      (c) => c.model === "sequenceStats" && c.op === "update"
-    );
-    expect(updateCall).toBeDefined();
-    // openedEmails 2→3; openRate via calculateRates = (3 / max(4+1,1)) * 100 = 60
-    expect(updateCall!.args.data.openedEmails).toBe(3);
-    expect(updateCall!.args.data.openRate).toBeCloseTo(60, 5);
-    // Compare: trackEmailEvent would compute (3/4)*100 = 75. The two paths
-    // DISAGREE. Phase 4a will pick one; this test documents the divergence.
-  });
 });
