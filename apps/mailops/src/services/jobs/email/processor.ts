@@ -33,6 +33,8 @@ import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo
 import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
 import type { EmailEventRepository } from "@/repositories/email-event.repo";
 import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
+import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
+import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
   private serviceManager = ServiceManager.getInstance();
@@ -41,6 +43,8 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
   private scheduleGenerator: ScheduleGenerator;
   private readonly emailTracking: EmailTrackingRepository;
   private readonly emailEvent: EmailEventRepository;
+  private readonly sequenceStep = new PrismaSequenceStepRepository();
+  private readonly sequence = new PrismaSequenceRepository();
 
   constructor(queue: Queue) {
     super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL));
@@ -320,19 +324,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
   private async getAndValidateSequenceStep(
     stepId: string
   ): Promise<SequenceStep> {
-    const step = await prisma.sequenceStep.findUnique({
-      where: { id: stepId },
-      include: {
-        sequence: {
-          select: {
-            id: true,
-            userId: true,
-            status: true,
-            name: true,
-          },
-        },
-      },
-    });
+    const step = await this.sequenceStep.findWithSequenceMeta(stepId);
 
     if (!step) {
       logger.error(`❌ Step ${stepId} not found - it may have been deleted`);
@@ -343,7 +335,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     return {
       ...step,
       stepType: step.stepType as StepTypeEnum,
-    } as SequenceStep;
+    } as unknown as SequenceStep;
   }
 
   private async handleSuccessfulEmail(
@@ -352,16 +344,9 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     step: any
   ) {
     // Get the total steps of a sequence
-    const totalSteps = await prisma.sequenceStep.count({
-      where: { sequenceId: data.sequenceId },
-    });
+    const totalSteps = await this.sequenceStep.countInSequence(data.sequenceId);
 
-    const sequence = await prisma.sequence.findUnique({
-      where: { id: data.sequenceId },
-      include: {
-        businessHours: true,
-      },
-    });
+    const sequence = await this.sequence.findWithBusinessHours(data.sequenceId);
 
     if (!sequence) {
       throw new Error(`Sequence ${data.sequenceId} not found`);
@@ -379,10 +364,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       // calculate the next step
       const nextStepOrder = step.order + 1;
 
-      const steps = await prisma.sequenceStep.findMany({
-        where: { sequenceId: data.sequenceId },
-        orderBy: { order: "asc" },
-      });
+      const steps = await this.sequenceStep.listBySequence(data.sequenceId);
 
       logger.info(steps, "🚀 ~ EmailProcessor ~ steps:");
 

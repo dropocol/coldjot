@@ -27,8 +27,27 @@ export interface SequenceWithLaunchGraph extends SequenceRecord {
 
 export interface SequenceWithDetails extends SequenceRecord {
   sequenceMailboxId: string;
+  sequenceMailbox?: { id: string } | null;
   businessHours: BusinessHours | null;
-  steps: Array<{ id: string; order: number }>;
+  steps: Array<{
+    id: string;
+    sequenceId: string;
+    order: number;
+    stepType: string;
+    priority: any;
+    timing: string;
+    delayAmount: number | null;
+    delayUnit: string | null;
+    subject: string | null;
+    content: string | null;
+    includeSignature: boolean | null;
+    note: string | null;
+    previousStepId: string | null;
+    replyToThread: boolean | null;
+    templateId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
 }
 
 export interface SequenceRepository {

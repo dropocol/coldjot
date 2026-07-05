@@ -31,6 +31,7 @@ import {
 import { ServiceManager } from "@/services/service-manager";
 import { updateSequenceContactStatus } from "../sequence/helper";
 import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
+import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
 // Define the type for what we actually need from the sequence
 type SequenceWithRelations = {
   id: string;
@@ -71,6 +72,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
   private serviceManager = ServiceManager.getInstance();
   private jobManager = this.serviceManager.getJobManager();
   private readonly sequenceContact = new PrismaSequenceContactRepository();
+  private readonly sequenceStep = new PrismaSequenceStepRepository();
 
   constructor(queue: Queue) {
     super(
@@ -263,12 +265,10 @@ export class ScheduleProcessor extends BaseProcessor<any> {
         );
 
         // Verify if the step still exists in the database
-        const stepExists = await prisma.sequenceStep.findFirst({
-          where: {
-            sequenceId: sequence.id,
-            order: email.currentStep,
-          },
-        });
+        const stepExists = await this.sequenceStep.findBySequenceAndOrder(
+          sequence.id,
+          email.currentStep
+        );
 
         if (!stepExists) {
           logger.info(

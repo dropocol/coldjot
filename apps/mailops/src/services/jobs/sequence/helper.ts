@@ -126,16 +126,7 @@ export async function getActiveSequenceContacts(sequenceId: string) {
  * Get sequence with steps and business hours
  */
 export async function getSequenceWithDetails(sequenceId: string) {
-  return prisma.sequence.findUnique({
-    where: { id: sequenceId },
-    include: {
-      sequenceMailbox: true,
-      steps: {
-        orderBy: { order: "asc" },
-      },
-      businessHours: true,
-    },
-  });
+  return sequenceRepo.findWithDetails(sequenceId);
 }
 
 /**

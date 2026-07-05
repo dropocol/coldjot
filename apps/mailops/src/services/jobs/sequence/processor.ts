@@ -118,8 +118,10 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
         throw new Error("Sequence mailbox not found");
       }
 
-      // Cast database sequence to our expected type
-      const sequence: SequenceWithRelations = {
+      // Cast database sequence to our expected type. The repository returns
+      // a narrowed shape; cast through unknown to the local SequenceWithRelations
+      // type (transitional — Phase 4 replaces this processor).
+      const sequence = {
         ...dbSequence,
         sequenceMailbox: dbSequence.sequenceMailbox,
         steps: dbSequence.steps.map((step) => ({
@@ -137,7 +139,7 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
               type: dbSequence.businessHours.type as BusinessScheduleEnum,
             }
           : null,
-      };
+      } as unknown as SequenceWithRelations;
 
       logger.info({
         steps: sequence.steps.length,
