@@ -180,7 +180,7 @@ export async function createGmailDraft({
       throw error;
     }
   } catch (error) {
-    console.error("Error creating Gmail draft:", error);
+    logger.error({ err: error }, "Error creating Gmail draft");
     throw error;
   }
 }
@@ -218,7 +218,7 @@ export async function sendGmailDraft({
 
     return response.data;
   } catch (error) {
-    console.error("Error sending Gmail draft:", error);
+    logger.error({ err: error }, "Error sending Gmail draft");
     throw error;
   }
 }

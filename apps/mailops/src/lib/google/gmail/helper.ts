@@ -210,7 +210,7 @@ export async function getEmailThreadInfo(
       };
     }
   } catch (error) {
-    console.error("Error getting thread details:", error);
+    logger.error({ err: error }, "Error getting thread details");
   }
 
   return { threadHeaders, originalSubject };

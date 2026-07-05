@@ -131,12 +131,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       }
 
       logger.info(`🔍 Fetching mailbox info ${data.sequenceMailboxId}`);
-      // const mailbox = await getSenderMailbox(
-      //   data.userId,
-      //   data.sequenceMailboxId
-      // );
 
-      console.log("🔍 Fetching mailbox info with data", data);
       const mailbox = await getSequenceMailboxWithId(data.sequenceMailboxId);
 
       if (!mailbox) {

@@ -1,5 +1,6 @@
 export * from "./email";
 import { AppUrlEnum, AppUrlType } from "@coldjot/types";
+import { logger } from "@/lib/log";
 // Sleep utility
 export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -9,7 +10,7 @@ export const getBaseUrl = (type: AppUrlType = AppUrlEnum.API) => {
   if (type === AppUrlEnum.API) {
     const apiUrl = process.env.MAILOPS_API_URL;
     if (!apiUrl) {
-      console.log("API URL", apiUrl);
+      logger.warn({ type: "API" }, "MAILOPS_API_URL not set — falling back to localhost");
       return "http://localhost:3001";
     }
     return apiUrl;
@@ -19,7 +20,7 @@ export const getBaseUrl = (type: AppUrlType = AppUrlEnum.API) => {
   if (type === AppUrlEnum.MAILOPS) {
     const mailopsUrl = process.env.MAILOPS_API_URL;
     if (!mailopsUrl) {
-      console.log("MAILOPS URL", mailopsUrl);
+      logger.warn({ type: "MAILOPS" }, "MAILOPS_API_URL not set — falling back to localhost");
       return "http://localhost:3001";
     }
     return mailopsUrl;
@@ -29,7 +30,7 @@ export const getBaseUrl = (type: AppUrlType = AppUrlEnum.API) => {
   if (type === AppUrlEnum.TRACKING) {
     const trackingUrl = process.env.TRACK_API_URL;
     if (!trackingUrl) {
-      console.log("TRACKING URL", trackingUrl);
+      logger.warn({ type: "TRACKING" }, "TRACK_API_URL not set — falling back to loca.lt");
       return "https://coldjot.loca.lt";
     }
     return trackingUrl;
@@ -39,7 +40,7 @@ export const getBaseUrl = (type: AppUrlType = AppUrlEnum.API) => {
   const webAppUrl = process.env.WEB_APP_URL;
 
   if (!webAppUrl) {
-    console.log("WEB APP URL", webAppUrl);
+    logger.warn({ type: "WEB" }, "WEB_APP_URL not set — falling back to localhost");
     return "http://localhost:3000";
   }
   return webAppUrl;

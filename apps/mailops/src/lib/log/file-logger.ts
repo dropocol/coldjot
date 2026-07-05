@@ -57,7 +57,10 @@ class FileLogger {
       // Append to log file
       fs.appendFileSync(this.currentLogFile, logString);
     } catch (error) {
-      console.error("Failed to write to log file:", error);
+      // intentional: fileLogger is a separate sink from the pino `logger`;
+      // routing this fallback through `logger` would risk recursion if the
+      // underlying failure is transport-related. Last-resort stderr only.
+      console.error("Failed to write to log file:", error); // intentional
     }
   }
 
