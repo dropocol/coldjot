@@ -12,9 +12,14 @@ export interface SequenceStatsRecord {
   totalEmails: number;
   sentEmails: number;
   openedEmails: number;
+  uniqueOpens?: number | null;
   clickedEmails: number;
   repliedEmails: number;
   bouncedEmails: number;
+  failedEmails?: number | null;
+  unsubscribed?: number | null;
+  interested?: number | null;
+  peopleContacted?: number | null;
   openRate: number;
   clickRate: number;
   replyRate: number;
@@ -38,6 +43,24 @@ export interface SequenceStatsRepository {
   createForSequence(sequenceId: string, contactId?: string): Promise<SequenceStatsRecord>;
   /** Increment counters + recompute rates. */
   updateCounts(sequenceId: string, counts: StatsCounts): Promise<void>;
+  /**
+   * Raw update — accepts a Prisma-shaped data object. Used by the legacy
+   * inline rate-math paths (lib/tracking trackEmailEvent + updateTrackingStats)
+   * until Phase 4 collapses them into updateCounts. The data shape is
+   * Prisma-specific on purpose; Phase 4 removes this method.
+   */
+  updateRaw(sequenceId: string, data: Record<string, unknown>): Promise<void>;
+  /** Create with explicit field values (legacy trackEmailEvent init path). */
+  createWithValues(data: {
+    sequenceId: string;
+    contactId?: string;
+    totalEmails?: number;
+    sentEmails?: number;
+    openedEmails?: number;
+    clickedEmails?: number;
+    repliedEmails?: number;
+    bouncedEmails?: number;
+  }): Promise<SequenceStatsRecord>;
   /** Bulk delete by sequenceId (sequence reset). */
   deleteBySequence(sequenceId: string): Promise<void>;
 }

@@ -425,23 +425,19 @@ export async function trackEmailEvent(
     });
 
     // Update sequence stats
-    const stats = await prisma.sequenceStats.findUnique({
-      where: { sequenceId: trackingData?.sequenceId },
-    });
+    const stats = await sequenceStatsRepo.getBySequence(sequenceId);
 
     if (!stats) {
       // Create initial stats if they don't exist
-      await prisma.sequenceStats.create({
-        data: {
-          sequenceId: sequenceId,
-          totalEmails: type === EmailEventEnum.SENT ? 1 : 0,
-          sentEmails: type === EmailEventEnum.SENT ? 1 : 0,
-          openedEmails: type === EmailEventEnum.OPENED ? 1 : 0,
-          clickedEmails: type === EmailEventEnum.CLICKED ? 1 : 0,
-          repliedEmails: type === EmailEventEnum.REPLIED ? 1 : 0,
-          bouncedEmails: type === EmailEventEnum.BOUNCED ? 1 : 0,
-          contactId: trackingData?.contactId,
-        },
+      await sequenceStatsRepo.createWithValues({
+        sequenceId,
+        contactId: trackingData?.contactId,
+        totalEmails: type === EmailEventEnum.SENT ? 1 : 0,
+        sentEmails: type === EmailEventEnum.SENT ? 1 : 0,
+        openedEmails: type === EmailEventEnum.OPENED ? 1 : 0,
+        clickedEmails: type === EmailEventEnum.CLICKED ? 1 : 0,
+        repliedEmails: type === EmailEventEnum.REPLIED ? 1 : 0,
+        bouncedEmails: type === EmailEventEnum.BOUNCED ? 1 : 0,
       });
       return event;
     }
@@ -494,10 +490,7 @@ export async function trackEmailEvent(
     }
 
     // Update stats
-    await prisma.sequenceStats.update({
-      where: { sequenceId },
-      data: updates,
-    });
+    await sequenceStatsRepo.updateRaw(sequenceId, updates as any);
 
     console.log(`📊 Tracked email event:`, {
       trackingId,
@@ -534,9 +527,7 @@ export async function updateTrackingStats(
   sequenceId: string,
   type: EmailEventType
 ) {
-  const stats = await prisma.sequenceStats.findFirst({
-    where: { sequenceId },
-  });
+  const stats = await sequenceStatsRepo.getBySequence(sequenceId);
 
   if (!stats) {
     return null;
@@ -598,10 +589,8 @@ export async function updateTrackingStats(
   }
 
   // Update stats atomically
-  return prisma.sequenceStats.update({
-    where: { sequenceId },
-    data: updates,
-  });
+  await sequenceStatsRepo.updateRaw(sequenceId, updates as any);
+  return;
 }
 
 export class TrackingService {
