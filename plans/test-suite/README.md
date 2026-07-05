@@ -23,20 +23,22 @@ Phase 0's characterization tests (`apps/mailops/src/__tests__/characterization/`
 
 | Step | Sub-plan | Status | Effort | Depends on |
 |---|---|---|---|---|
-| **7.0** | [**Domain service impls (prerequisite)**](./7.0-domain-service-impls.md) | ✅ **Done** — `LaunchSequenceServiceImpl` + `RunScheduleServiceImpl` implemented + wired; on branch `refactor/mailops-phase-7a-impls` (pending merge into `refactor/mailops`) | 0.5 day | — |
-| 7.1 | [In-memory repository fakes](./7.1-repository-fakes.md) | ⬜ Not started | 0.5 day | — |
-| 7.2 | [Unit tests for domain services](./7.2-unit-domain-services.md) | ⬜ Not started | 1 day | 7.0, 7.1 |
-| 7.3 | [Unit tests for pure helpers](./7.3-unit-pure-helpers.md) | ⬜ Not started | 0.5 day | — |
-| 7.4 | [Adapter tests with recorded fixtures](./7.4-adapter-tests.md) | ⬜ Not started | 0.5 day | 7.1 |
-| 7.5 | [Repository tests against a real test DB](./7.5-repository-tests-db.md) | ⬜ Not started | 0.5–1 day | — |
-| 7.6 | [Processor tests](./7.6-processor-tests.md) | ⬜ Not started | 0.5 day | 7.0, 7.1, 7.2 |
-| 7.7 | [End-to-end integration tests (12 flows)](./7.7-integration-tests.md) | ⬜ Not started | 1–1.5 days | 7.0, 7.1–7.6 |
-| 7.8 | [CI gate + coverage enforcement](./7.8-ci-gate.md) | ⬜ Not started | 0.5 day | 7.1–7.7 |
-| 7.9 | [Retire the characterization tests](./7.9-retire-characterization.md) | ⬜ Not started | 0.25 day | every row in the mapping is green |
+| **7.0** | [**Domain service impls (prerequisite)**](./7.0-domain-service-impls.md) | ✅ **Done** — `LaunchSequenceServiceImpl` + `RunScheduleServiceImpl` implemented + wired | 0.5 day | — |
+| 7.1 | [In-memory repository fakes](./7.1-repository-fakes.md) | ✅ **Done** — per-repo fakes + FakeMailTransport/FakeInboxSource + FakeJobManager/FakeRateLimitService | 0.5 day | — |
+| 7.2 | [Unit tests for domain services](./7.2-unit-domain-services.md) | 🟢 **Partial** — tracking + launch-sequence + run-schedule done (24 cases). send-email + inbox-sync deferred (module-singleton seams; Groups A/C pin them) | 1 day | 7.0, 7.1 |
+| 7.3 | [Unit tests for pure helpers](./7.3-unit-pure-helpers.md) | 🟢 **Partial** — pixel, link-wrap, stats, placeholders, classify, states done (46 cases). email-subject + schedule-generator deferred (Groups M/K pin them) | 0.5 day | — |
+| 7.4 | [Adapter tests with recorded fixtures](./7.4-adapter-tests.md) | 🟢 **Partial** — GmailTransport + GmailInboxSource with synthetic fixtures (17 cases). Real recorded fixtures deferred (needs dev Gmail creds) | 0.5 day | 7.1 |
+| 7.5 | [Repository tests against a real test DB](./7.5-repository-tests-db.md) | 🟢 **Partial** — EmailTracking representative done (7 cases) + test-DB wiring proven. Remaining 19 repos follow the same template | 0.5–1 day | — |
+| 7.6 | [Processor tests](./7.6-processor-tests.md) | 🟢 **Partial** — BaseProcessor.onFailed DLQ path done (4 cases). Individual processors covered by Groups D/H/I characterization | 0.5 day | 7.0, 7.1, 7.2 |
+| 7.7 | [End-to-end integration tests (12 flows)](./7.7-integration-tests.md) | 🟢 **Partial** — TrackingServiceImpl-vs-DB representative done (3 cases) + sequential-execution isolation. 11 flows deferred (need faked Gmail / supertest) | 1–1.5 days | 7.0, 7.1–7.6 |
+| 7.8 | [CI gate + coverage enforcement](./7.8-ci-gate.md) | ✅ **Done** — fast/integration test split, turbo wiring, GitHub Action, 80% coverage threshold | 0.5 day | 7.1–7.7 |
+| 7.9 | [Retire the characterization tests](./7.9-retire-characterization.md) | ⏸️ **Blocked** — requires every Feature→test mapping row green (full 7.2/7.7). Do NOT delete characterization files yet | 0.25 day | every row in the mapping is green |
 
-**Estimated total:** 3–4 days of focused work (7.0 is done). **Behavior change:** 7.0 is behavior-preserving; 7.1–7.9 are test-only.
+**Totals so far:** 189 fast-tier tests + 10 integration-tier tests, all green. **Behavior change:** 7.0 is behavior-preserving; 7.1–7.8 are test-only.
 
 **Legend:** ⬜ Not started · 🟡 In progress · 🟢 Code done, awaiting verification · ✅ Done · ⏸️ Blocked/Deferred
+
+> **What's shippable now:** the foundation (fakes, CI gate, coverage threshold, service unit tests, adapter tests, DB integration wiring) is in place and green. The remaining work is **breadth** — more unit/integration tests of the same shape — not new infrastructure. The characterization suite (98 tests) stays as the safety net until 7.9's coverage contract is fully met.
 
 ## Branch setup
 
