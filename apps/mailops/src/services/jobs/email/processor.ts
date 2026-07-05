@@ -286,21 +286,6 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     }
   }
 
-  private validateEmailData(data: EmailJob): void {
-    if (!data.to) {
-      throw new Error("Email recipient is required");
-    }
-    // if (!data.subject) {
-    //   throw new Error("Email subject is required");
-    // }
-    if (!data.userId) {
-      throw new Error("User ID is required");
-    }
-    if (!data.stepId) {
-      throw new Error("Step ID is required");
-    }
-  }
-
   private async validateRateLimits(data: EmailJob) {
     // TODO : add info to the logger
     const { allowed } = await rateLimitService.checkRateLimit(
