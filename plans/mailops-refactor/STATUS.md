@@ -13,7 +13,7 @@
 | 0 | [characterization tests](./phase-0-characterization-tests.md) | ✅ **Done** — 15/15 groups, 100 cases passing | `refactor/mailops-phase-0-tests` (merged) | 2–3 days |
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ✅ **Done** — interfaces + Prisma impls + createApp() + wiring test + lint rule | `refactor/mailops-phase-1-seams` (merged) | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ✅ **Done** — route files thinned, logic moved to controllers/ | `refactor/mailops-phase-2-controllers` (merged) | 1 day |
-| 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ⬜ Not started | `refactor/mailops-phase-3-repos` | 3–4 days |
+| 3 | [repositories isolate Prisma](./phase-3-repositories.md) | 🟡 **In progress** — 6/10 aggregates migrated (3.1–3.6 done), 102/102 tests green, unmerged | `refactor/mailops-phase-3-repos` | 3–4 days |
 | 4 | [split three god-objects](./phase-4-split-god-objects.md) | ⬜ Not started | `refactor/mailops-phase-4-split` | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
@@ -30,10 +30,10 @@ Sub-branches use the **hyphen** scheme `refactor/mailops-phase-N-<short>` (git r
 ```
 upgrade/remaining-majors
   └─ refactor/mailops                            ← base; plan docs live here
-       └─ refactor/mailops-phase-0-tests         ← CURRENT (15/15 groups done)
-            └─ refactor/mailops-phase-1-seams
-                 └─ refactor/mailops-phase-2-controllers
-                      └─ refactor/mailops-phase-3-repos
+       └─ refactor/mailops-phase-0-tests         (merged — 15/15 groups)
+            └─ refactor/mailops-phase-1-seams         (merged)
+                 └─ refactor/mailops-phase-2-controllers (merged)
+                      └─ refactor/mailops-phase-3-repos ← CURRENT (6/10 aggregates done; unmerged)
                            └─ refactor/mailops-phase-4-split
                                 └─ refactor/mailops-phase-5-cleanup
                                      └─ refactor/mailops-phase-6-singleton
@@ -156,6 +156,97 @@ All four architectural decisions are settled — don't re-litigate:
 - `src/__tests__/helpers/fake-prisma.ts` — in-memory Prisma stub (create/update/updateMany/findUnique/findFirst/findMany/count/upsert/delete/deleteMany/$transaction + nested relation writes + unique-field registration)
 - `src/__tests__/helpers/fake-gmail.ts` — canned gmail_v1.Gmail (send/get/insert/delete/threads.get) + makeFakeFetch
 - `src/__tests__/helpers/test-context.ts` — vi.mock wiring for @coldjot/database, @/lib/google, @/lib/google/gmail/helper, @/lib/stats via vi.hoisted
+
+---
+
+## Phase 3 progress — repositories isolate Prisma
+
+**Goal:** every `prisma.*` call lives behind a repository. Domain code depends on `*Repository` interfaces, not `@coldjot/database`. See [phase-3-repositories.md](./phase-3-repositories.md).
+
+**Sub-branch:** `refactor/mailops-phase-3-repos` (off `refactor/mailops`, **unmerged**).
+
+**Run:** `npm test -w mailops` → 16 files / 102 tests. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → clean. `npm run lint -w mailops` → 0 errors (22 `@coldjot/database` warnings remain — the progress signal).
+
+### Aggregate tracker
+
+| Step | Aggregate | Status | Commit |
+|---|---|---|---|
+| 3.1 | EmailTracking | ✅ done | `0109a4c` |
+| 3.2 | EmailEvent | ✅ done | `d0cab22` |
+| 3.3 | TrackedLink + LinkClick (non-tx) | ✅ done | `0371d11` |
+| 3.4 | SequenceStats | ✅ done | `6e7a5f5` |
+| 3.5 | SequenceContact (non-pubsub) | ✅ done | `63b9123` |
+| 3.6 | Sequence + SequenceStep + BusinessHours | ✅ done | `d98f3a9` |
+| 3.7 | Mailbox (+ aliases) | ⬜ next | — |
+| 3.8 | EmailThread | ⬜ next | — |
+| 3.9 | EmailWatch + EmailWatchHistory + ProcessedMessage + pubsub's deferred SequenceContact/EmailThread/Mailbox | ⬜ (biggest — 1366-line `pubsub/handler.ts`) | — |
+| 3.10 | Template + Contact + EmailList | ⬜ | — |
+| final | promote `no-restricted-imports` warn → error; merge to `refactor/mailops` | ⬜ | — |
+
+### What's been migrated (3.1–3.6)
+
+Direct `prisma.<model>.*` calls have been replaced with repository method calls in:
+- `lib/email/index.ts`, `lib/tracking/index.ts` (standalone fns + TrackingService class), `lib/stats/index.ts`, `lib/schedule/index.ts`
+- `controllers/sequence.controller.ts`
+- `services/jobs/{email,schedule,contact,sequence,list}/` (processor.ts + helper.ts)
+- `services/monitor/service.ts`
+- `services/pubsub/handler.ts` (EmailEvent calls only — the rest of pubsub defers to 3.9)
+
+### Files still importing `@coldjot/database` (to migrate in 3.7–3.10)
+
+```
+controllers/list.controller.ts          ← 3.10 (list)
+controllers/mailbox.controller.ts       ← 3.7
+controllers/sequence.controller.ts      ← residual (sequenceHealth in resetSequence helper)
+lib/email-subject.ts                    ← 3.8 (emailThread) + 3.10 (template)
+lib/google/account/google-account.ts    ← 3.7 (mailbox)
+lib/google/gmail/gmail.ts               ← 3.7 (mailbox)
+lib/google/smtp/gmail.ts                ← (Phase 4b deletes SMTP path; skip)
+lib/mailbox/index.ts                    ← 3.7
+lib/stats/index.ts                      ← residual ($transaction tx client — Phase 4)
+lib/tracking/index.ts                   ← residual ($transaction tx client — Phase 4a)
+services/jobs/email/processor.ts        ← 3.8 (emailThread) + 3.10 (template, contact)
+services/jobs/list/helper.ts            ← 3.10 (listSyncRecord)
+services/jobs/list/processor.ts         ← 3.10 (listSyncRecord)
+services/jobs/schedule/processor.ts     ← residual (sequenceHealth in resetSequence)
+services/jobs/sequence/helper.ts        ← residual (sequenceHealth in resetSequence)
+services/jobs/thread-watch/processor.ts ← 3.8 (emailThread) + 3.5 (sequenceContact)
+services/monitor/service.ts             ← residual (sequenceStats.create in init)
+services/pubsub/handler.ts              ← 3.7/3.8/3.9 (mailbox, emailThread, emailWatch, emailWatchHistory, processedMessage, sequenceContact)
+services/pubsub/helper.ts               ← 3.8/3.9 (emailThread, emailWatch, emailWatchHistory, processedMessage, sequenceContact, sequence)
+services/watch/cleanup.ts               ← 3.9 (emailWatch, emailWatchHistory)
+services/watch/debug.ts                 ← 3.9 (dev-only; low priority)
+services/watch/index.ts                 ← 3.9 (emailWatch)
+```
+
+### Key decisions made during 3.1–3.6 (read before resuming)
+
+1. **Injection pattern:** BullMQ processors (`EmailProcessor`, `ScheduleProcessor`, `ContactProcessor`) and legacy singletons (`emailService`, `trackingService`) aren't constructed via `createApp()`. Used **private-field-with-default-Prisma-repo** injection (`private readonly foo = new PrismaFooRepository()`) — overridable for tests, no behavior change. Full DI through `createApp()` lands in Phase 6 when `ServiceManager` is unwound. Do NOT try to thread these through the composition root yet.
+2. **Standalone-function stopgap in `lib/tracking`:** module-level repo singletons (`emailTrackingRepo`, `emailEventRepo`, `trackedLinkRepo`, `linkClickRepo`, `sequenceStatsRepo`) bridge the standalone fns (`createEmailTracking`, `recordEmailOpen`, etc.) until Phase 4a deletes them. **Don't extend this pattern to other files** — for classes, use the private-field pattern.
+3. **`$transaction` blocks left on the tx client:** the `linkClick`/`trackedLink` writes inside `lib/tracking`'s `$transaction(async (prisma) => ...)` blocks still call `prisma.linkClick.create` / `prisma.trackedLink.update` / `prisma.emailTracking.update` on the **tx client** (not the repo) — they need atomicity. Phase 4a collapses these. Same for `lib/stats/index.ts`'s `updateSequenceStats` `$transaction`.
+4. **`sequenceStats.updateRaw` + `createWithValues`:** added as escape hatches for the legacy inline rate-math paths (`trackEmailEvent`, `updateTrackingStats`). Phase 4 collapses the divergent rate-math into `updateCounts` and removes these methods.
+5. **Fake-prisma fix:** `handleCreate` in `__tests__/helpers/fake-prisma.ts` was patched so a passed `id: undefined` doesn't shadow the generated UUID (`{ id: randomUUID(), ...args.data, ...(args.data?.id ? { id: args.data.id } : {}) }`). Without this, repo `createPending` calls that omit `id` returned `undefined` ids in tests.
+6. **`SequenceWithDetails` type** keeps BOTH `sequenceMailboxId` (new) and `sequenceMailbox` (legacy nested) so `services/jobs/sequence/processor.ts`'s cast still works. Phase 4 cleans this up.
+7. **`sequenceHealth`** model is NOT in the repository set (monitor-only). Calls in `resetSequence` (`services/jobs/sequence/helper.ts`) and `services/jobs/schedule/processor.ts` remain on `prisma.sequenceHealth`. Decide in 3.9/3.10 whether to add a repo or leave it.
+
+### Per-step recipe (unchanged from the plan doc)
+
+For each remaining aggregate (3.7–3.10):
+1. `grep -rn "prisma\.<model>\." apps/mailops/src` → confirm matching repo method exists; add if missing.
+2. Inject the repo (private-field-with-default for classes; module-level singleton ONLY for `lib/tracking`'s standalone fns).
+3. Replace each call site, diff line-by-line.
+4. `npm test -w mailops` must stay 102/102 green.
+5. Commit: `phase 3.N: migrate <Aggregate> call sites to repository`.
+
+### Resume commands
+
+```bash
+cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
+git checkout refactor/mailops-phase-3-repos
+npm test -w mailops                                   # 102/102 passing
+npx tsc --noEmit -p apps/mailops/tsconfig.json        # clean
+# Next: Step 3.7 (Mailbox). See "Files still importing @coldjot/database" above.
+```
 
 ---
 
