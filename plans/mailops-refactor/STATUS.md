@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | 0 | [characterization tests](./phase-0-characterization-tests.md) | ✅ **Done** — 15/15 groups, 100 cases passing | `refactor/mailops-phase-0-tests` (merged) | 2–3 days |
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ✅ **Done** — interfaces + Prisma impls + createApp() + wiring test + lint rule | `refactor/mailops-phase-1-seams` (merged) | 2–3 days |
-| 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ⬜ Not started | `refactor/mailops-phase-2-controllers` | 1 day |
+| 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ✅ **Done** — route files thinned, logic moved to controllers/ | `refactor/mailops-phase-2-controllers` (merged) | 1 day |
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ⬜ Not started | `refactor/mailops-phase-3-repos` | 3–4 days |
 | 4 | [split three god-objects](./phase-4-split-god-objects.md) | ⬜ Not started | `refactor/mailops-phase-4-split` | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |

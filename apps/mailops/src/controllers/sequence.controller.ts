@@ -1,4 +1,3 @@
-import { Request, Response } from "express";
 import { prisma } from "@coldjot/database";
 import { ServiceManager } from "@/services/service-manager";
 import { MonitoringService } from "@/services/monitor/service";
@@ -9,8 +8,14 @@ import { ProcessingJobEnum, BusinessScheduleEnum } from "@coldjot/types";
 import type {
   BusinessHours,
   ProcessingJob,
-  BusinessScheduleType,
 } from "@coldjot/types";
+import {
+  ok,
+  badRequest,
+  notFound,
+  serverError,
+  type ControllerResult,
+} from "./utils";
 
 // Initialize services
 const serviceManager = ServiceManager.getInstance();
@@ -72,10 +77,12 @@ async function getSequenceBusinessHours(
   };
 }
 
-export async function launchSequence(req: Request<{ id: string }>, res: Response) {
+export async function launchSequence(
+  id: string,
+  body: { userId: string }
+): Promise<ControllerResult> {
   try {
-    const { id } = req.params;
-    const { userId } = req.body;
+    const { userId } = body;
 
     // Get sequence and validate
     const sequence = await prisma.sequence.findUnique({
@@ -102,15 +109,15 @@ export async function launchSequence(req: Request<{ id: string }>, res: Response
     });
 
     if (!sequence) {
-      return res.status(404).json({ error: "Sequence not found" });
+      return notFound("Sequence not found");
     }
 
     if (sequence.steps.length === 0) {
-      return res.status(400).json({ error: "Sequence has no steps" });
+      return badRequest("Sequence has no steps");
     }
 
     if (sequence.contacts.length === 0) {
-      return res.status(400).json({ error: "Sequence has no active contacts" });
+      return badRequest("Sequence has no active contacts");
     }
 
     // Get business hours settings
@@ -145,7 +152,7 @@ export async function launchSequence(req: Request<{ id: string }>, res: Response
     // Start monitoring the sequence
     await monitoringService.startMonitoring(id);
 
-    res.json({
+    return ok({
       success: true,
       jobId: job.id,
       contactCount: sequence.contacts.length,
@@ -153,14 +160,16 @@ export async function launchSequence(req: Request<{ id: string }>, res: Response
     });
   } catch (error) {
     logger.error({ err: error }, "Error launching sequence");
-    res.status(500).json({ error: "Failed to launch sequence" });
+    return serverError("Failed to launch sequence");
   }
 }
 
-export async function pauseSequence(req: Request<{ id: string }>, res: Response) {
+export async function pauseSequence(
+  id: string,
+  body: { userId: string }
+): Promise<ControllerResult> {
   try {
-    const { id } = req.params;
-    const { userId } = req.body;
+    const { userId } = body;
 
     // Validate sequence ownership
     const sequence = await prisma.sequence.findUnique({
@@ -171,7 +180,7 @@ export async function pauseSequence(req: Request<{ id: string }>, res: Response)
     });
 
     if (!sequence) {
-      return res.status(404).json({ error: "Sequence not found" });
+      return notFound("Sequence not found");
     }
 
     // Update sequence status
@@ -183,17 +192,19 @@ export async function pauseSequence(req: Request<{ id: string }>, res: Response)
     // Stop monitoring
     await monitoringService.stopMonitoring(id);
 
-    res.json({ success: true });
+    return ok({ success: true });
   } catch (error) {
     logger.error({ err: error }, "Error pausing sequence");
-    res.status(500).json({ error: "Failed to pause sequence" });
+    return serverError("Failed to pause sequence");
   }
 }
 
-export async function resumeSequence(req: Request<{ id: string }>, res: Response) {
+export async function resumeSequence(
+  id: string,
+  body: { userId: string }
+): Promise<ControllerResult> {
   try {
-    const { id } = req.params;
-    const { userId } = req.body;
+    const { userId } = body;
 
     // Validate sequence ownership
     const sequence = await prisma.sequence.findUnique({
@@ -204,7 +215,7 @@ export async function resumeSequence(req: Request<{ id: string }>, res: Response
     });
 
     if (!sequence) {
-      return res.status(404).json({ error: "Sequence not found" });
+      return notFound("Sequence not found");
     }
 
     // Update sequence status
@@ -216,17 +227,19 @@ export async function resumeSequence(req: Request<{ id: string }>, res: Response
     // Resume monitoring
     await monitoringService.startMonitoring(id);
 
-    res.json({ success: true });
+    return ok({ success: true });
   } catch (error) {
     logger.error({ err: error }, "Error resuming sequence");
-    res.status(500).json({ error: "Failed to resume sequence" });
+    return serverError("Failed to resume sequence");
   }
 }
 
-export async function resetSequenceHandler(req: Request<{ id: string }>, res: Response) {
+export async function resetSequenceHandler(
+  id: string,
+  body: { userId: string }
+): Promise<ControllerResult> {
   try {
-    const { id } = req.params;
-    const { userId } = req.body;
+    const { userId } = body;
 
     // Verify sequence ownership
     const sequence = await prisma.sequence.findUnique({
@@ -237,7 +250,7 @@ export async function resetSequenceHandler(req: Request<{ id: string }>, res: Re
     });
 
     if (!sequence) {
-      return res.status(404).json({ error: "Sequence not found" });
+      return notFound("Sequence not found");
     }
 
     // Stop monitoring
@@ -263,12 +276,12 @@ export async function resetSequenceHandler(req: Request<{ id: string }>, res: Re
     });
     logger.info(`Sequence status reset to draft`);
 
-    res.json({
+    return ok({
       success: true,
       message: "Sequence reset successfully",
     });
   } catch (error) {
     logger.error({ err: error }, "Error resetting sequence");
-    res.status(500).json({ error: "Failed to reset sequence" });
+    return serverError("Failed to reset sequence");
   }
 }
