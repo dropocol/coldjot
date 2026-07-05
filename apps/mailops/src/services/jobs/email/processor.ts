@@ -51,8 +51,8 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
   private readonly templateRepo = new PrismaTemplateRepository();
   private readonly contactRepo = new PrismaContactRepository();
 
-  constructor(queue: Queue) {
-    super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL));
+  constructor(queue: Queue, dlQueues: Map<string, Queue> = new Map()) {
+    super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL), dlQueues);
     this.scheduleGenerator = scheduleGenerator;
     this.emailTracking = new PrismaEmailTrackingRepository();
     this.emailEvent = new PrismaEmailEventRepository();

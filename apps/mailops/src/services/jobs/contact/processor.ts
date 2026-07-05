@@ -25,8 +25,8 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
   private jobManager = this.serviceManager.getJobManager();
   private readonly sequenceContact = new PrismaSequenceContactRepository();
 
-  constructor(queue: Queue) {
-    super(queue, QUEUE_NAMES.CONTACT, getWorkerOptions(QUEUE_NAMES.CONTACT));
+  constructor(queue: Queue, dlQueues: Map<string, Queue> = new Map()) {
+    super(queue, QUEUE_NAMES.CONTACT, getWorkerOptions(QUEUE_NAMES.CONTACT), dlQueues);
     this.setupContactProcessingScheduler();
   }
 

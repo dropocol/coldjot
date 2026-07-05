@@ -19,11 +19,12 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
   // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
   private readonly listSyncRecordRepo = new PrismaListSyncRecordRepository();
 
-  constructor(queue: Queue) {
+  constructor(queue: Queue, dlQueues: Map<string, Queue> = new Map()) {
     super(
       queue,
       QUEUE_NAMES.LIST_SYNC,
-      getWorkerOptions(QUEUE_NAMES.LIST_SYNC)
+      getWorkerOptions(QUEUE_NAMES.LIST_SYNC),
+      dlQueues
     );
 
     // Initialize concurrency limiter

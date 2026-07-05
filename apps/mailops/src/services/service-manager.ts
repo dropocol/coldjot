@@ -172,15 +172,18 @@ export class ServiceManager {
     try {
       logger.info("⚙️ Initializing processors...");
 
+      // Phase 6.2: each processor takes the DLQ map via constructor (no more
+      // ServiceManager.getInstance() reach in BaseProcessor.onFailed).
+      const dlQueues = this.dlQueues;
       const processorMap: Record<string, (queue: Queue) => ProcessorType> = {
-        [QUEUE_NAMES.SEQUENCE]: (queue: Queue) => new SequenceProcessor(queue),
-        [QUEUE_NAMES.EMAIL]: (queue: Queue) => new EmailProcessor(queue),
+        [QUEUE_NAMES.SEQUENCE]: (queue: Queue) => new SequenceProcessor(queue, dlQueues),
+        [QUEUE_NAMES.EMAIL]: (queue: Queue) => new EmailProcessor(queue, dlQueues),
         // [QUEUE_NAMES.THREAD_WATCHER]: (queue: Queue) =>
         //   new ThreadProcessor(queue),
-        [QUEUE_NAMES.CONTACT]: (queue: Queue) => new ContactProcessor(queue),
+        [QUEUE_NAMES.CONTACT]: (queue: Queue) => new ContactProcessor(queue, dlQueues),
         [QUEUE_NAMES.EMAIL_SCHEDULE]: (queue: Queue) =>
-          new ScheduleProcessor(queue),
-        [QUEUE_NAMES.LIST_SYNC]: (queue: Queue) => new ListSyncProcessor(queue),
+          new ScheduleProcessor(queue, dlQueues),
+        [QUEUE_NAMES.LIST_SYNC]: (queue: Queue) => new ListSyncProcessor(queue, dlQueues),
       };
 
       for (const [queueName, createProcessor] of Object.entries(processorMap)) {

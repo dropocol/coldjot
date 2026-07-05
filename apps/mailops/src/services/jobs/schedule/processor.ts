@@ -74,11 +74,12 @@ export class ScheduleProcessor extends BaseProcessor<any> {
   private readonly sequenceContact = new PrismaSequenceContactRepository();
   private readonly sequenceStep = new PrismaSequenceStepRepository();
 
-  constructor(queue: Queue) {
+  constructor(queue: Queue, dlQueues: Map<string, Queue> = new Map()) {
     super(
       queue,
       QUEUE_NAMES.EMAIL_SCHEDULE,
-      getWorkerOptions(QUEUE_NAMES.EMAIL_SCHEDULE)
+      getWorkerOptions(QUEUE_NAMES.EMAIL_SCHEDULE),
+      dlQueues
     );
 
     logger.info({

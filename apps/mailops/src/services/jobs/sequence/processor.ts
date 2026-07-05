@@ -64,8 +64,8 @@ export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
   private serviceManager = ServiceManager.getInstance();
   private jobManager = this.serviceManager.getJobManager();
 
-  constructor(queue: Queue) {
-    super(queue, QUEUE_NAMES.SEQUENCE, getWorkerOptions(QUEUE_NAMES.SEQUENCE));
+  constructor(queue: Queue, dlQueues: Map<string, Queue> = new Map()) {
+    super(queue, QUEUE_NAMES.SEQUENCE, getWorkerOptions(QUEUE_NAMES.SEQUENCE), dlQueues);
 
     this.rateLimitService = RateLimitService.getInstance();
     this.scheduleGenerator = scheduleGenerator;
