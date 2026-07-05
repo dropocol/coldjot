@@ -1,17 +1,48 @@
 import { Router } from "express";
-import * as controller from "./controller";
+import * as controller from "@/controllers/sequence.controller";
 import * as validator from "./validator";
+import { send } from "@/controllers/utils";
 
 const router = Router();
 
 // Sequence routes
-router.post("/:id/launch", validator.validateLaunch, controller.launchSequence);
-router.post("/:id/pause", validator.validatePause, controller.pauseSequence);
-router.post("/:id/resume", validator.validateResume, controller.resumeSequence);
+router.post(
+  "/:id/launch",
+  validator.validateLaunch,
+  async (req, res) => {
+    const result = await controller.launchSequence(
+      String(req.params.id),
+      req.body
+    );
+    return send(res, result);
+  }
+);
+router.post(
+  "/:id/pause",
+  validator.validatePause,
+  async (req, res) => {
+    const result = await controller.pauseSequence(String(req.params.id), req.body);
+    return send(res, result);
+  }
+);
+router.post(
+  "/:id/resume",
+  validator.validateResume,
+  async (req, res) => {
+    const result = await controller.resumeSequence(String(req.params.id), req.body);
+    return send(res, result);
+  }
+);
 router.post(
   "/:id/reset",
   validator.validateReset,
-  controller.resetSequenceHandler
+  async (req, res) => {
+    const result = await controller.resetSequenceHandler(
+      String(req.params.id),
+      req.body
+    );
+    return send(res, result);
+  }
 );
 
 export default router;
