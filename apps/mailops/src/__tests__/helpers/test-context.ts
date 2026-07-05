@@ -63,8 +63,15 @@ vi.mock("@coldjot/database", () => ({ prisma: lazyPrisma }));
 vi.mock("@/lib/google", () => ({
   gmailClientService: {
     async getClient(_userId: string, _mailboxId: string) {
-      // Build a fresh fake gmail from current response overrides each call.
-      holder.fakeGmailHolder.current = makeFakeGmail(holder.gmailResponses);
+      // Reuse the same fake gmail across calls within one test, mirroring how
+      // the real GmailClientService caches its OAuth client. Phase 4b's
+      // GmailTransport calls getClient per-method (send/insert/get/delete); if
+      // each call returned a fresh fake, each fake would have its own empty
+      // `calls` array and tests couldn't assert on the full transport sequence.
+      // ctx.reset() drops the cached instance between tests.
+      if (!holder.fakeGmailHolder.current) {
+        holder.fakeGmailHolder.current = makeFakeGmail(holder.gmailResponses);
+      }
       return holder.fakeGmailHolder.current.gmail;
     },
   },

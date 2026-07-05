@@ -20,7 +20,7 @@ import {
   updateSequenceContactStatus,
   getDefaultBusinessHours,
 } from "@/services/jobs/sequence/helper";
-import { emailService } from "@/lib/email";
+import { sendEmailService } from "@/services/domain/send-email.service";
 import { QUEUE_NAMES } from "@/config";
 import { getWorkerOptions } from "@/config";
 import { ScheduleGenerator, scheduleGenerator } from "@/lib/schedule";
@@ -235,7 +235,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         "📤 Sending email"
       );
 
-      const emailResult = await emailService.sendEmail(emailOptions);
+      const emailResult = await sendEmailService.send(emailOptions);
 
       if (emailResult.success) {
         logger.info(
