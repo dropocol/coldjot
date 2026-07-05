@@ -100,8 +100,8 @@ export class RunScheduleServiceImpl implements RunScheduleService {
 
     for (const email of dueEmails) {
       try {
-        await this.processEmail(email);
-        enqueued++;
+        const did = await this.processEmail(email);
+        if (did) enqueued++;
       } catch (error) {
         logger.error(
           {
@@ -129,8 +129,12 @@ export class RunScheduleServiceImpl implements RunScheduleService {
     return { enqueued };
   }
 
-  /** Process a single due contact. Throws on failure (caught by the caller). */
-  private async processEmail(email: DueContactGraph): Promise<void> {
+  /**
+   * Process a single due contact. Returns true when an email job was enqueued,
+   * false for an early no-op (rate-limit skip, deleted step). Throws on failure
+   * (caught by the caller's bounded-retry path).
+   */
+  private async processEmail(email: DueContactGraph): Promise<boolean> {
     const { sequence, contact } = email;
 
     logger.info(
@@ -166,7 +170,7 @@ export class RunScheduleServiceImpl implements RunScheduleService {
           },
           "⚠️ Rate limit exceeded"
         );
-        return;
+        return false;
       }
 
       // 2. Get current step. The repo flattens sequenceMailbox →
@@ -175,7 +179,7 @@ export class RunScheduleServiceImpl implements RunScheduleService {
       const currentStepIndex = email.currentStep - 1;
       const rawStep = sequence.steps[currentStepIndex];
       if (!rawStep) {
-        return this.handleMissingStep(email);
+        return await this.handleMissingStep(email);
       }
       const currentStep = {
         ...rawStep,
@@ -334,6 +338,7 @@ export class RunScheduleServiceImpl implements RunScheduleService {
         },
         "✅ Successfully processed email"
       );
+      return true;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -401,10 +406,10 @@ export class RunScheduleServiceImpl implements RunScheduleService {
   /**
    * The current step index didn't resolve to a step in the sequence's steps
    * array. Verify whether the step still exists in the DB; if it's gone, this
-   * is a no-op (matches the pre-refactor "step deleted" path). If it exists,
-   * throw "Step not found" (caught by the per-contact handler → retry).
+   * is a no-op (returns false). If it exists, throw "Step not found" (caught
+   * by the per-contact handler → retry).
    */
-  private async handleMissingStep(email: DueContactGraph): Promise<void> {
+  private async handleMissingStep(email: DueContactGraph): Promise<boolean> {
     const { sequence } = email;
 
     logger.error(
@@ -429,7 +434,7 @@ export class RunScheduleServiceImpl implements RunScheduleService {
         },
         "🗑️ Step has been deleted, cleaning up"
       );
-      return;
+      return false;
     }
 
     throw new Error("Step not found");
