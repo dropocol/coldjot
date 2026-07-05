@@ -21,7 +21,7 @@ A characterization test answers one question: **given this input, does the code 
 
 ## Approach
 
-- **Vitest** — `plans/testing/01-testing-baseline.md` already picks Vitest; reuse it. Add it to `apps/mailops` (devDependency) and a `test` script.
+- **Vitest** — the test plan (`plans/test-suite/`) picks Vitest; reuse it. Add it to `apps/mailops` (devDependency) and a `test` script.
 - **No Prisma singleton mocking via module replacement** (fragile). Instead, Phase 1 introduces constructor injection. For Phase 0, **before that injection exists**, use a two-step trick:
   1. Write the test against the *current* exported class (e.g. `emailService`).
   2. Use `vi.mock("@coldjot/database", ...)` to swap `prisma` for an in-memory fake that records calls. Provide a minimal in-memory implementation (a plain object with `Map`s keyed by model name) — only the methods the code path actually calls.

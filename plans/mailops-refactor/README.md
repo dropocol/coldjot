@@ -16,7 +16,7 @@
   - [Phase 4 — split the three god-objects](./phase-4-split-god-objects.md)
   - [Phase 5 — dead code cleanup](./phase-5-dead-code-cleanup.md)
   - [Phase 6 — kill ServiceManager singleton](./phase-6-kill-service-manager.md)
-  - [Phase 7 — real test suite](./phase-7-test-suite.md)
+  - [Phase 7 — real test suite](../test-suite/README.md) — lifted into its own `plans/test-suite/` folder, split into sub-plans 7.1–7.9.
 
 ## TL;DR — what's wrong today
 
@@ -91,7 +91,7 @@ The composition root is the only file that constructs real instances and wires t
 | SMTP path (`useApi = true` dead branch) | **Delete.** Focus on Gmail. Preserve the `MailTransport` interface as the seam for future providers (SMTP, Outlook, send-through-API). Keep `lib/email/helper.ts` + `lib/google/gmail/helper.ts` (reused). Remove `nodemailer` + `quoted-printable`. |
 | Dormant `ThreadProcessor` (846 lines, commented out) | **Delete** in Phase 5. `InboxSource` interface is the future seam for any polling/IMAP implementation. |
 | Infra singletons (`Redis`, `MemoryMonitor`, `RateLimit`, `PubSub`) | **Keep as process-wide singletons**, constructed inside `createApp()` only. |
-| Phase 0 characterization tests | **Delete** in Phase 7.9 once the permanent suite covers every row in the [Feature → test mapping](./phase-7-test-suite.md#feature--test-mapping). |
+| Phase 0 characterization tests | **Delete** in Phase 7.9 once the permanent suite covers every row in the [Feature → test mapping](../test-suite/README.md#feature--test-mapping). |
 
 ## Verification strategy
 
@@ -101,4 +101,4 @@ Because you can't fully test the live system, every phase is designed to be **me
 2. **Characterization tests** captured *before* any refactor: 15 test files (Groups A–O) pinning current input→output behavior for **every** mailops feature. Run before AND after each phase; if the assertions still pass, behavior is preserved. See [Phase 0 coverage matrix](./phase-0-characterization-tests.md#coverage-matrix).
 3. **Diff discipline:** each commit is one concern, one layer, or one god-object split — never "refactor + behavior change" in the same commit.
 4. **Behavior-preserving markers:** where a method is moved verbatim, the commit message says `move-only`; where logic is genuinely reshaped (rare), it's called out explicitly with a before/after.
-5. **Final coverage:** at the end of Phase 7, every feature has permanent test coverage (unit + adapter + repository + integration). Coverage targets enforced in CI. See [Phase 7 Feature → test mapping](./phase-7-test-suite.md#feature--test-mapping).
+5. **Final coverage:** at the end of Phase 7, every feature has permanent test coverage (unit + adapter + repository + integration). Coverage targets enforced in CI. See [test-suite Feature → test mapping](../test-suite/README.md#feature--test-mapping).

@@ -22,7 +22,7 @@ A running principle: **add the new seam first, migrate callers one at a time, th
 4. **`ScheduleProcessor`** (`services/jobs/schedule/processor.ts`) — given a set of `SequenceContact` rows with `nextScheduledAt` in the past, assert the right number of `EmailJob`s get enqueued with the right delays.
 
 **How:**
-- Add `vitest` (the testing plan at `plans/testing/01-testing-baseline.md` already picks Vitest; reuse it). These tests live under `apps/mailops/src/__tests__/characterization/`.
+- Add `vitest` (the test plan at `plans/test-suite/` picks Vitest; reuse it). These tests live under `apps/mailops/src/__tests__/characterization/`.
 - Inject fakes through constructor params (Phase 1 introduces these seams; for Phase 0, use the seam-creation pattern inline — wrap the existing class in a tiny test-only subclass or use Vitest's `vi.mock` on `@coldjot/database` + `googleapis`).
 - Each test asserts on **rows written** + **jobs enqueued** + **transport calls** — the three observable surfaces. Not on internal call order.
 

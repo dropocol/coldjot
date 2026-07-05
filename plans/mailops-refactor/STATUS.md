@@ -17,7 +17,7 @@
 | 4 | [split three god-objects](./phase-4-split-god-objects.md) | ✅ **Done** — 4a (tracking) + 4b (email) + 4c (pubsub) all merged `--no-ff` (`44e55df`, `40fe9d2`, `0bc50fa`). 98/98 tests green; tsc clean; 0 errors / 260 warnings | `refactor/mailops-phase-4c-pubsub` (merged) | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ✅ **Done** — 5 files deleted, console sweep, deps pruned. 98/98 tests green; tsc clean; 0 errors / 244 warnings | `refactor/mailops-phase-5-cleanup` (merged) | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ✅ **Done** — ServiceManager deleted (297 lines); composition root owns the full graph; controllers → factories; routes → `makeRouter(app)`. 98/98 tests green; tsc clean; 0 errors / 242 warnings | `refactor/mailops-phase-6-singleton` (merged) | 2 days |
-| 7 | [real test suite](./phase-7-test-suite.md) | ⬜ Not started | `refactor/mailops-phase-7-tests` | 3–4 days |
+| 7 | [real test suite](../test-suite/README.md) | ⬜ Not started | `refactor/mailops-phase-7-tests` | 3–4 days |
 
 **Estimated total:** ~19–25 days of focused work. Each phase is independently shippable.
 
@@ -549,13 +549,13 @@ npm run lint -w mailops                                # 0 errors, 242 warnings
 
 git checkout -b refactor/mailops-phase-7-tests         # branch off refactor/mailops tip
 ```
-Then open [phase-7-test-suite.md](./phase-7-test-suite.md).
+Then open the [test-suite plan](../test-suite/README.md) (Phase 7 lifted into its own folder, split into sub-plans 7.1–7.9).
 
 ---
 
 ## Resume guide
 
-> **Phases 0–6 are done.** Phase 7 (real test suite) is the next active phase — see [phase-7-test-suite.md](./phase-7-test-suite.md). The "Recommended order for the remaining groups" table below is preserved as Phase-0 reference only.
+> **Phases 0–6 are done.** Phase 7 (real test suite) is the next active phase — see the [test-suite plan](../test-suite/README.md) (Phase 7 lifted into its own folder, split into sub-plans 7.1–7.9). The "Recommended order for the remaining groups" table below is preserved as Phase-0 reference only.
 
 ### Get back to a green state
 
@@ -692,7 +692,7 @@ Every phase's "Definition of done" boils down to:
 
 ## Final coverage requirement
 
-At the end of Phase 7, every mailops feature has test coverage. Phase 0 characterizes current behavior (so the refactor provably changes nothing); Phase 7 replaces those with a permanent suite organized by layer. See [Phase 0 § Coverage matrix](./phase-0-characterization-tests.md#coverage-matrix) and [Phase 7 § Feature → test mapping](./phase-7-test-suite.md#feature--test-mapping).
+At the end of Phase 7, every mailops feature has test coverage. Phase 0 characterizes current behavior (so the refactor provably changes nothing); Phase 7 replaces those with a permanent suite organized by layer. See [Phase 0 § Coverage matrix](./phase-0-characterization-tests.md#coverage-matrix) and [test-suite § Feature → test mapping](../test-suite/README.md#feature--test-mapping).
 
 ## What does NOT change (true for every phase)
 
@@ -708,4 +708,4 @@ At the end of Phase 7, every mailops feature has test coverage. Phase 0 characte
 - **`plans/mailops-consolidation/`** — deliberately postponed. This refactor *enables* future consolidation but does not perform it.
 - **`plans/refactor-plan/10` (BullMQ resilience)** — already done; untouched here.
 - **`plans/refactor-plan/03` (service auth + CORS)** — already done; `requireServiceToken` middleware untouched.
-- **`plans/testing/01-testing-baseline.md`** — picks Vitest; Phase 0 + Phase 7 reuse that choice.
+- **`plans/test-suite/`** — the Phase 7 test plan (lifted out of this folder into its own area, split into sub-plans 7.1–7.9). Picks Vitest; Phase 0 + Phase 7 reuse that choice.
