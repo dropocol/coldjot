@@ -1,17 +1,20 @@
-import { prisma } from "@coldjot/database";
 import { EmailAlias, Mailbox, MailboxCredentials } from "@coldjot/types";
+import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
+
+// Module-level repository singleton — bridges the standalone fns until Phase 4
+// turns these into a proper MailboxService with constructor injection. Matches
+// the same stopgap pattern used in lib/tracking.
+const mailboxRepo = new PrismaMailboxRepository();
 
 export async function getSequenceMailboxId(
   sequenceId: string
 ): Promise<string | null> {
-  const mailbox = await prisma.sequenceMailbox.findUnique({
-    where: { sequenceId: sequenceId },
-  });
-  if (!mailbox) {
+  const mailboxId = await mailboxRepo.findSequenceMailboxId(sequenceId);
+  if (!mailboxId) {
     // throw new Error("Sequence mailbox not found");
     return null;
   }
-  return mailbox.mailboxId;
+  return mailboxId;
 }
 
 /**
@@ -21,12 +24,7 @@ export async function getSenderMailbox(
   userId: string,
   mailboxId: string
 ): Promise<Mailbox | null> {
-  const mailbox = await prisma.mailbox.findUnique({
-    where: { id: mailboxId, userId: userId },
-    include: {
-      aliases: true,
-    },
-  });
+  const mailbox = await mailboxRepo.findWithAliases(mailboxId, userId);
 
   if (
     !mailbox?.providerAccountId ||
@@ -55,15 +53,7 @@ export async function getSequenceMailboxWithId(
   id: string
 ): Promise<Mailbox | null> {
   console.log("🔍 Getting sequence mailbox with id", id);
-  const sequenceMailbox = await prisma.sequenceMailbox.findUnique({
-    where: {
-      id,
-    },
-    include: {
-      alias: true,
-      mailbox: true,
-    },
-  });
+  const sequenceMailbox = await mailboxRepo.findSequenceMailboxById(id);
 
   if (
     !sequenceMailbox?.mailbox.providerAccountId ||
@@ -98,17 +88,11 @@ export async function getSequenceMailbox(
     userId
   );
 
-  const sequenceMailbox = await prisma.sequenceMailbox.findUnique({
-    where: {
-      sequenceId: sequenceId,
-      mailboxId: sequenceMailboxId,
-      userId: userId,
-    },
-    include: {
-      alias: true,
-      mailbox: true,
-    },
-  });
+  const sequenceMailbox = await mailboxRepo.findSequenceMailbox(
+    sequenceMailboxId,
+    sequenceId,
+    userId
+  );
 
   if (
     !sequenceMailbox?.mailbox.providerAccountId ||
@@ -136,15 +120,12 @@ export async function updateMailboxCredentials(
   data: Partial<MailboxCredentials>
 ) {
   try {
-    const updatedMailbox = await prisma.mailbox.update({
-      where: { id: mailboxId },
-      data: {
-        access_token: data.accessToken,
-        expires_at: data.expiryDate ? data.expiryDate / 1000 : null,
-        // id_token: credentials.id_token,
-      },
-    });
-    console.log(`🔄 Updated mailbox: ${updatedMailbox}`);
+    await mailboxRepo.updateTokens(
+      mailboxId,
+      data.accessToken!,
+      data.expiryDate!
+    );
+    console.log(`🔄 Updated mailbox: ${mailboxId}`);
   } catch (error) {
     console.error(`❌ Error updating mailbox: ${error}`);
   }

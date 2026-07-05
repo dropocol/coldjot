@@ -1,4 +1,3 @@
-import { prisma } from "@coldjot/database";
 import { sleep } from "@/utils";
 import { google } from "googleapis";
 import { TokenRefreshError } from "@coldjot/types";

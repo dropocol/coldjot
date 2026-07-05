@@ -14,7 +14,7 @@ import { logger } from "@/lib/log";
 import { backOff } from "exponential-backoff";
 import { SequenceContactStatusEnum, EmailEventEnum } from "@coldjot/types";
 import { refreshTokenIfNeeded } from "@/lib/google/gmail/helper";
-import { Prisma, EmailWatch, Mailbox, EmailAlias } from "@prisma/client";
+import { EmailWatch } from "@prisma/client";
 import { fileLogger } from "@/lib/log/file-logger";
 import {
   isBounceMessage,
@@ -26,6 +26,8 @@ import {
 import { updateSequenceStats } from "@/lib/stats";
 import { GMAIL_API } from "@/config/gmail/constants";
 import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
+import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
+import type { MailboxWithAliases } from "@/repositories/mailbox.repo";
 import {
   sanitizeData,
   decodeNotification,
@@ -48,9 +50,7 @@ interface GmailHistoryResponse {
 }
 
 interface WatchWithMailbox extends EmailWatch {
-  mailbox: Mailbox & {
-    aliases: EmailAlias[];
-  };
+  mailbox: MailboxWithAliases;
 }
 
 // -----------------------------------------
@@ -63,6 +63,7 @@ export class PubSubHandler {
   // TODO(phase-3.9): inject all repositories via constructor once ServiceManager
   // is unwound in Phase 6. For now, default to Prisma impls.
   private readonly emailEvent = new PrismaEmailEventRepository();
+  private readonly mailboxRepo = new PrismaMailboxRepository();
 
   async handleNotification(message: PubSubMessage): Promise<void> {
     try {
@@ -151,12 +152,7 @@ export class PubSubHandler {
       return null;
     }
 
-    const mailbox = await prisma.mailbox.findFirst({
-      where: { email },
-      include: {
-        aliases: true,
-      },
-    });
+    const mailbox = await this.mailboxRepo.findWithEmailAliases(email);
 
     if (!mailbox) {
       fileLogger.log("warn", "No mailbox found for watch", {

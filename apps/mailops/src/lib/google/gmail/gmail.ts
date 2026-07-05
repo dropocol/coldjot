@@ -1,9 +1,9 @@
 import { google } from "googleapis";
 import { encode as base64Encode } from "js-base64";
-import { prisma } from "@coldjot/database";
 
 import type { gmail_v1 } from "googleapis";
 import { logger } from "@/lib/log";
+import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
 import {
   validateGmailCredentials,
   refreshTokenIfNeeded,
@@ -24,12 +24,15 @@ import type {
 export class GmailClientService {
   private static instance: GmailClientService;
   private config: GmailClientConfig;
+  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
+  // For now, default to the Prisma impl — overridable for tests.
+  private readonly mailboxRepo = new PrismaMailboxRepository();
 
   // TODO: Move to config
   private constructor() {
     this.config = {
       clientId: process.env.GOOGLE_CLIENT_ID_EMAIL!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET_EMAIL!,
+      clientSecret: process.env.GOOGLE_SECRET_EMAIL!,
       redirectUri: process.env.GOOGLE_REDIRECT_URI_EMAIL!,
     };
   }
@@ -74,12 +77,7 @@ export class GmailClientService {
       );
 
       // Lets get user mailbox here instead of passing it in
-      const mailbox = await prisma.mailbox.findUnique({
-        where: {
-          id: mailboxId,
-          userId: userId,
-        },
-      });
+      const mailbox = await this.mailboxRepo.findByIdForUser(mailboxId, userId);
 
       if (!mailbox) {
         throw new Error("Mailbox not found");

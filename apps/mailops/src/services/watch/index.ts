@@ -2,6 +2,7 @@ import { logger } from "@/lib/log";
 import { OAuth2Client } from "google-auth-library";
 import { google } from "googleapis";
 import { prisma } from "@coldjot/database";
+import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
 import { nanoid } from "nanoid";
 import {
   GMAIL_API,
@@ -46,6 +47,9 @@ interface WatchSetupParams {
 export class WatchService {
   private pubSubClient: PubSub;
   private oauth2Client: OAuth2Client;
+  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
+  // For now, default to the Prisma impl — overridable for tests.
+  private readonly mailboxRepo = new PrismaMailboxRepository();
 
   private TOPIC_NAME: string = `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/${process.env.PUBSUB_TOPIC_NAME}`;
 
@@ -280,13 +284,7 @@ export class WatchService {
       }
 
       // Get the mailbox
-      const mailbox = await prisma.mailbox.findFirst({
-        where: {
-          email,
-          isActive: true,
-          provider: "gmail",
-        },
-      });
+      const mailbox = await this.mailboxRepo.findActiveGmailByEmail(email);
 
       if (!mailbox || !mailbox.access_token) {
         logger.error(
@@ -347,13 +345,7 @@ export class WatchService {
   private async getAccessToken(email: string): Promise<string | null> {
     try {
       // Get the mailbox
-      const mailbox = await prisma.mailbox.findFirst({
-        where: {
-          email: email,
-          isActive: true,
-          provider: "gmail",
-        },
-      });
+      const mailbox = await this.mailboxRepo.findActiveGmailByEmail(email);
 
       if (!mailbox) {
         logger.error({ email }, "No active Google mailbox found");
