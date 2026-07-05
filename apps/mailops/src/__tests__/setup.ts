@@ -13,9 +13,13 @@
 process.env.NODE_ENV = "test";
 process.env.APP_ENV = "test";
 
-// Required by config/env.ts zod schema (min-length checks)
+// Required by config/env.ts zod schema (min-length checks). The integration
+// tier (vitest.integration.config.ts) sets DATABASE_URL_TEST; honor it here so
+// the real prisma client connects to the test DB.
 process.env.DATABASE_URL =
-  process.env.DATABASE_URL || "postgresql://test:test@localhost:5432/test";
+  process.env.DATABASE_URL_TEST ||
+  process.env.DATABASE_URL ||
+  "postgresql://test:test@localhost:5432/test";
 process.env.SERVICE_INTERNAL_TOKEN = "test-token-at-least-16-chars-long";
 process.env.GOOGLE_CLIENT_ID_EMAIL = "test-client-id";
 process.env.GOOGLE_CLIENT_SECRET_EMAIL = "test-client-secret";
