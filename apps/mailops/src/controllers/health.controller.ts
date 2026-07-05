@@ -1,8 +1,8 @@
-import { Request, Response } from "express";
 import { logger } from "@/lib/log";
 import Redis from "ioredis";
 import { ServiceManager } from "@/services/service-manager";
 import { MonitoringService } from "@/services/monitor/service";
+import { ok, serverError, type ControllerResult } from "./utils";
 
 // TODO : recheck this file
 // Initialize services
@@ -14,11 +14,11 @@ const redis = new Redis({
   password: process.env.REDIS_PASSWORD,
 });
 
-export async function checkHealthSimple(req: Request, res: Response) {
-  res.status(200).json({ message: "OK" });
+export async function checkHealthSimple(): Promise<ControllerResult> {
+  return ok({ message: "OK" });
 }
 
-export async function checkHealth(req: Request, res: Response) {
+export async function checkHealth(): Promise<ControllerResult> {
   try {
     // Check Redis connection
     const redisStatus = await redis.ping();
@@ -45,7 +45,7 @@ export async function checkHealth(req: Request, res: Response) {
     // Get queue metrics
     const metrics = await monitoringService.getSystemMetrics();
 
-    res.json({
+    return ok({
       status: "ok",
       redis: redisStatus === "PONG" ? "connected" : "error",
       queues: {
@@ -56,14 +56,18 @@ export async function checkHealth(req: Request, res: Response) {
     });
   } catch (error) {
     logger.error({ err: error }, "Health check failed");
-    res.status(500).json({
-      status: "error",
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
+    // Original handler returns 500 with { status, error } — preserve that shape.
+    return {
+      status: 500,
+      body: {
+        status: "error",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+    } as ControllerResult;
   }
 }
 
-export async function getQueueStatus(req: Request, res: Response) {
+export async function getQueueStatus(): Promise<ControllerResult> {
   try {
     // Get queues from service manager
     const sequenceQueue = serviceManager.getQueue("sequence-processing");
@@ -93,7 +97,7 @@ export async function getQueueStatus(req: Request, res: Response) {
       delayed: sequenceJobCounts.delayed + emailJobCounts.delayed,
     };
 
-    res.json({
+    return ok({
       sequence: {
         ...detailedStatus.sequence,
         isProcessing: detailedStatus.sequence.active > 0,
@@ -106,6 +110,6 @@ export async function getQueueStatus(req: Request, res: Response) {
     });
   } catch (error) {
     logger.error({ err: error }, "Error getting queue status");
-    res.status(500).json({ error: "Failed to get queue status" });
+    return serverError("Failed to get queue status");
   }
 }

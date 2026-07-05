@@ -1,25 +1,26 @@
-import { Request, Response } from "express";
 import { ServiceManager } from "@/services/service-manager";
 import { MonitoringService } from "@/services/monitor/service";
 import { logger } from "@/lib/log";
+import { ok, serverError, type ControllerResult } from "./utils";
 
 // Initialize services
 const serviceManager = ServiceManager.getInstance();
 const monitoringService = new MonitoringService(serviceManager);
 
-export async function getSystemMetrics(req: Request, res: Response) {
+export async function getSystemMetrics(): Promise<ControllerResult> {
   try {
     const metrics = await monitoringService.getSystemMetrics();
-    res.json(metrics);
+    return ok(metrics);
   } catch (error) {
     logger.error({ err: error }, "Error getting system metrics");
-    res.status(500).json({ error: "Failed to get system metrics" });
+    return serverError("Failed to get system metrics");
   }
 }
 
-export async function getSequenceHealth(req: Request<{ id: string }>, res: Response) {
+export async function getSequenceHealth(
+  id: string
+): Promise<ControllerResult> {
   try {
-    const { id } = req.params;
     const health = await monitoringService.checkSequenceHealth(id, {
       errorThreshold: 0.1,
       warningThreshold: 0.05,
@@ -33,9 +34,9 @@ export async function getSequenceHealth(req: Request<{ id: string }>, res: Respo
       },
     });
 
-    res.json(health);
+    return ok(health);
   } catch (error) {
     logger.error({ err: error }, "Error getting sequence health");
-    res.status(500).json({ error: "Failed to get sequence health" });
+    return serverError("Failed to get sequence health");
   }
 }
