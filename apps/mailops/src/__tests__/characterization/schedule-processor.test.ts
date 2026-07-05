@@ -68,7 +68,9 @@ vi.mock("@/services/jobs/sequence/helper", () => ({
 
 const ctx = setupTestContext();
 
-import { ScheduleProcessor } from "@/services/jobs/schedule/processor";
+import { RunScheduleServiceImpl } from "@/services/domain/run-schedule.service";
+import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
+import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
 import {
   SequenceContactStatusEnum,
   SequenceStatus,
@@ -171,14 +173,20 @@ function seedDueContact(over: Record<string, any> = {}) {
   return sc;
 }
 
-/** Construct a processor and invoke the private tick. */
+/** Construct the schedule service and invoke the tick. */
 async function runTick(): Promise<void> {
-  const queue = new (await import("bullmq")).Queue("q" as any, {} as any);
-  // Phase 6.3: JobManager is now constructor-injected. Pass a stub whose
-  // addEmailJob is the hoisted mock (assertions check mocks.addEmailJob).
+  // Phase 7.2b: the tick logic moved from ScheduleProcessor.processScheduledEmails
+  // into RunScheduleServiceImpl.tick(). Construct the service directly with a
+  // stub jobManager (addEmailJob is the hoisted mock) and the fake-backed repos.
+  // rateLimitService + scheduleGenerator are read from their module paths by
+  // default (the vi.mock factories above), so the service picks up those mocks.
   const jobManager = { addEmailJob: mocks.addEmailJob } as any;
-  const p = new ScheduleProcessor(queue as any, jobManager);
-  await (p as any).processScheduledEmails();
+  const service = new RunScheduleServiceImpl(
+    new PrismaSequenceContactRepository(),
+    new PrismaSequenceStepRepository(),
+    jobManager
+  );
+  await service.tick();
 }
 
 // ------------------------------------------------------------------------
