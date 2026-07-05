@@ -26,12 +26,12 @@ export interface ListSyncRecordRepository {
   /** Mark a record processing/completed/failed. */
   updateStatus(
     id: string,
-    data: { status: string; contactsAdded?: number; error?: string }
+    data: { status: string; contactsAdded?: number; error?: string | null }
   ): Promise<void>;
   /** Bulk update by listId+sequenceId (reconciliation helper). */
   updateStatusByListSequence(
     listId: string,
     sequenceId: string,
-    data: { status: string; contactsAdded?: number; error?: string }
+    data: { status: string; contactsAdded?: number; error?: string | null }
   ): Promise<void>;
 }

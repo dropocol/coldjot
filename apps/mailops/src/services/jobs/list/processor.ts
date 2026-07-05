@@ -1,7 +1,7 @@
 import { Queue, Job } from "bullmq";
 import { BaseProcessor } from "../base-processor";
 import { logger } from "@/lib/log";
-import { prisma } from "@coldjot/database";
+import { PrismaListSyncRecordRepository } from "@/repositories/prisma/prisma-list-sync-record.repo";
 import { getWorkerOptions, getRateLimits } from "@/config";
 import { QUEUE_NAMES } from "@/config";
 import { syncListToSequences } from "./helper";
@@ -16,6 +16,8 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
   private readonly CHECK_INTERVAL = 30000; // 5 seconds
   private readonly MAX_CONCURRENT_SYNCS = 3; // Maximum number of concurrent syncs
   private readonly concurrencyLimit: pLimit.Limit;
+  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
+  private readonly listSyncRecordRepo = new PrismaListSyncRecordRepository();
 
   constructor(queue: Queue) {
     super(
@@ -72,18 +74,7 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
       logger.info("📋 Starting list sync processing");
 
       // Find all pending sync records
-      const syncRecords = await prisma.listSyncRecord.findMany({
-        where: { status: "pending" },
-        orderBy: { createdAt: "asc" },
-        take: 10,
-        include: {
-          list: {
-            select: {
-              _count: { select: { contacts: true } },
-            },
-          },
-        },
-      });
+      const syncRecords = await this.listSyncRecordRepo.findPending(10);
 
       if (syncRecords.length === 0) return;
 
@@ -99,27 +90,22 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
         sortedRecords.map((record) =>
           this.concurrencyLimit(async () => {
             try {
-              await prisma.listSyncRecord.update({
-                where: { id: record.id },
-                data: { status: "processing" },
+              await this.listSyncRecordRepo.updateStatus(record.id, {
+                status: "processing",
               });
 
               await syncListToSequences(record.listId);
 
-              await prisma.listSyncRecord.update({
-                where: { id: record.id },
-                data: { status: "completed" },
+              await this.listSyncRecordRepo.updateStatus(record.id, {
+                status: "completed",
               });
 
               logger.info(`📋 Processed list sync record ${record.id}`);
             } catch (error) {
               logger.error({ err: error }, `📋 ❌ Error processing sync record ${record.id}`);
-              await prisma.listSyncRecord.update({
-                where: { id: record.id },
-                data: {
-                  status: "failed",
-                  error: error instanceof Error ? error.message : String(error),
-                },
+              await this.listSyncRecordRepo.updateStatus(record.id, {
+                status: "failed",
+                error: error instanceof Error ? error.message : String(error),
               });
             }
           })

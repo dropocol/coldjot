@@ -1,8 +1,11 @@
-import { prisma } from "@coldjot/database";
 import { logger } from "@/lib/log";
 import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
+import { PrismaListRepository } from "@/repositories/prisma/prisma-list.repo";
+import { PrismaListSyncRecordRepository } from "@/repositories/prisma/prisma-list-sync-record.repo";
 
 const sequenceContactRepo = new PrismaSequenceContactRepository();
+const listRepo = new PrismaListRepository();
+const listSyncRecordRepo = new PrismaListSyncRecordRepository();
 
 const BATCH_SIZE = 1000; // Process contacts in chunks of 1000
 
@@ -14,14 +17,7 @@ export async function syncListToSequences(listId: string) {
     logger.info({ listId }, "Starting list sync job");
 
     // Get the list with its sequences first (without contacts)
-    const list = await prisma.emailList.findUnique({
-      where: { id: listId },
-      include: {
-        sequences: {
-          select: { id: true },
-        },
-      },
-    });
+    const list = await listRepo.findWithSequences(listId);
 
     if (!list) {
       logger.warn({ listId }, "List not found");
@@ -34,16 +30,7 @@ export async function syncListToSequences(listId: string) {
     }
 
     // Get total contact count
-    const totalContacts = await prisma.emailList.findUnique({
-      where: { id: listId },
-      include: {
-        _count: {
-          select: { contacts: true },
-        },
-      },
-    });
-
-    const totalContactCount = totalContacts?._count.contacts || 0;
+    const totalContactCount = await listRepo.contactCount(listId);
     logger.info(
       {
         listId,
@@ -64,25 +51,21 @@ export async function syncListToSequences(listId: string) {
 
         // Process contacts in batches
         while (processedCount < totalContactCount) {
-          const contacts = await prisma.emailList.findUnique({
-            where: { id: listId },
-            include: {
-              contacts: {
-                take: BATCH_SIZE,
-                skip: processedCount,
-              },
-            },
-          });
+          const contacts = await listRepo.findContactsPage(
+            listId,
+            BATCH_SIZE,
+            processedCount
+          );
 
-          if (!contacts?.contacts.length) break;
+          if (!contacts.length) break;
 
           const added = await syncContactsToSequence(
             sequence.id,
-            contacts.contacts
+            contacts
           );
 
           totalAdded += added;
-          processedCount += contacts.contacts.length;
+          processedCount += contacts.length;
 
           logger.info(
             {
@@ -143,21 +126,11 @@ async function updateSyncRecordStatus(
   error: string | null = null
 ): Promise<void> {
   try {
-    await prisma.listSyncRecord.updateMany({
-      where: {
-        listId,
-        sequenceId,
-        status: {
-          in: ["pending", "processing"],
-        },
-      },
-      data: {
-        status,
-        contactsAdded,
-        error,
-        updatedAt: new Date(),
-      },
-    });
+    await listSyncRecordRepo.updateStatusByListSequence(
+      listId,
+      sequenceId,
+      { status, contactsAdded, error }
+    );
   } catch (err) {
     logger.error(
       { listId, sequenceId, error: err },

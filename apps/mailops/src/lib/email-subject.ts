@@ -2,17 +2,18 @@ import { gmail_v1 } from "googleapis";
 import { getGmailSubject } from "./google/gmail";
 import type { SequenceStep, SubjectInfo } from "@coldjot/types";
 import { logger } from "./log";
-import { prisma } from "@coldjot/database";
 import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
 import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
+import { PrismaTemplateRepository } from "@/repositories/prisma/prisma-template.repo";
 import { replacePlaceholders } from "@/lib/placeholders";
 import type { Contact } from "@prisma/client";
 
 // Module-level repo singletons — bridges the standalone determineEmailSubject
 // fn until Phase 4 turns it into a proper service. Matches the lib/tracking
-// stopgap pattern. (template calls below still use prisma directly — 3.10.)
+// stopgap pattern.
 const emailThreadRepo = new PrismaEmailThreadRepository();
 const emailTrackingRepo = new PrismaEmailTrackingRepository();
+const templateRepo = new PrismaTemplateRepository();
 
 export async function determineEmailSubject(
   step: SequenceStep,
@@ -74,18 +75,15 @@ export async function determineEmailSubject(
 
       // Try to get subject from template if templateId exists
       if (step.templateId) {
-        const template = await prisma.template.findUnique({
-          where: { id: step.templateId },
-          select: { subject: true },
-        });
+        const templateSubject = await templateRepo.findSubject(step.templateId);
 
         logger.debug({
           templateId: step.templateId,
-          templateSubject: template?.subject,
+          templateSubject,
         }, "Fetched template subject");
 
-        if (template?.subject) {
-          newThreadSubject = template.subject;
+        if (templateSubject) {
+          newThreadSubject = templateSubject;
         }
       }
 
@@ -191,11 +189,7 @@ export async function determineEmailSubject(
           let fallbackSubject: string | null = null;
 
           if (step.templateId) {
-            const template = await prisma.template.findUnique({
-              where: { id: step.templateId },
-              select: { subject: true },
-            });
-            fallbackSubject = template?.subject || null;
+            fallbackSubject = await templateRepo.findSubject(step.templateId);
           }
 
           const baseSubject = fallbackSubject || step.subject || "No Subject";
@@ -233,11 +227,7 @@ export async function determineEmailSubject(
         let fallbackSubject: string | null = null;
 
         if (step.templateId) {
-          const template = await prisma.template.findUnique({
-            where: { id: step.templateId },
-            select: { subject: true },
-          });
-          fallbackSubject = template?.subject || null;
+          fallbackSubject = await templateRepo.findSubject(step.templateId);
         }
 
         const baseSubject = fallbackSubject || step.subject || "No Subject";
@@ -253,11 +243,7 @@ export async function determineEmailSubject(
     let fallbackSubject: string | null = null;
 
     if (step.templateId) {
-      const template = await prisma.template.findUnique({
-        where: { id: step.templateId },
-        select: { subject: true },
-      });
-      fallbackSubject = template?.subject || null;
+      fallbackSubject = await templateRepo.findSubject(step.templateId);
     }
 
     const baseSubject = fallbackSubject || step.subject || "No Subject";
@@ -286,11 +272,7 @@ export async function determineEmailSubject(
       let fallbackSubject: string | null = null;
 
       if (step.templateId) {
-        const template = await prisma.template.findUnique({
-          where: { id: step.templateId },
-          select: { subject: true },
-        });
-        fallbackSubject = template?.subject || null;
+        fallbackSubject = await templateRepo.findSubject(step.templateId);
       }
 
       const baseSubject = fallbackSubject || step.subject || "No Subject";

@@ -1,7 +1,6 @@
 import { Job, Queue } from "bullmq";
 import { BaseProcessor } from "../base-processor";
 import { logger } from "@/lib/log";
-import { prisma } from "@coldjot/database";
 import {
   SendEmailOptions,
   EmailResult,
@@ -36,6 +35,8 @@ import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-e
 import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
 import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
 import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
+import { PrismaTemplateRepository } from "@/repositories/prisma/prisma-template.repo";
+import { PrismaContactRepository } from "@/repositories/prisma/prisma-contact.repo";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
   private serviceManager = ServiceManager.getInstance();
@@ -47,6 +48,8 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
   private readonly sequenceStep = new PrismaSequenceStepRepository();
   private readonly sequence = new PrismaSequenceRepository();
   private readonly emailThreadRepo = new PrismaEmailThreadRepository();
+  private readonly templateRepo = new PrismaTemplateRepository();
+  private readonly contactRepo = new PrismaContactRepository();
 
   constructor(queue: Queue) {
     super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL));
@@ -107,9 +110,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       const step = await this.getAndValidateSequenceStep(data.stepId);
 
       // get template info
-      const template = await prisma.template.findUnique({
-        where: { id: step.templateId || "" },
-      });
+      const template = await this.templateRepo.findById(step.templateId || "");
 
       if (template) {
         step.subject = template.subject;
@@ -123,9 +124,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       // Get contact info
       // TODO : Check if the contact is available
       logger.info(`🔍 Fetching contact info ${data.contactId}`);
-      const contact = await prisma.contact.findUnique({
-        where: { id: data.contactId },
-      });
+      const contact = await this.contactRepo.findById(data.contactId);
 
       if (!contact) {
         throw new Error(`Contact ${data.contactId} not found`);
