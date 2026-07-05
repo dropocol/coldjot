@@ -13,7 +13,7 @@ import { getActiveSequenceContacts, getSequenceWithDetails } from "./helper";
 import { QUEUE_NAMES } from "@/config";
 import { getWorkerOptions } from "@/config";
 import { BaseProcessor } from "../base-processor";
-import { ServiceManager } from "@/services/service-manager";
+import type { JobManager } from "@/services/jobs/job-manager";
 import { processContactShared } from "./helper";
 
 // Define our sequence processing types
@@ -60,13 +60,16 @@ interface ProcessingJobData {
 export class SequenceProcessor extends BaseProcessor<ProcessingJobData> {
   private rateLimitService: RateLimitService;
   private scheduleGenerator: ScheduleGenerator;
+  private readonly jobManager: JobManager;
 
-  private serviceManager = ServiceManager.getInstance();
-  private jobManager = this.serviceManager.getJobManager();
-
-  constructor(queue: Queue, dlQueues: Map<string, Queue> = new Map()) {
+  constructor(
+    queue: Queue,
+    jobManager: JobManager,
+    dlQueues: Map<string, Queue> = new Map()
+  ) {
     super(queue, QUEUE_NAMES.SEQUENCE, getWorkerOptions(QUEUE_NAMES.SEQUENCE), dlQueues);
 
+    this.jobManager = jobManager;
     this.rateLimitService = RateLimitService.getInstance();
     this.scheduleGenerator = scheduleGenerator;
   }

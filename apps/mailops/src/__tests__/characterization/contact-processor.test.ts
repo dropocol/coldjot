@@ -80,7 +80,10 @@ function seedNewContact(scId: string, contactId: string, contactEmail = "ada@exa
 
 async function runContact() {
   const queue = new (await import("bullmq")).Queue("q" as any, {} as any);
-  const p = new ContactProcessor(queue as any);
+  // Phase 6.3: JobManager is constructor-injected. Pass a stub; the processor
+  // forwards it to processContactShared (mocked), which the test asserts on.
+  const jobManager = { add: vi.fn() } as any;
+  const p = new ContactProcessor(queue as any, jobManager);
   await (p as any).processNewContacts();
 }
 

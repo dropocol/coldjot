@@ -19,28 +19,19 @@ import type {
 
 // Gmail Client Class
 export class GmailClientService {
-  private static instance: GmailClientService;
   private config: GmailClientConfig;
-  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
-  // For now, default to the Prisma impl — overridable for tests.
+  // Phase 6.3: was a private-constructor + getInstance() singleton. Now a
+  // plain constructable class — overridable mailboxRepo for tests, and the
+  // module-level export below is the legacy stopgap for callers not yet
+  // threaded through createApp().
   private readonly mailboxRepo = new PrismaMailboxRepository();
 
-  // TODO: Move to config
-  private constructor() {
+  constructor() {
     this.config = {
       clientId: process.env.GOOGLE_CLIENT_ID_EMAIL!,
       clientSecret: process.env.GOOGLE_SECRET_EMAIL!,
       redirectUri: process.env.GOOGLE_REDIRECT_URI_EMAIL!,
     };
-  }
-
-  // -------------------------------------------------------
-
-  public static getInstance(): GmailClientService {
-    if (!GmailClientService.instance) {
-      GmailClientService.instance = new GmailClientService();
-    }
-    return GmailClientService.instance;
   }
 
   // -------------------------------------------------------
@@ -271,5 +262,6 @@ export async function getGmailThread(accessToken: string, threadId: string) {
 }
 
 
-// Export singleton instance
-export const gmailClientService = GmailClientService.getInstance();
+// Phase 6.3: plain exported instance (no getInstance singleton). The class is
+// safe to construct eagerly; consumers that want a fake inject one.
+export const gmailClientService = new GmailClientService();

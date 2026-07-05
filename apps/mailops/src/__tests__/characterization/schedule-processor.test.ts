@@ -182,7 +182,10 @@ function seedDueContact(over: Record<string, any> = {}) {
 /** Construct a processor and invoke the private tick. */
 async function runTick(): Promise<void> {
   const queue = new (await import("bullmq")).Queue("q" as any, {} as any);
-  const p = new ScheduleProcessor(queue as any);
+  // Phase 6.3: JobManager is now constructor-injected. Pass a stub whose
+  // addEmailJob is the hoisted mock (assertions check mocks.addEmailJob).
+  const jobManager = { addEmailJob: mocks.addEmailJob } as any;
+  const p = new ScheduleProcessor(queue as any, jobManager);
   await (p as any).processScheduledEmails();
 }
 

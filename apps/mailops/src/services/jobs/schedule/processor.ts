@@ -28,7 +28,7 @@ import {
   SCHEDULE_MAX_FAILURES,
   SCHEDULE_FAILURE_BACKOFF_MS,
 } from "@/config/queue/policy";
-import { ServiceManager } from "@/services/service-manager";
+import type { JobManager } from "@/services/jobs/job-manager";
 import { updateSequenceContactStatus } from "../sequence/helper";
 import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
 import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
@@ -69,18 +69,22 @@ export class ScheduleProcessor extends BaseProcessor<any> {
   private retryDelay: number = EMAIL_SCHEDULER_CONFIG.RETRY_DELAY;
   private readonly SCHEDULER_ID = "email-sending-scheduler";
 
-  private serviceManager = ServiceManager.getInstance();
-  private jobManager = this.serviceManager.getJobManager();
+  private readonly jobManager: JobManager;
   private readonly sequenceContact = new PrismaSequenceContactRepository();
   private readonly sequenceStep = new PrismaSequenceStepRepository();
 
-  constructor(queue: Queue, dlQueues: Map<string, Queue> = new Map()) {
+  constructor(
+    queue: Queue,
+    jobManager: JobManager,
+    dlQueues: Map<string, Queue> = new Map()
+  ) {
     super(
       queue,
       QUEUE_NAMES.EMAIL_SCHEDULE,
       getWorkerOptions(QUEUE_NAMES.EMAIL_SCHEDULE),
       dlQueues
     );
+    this.jobManager = jobManager;
 
     logger.info({
       checkInterval: this.checkInterval,
