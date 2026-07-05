@@ -5,22 +5,31 @@ import { logger } from "./log";
 import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
 import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
 import { PrismaTemplateRepository } from "@/repositories/prisma/prisma-template.repo";
+import type { EmailThreadRepository } from "@/repositories/email-thread.repo";
+import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
+import type { TemplateRepository } from "@/repositories/template.repo";
 import { replacePlaceholders } from "@/lib/placeholders";
 import type { Contact } from "@prisma/client";
 
-// Module-level repo singletons — bridges the standalone determineEmailSubject
-// fn until Phase 4 turns it into a proper service. Matches the lib/tracking
-// stopgap pattern.
-const emailThreadRepo = new PrismaEmailThreadRepository();
-const emailTrackingRepo = new PrismaEmailTrackingRepository();
-const templateRepo = new PrismaTemplateRepository();
+/**
+ * Optional injected repositories. Callers that pass their own instances (tests,
+ * the composition root) bypass the module-level singletons; the bare call site
+ * in services/jobs/email/processor.ts omits this and gets the Prisma defaults.
+ */
+export interface DetermineEmailSubjectDeps {
+  emailThread: EmailThreadRepository;
+  emailTracking: EmailTrackingRepository;
+  template: TemplateRepository;
+}
 
 export async function determineEmailSubject(
   step: SequenceStep,
   threadId?: string,
   gmail?: gmail_v1.Gmail,
-  contact?: Contact
+  contact?: Contact,
+  deps: DetermineEmailSubjectDeps = DEFAULT_DEPS
 ): Promise<SubjectInfo> {
+  const { emailThread: emailThreadRepo, emailTracking: emailTrackingRepo, template: templateRepo } = deps;
   logger.info({
     stepId: step.id,
     threadId,
@@ -289,3 +298,14 @@ export async function determineEmailSubject(
     }
   }
 }
+
+/**
+ * Default deps — the Prisma repo singletons. Kept as a single object so the
+ * bare call site (no deps arg) keeps working identically to before this fn
+ * accepted injected repos.
+ */
+const DEFAULT_DEPS: DetermineEmailSubjectDeps = {
+  emailThread: new PrismaEmailThreadRepository(),
+  emailTracking: new PrismaEmailTrackingRepository(),
+  template: new PrismaTemplateRepository(),
+};
