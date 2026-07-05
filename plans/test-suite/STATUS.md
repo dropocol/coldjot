@@ -66,15 +66,18 @@ Each 🟢 step has a working, green representative that proves the pattern; the 
 # Fast tier (no DB needed) — runs on every push:
 npm test -w mailops                                   # 189 tests, <5s
 
-# Integration tier (needs Postgres):
-docker compose up -d postgres                          # start the dev postgres
-# create the test DB + run migrations (one-time):
-docker exec coldjot-postgres-1 psql -U postgres -c "CREATE DATABASE coldjot_test;"
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/coldjot_test \
-  npx prisma migrate deploy --schema packages/database/prisma/schema.prisma
+# Integration tier (needs Postgres) — one-shot from repo root (boots Postgres,
+# creates coldjot_test if absent, applies migrations, runs the tests):
+npm run test:mailops:integration                      # 116 tests
 
+# ...or step-by-step:
+npm run db:up                                         # start postgres
+npm run db:test:setup                                 # create + migrate coldjot_test (idempotent)
+npm run test:integration -w mailops                   # 116 tests
+
+# Override the test DB connection string if yours differs:
 DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/coldjot_test \
-  npm run test:integration -w mailops                  # 10 tests
+  npm run test:integration -w mailops
 ```
 
 The CI workflow (`.github/workflows/ci.yml`) provisions Postgres + runs migrations automatically on PRs.
