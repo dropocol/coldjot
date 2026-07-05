@@ -3,8 +3,16 @@ import { getGmailSubject } from "./google/gmail";
 import type { SequenceStep, SubjectInfo } from "@coldjot/types";
 import { logger } from "./log";
 import { prisma } from "@coldjot/database";
+import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
+import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
 import { replacePlaceholders } from "@/lib/placeholders";
 import type { Contact } from "@prisma/client";
+
+// Module-level repo singletons — bridges the standalone determineEmailSubject
+// fn until Phase 4 turns it into a proper service. Matches the lib/tracking
+// stopgap pattern. (template calls below still use prisma directly — 3.10.)
+const emailThreadRepo = new PrismaEmailThreadRepository();
+const emailTrackingRepo = new PrismaEmailTrackingRepository();
 
 export async function determineEmailSubject(
   step: SequenceStep,
@@ -45,9 +53,7 @@ export async function determineEmailSubject(
     let existingEmails = 0;
 
     if (threadId) {
-      existingEmails = await prisma.emailTracking.count({
-        where: { threadId },
-      });
+      existingEmails = await emailTrackingRepo.countByThread(threadId);
       // It's a new thread if:
       // 1. replyToThread is false (regardless of order number) OR
       // 2. There are no existing emails in the thread
@@ -106,25 +112,23 @@ export async function determineEmailSubject(
       logger.debug({ threadId }, "Handling reply to thread");
       try {
         // First try to get from emailThreads
-        const emailThread = await prisma.emailThread.findUnique({
-          where: { threadId },
-          select: { subject: true },
-        });
+        const emailThreadSubject =
+          await emailThreadRepo.findSubjectByThread(threadId);
 
         logger.debug({
           threadId,
-          foundSubject: emailThread?.subject,
+          foundSubject: emailThreadSubject,
         }, "Fetched subject from emailThread");
 
-        if (emailThread?.subject) {
+        if (emailThreadSubject) {
           // For replies, always use the original thread subject
-          const processedSubject = processSubject(emailThread.subject);
+          const processedSubject = processSubject(emailThreadSubject);
           const subject = processedSubject.startsWith("Re:")
             ? processedSubject
             : `Re: ${processedSubject}`;
 
           logger.info({
-            originalSubject: emailThread.subject,
+            originalSubject: emailThreadSubject,
             processedSubject,
             finalSubject: subject,
           }, "Using emailThread subject for reply");
@@ -132,34 +136,28 @@ export async function determineEmailSubject(
           return {
             subject,
             isReply: true,
-            originalSubject: emailThread.subject,
+            originalSubject: emailThreadSubject,
           };
         }
 
         // If not in emailThreads, try emailTracking
-        const emailTracking = await prisma.emailTracking.findFirst({
-          where: {
-            threadId: threadId,
-            subject: { not: "" },
-          },
-          orderBy: { createdAt: "asc" },
-          select: { subject: true },
-        });
+        const trackingSubject =
+          await emailTrackingRepo.findEarliestSubjectInThread(threadId);
 
         logger.debug({
           threadId,
-          foundSubject: emailTracking?.subject,
+          foundSubject: trackingSubject,
         }, "Fetched subject from emailTracking");
 
-        if (emailTracking?.subject) {
+        if (trackingSubject) {
           // For replies, always use the original thread subject
-          const processedSubject = processSubject(emailTracking.subject);
+          const processedSubject = processSubject(trackingSubject);
           const subject = processedSubject.startsWith("Re:")
             ? processedSubject
             : `Re: ${processedSubject}`;
 
           logger.info({
-            originalSubject: emailTracking.subject,
+            originalSubject: trackingSubject,
             processedSubject,
             finalSubject: subject,
           }, "Using emailTracking subject for reply");
@@ -167,7 +165,7 @@ export async function determineEmailSubject(
           return {
             subject,
             isReply: true,
-            originalSubject: emailTracking.subject,
+            originalSubject: trackingSubject,
           };
         }
 

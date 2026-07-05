@@ -9,6 +9,12 @@ import { logger } from "@/lib/log";
 import { prisma } from "@coldjot/database";
 import { nanoid } from "nanoid";
 import { Prisma } from "@prisma/client";
+import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
+
+// Module-level repo singleton for the standalone helper fns (matches the
+// lib/tracking stopgap pattern). Other Prisma calls in this file (emailWatch,
+// processedMessage, sequenceContact) still defer to 3.5/3.9.
+const emailThreadRepo = new PrismaEmailThreadRepository();
 import {
   isBounceMessage,
   isExternalSender,
@@ -221,13 +227,7 @@ export const isMessageProcessed = async (
     }
 
     // Then check if the thread exists and get its sequence contact
-    const emailThread = await prisma.emailThread.findUnique({
-      where: { threadId },
-      select: {
-        sequenceId: true,
-        contactId: true,
-      },
-    });
+    const emailThread = await emailThreadRepo.findSequenceContactByThread(threadId);
 
     if (!emailThread) {
       return false;

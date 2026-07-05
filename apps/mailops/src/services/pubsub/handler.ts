@@ -27,6 +27,7 @@ import { updateSequenceStats } from "@/lib/stats";
 import { GMAIL_API } from "@/config/gmail/constants";
 import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
+import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
 import type { MailboxWithAliases } from "@/repositories/mailbox.repo";
 import {
   sanitizeData,
@@ -64,6 +65,7 @@ export class PubSubHandler {
   // is unwound in Phase 6. For now, default to Prisma impls.
   private readonly emailEvent = new PrismaEmailEventRepository();
   private readonly mailboxRepo = new PrismaMailboxRepository();
+  private readonly emailThreadRepo = new PrismaEmailThreadRepository();
 
   async handleNotification(message: PubSubMessage): Promise<void> {
     try {
@@ -875,12 +877,10 @@ export class PubSubHandler {
         })
       );
 
-      const emailThread = await prisma.emailThread.findUnique({
-        where: { threadId: change.threadId },
-        include: {
-          sequence: true,
-        },
-      });
+      const emailThread = await this.emailThreadRepo.findByThread(
+        change.threadId,
+        true
+      );
 
       if (!emailThread) {
         fileLogger.log(
@@ -1034,12 +1034,10 @@ export class PubSubHandler {
         })
       );
 
-      const emailThread = await prisma.emailThread.findUnique({
-        where: { threadId: change.threadId },
-        include: {
-          sequence: true,
-        },
-      });
+      const emailThread = await this.emailThreadRepo.findByThread(
+        change.threadId,
+        true
+      );
 
       if (!emailThread) {
         fileLogger.log(
@@ -1300,12 +1298,7 @@ export class PubSubHandler {
         threadId,
       });
 
-      const emailThread = await prisma.emailThread.findUnique({
-        where: { threadId },
-        include: {
-          sequence: true,
-        },
-      });
+      const emailThread = await this.emailThreadRepo.findByThread(threadId, true);
 
       if (!emailThread) {
         fileLogger.log("debug", "No email thread found", { threadId });

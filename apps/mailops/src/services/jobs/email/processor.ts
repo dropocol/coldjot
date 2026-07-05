@@ -35,6 +35,7 @@ import type { EmailEventRepository } from "@/repositories/email-event.repo";
 import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
 import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
+import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
   private serviceManager = ServiceManager.getInstance();
@@ -45,6 +46,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
   private readonly emailEvent: EmailEventRepository;
   private readonly sequenceStep = new PrismaSequenceStepRepository();
   private readonly sequence = new PrismaSequenceRepository();
+  private readonly emailThreadRepo = new PrismaEmailThreadRepository();
 
   constructor(queue: Queue) {
     super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL));
@@ -249,16 +251,14 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
         // Save information in EmailThread
         if (step.order === 1) {
-          await prisma.emailThread.create({
-            data: {
-              threadId: emailResult.threadId!,
-              sequenceId: data.sequenceId,
-              contactId: data.contactId,
-              userId: data.userId,
-              firstMessageId: emailResult.messageId!,
-              subject: subjectInfo.originalSubject || "",
-              isFake: emailResult.isFake ?? false,
-            },
+          await this.emailThreadRepo.create({
+            threadId: emailResult.threadId!,
+            sequenceId: data.sequenceId,
+            contactId: data.contactId,
+            userId: data.userId,
+            firstMessageId: emailResult.messageId!,
+            subject: subjectInfo.originalSubject || "",
+            isFake: emailResult.isFake ?? false,
           });
         }
 
