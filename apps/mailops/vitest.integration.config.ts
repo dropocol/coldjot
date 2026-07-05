@@ -23,6 +23,11 @@ export default defineConfig({
       "src/__tests__/repositories/**/*.test.ts",
       "src/__tests__/integration/**/*.test.ts",
     ],
+    // All integration files share one test DB; run them sequentially (no file
+    // parallelism) so a suite's truncate/seed isn't raced by another. Each
+    // suite's beforeEach truncates the tables it touches.
+    fileParallelism: false,
+    pool: "forks",
     // No coverage gate on the slow tier (covered by the fast tier's gate).
     coverage: { enabled: false },
   },
