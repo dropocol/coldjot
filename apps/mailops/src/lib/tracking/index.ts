@@ -3,7 +3,6 @@ import {
   EmailTracking,
   EmailTrackingEnum,
   EmailEventEnum,
-  EmailTrackingStatusEnum,
 } from "@coldjot/types";
 import { nanoid } from "nanoid";
 import { updateSequenceStats } from "@/lib/stats";
@@ -16,6 +15,15 @@ import { PrismaTrackedLinkRepository } from "@/repositories/prisma/prisma-tracke
 import { PrismaLinkClickRepository } from "@/repositories/prisma/prisma-link-click.repo";
 import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
 import { prisma } from "@coldjot/database";
+
+// The TrackingService class + singleton moved to services/domain/ in 4a.2.
+// Re-exported here under the legacy names so existing
+// `import { TrackingService, trackingService } from "@/lib/tracking"` imports
+// keep resolving until callers are migrated.
+export {
+  TrackingServiceImpl as TrackingService,
+  trackingService,
+} from "@/services/domain/tracking.service";
 
 // Pure helpers (moved to their own modules in 4a.1; re-exported here so
 // existing `from "@/lib/tracking"` imports keep resolving).
@@ -505,162 +513,5 @@ export async function updateTrackingStats(
   return;
 }
 
-export class TrackingService {
-  async handleEmailOpen(hash: string): Promise<void> {
-    try {
-      const tracking = await emailTrackingRepo.findWithOpenEvents(hash);
-
-      if (!tracking) {
-        logger.warn(`No tracking record found for hash: ${hash}`);
-        return;
-      }
-
-      const isFirstOpen = tracking.events.length === 0;
-
-      // Always increment the open count and update timestamps
-      await emailTrackingRepo.recordOpen(
-        hash,
-        tracking.sequenceId,
-        tracking.contactId,
-        {
-          openCount: tracking.openCount + 1,
-          isFirstOpen,
-        }
-      );
-
-      // Update sequence stats if this is a sequence email
-      if (tracking.sequenceId && tracking.contactId) {
-        await updateSequenceStats(
-          tracking.sequenceId,
-          EmailEventEnum.OPENED,
-          tracking.contactId,
-          { isUniqueOpen: isFirstOpen }
-        );
-      }
-
-      logger.info(
-        `Recorded email open for hash: ${hash}, isFirstOpen: ${isFirstOpen}`
-      );
-    } catch (error) {
-      logger.error({ err: error }, "Error handling email open");
-      throw error;
-    }
-  }
-
-  async handleLinkClick(hash: string, linkId: string): Promise<string> {
-    try {
-      const tracking = await emailTrackingRepo.findWithLink(hash, linkId);
-
-      if (!tracking) {
-        logger.warn(`No tracking record found for hash: ${hash}`);
-        throw new Error("Invalid tracking data");
-      }
-
-      const link = tracking.links[0];
-      if (!link) {
-        logger.warn(`No link found for id: ${linkId}`);
-        throw new Error("Invalid link data");
-      }
-
-      // Create click record and update click count in a transaction
-      await prisma.$transaction(async (prisma) => {
-        // Create click record
-        await prisma.linkClick.create({
-          data: {
-            trackedLinkId: linkId,
-            timestamp: new Date(),
-          },
-        });
-
-        // Increment click count and update tracking
-        await prisma.trackedLink.update({
-          where: { id: linkId },
-          data: {
-            clickCount: {
-              increment: 1,
-            },
-            updatedAt: new Date(),
-          },
-        });
-
-        // Update tracking record
-        await prisma.emailTracking.update({
-          where: { id: tracking.id },
-          data: {
-            clickedAt: tracking.clickedAt ?? new Date(), // Only set clickedAt if it hasn't been set before
-            status: EmailTrackingStatusEnum.CLICKED,
-            events: {
-              create: {
-                type: EmailEventEnum.CLICKED,
-                sequenceId: tracking.sequenceId,
-                contactId: tracking.contactId,
-                timestamp: new Date(),
-                metadata: {
-                  linkId: linkId,
-                  originalUrl: link.originalUrl,
-                },
-              },
-            },
-          },
-        });
-      });
-
-      // Update sequence stats
-      if (tracking.sequenceId && tracking.contactId) {
-        await updateSequenceStats(
-          tracking.sequenceId,
-          EmailEventEnum.CLICKED,
-          tracking.contactId
-        );
-      }
-
-      logger.info(`Recorded link click for hash: ${hash}, linkId: ${linkId}`);
-      return link.originalUrl;
-    } catch (error) {
-      logger.error({ err: error }, "Error handling link click");
-      throw error;
-    }
-  }
-
-  async trackEmailEvent(data: {
-    trackingId: string;
-    eventType: EmailEventType;
-    metadata?: any;
-  }): Promise<void> {
-    try {
-      const { trackingId, eventType, metadata } = data;
-
-      const tracking = await emailTrackingRepo.findById(trackingId);
-
-      if (!tracking) {
-        throw new Error("Email tracking record not found");
-      }
-
-      // Create the event
-      await emailEventRepo.create({
-        trackingId: tracking.id,
-        type: eventType,
-        metadata: (metadata || {}) as any,
-        timestamp: new Date(),
-      });
-
-      // Update tracking status
-      await emailTrackingRepo.setStatus(tracking.id, eventType);
-
-      // Update sequence stats if applicable
-      if (tracking.sequenceId && tracking.contactId) {
-        await updateSequenceStats(
-          tracking.sequenceId,
-          eventType,
-          tracking.contactId
-        );
-      }
-
-      logger.info(`Tracked email event: ${eventType} for email: ${trackingId}`);
-    } catch (error) {
-      logger.error({ err: error }, "Error tracking email event");
-      throw error;
-    }
-  }
-}
-export const trackingService = new TrackingService();
+// The TrackingService class + singleton now live in services/domain/ (4a.2).
+// This file re-exports them under the legacy names at the top.
