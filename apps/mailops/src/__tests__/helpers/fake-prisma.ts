@@ -347,19 +347,50 @@ export function makeFakePrisma(): FakePrisma {
       }
       const rowVal = row[key];
       if (cond && typeof cond === "object") {
-        if ("in" in cond) {
-          if (!Array.isArray(cond.in) || !cond.in.includes(rowVal)) return false;
+        // Operator objects: { in }, { not }, { notIn }, { gte/lte/gt/lt }.
+        // A condition may combine multiple operators (e.g. { lte, not }).
+        if (
+          "in" in cond ||
+          "notIn" in cond ||
+          "not" in cond ||
+          "gte" in cond ||
+          "lte" in cond ||
+          "gt" in cond ||
+          "lt" in cond
+        ) {
+          if ("in" in cond) {
+            if (!Array.isArray(cond.in) || !cond.in.includes(rowVal))
+              return false;
+          }
+          if ("notIn" in cond) {
+            if (Array.isArray(cond.notIn) && cond.notIn.includes(rowVal))
+              return false;
+          }
+          if ("not" in cond) {
+            if (rowVal === cond.not) return false;
+          }
+          if ("gte" in cond) {
+            if (!(rowVal != null && rowVal >= (cond.gte as any))) return false;
+          }
+          if ("lte" in cond) {
+            if (!(rowVal != null && rowVal <= (cond.lte as any))) return false;
+          }
+          if ("gt" in cond) {
+            if (!(rowVal != null && rowVal > (cond.gt as any))) return false;
+          }
+          if ("lt" in cond) {
+            if (!(rowVal != null && rowVal < (cond.lt as any))) return false;
+          }
           continue;
         }
-        if ("not" in cond) {
-          if (rowVal === cond.not) return false;
+        // Nested relation filter: { sequence: { status: X } } — recurse into
+        // the related row/object attached to this row.
+        if (rowVal && typeof rowVal === "object") {
+          if (!matchesWhere(rowVal, cond)) return false;
           continue;
         }
-        if ("notIn" in cond) {
-          if (Array.isArray(cond.notIn) && cond.notIn.includes(rowVal))
-            return false;
-          continue;
-        }
+        // Condition object but row value is not an object — can't match.
+        return false;
       }
       if (rowVal !== cond) return false;
     }
