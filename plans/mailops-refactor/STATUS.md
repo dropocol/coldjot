@@ -14,7 +14,7 @@
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ✅ **Done** — interfaces + Prisma impls + createApp() + wiring test + lint rule | `refactor/mailops-phase-1-seams` (merged) | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ✅ **Done** — route files thinned, logic moved to controllers/ | `refactor/mailops-phase-2-controllers` (merged) | 1 day |
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ✅ **Done** — 10/10 aggregates migrated (3.1–3.10), merged `--no-ff` (`4d6571d`). 102/102 tests green. Lint-rule promotion deferred to Phase 4 (8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth). | `refactor/mailops-phase-3-repos` (merged) | 3–4 days |
-| 4 | [split three god-objects](./phase-4-split-god-objects.md) | 🟡 In progress — 4a (tracking) done: 5 commits, 98/98 tests green; 4b (email) + 4c (pubsub) next | `refactor/mailops-phase-4-split` (4a done, unmerged) | 5–7 days |
+| 4 | [split three god-objects](./phase-4-split-god-objects.md) | 🟡 In progress — 4a (tracking) merged `--no-ff` (`44e55df`); 4b (email) + 4c (pubsub) next | `refactor/mailops-phase-4-split` (4a merged) | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
 | 7 | [real test suite](./phase-7-test-suite.md) | ⬜ Not started | `refactor/mailops-phase-7-tests` | 3–4 days |
@@ -280,7 +280,7 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 
 **Goal:** break `lib/tracking/index.ts`, `lib/email/index.ts`, `services/pubsub/handler.ts` into layered, single-responsibility pieces. See [phase-4-split-god-objects.md](./phase-4-split-god-objects.md). Do 4a → 4b → 4c in order.
 
-**Sub-branch:** `refactor/mailops-phase-4-split` (off `refactor/mailops`, **4a done, unmerged**).
+**Sub-branch:** `refactor/mailops-phase-4-split` (off `refactor/mailops`, **4a merged `--no-ff` at `44e55df`**).
 
 **Run:** `npm test -w mailops` → 16 files / 98 tests. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → clean. `npm run lint -w mailops` → 0 errors (304 warnings; 8 are `@coldjot/database` — same count as end of Phase 3, but the tracking residual moved from `lib/tracking/index.ts` to `services/domain/tracking.service.ts` where the `$transaction` tx-client belongs).
 
