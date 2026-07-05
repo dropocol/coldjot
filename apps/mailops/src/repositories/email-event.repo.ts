@@ -19,8 +19,8 @@ export interface EmailEventRecord {
 export interface CreateEventInput {
   trackingId: string;
   type: EmailEventEnum;
-  sequenceId: string;
-  contactId: string;
+  sequenceId?: string;
+  contactId?: string;
   metadata?: EmailEventMetadata;
   timestamp?: Date;
 }

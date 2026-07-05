@@ -31,6 +31,8 @@ import { gmailClientService } from "@/lib/google";
 import { determineEmailSubject } from "@/lib/email-subject";
 import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
 import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
+import type { EmailEventRepository } from "@/repositories/email-event.repo";
+import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
   private serviceManager = ServiceManager.getInstance();
@@ -38,11 +40,13 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
   private scheduleGenerator: ScheduleGenerator;
   private readonly emailTracking: EmailTrackingRepository;
+  private readonly emailEvent: EmailEventRepository;
 
   constructor(queue: Queue) {
     super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL));
     this.scheduleGenerator = scheduleGenerator;
     this.emailTracking = new PrismaEmailTrackingRepository();
+    this.emailEvent = new PrismaEmailEventRepository();
   }
 
   protected async process(job: Job<EmailJob>): Promise<void> {
@@ -466,24 +470,18 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     }
 
     // Check for existing bounce or reply events
-    const existingEvents = await prisma.emailEvent.findMany({
-      where: {
-        sequenceId: data.sequenceId,
-        contactId: data.contactId,
-        type: {
-          in: ["BOUNCED", "replied"],
-        },
-      },
-    });
+    const hasExisting = await this.emailEvent.existsBySequenceContactInTypes(
+      data.sequenceId,
+      data.contactId,
+      ["BOUNCED", "replied"] as any
+    );
 
-    if (existingEvents.length > 0) {
-      const eventTypes = existingEvents.map((event) => event.type).join(", ");
+    if (hasExisting) {
       logger.warn({
           threadId: data.threadId,
           sequenceId: data.sequenceId,
           contactId: data.contactId,
-          events: existingEvents,
-        }, `⚠️ Thread already has ${eventTypes} event(s). Skipping email send.`);
+        }, `⚠️ Thread already has BOUNCED/replied event(s). Skipping email send.`);
       return false;
     }
 

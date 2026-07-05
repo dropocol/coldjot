@@ -25,6 +25,7 @@ import {
 } from "@/utils/email";
 import { updateSequenceStats } from "@/lib/stats";
 import { GMAIL_API } from "@/config/gmail/constants";
+import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 import {
   sanitizeData,
   decodeNotification,
@@ -59,6 +60,9 @@ interface WatchWithMailbox extends EmailWatch {
 export class PubSubHandler {
   private readonly maxRetries = PUBSUB_CONFIG.MAX_RETRIES;
   private readonly backoffSeconds = PUBSUB_CONFIG.BACKOFF_SECONDS;
+  // TODO(phase-3.9): inject all repositories via constructor once ServiceManager
+  // is unwound in Phase 6. For now, default to Prisma impls.
+  private readonly emailEvent = new PrismaEmailEventRepository();
 
   async handleNotification(message: PubSubMessage): Promise<void> {
     try {
@@ -904,13 +908,11 @@ export class PubSubHandler {
         })
       );
 
-      const existingBounce = await prisma.emailEvent.findFirst({
-        where: {
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-          type: EmailEventEnum.BOUNCED,
-        },
-      });
+      const existingBounce = await this.emailEvent.findFirstBySequenceContactType(
+        emailThread.sequenceId,
+        emailThread.contactId,
+        EmailEventEnum.BOUNCED
+      );
 
       if (existingBounce) {
         fileLogger.log(
@@ -926,13 +928,11 @@ export class PubSubHandler {
         return;
       }
 
-      const sentEvent = await prisma.emailEvent.findFirst({
-        where: {
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-          type: EmailEventEnum.SENT,
-        },
-      });
+      const sentEvent = await this.emailEvent.findFirstBySequenceContactType(
+        emailThread.sequenceId,
+        emailThread.contactId,
+        EmailEventEnum.SENT
+      );
 
       if (!sentEvent) {
         fileLogger.log("warn", "No sent event found for bounce", {
@@ -948,18 +948,16 @@ export class PubSubHandler {
         trackingId: sentEvent.trackingId,
       });
 
-      const bounceEvent = await prisma.emailEvent.create({
-        data: {
-          type: EmailEventEnum.BOUNCED,
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-          trackingId: sentEvent.trackingId,
-          metadata: {
-            messageId: change.messageId,
-            threadId: change.threadId,
-            bounceReason: "Email delivery failed",
-          },
-        },
+      const bounceEvent = await this.emailEvent.create({
+        trackingId: sentEvent.trackingId,
+        type: EmailEventEnum.BOUNCED,
+        sequenceId: emailThread.sequenceId,
+        contactId: emailThread.contactId,
+        metadata: {
+          messageId: change.messageId,
+          threadId: change.threadId,
+          bounceReason: "Email delivery failed",
+        } as any,
       });
 
       fileLogger.log("info", "Created bounce event", {
@@ -1069,13 +1067,11 @@ export class PubSubHandler {
         })
       );
 
-      const existingReply = await prisma.emailEvent.findFirst({
-        where: {
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-          type: EmailEventEnum.REPLIED,
-        },
-      });
+      const existingReply = await this.emailEvent.findFirstBySequenceContactType(
+        emailThread.sequenceId,
+        emailThread.contactId,
+        EmailEventEnum.REPLIED
+      );
 
       if (existingReply) {
         fileLogger.log(
@@ -1091,13 +1087,11 @@ export class PubSubHandler {
         return;
       }
 
-      const sentEvent = await prisma.emailEvent.findFirst({
-        where: {
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-          type: EmailEventEnum.SENT,
-        },
-      });
+      const sentEvent = await this.emailEvent.findFirstBySequenceContactType(
+        emailThread.sequenceId,
+        emailThread.contactId,
+        EmailEventEnum.SENT
+      );
 
       if (!sentEvent) {
         fileLogger.log("warn", "No sent event found for reply", {
@@ -1113,18 +1107,16 @@ export class PubSubHandler {
         trackingId: sentEvent.trackingId,
       });
 
-      const replyEvent = await prisma.emailEvent.create({
-        data: {
-          type: EmailEventEnum.REPLIED,
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-          trackingId: sentEvent.trackingId,
-          metadata: {
-            messageId: change.messageId,
-            threadId: change.threadId,
-            from: change.from,
-          },
-        },
+      const replyEvent = await this.emailEvent.create({
+        trackingId: sentEvent.trackingId,
+        type: EmailEventEnum.REPLIED,
+        sequenceId: emailThread.sequenceId,
+        contactId: emailThread.contactId,
+        metadata: {
+          messageId: change.messageId,
+          threadId: change.threadId,
+          from: change.from,
+        } as any,
       });
 
       fileLogger.log("info", "Created reply event", {
