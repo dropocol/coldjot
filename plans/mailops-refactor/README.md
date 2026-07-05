@@ -6,7 +6,7 @@
 
 ## Read this first
 
-- **[`STATUS.md`](./STATUS.md)** — phase tracker + open decisions. Start here.
+- **[`STATUS.md`](./STATUS.md)** — the single tracker: phase status, branch layout, locked decisions, Phase 0 group progress, and the resume guide (what to do next + solved pitfalls). Start here.
 - **[`plan.md`](./plan.md)** — the full plan, layer by layer, with file:line refs and a phased sequence.
 - **Sub-plans** (one per phase, each self-contained with step-by-step instructions, file:line refs, definition of done, and commit plan):
   - [Phase 0 — characterization tests](./phase-0-characterization-tests.md)
