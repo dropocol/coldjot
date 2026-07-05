@@ -33,7 +33,9 @@ export type ModelName =
   | "template"
   | "contact"
   | "emailThread"
-  | "emailList";
+  | "emailList"
+  | "listSyncRecord"
+  | "list";
 
 export interface RecordedCall {
   model: ModelName;
@@ -90,6 +92,8 @@ export function makeFakePrisma(): FakePrisma {
         "contact",
         "emailThread",
         "emailList",
+        "listSyncRecord",
+        "list",
       ] as ModelName[]
     ).map((m) => [m, makeModelStore()])
   ) as Record<ModelName, ModelStore>;
