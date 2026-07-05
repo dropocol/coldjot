@@ -4,7 +4,6 @@ import {
   DecodedNotification,
   MessageDetails,
 } from "@coldjot/types";
-import { SequenceContactStatusEnum } from "@coldjot/types";
 import { logger } from "@/lib/log";
 import { nanoid } from "nanoid";
 import { Prisma } from "@prisma/client";
@@ -106,20 +105,13 @@ export const isValidNotification = (data: any): data is DecodedNotification => {
 };
 
 /**
- * Determine new sequence contact status based on change type
+ * Determine new sequence contact status based on change type.
+ *
+ * Phase 4c.3: moved to services/inbox-sync/states.ts (`nextContactStatus`).
+ * Re-exported here under the legacy name so the still-live PubSubHandler
+ * (`updateSequenceStatuses`) keeps resolving until 4c.5.
  */
-export const determineNewStatus = (
-  changeType: NotificationType
-): SequenceContactStatusEnum | null => {
-  switch (changeType) {
-    case NotificationType.REPLY:
-      return SequenceContactStatusEnum.REPLIED;
-    case NotificationType.BOUNCE:
-      return SequenceContactStatusEnum.BOUNCED;
-    default:
-      return null;
-  }
-};
+export { nextContactStatus as determineNewStatus } from "@/services/inbox-sync/states";
 
 /**
  * Format error for logging
