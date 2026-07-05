@@ -7,7 +7,7 @@ import {
 import { logger } from "@/lib/log";
 import { updateSequenceStats } from "@/lib/stats";
 import { addTrackingToEmail } from "@/lib/tracking/link-wrap";
-import { getEmailThreadInfo } from "@/lib/google/helper";
+import { getEmailThreadInfo } from "@/lib/google/gmail/helper";
 import {
   createEmailMessage,
   createUntrackedMessage,
