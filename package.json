@@ -27,6 +27,8 @@
         "debug:env": "turbo run dev --dry=json --filter=web --filter=mailops",
         "lint": "turbo run lint",
         "typecheck": "turbo run typecheck",
+        "test": "turbo run test",
+        "test:integration": "turbo run test:integration",
         "format": "prettier --write \"**/*.{ts,tsx,md}\"",
         "clean": "turbo run clean && rm -rf node_modules"
     },
