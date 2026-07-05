@@ -1,15 +1,20 @@
 import { Router } from "express";
-import * as controller from "@/controllers/metrics.controller";
 import { send } from "@/controllers/utils";
+import type { createMetricsController } from "@/controllers/metrics.controller";
 
-const router = Router();
+type MetricsController = ReturnType<typeof createMetricsController>;
 
-// Metrics routes
-router.get("/", async (req, res) =>
-  send(res, await controller.getSystemMetrics())
-);
-router.get("/sequences/:id/health", async (req, res) =>
-  send(res, await controller.getSequenceHealth(String(req.params.id)))
-);
+/** Phase 6.4: route factory takes the controller. */
+export function makeMetricsRouter(controller: MetricsController): Router {
+  const router = Router();
 
-export default router;
+  // Metrics routes
+  router.get("/", async (req, res) =>
+    send(res, await controller.getSystemMetrics())
+  );
+  router.get("/sequences/:id/health", async (req, res) =>
+    send(res, await controller.getSequenceHealth(String(req.params.id)))
+  );
+
+  return router;
+}

@@ -1,18 +1,23 @@
 import { Router } from "express";
-import * as controller from "@/controllers/mailbox.controller";
 import { send } from "@/controllers/utils";
+import type { createMailboxController } from "@/controllers/mailbox.controller";
 
-const router = Router();
+type MailboxController = ReturnType<typeof createMailboxController>;
 
-router.post("/watch", async (req, res) => {
-  const result = await controller.setupWatch(req.body);
-  return send(res, result);
-});
+/** Phase 6.4: route factory takes the controller. */
+export function makeMailboxRouter(controller: MailboxController): Router {
+  const router = Router();
 
-router.delete("/watch/:email", async (req, res) => {
-  const email = decodeURIComponent(String(req.params.email));
-  const result = await controller.stopWatch(email);
-  return send(res, result);
-});
+  router.post("/watch", async (req, res) => {
+    const result = await controller.setupWatch(req.body);
+    return send(res, result);
+  });
 
-export default router;
+  router.delete("/watch/:email", async (req, res) => {
+    const email = decodeURIComponent(String(req.params.email));
+    const result = await controller.stopWatch(email);
+    return send(res, result);
+  });
+
+  return router;
+}

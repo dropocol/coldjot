@@ -67,7 +67,24 @@ const ctx = setupTestContext();
 
 import express from "express";
 import request from "supertest";
-import seqRouter from "@/routes/sequence";
+import { makeSequenceRouter } from "@/routes/sequence";
+import { createSequenceController } from "@/controllers/sequence.controller";
+import { MonitoringService } from "@/services/monitor/service";
+import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
+import { PrismaBusinessHoursRepository } from "@/repositories/prisma/prisma-business-hours.repo";
+import { rateLimitService } from "@/services/core/rate-limit/service";
+
+// Phase 6.4: the controller is a factory. Construct it with a stub jobManager
+// (addSequenceJob is the hoisted mock), mocked MonitoringService, fake-backed
+// repos, and the mocked rateLimitService.
+const sequenceController = createSequenceController({
+  jobManager: { addSequenceJob: mocks.addSequenceJob } as any,
+  monitoringService: new MonitoringService(new Map()),
+  sequenceRepo: new PrismaSequenceRepository(),
+  businessHoursRepo: new PrismaBusinessHoursRepository(),
+  rateLimitService,
+});
+const seqRouter = makeSequenceRouter(sequenceController);
 
 const app = express();
 app.use(express.json());
