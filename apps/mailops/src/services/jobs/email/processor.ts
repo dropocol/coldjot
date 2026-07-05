@@ -13,7 +13,7 @@ import {
   BusinessScheduleEnum,
 } from "@coldjot/types";
 import { rateLimitService } from "@/services/core/rate-limit/service";
-import { createEmailTracking } from "@/lib/tracking";
+import { trackingService } from "@/services/domain/tracking.service";
 import { ServiceManager } from "@/services/service-manager";
 import {
   updateSequenceContactThreadId,
@@ -191,7 +191,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       };
 
       // Create tracking object
-      const tracking = await createEmailTracking(trackingMetadata);
+      const tracking = await trackingService.createTracking(trackingMetadata);
       if (!tracking) {
         throw new Error("Failed to create tracking information");
       }

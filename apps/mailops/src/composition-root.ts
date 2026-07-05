@@ -172,6 +172,7 @@ export function createApp(): App {
 
   const trackingImpl = new TrackingServiceImpl();
   const tracking: TrackingService = {
+    createTracking: (metadata) => trackingImpl.createTracking(metadata),
     handleEmailOpen: (hash) => trackingImpl.handleEmailOpen(hash),
     handleLinkClick: (hash, linkId) => trackingImpl.handleLinkClick(hash, linkId),
     trackEmailEvent: (input) => trackingImpl.trackEmailEvent(input),

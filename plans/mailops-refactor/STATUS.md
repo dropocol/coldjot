@@ -14,7 +14,7 @@
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ✅ **Done** — interfaces + Prisma impls + createApp() + wiring test + lint rule | `refactor/mailops-phase-1-seams` (merged) | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ✅ **Done** — route files thinned, logic moved to controllers/ | `refactor/mailops-phase-2-controllers` (merged) | 1 day |
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ✅ **Done** — 10/10 aggregates migrated (3.1–3.10), merged `--no-ff` (`4d6571d`). 102/102 tests green. Lint-rule promotion deferred to Phase 4 (8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth). | `refactor/mailops-phase-3-repos` (merged) | 3–4 days |
-| 4 | [split three god-objects](./phase-4-split-god-objects.md) | ⬜ Not started | `refactor/mailops-phase-4-split` | 5–7 days |
+| 4 | [split three god-objects](./phase-4-split-god-objects.md) | 🟡 In progress — 4a (tracking) done: 5 commits, 98/98 tests green; 4b (email) + 4c (pubsub) next | `refactor/mailops-phase-4-split` (4a done, unmerged) | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
 | 7 | [real test suite](./phase-7-test-suite.md) | ⬜ Not started | `refactor/mailops-phase-7-tests` | 3–4 days |
@@ -272,6 +272,63 @@ npm test -w mailops                                   # 102/102 passing
 npx tsc --noEmit -p apps/mailops/tsconfig.json        # clean
 git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mailops tip
 # Next: Phase 4 (split three god-objects). See phase-4-split-god-objects.md.
+```
+
+---
+
+## Phase 4 progress — split three god-objects
+
+**Goal:** break `lib/tracking/index.ts`, `lib/email/index.ts`, `services/pubsub/handler.ts` into layered, single-responsibility pieces. See [phase-4-split-god-objects.md](./phase-4-split-god-objects.md). Do 4a → 4b → 4c in order.
+
+**Sub-branch:** `refactor/mailops-phase-4-split` (off `refactor/mailops`, **4a done, unmerged**).
+
+**Run:** `npm test -w mailops` → 16 files / 98 tests. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → clean. `npm run lint -w mailops` → 0 errors (304 warnings; 8 are `@coldjot/database` — same count as end of Phase 3, but the tracking residual moved from `lib/tracking/index.ts` to `services/domain/tracking.service.ts` where the `$transaction` tx-client belongs).
+
+### Step tracker
+
+| Step | Target | Status | Commit |
+|---|---|---|---|
+| 4a.1 | Isolate pure helpers (pixel.ts, link-wrap.ts, stats.ts) | ✅ done | `30c1bdf` |
+| 4a.2 | Move TrackingServiceImpl → services/domain/tracking.service.ts (constructor-injected repos) | ✅ done | `7266935` |
+| 4a.3 | Delete dead standalone `trackEmailEvent` + `updateTrackingStats` + cases 6/6b/7 | ✅ done | `3cdb926` |
+| 4a.4 | Delete remaining dead standalones (recordEmailOpen/recordLinkClick/getEmailEvents/getSequenceEvents) + case 4 | ✅ done | `b00d7f2` |
+| 4a.5 | Migrate `createEmailTracking` → `TrackingServiceImpl.createTracking`; update EmailProcessor + cases 5a/5b | ✅ done | `2c898dc` |
+| 4b.1–4b.4 | Split `lib/email/index.ts` → GmailTransport + SendEmailServiceImpl; delete SMTP path | ⬜ Not started | — |
+| 4c.1–4c.7 | Split `services/pubsub/handler.ts` → GmailInboxSource + InboxSync pipeline | ⬜ Not started | — |
+
+### What 4a produced
+
+**`lib/tracking/` now:**
+- `pixel.ts` (17 lines) — pure `generateTrackingPixel`.
+- `link-wrap.ts` (112 lines) — pure `wrapLinksWithTracking` + `addTrackingToEmail` (with `createLink` injected as a callback).
+- `stats.ts` (38 lines) — pure `calculateRates` (single source of truth for rate math).
+- `index.ts` (95 lines) — barrel: re-exports the `TrackingServiceImpl`/`trackingService` from `services/domain/` + the pure helpers; keeps `createTrackedLink` + a no-callback `addTrackingToEmail` shim (their caller `lib/email` migrates in 4b, then the shim + its `console.error`s are deleted).
+
+**`services/domain/tracking.service.ts` (284 lines)** — interface + `TrackingServiceImpl` (the canonical open/click/event + `createTracking` path). Constructor-injected repos with Prisma defaults (the Phase 3 private-field-with-default pattern). The `$transaction` block in `handleLinkClick` stays on the tx client (collapses later — flagged residual).
+
+**Dead code removed:** standalone `recordEmailOpen`, `recordLinkClick`, `trackEmailEvent`, `updateTrackingStats`, `getEmailEvents`, `getSequenceEvents` — all had zero live callers. The two divergent rate-math paths were deleted, not reconciled (per plan). Test count: 102 → 98 (4 dead-code characterization cases removed: 4, 6, 6b, 7).
+
+### Key decisions made during 4a (read before resuming)
+
+1. **`TrackingServiceImpl` uses constructor injection with Prisma defaults** (`new PrismaEmailTrackingRepository()`, `new PrismaEmailEventRepository()`). This keeps `new TrackingServiceImpl()` working for the characterization tests (the test harness mocks `@coldjot/database`) AND lets `createApp()` pass real repos later. Phase 6 threads this through `createApp()` properly.
+2. **`lib/tracking/index.ts` stays a barrel re-exporting `TrackingServiceImpl as TrackingService` + `trackingService`** under the legacy names. The route controller (`controllers/tracking.controller.ts`) still imports `trackingService` from `@/lib/tracking` — that resolves to the new singleton. Migrating the controller import to `@/services/domain/tracking.service` is cosmetic; deferred to Phase 6 when it's constructor-injected.
+3. **`addTrackingToEmail` has TWO surfaces now:** the pure `addTrackingToEmail` in `link-wrap.ts` (takes a `createLink` callback) and a no-callback backwards-compat wrapper in `index.ts` (binds the module-level `trackedLinkRepo`). The wrapper is deleted in 4b when the email service (its only caller) is split.
+4. **`createTracking` body is the cleaned-up `createEmailTracking`** — dropped the dead `eventData` local (the repo call reconstructed it anyway) and the `console.error`. Behavior identical: same `createPending` payload, same returned `EmailTracking` shape. Cases 5a/5b pass against the new method unchanged.
+5. **`lib/tracking/helper.ts` is dead** (`generateTrackingMetadata` has zero callers). Left in place — Phase 5 sweeps dead code. Its `console.log` is the only `console.*` in the tracking directory outside the two shim `console.error`s in `index.ts`.
+6. **Lint count unchanged at 8** `@coldjot/database` warnings. Composition changed: `lib/tracking/index.ts` dropped out; `services/domain/tracking.service.ts` joined (the `$transaction` tx-client for `handleLinkClick`). Promoting `no-restricted-imports` to `error` still waits for the tx-client paths to collapse (now planned as a later Phase 4/7 sweep) + SMTP deletion in 4b.
+
+### Resume commands
+
+4a is **done** (5 commits on `refactor/mailops-phase-4-split`, not yet merged). To continue with 4b:
+
+```bash
+cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
+git checkout refactor/mailops-phase-4-split         # already has 4a
+npm test -w mailops                                   # 98/98 passing
+npx tsc --noEmit -p apps/mailops/tsconfig.json        # clean
+# Next: 4b — split lib/email/index.ts. See phase-4-split-god-objects.md §4b.
+# 4b deletes lib/google/smtp/*, removes nodemailer, and migrates the
+# addTrackingToEmail caller (which lets lib/tracking/index.ts drop its shim).
 ```
 
 ---
