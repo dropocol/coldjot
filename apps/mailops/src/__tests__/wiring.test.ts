@@ -61,11 +61,11 @@ describe("composition root", () => {
     expect(app.inboxSync).toBeDefined();
     expect(typeof app.inboxSync.handleNotification).toBe("function");
 
-    // launchSequence + runSchedule exist but are deliberately not-yet-wired
-    // (Phase 7 fills them). They should reject on call.
-    expect(app.launchSequence).toBeDefined();
-    expect(app.runSchedule).toBeDefined();
-    await expect(app.runSchedule.tick()).rejects.toThrow(/not wired/);
+  // launchSequence + runSchedule are wired (Phase 7.2a + 7.2b).
+  expect(app.launchSequence).toBeDefined();
+  expect(typeof app.launchSequence.launch).toBe("function");
+  expect(app.runSchedule).toBeDefined();
+  expect(typeof app.runSchedule.tick).toBe("function");
 
     // Controllers (Phase 6.4 factories).
     expect(app.sequenceController).toBeDefined();

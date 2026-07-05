@@ -95,6 +95,8 @@ import type { RunScheduleService } from "@/services/domain/run-schedule.service"
 import { TrackingService as TrackingServiceImpl } from "@/lib/tracking";
 import { SendEmailServiceImpl } from "@/services/domain/send-email.service";
 import { InboxSyncServiceImpl } from "@/services/domain/inbox-sync.service";
+import { LaunchSequenceServiceImpl } from "@/services/domain/launch-sequence.service";
+import { RunScheduleServiceImpl } from "@/services/domain/run-schedule.service";
 import { GmailTransport } from "@/adapters/gmail-transport";
 
 // Controller factories
@@ -271,22 +273,21 @@ export function createApp(): App {
     emailEvent
   );
 
-  // launchSequence + runSchedule remain placeholders — production calls the
-  // route handlers / ScheduleProcessor directly. Phase 7 fills these in.
-  const notYetWired = (name: string): never => {
-    throw new Error(
-      `composition-root: ${name} is not wired yet. Production should still call the existing route/processor directly.`
-    );
-  };
-  const launchSequence: LaunchSequenceService = {
-    launch: async () => notYetWired("launchSequence.launch"),
-    pause: async () => notYetWired("launchSequence.pause"),
-    resume: async () => notYetWired("launchSequence.resume"),
-    reset: async () => notYetWired("launchSequence.reset"),
-  };
-  const runSchedule: RunScheduleService = {
-    tick: async () => notYetWired("runSchedule.tick"),
-  };
+  // launchSequence + runSchedule are both wired (Phase 7.2a + 7.2b).
+  const launchSequence: LaunchSequenceService = new LaunchSequenceServiceImpl(
+    sequence,
+    businessHours,
+    jobManager,
+    monitoring,
+    rateLimit
+  );
+
+  const runSchedule: RunScheduleService = new RunScheduleServiceImpl(
+    sequenceContact,
+    sequenceStep,
+    jobManager,
+    rateLimit
+  );
 
   // ---- Processors (need queues + DLQs + jobManager + services + repos) ---
   const processors = new Map<string, ProcessorType>();
@@ -294,7 +295,7 @@ export function createApp(): App {
     [QUEUE_NAMES.SEQUENCE, () => new SequenceProcessor(queues.get(QUEUE_NAMES.SEQUENCE)!, jobManager, dlQueues)],
     [QUEUE_NAMES.EMAIL, () => new EmailProcessor(queues.get(QUEUE_NAMES.EMAIL)!, dlQueues)],
     [QUEUE_NAMES.CONTACT, () => new ContactProcessor(queues.get(QUEUE_NAMES.CONTACT)!, jobManager, dlQueues)],
-    [QUEUE_NAMES.EMAIL_SCHEDULE, () => new ScheduleProcessor(queues.get(QUEUE_NAMES.EMAIL_SCHEDULE)!, jobManager, dlQueues)],
+    [QUEUE_NAMES.EMAIL_SCHEDULE, () => new ScheduleProcessor(queues.get(QUEUE_NAMES.EMAIL_SCHEDULE)!, jobManager, dlQueues, runSchedule)],
     [QUEUE_NAMES.LIST_SYNC, () => new ListSyncProcessor(queues.get(QUEUE_NAMES.LIST_SYNC)!, dlQueues)],
   ];
   for (const [name, make] of processorSpecs) {
@@ -304,11 +305,7 @@ export function createApp(): App {
   // ---- Controllers (need jobManager + monitoring + repos + services) -----
   const watchService = new WatchService();
   const sequenceController = createSequenceController({
-    jobManager,
-    monitoringService: monitoring,
-    sequenceRepo: sequence,
-    businessHoursRepo: businessHours,
-    rateLimitService: rateLimit,
+    launchSequenceService: launchSequence,
   });
   const healthController = createHealthController({
     redis: redisClient,

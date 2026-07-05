@@ -23,17 +23,18 @@ Phase 0's characterization tests (`apps/mailops/src/__tests__/characterization/`
 
 | Step | Sub-plan | Status | Effort | Depends on |
 |---|---|---|---|---|
+| **7.0** | [**Domain service impls (prerequisite)**](./7.0-domain-service-impls.md) | ✅ **Done** — `LaunchSequenceServiceImpl` + `RunScheduleServiceImpl` implemented + wired; on branch `refactor/mailops-phase-7a-impls` (pending merge into `refactor/mailops`) | 0.5 day | — |
 | 7.1 | [In-memory repository fakes](./7.1-repository-fakes.md) | ⬜ Not started | 0.5 day | — |
-| 7.2 | [Unit tests for domain services](./7.2-unit-domain-services.md) | ⬜ Not started | 1 day | 7.1 |
+| 7.2 | [Unit tests for domain services](./7.2-unit-domain-services.md) | ⬜ Not started | 1 day | 7.0, 7.1 |
 | 7.3 | [Unit tests for pure helpers](./7.3-unit-pure-helpers.md) | ⬜ Not started | 0.5 day | — |
 | 7.4 | [Adapter tests with recorded fixtures](./7.4-adapter-tests.md) | ⬜ Not started | 0.5 day | 7.1 |
 | 7.5 | [Repository tests against a real test DB](./7.5-repository-tests-db.md) | ⬜ Not started | 0.5–1 day | — |
-| 7.6 | [Processor tests](./7.6-processor-tests.md) | ⬜ Not started | 0.5 day | 7.1, 7.2 |
-| 7.7 | [End-to-end integration tests (12 flows)](./7.7-integration-tests.md) | ⬜ Not started | 1–1.5 days | 7.1–7.6 |
+| 7.6 | [Processor tests](./7.6-processor-tests.md) | ⬜ Not started | 0.5 day | 7.0, 7.1, 7.2 |
+| 7.7 | [End-to-end integration tests (12 flows)](./7.7-integration-tests.md) | ⬜ Not started | 1–1.5 days | 7.0, 7.1–7.6 |
 | 7.8 | [CI gate + coverage enforcement](./7.8-ci-gate.md) | ⬜ Not started | 0.5 day | 7.1–7.7 |
 | 7.9 | [Retire the characterization tests](./7.9-retire-characterization.md) | ⬜ Not started | 0.25 day | every row in the mapping is green |
 
-**Estimated total:** 3–4 days of focused work. **Behavior change:** zero (test-only).
+**Estimated total:** 3–4 days of focused work (7.0 is done). **Behavior change:** 7.0 is behavior-preserving; 7.1–7.9 are test-only.
 
 **Legend:** ⬜ Not started · 🟡 In progress · 🟢 Code done, awaiting verification · ✅ Done · ⏸️ Blocked/Deferred
 
@@ -42,9 +43,13 @@ Phase 0's characterization tests (`apps/mailops/src/__tests__/characterization/`
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
 git checkout refactor/mailops                      # Phases 0–6 merged here
-npm test -w mailops                                # 16 files / 98 tests passing (Phase 0 baseline)
+
+# 7.0 prerequisite: merge the domain-service impls first (if not already merged).
+git merge --no-ff refactor/mailops-phase-7a-impls -m "merge: phase 7.0 — implement LaunchSequence + RunSchedule services"
+
+npm test -w mailops                                # 16 files / 98 tests passing
 npx tsc --noEmit -p apps/mailops/tsconfig.json     # clean
-npm run lint -w mailops                            # 0 errors, 242 warnings
+npm run lint -w mailops                            # 0 errors, 228 warnings
 
 git checkout -b refactor/mailops-phase-7-tests     # hyphen scheme — matches all prior phases
 ```
@@ -150,6 +155,7 @@ apps/mailops/src/__tests__/
 
 ## Commit messages
 
+- "phase 7.0: implement LaunchSequence + RunSchedule services" *(done — 7.2a + 7.2b on `refactor/mailops-phase-7a-impls`)*
 - "phase 7.1: add in-memory repository fakes"
 - "phase 7.2: unit tests for domain services"
 - "phase 7.3: unit tests for pure helpers"
@@ -166,7 +172,7 @@ This plan **is** the refactor's Phase 7, lifted into its own folder so it can be
 
 **Reusable harness from Phase 0:** the existing `apps/mailops/src/__tests__/helpers/{fake-prisma,fake-gmail,test-context}.ts` + `setup.ts` are the starting point. 7.1 refactors `fake-prisma.ts` into per-repo fakes; the in-memory patterns (and the solved-pitfall notes in STATUS.md) carry over.
 
-**Known implementation gap to resolve inside this plan:** `services/domain/launch-sequence.service.ts` and `run-schedule.service.ts` are **interfaces only** today — no `*Impl` exists (the refactor's STATUS.md notes they're "not wired, Phase 7 scope"). [7.2](./7.2-unit-domain-services.md) and [7.7](./7.7-integration-tests.md) call this out as a prerequisite for the sequence-lifecycle and schedule-tick tests.
+**Implementation gap — now closed (7.0):** `services/domain/launch-sequence.service.ts` and `run-schedule.service.ts` were **interfaces only** at the end of the refactor (the composition root wired them to `notYetWired` placeholders). [7.0](./7.0-domain-service-impls.md) implemented both `*Impl` classes and wired them through — so 7.2 + 7.7 can now write their tests directly against the real services. ✅ done on branch `refactor/mailops-phase-7a-impls` (pending merge into `refactor/mailops`).
 
 ## Risks
 
@@ -176,4 +182,4 @@ This plan **is** the refactor's Phase 7, lifted into its own folder so it can be
 | Repository tests are flaky (DB state leaks between tests) | Wrap each test in a transaction that rolls back, OR truncate in `beforeEach`. Don't rely on test ordering. |
 | Integration tests are slow → developers skip running them | Keep them in a separate `test:integration` script. Fast `test` runs on every save; integration runs in CI only. |
 | 80% coverage target feels arbitrary | It's a floor, not a ceiling. Focus coverage on the domains with the most logic (tracking, inbox-sync, send-email). Pure helpers should be ~100%. |
-| `LaunchSequence` / `RunSchedule` impls don't exist yet | Writing them is in-scope for this plan (flagged in 7.2 + 7.7). Do it before their unit + integration tests. |
+| ~~`LaunchSequence` / `RunSchedule` impls don't exist yet~~ | ✅ Resolved in [7.0](./7.0-domain-service-impls.md). The branch `refactor/mailops-phase-7a-impls` must be merged into `refactor/mailops` **before** branching `refactor/mailops-phase-7-tests` — otherwise the Phase 7 branch won't have the service impls to test. |
