@@ -1,15 +1,19 @@
 /**
  * Group C — PubSub handler characterization tests.
  *
- * Pins the CURRENT behavior of services/pubsub/handler.ts so the Phase 4c
+ * Pins the CURRENT behavior of the Gmail inbox-sync pipeline so the Phase 4c
  * refactor (split into InboxSource + classify + apply-classification +
  * InboxSyncServiceImpl) is provably non-breaking.
  *
- * What's under test: the Gmail-history-sync pipeline — notification decode,
- * watch lookup, OAuth token refresh, history fetch, message classification
- * (reply/bounce/original), EmailEvent writes, SequenceContact state changes.
+ * What's under test: notification decode, watch lookup, OAuth token refresh,
+ * history fetch, message classification (reply/bounce/original), EmailEvent
+ * writes, SequenceContact state changes.
  *
- * Source: services/pubsub/handler.ts (PubSubHandler, ~1366 lines).
+ * Phase 4c.5: now exercises InboxSyncServiceImpl (the new flat orchestrator)
+ * instead of PubSubHandler. The mocking is unchanged — all at the
+ * @coldjot/database fake boundary + global fetch + the gmail helper — because
+ * InboxSyncServiceImpl routes through the same collaborators. Production
+ * still wires PubSubHandler until 4c.6 swaps the call sites.
  */
 import { vi } from "vitest";
 import { setupTestContext } from "@/__tests__/helpers/test-context";
@@ -32,7 +36,7 @@ const fakeFetch = vi.fn(async (input: any) => {
 });
 vi.stubGlobal("fetch", fakeFetch);
 
-import { PubSubHandler } from "@/services/pubsub/handler";
+import { InboxSyncServiceImpl } from "@/services/domain/inbox-sync.service";
 import { NotificationType, EmailEventEnum } from "@coldjot/types";
 import type { PubSubMessage } from "@coldjot/types";
 
@@ -142,7 +146,7 @@ describe("[Group C] PubSubHandler.handleNotification", () => {
       respond: async () => makeMessageDetailsResponse({ from: EMAIL }),
     });
 
-    const handler = new PubSubHandler();
+    const handler = new InboxSyncServiceImpl();
     await handler.handleNotification(makeEncodedNotification());
 
     // No reply/bounce EmailEvent should be created.
@@ -172,7 +176,7 @@ describe("[Group C] PubSubHandler.handleNotification", () => {
       respond: async () => makeHistoryResponse([makeMessage("msg-1", "ext@x.com")]),
     });
 
-    const handler = new PubSubHandler();
+    const handler = new InboxSyncServiceImpl();
     await handler.handleNotification(makeEncodedNotification());
 
     // The message-details fetch should NOT have happened (skipped before it).
@@ -186,7 +190,7 @@ describe("[Group C] PubSubHandler.handleNotification", () => {
 
   it("case 6: no EmailWatch for the notification's email → returns early", async () => {
     // No watch seeded.
-    const handler = new PubSubHandler();
+    const handler = new InboxSyncServiceImpl();
     await handler.handleNotification(makeEncodedNotification("unknown@x.com"));
 
     // No history fetch at all
@@ -203,7 +207,7 @@ describe("[Group C] PubSubHandler.handleNotification", () => {
     );
     // No mailbox seeded.
 
-    const handler = new PubSubHandler();
+    const handler = new InboxSyncServiceImpl();
     await handler.handleNotification(makeEncodedNotification());
 
     expect(fakeFetch).not.toHaveBeenCalled();
@@ -216,7 +220,7 @@ describe("[Group C] PubSubHandler.handleNotification", () => {
     // historyId gap: watch has 1000, notification says 999999999 → huge gap.
     const bigNotification = makeEncodedNotification(EMAIL, "999999999");
 
-    const handler = new PubSubHandler();
+    const handler = new InboxSyncServiceImpl();
     await handler.handleNotification(bigNotification);
 
     // Watch historyId updated to the latest
@@ -243,7 +247,7 @@ describe("[Group C] PubSubHandler.handleNotification", () => {
     const { refreshTokenIfNeeded } = await import("@/lib/google/gmail/helper");
     (refreshTokenIfNeeded as any).mockResolvedValueOnce(null);
 
-    const handler = new PubSubHandler();
+    const handler = new InboxSyncServiceImpl();
     await handler.handleNotification(makeEncodedNotification());
 
     // No history fetch occurred
@@ -298,7 +302,7 @@ describe("[Group C] PubSubHandler.handleNotification", () => {
         }),
     });
 
-    const handler = new PubSubHandler();
+    const handler = new InboxSyncServiceImpl();
     await handler.handleNotification(makeEncodedNotification());
 
     const bounces = [...ctx.fake.stores.emailEvent.rows.values()].filter(
@@ -358,7 +362,7 @@ describe("[Group C] PubSubHandler.handleNotification", () => {
         }),
     });
 
-    const handler = new PubSubHandler();
+    const handler = new InboxSyncServiceImpl();
     await handler.handleNotification(makeEncodedNotification());
 
     const replies = [...ctx.fake.stores.emailEvent.rows.values()].filter(
