@@ -15,13 +15,13 @@
 | 7.2 | [Unit tests for domain services](./7.2-unit-domain-services.md) | 🟢 **Partial** | 24 (tracking + launch-sequence + run-schedule) | `8a9d0f4` |
 | 7.3 | [Unit tests for pure helpers](./7.3-unit-pure-helpers.md) | 🟢 **Partial** | 46 (pixel, link-wrap, stats, placeholders, classify, states) | `36aa055` |
 | 7.4 | [Adapter tests](./7.4-adapter-tests.md) | 🟢 **Partial** | 17 (GmailTransport + GmailInboxSource, synthetic fixtures) | `98b5b4f` |
-| 7.5 | [Repository tests vs test DB](./7.5-repository-tests-db.md) | 🟢 **Partial** | 7 (EmailTracking representative) | `5056cad` |
-| 7.6 | [Processor tests](./7.6-processor-tests.md) | 🟢 **Partial** | 4 (BaseProcessor.onFailed DLQ path) | `8a9ae48` |
-| 7.7 | [End-to-end integration tests](./7.7-integration-tests.md) | 🟢 **Partial** | 3 (TrackingServiceImpl-vs-DB canary) | `f160a0c` |
+| 7.5 | [Repository tests vs test DB](./7.5-repository-tests-db.md) | ✅ **Done** | 88 (all 20 `Prisma*Repository` classes) | `5056cad` + breadth |
+| 7.6 | [Processor tests](./7.6-processor-tests.md) | ✅ **Done** | 4 (BaseProcessor.onFailed DLQ path; per-processor logic covered by Groups D/H/I) | `8a9ae48` |
+| 7.7 | [End-to-end integration tests](./7.7-integration-tests.md) | 🟢 **Partial** | 116 (9 of 12 flows; mailbox-watch + token-refresh blocked on Gmail seam) | `f160a0c` + breadth |
 | 7.8 | [CI gate + coverage](./7.8-ci-gate.md) | ✅ **Done** | — (infra) | `0e8242f` |
 | 7.9 | [Retire characterization tests](./7.9-retire-characterization.md) | ⏸️ **Blocked** | — | — |
 
-**Test totals:** 189 fast-tier + 10 integration-tier, all green. The 98-test Phase 0 characterization suite remains as the safety net (deleted only in 7.9).
+**Test totals:** 189 fast-tier + 116 integration-tier = **305 tests, all green**. The 98-test Phase 0 characterization suite remains as the safety net (deleted only in 7.9).
 
 **Estimated total:** 3–4 days of focused work. **Behavior change:** 7.0 is behavior-preserving; 7.1–7.8 are test-only; 7.9 deletes tests.
 
@@ -48,12 +48,16 @@ Each 🟢 step has a working, green representative that proves the pattern; the 
 - **7.2** — tracking / launch-sequence / run-schedule done. **Deferred:** send-email + inbox-sync unit tests (both have module-singleton seams — `lib/email/helper`, `lib/google/gmail/helper`, `lib/stats` — that Groups A/C already pin end-to-end; clean unit tests land when those seams are extracted).
 - **7.3** — pixel, link-wrap, stats, placeholders, classify, states done. **Deferred:** email-subject (Group M) + schedule-generator (Group K) — both have module-singleton/file-IO entanglement; characterization already pins them.
 - **7.4** — GmailTransport + GmailInboxSource with hand-built fixtures. **Deferred:** swap in real recorded fixtures from a one-time `scripts/record-gmail-fixtures.ts` run against dev Gmail (needs credentials). Assertion shapes stay identical.
-- **7.5** — EmailTracking repo test vs real Postgres (7 cases) + test-DB wiring proven. **Deferred:** 19 more `Prisma*Repository` test files (copy the EmailTracking template; seed the FK graph per aggregate).
-- **7.6** — `BaseProcessor.onFailed` DLQ path (the Phase-0 gap). The individual processors (schedule/contact/list) stay covered by Groups D/H/I; EmailProcessor is an orchestrator over the already-tested services.
-- **7.7** — TrackingServiceImpl-vs-DB integration canary (3 cases) + sequential-execution isolation (`fileParallelism: false` — all integration files share one test DB). **Deferred:** 11 more flows (send-and-track, pubsub-*, sequence-lifecycle, schedule-tick, mailbox-watch, tracking-http, token-refresh). Several need faked Gmail (`FakeMailTransport`) or supertest (tracking-http).
+- **7.7** — 9 of 12 flows shipped: send-and-track (full send → open → click chain), send-disabled, pubsub-classification (reply/bounce/original/dedupe/no-thread), pubsub-large-gap, sequence-lifecycle (launch/pause/resume/reset), schedule-tick (enqueue/rate-limit-skip/deleted-step), tracking-http (pixel/compose-skip/googlebot-skip/click-redirect/unsafe-block/event-validation via supertest). **Blocked:** mailbox-watch (flow 10) + token-refresh (flow 12) — both construct an OAuth2Client + google.gmail internally with no injection seam; they land when a `GmailClient` adapter seam is extracted (same prerequisite as 7.2's send-email/inbox-sync unit tests).
+
+## What shipped in the breadth pass
+
+- **7.5 — all 20 `Prisma*Repository` classes now have a test file** (was 1 representative; now 20). One file per repo under `__tests__/repositories/`, each seeding its FK graph via the shared `__tests__/helpers/seed.ts` helpers and truncating its own tables in `beforeEach`. Covers every interface method. Added `ENCRYPTION_KEY` to `__tests__/setup.ts` so the Mailbox Prisma extension (at-rest OAuth token encryption) works in the integration tier.
+- **7.7 — 9 of 12 integration flows.** Real Prisma + real domain services + faked Gmail (FakeMailTransport / FakeInboxSource) + faked infra (FakeJobManager / FakeRateLimitService). The Gmail-touching module-singleton seams (`lib/email/helper`, `lib/google/gmail/helper`, `lib/tracking/link-wrap`, `lib/stats`) are mocked via `vi.mock` so the real service code paths run against the real DB without a Gmail client.
 
 ## What's blocked
 
+- **7.7 flows 10 + 12 (mailbox-watch + token-refresh)** — `WatchService` constructs `new google.auth.OAuth2(...)` + `google.gmail(...)` internally and `refreshTokenIfNeeded` lives in `lib/google/gmail/helper`; neither has a constructor-injected Gmail-client seam. They become testable once a `GmailClient` adapter is extracted (the same prerequisite that unblocks 7.2's send-email/inbox-sync unit tests). The DB-only half of these flows (watch due-for-renewal, history purge, token persistence) is already covered by the 7.5 repo tests.
 - **7.9** — Retire the characterization tests. Requires **every** row in the [Feature → test mapping](./README.md#feature--test-mapping) to be green in the permanent suite first. Do NOT delete any `__tests__/characterization/*.test.ts` file until its row is covered. Today the mapping is partially covered; the characterization suite (98 tests) stays as the safety net.
 
 ## How to run
@@ -77,22 +81,23 @@ The CI workflow (`.github/workflows/ci.yml`) provisions Postgres + runs migratio
 
 ## Resume guide
 
-**Where we are:** the foundation (7.0, 7.1, 7.8) is done and merged. The breadth work (more 7.2/7.3/7.4/7.5/7.6/7.7 tests) is next; 7.9 stays blocked until the Feature→test mapping is fully green.
+**Where we are:** 7.0, 7.1, 7.5, 7.6, 7.8 are done; 7.7 has 9 of 12 flows. The remaining work is: extract the Gmail-client seam (unblocks 7.2 remainder + 7.7 flows 10/12 + makes 7.4's recorded fixtures reachable), then 7.9 once the Feature→test mapping is fully green.
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
 git checkout refactor/mailops
 npm test -w mailops                                    # 189 fast-tier tests passing
+npm run test:integration -w mailops                    # 116 integration-tier tests passing (needs Postgres)
 npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
 npm run lint -w mailops                                # 0 errors
 
-git checkout -b refactor/mailops-phase-7b-breadth      # branch off refactor/mailops tip
+git checkout -b refactor/mailops-phase-7c-gmail-seam   # branch off refactor/mailops tip
 ```
 
-Then pick a 🟢 step from the At-a-glance table above and add tests of the shape its sub-plan describes. Highest-leverage next steps:
-1. **7.5 breadth** — 19 repo test files, each a copy of the EmailTracking template (mechanical, high coverage gain).
-2. **7.7 flows** — the send-and-track canary (use `FakeMailTransport` + real repos) is the highest-value integration test.
-3. **7.2 remainder** — extract the send-email/inbox-sync module-singleton seams, then write their unit tests.
+Highest-leverage next steps:
+1. **Extract the Gmail-client seam** — wrap `new google.auth.OAuth2` + `google.gmail` behind an injectable adapter. Unblocks 7.2 send-email/inbox-sync unit tests, 7.7 flows 10 (mailbox-watch) + 12 (token-refresh), and makes 7.4's recorded fixtures reachable.
+2. **7.2 remainder** — once the seam lands, write SendEmailServiceImpl + InboxSyncServiceImpl unit tests against `FakeMailTransport` / `FakeInboxSource`.
+3. **7.9** — audit the [Feature → test mapping](./README.md#feature--test-mapping); delete each characterization file only once its row is green in the permanent suite.
 
 ## Definition of done (for the whole plan)
 
@@ -116,3 +121,7 @@ This plan **is** the refactor's Phase 7, lifted into its own folder. The refacto
 3. **EmailTracking FK graph** — `userId` is a required FK (seed a `User`); `sequenceId`/`stepId`/`contactId` are nullable FKs but the `*Repository` interface types mark some required. Seed the parents you exercise (`User`/`Sequence`/`SequenceStep`/`Contact`) in `beforeAll`; cast `as CreatePendingInput` if you omit a required-but-nullable field.
 4. **`DATABASE_URL_TEST` → `DATABASE_URL`** — `__tests__/setup.ts` maps `DATABASE_URL_TEST` into `DATABASE_URL` (which the real prisma client reads). The fast tier leaves `DATABASE_URL_TEST` unset → the dummy fallback applies → no real DB connection.
 5. **`RunScheduleServiceImpl.processEmail` returns boolean** — `true` when enqueued, `false` for rate-limit/deleted-step no-ops, throws on failure (caught by `tick()`'s per-contact handler). `tick()` resolves with `{ enqueued }`; it does NOT reject on per-contact failures.
+6. **Integration `beforeEach` truncates must be scoped** — files share one DB and run sequentially (not isolated). A blanket `prisma.contact.deleteMany()` trips FKs from rows other suites seeded; scope deletes by the suite's id prefix or `sequenceId` (`where: { sequenceId: SEQ_ID }`). Same for any aggregate another file might reference.
+7. **`ENCRYPTION_KEY` is required for Mailbox writes** — `packages/database`'s Prisma extension encrypts `Mailbox.access_token` at rest via `ENCRYPTION_KEY`. `__tests__/setup.ts` sets a deterministic test key; if a repo test writes a real Mailbox row and you see "ENCRYPTION_KEY is not set", the setup file isn't loaded for that tier.
+8. **Global poller queries see every suite's rows** — `findDueContacts` / `findNewContacts` query across ALL sequences, not just the test's own. When asserting on `tick()` outcomes, filter assertions by the suite's own `sequenceId`/`contactId` rather than asserting global counts (`enqueued === 1`), since another suite's ACTIVE sequence may contribute due contacts.
+9. **`vi.mock` factories are hoisted** — declaring mock fns as top-level `const` then referencing them inside `vi.mock(...)` throws `Cannot access X before initialization`. Use `vi.hoisted(() => ({...}))` to declare the fns, then destructure them after the `vi.mock` call (see `integration/tracking-http.test.ts`).
