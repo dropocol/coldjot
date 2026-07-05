@@ -40,13 +40,21 @@ export interface MessageDetails {
 
 export interface MailTransport {
   /** Send a message; returns Gmail's assigned id + threadId. */
-  send(input: SendMessageInput): Promise<SendMessageResult>;
+  send(
+    input: SendMessageInput & { mailboxId: string }
+  ): Promise<SendMessageResult>;
   /** Insert a message into a folder (used for the untracked sent copy). */
-  insert(input: InsertMessageInput): Promise<{ id: string }>;
+  insert(
+    input: InsertMessageInput & { mailboxId: string }
+  ): Promise<{ id: string }>;
   /** Delete a message (used to remove the tracked original from sent). */
-  delete(id: string): Promise<void>;
+  delete(id: string, userId: string, mailboxId: string): Promise<void>;
   /** Fetch a sent message's headers — used to recover the real Message-ID. */
-  getSentDetails(id: string): Promise<MessageDetails>;
+  getSentDetails(
+    id: string,
+    userId: string,
+    mailboxId: string
+  ): Promise<MessageDetails>;
   /** Get a gmail client bound to a user+mailbox (for thread-info fetches). */
   getClient(userId: string, mailboxId: string): Promise<gmail_v1.Gmail>;
 }
