@@ -16,7 +16,7 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
   private readonly CHECK_INTERVAL = 30000; // 5 seconds
   private readonly MAX_CONCURRENT_SYNCS = 3; // Maximum number of concurrent syncs
   private readonly concurrencyLimit: pLimit.Limit;
-  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
+  // Default Prisma repo; overridable for tests (Phase 3 pattern).
   private readonly listSyncRecordRepo = new PrismaListSyncRecordRepository();
 
   constructor(queue: Queue, dlQueues: Map<string, Queue> = new Map()) {

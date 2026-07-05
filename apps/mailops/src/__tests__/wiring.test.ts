@@ -1,10 +1,10 @@
 /**
- * Phase 1 wiring test — confirms createApp() constructs the full app graph
- * without throwing, and that every slot on the App object is non-null.
+ * Wiring test — confirms createApp() constructs the full app graph without
+ * throwing, and that every slot on the App object is non-null.
  *
- * This test does NOT boot Redis/PubSub (those are lazily started by
- * ServiceManager.initialize(), which createApp() deliberately does not call).
- * The infra singletons returned are constructed references only.
+ * This test does NOT boot Redis/PubSub (those are started by initializeApp(),
+ * which createApp() deliberately does not call). The infra singletons
+ * returned are constructed references only.
  */
 import { describe, it, expect } from "vitest";
 import { createApp } from "@/composition-root";
@@ -13,16 +13,25 @@ describe("composition root", () => {
   it("constructs the full app graph without throwing", async () => {
     const app = createApp();
 
-    // Infra singletons.
+    // Infra singletons (the 4 locked singletons + watch cleanup + clock).
     expect(app.redis).toBeDefined();
+    expect(app.redisClient).toBeDefined();
     expect(app.memoryMonitor).toBeDefined();
     expect(app.rateLimit).toBeDefined();
     expect(app.pubsub).toBeDefined();
     expect(app.watchCleanup).toBeDefined();
-    expect(app.jobManager).toBeDefined();
-    expect(app.serviceManager).toBeDefined();
     expect(app.clock).toBeDefined();
     expect(typeof app.clock.now()).toBe("object"); // Date
+
+    // Jobs infrastructure.
+    expect(app.queues).toBeInstanceOf(Map);
+    expect(app.queues.size).toBeGreaterThan(0);
+    expect(app.dlQueues).toBeInstanceOf(Map);
+    expect(app.dlQueues.size).toBeGreaterThan(0);
+    expect(app.jobManager).toBeDefined();
+    expect(app.processors).toBeInstanceOf(Map);
+    expect(app.processors.size).toBeGreaterThan(0);
+    expect(app.monitoring).toBeDefined();
 
     // Repositories — every slot wired to a Prisma impl.
     expect(app.emailTracking).toBeDefined();
@@ -53,10 +62,19 @@ describe("composition root", () => {
     expect(typeof app.inboxSync.handleNotification).toBe("function");
 
     // launchSequence + runSchedule exist but are deliberately not-yet-wired
-    // (Phase 2/4 fills them). They should reject on call.
+    // (Phase 7 fills them). They should reject on call.
     expect(app.launchSequence).toBeDefined();
     expect(app.runSchedule).toBeDefined();
     await expect(app.runSchedule.tick()).rejects.toThrow(/not wired/);
+
+    // Controllers (Phase 6.4 factories).
+    expect(app.sequenceController).toBeDefined();
+    expect(typeof app.sequenceController.launchSequence).toBe("function");
+    expect(app.healthController).toBeDefined();
+    expect(typeof app.healthController.checkHealth).toBe("function");
+    expect(app.metricsController).toBeDefined();
+    expect(app.mailboxController).toBeDefined();
+    expect(app.listController).toBeDefined();
   });
 
   it("returns independent repository instances on each call (stateless repos)", () => {
@@ -68,3 +86,4 @@ describe("composition root", () => {
     expect(a.redis).toBe(b.redis);
   });
 });
+

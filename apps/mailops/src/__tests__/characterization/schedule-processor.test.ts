@@ -66,14 +66,6 @@ vi.mock("@/services/jobs/sequence/helper", () => ({
   updateSequenceContactStatus: (...args: any[]) => mocks.updateStatus(args),
 }));
 
-vi.mock("@/services/service-manager", () => ({
-  ServiceManager: {
-    getInstance: () => ({
-      getJobManager: () => ({ addEmailJob: mocks.addEmailJob }),
-    }),
-  },
-}));
-
 const ctx = setupTestContext();
 
 import { ScheduleProcessor } from "@/services/jobs/schedule/processor";

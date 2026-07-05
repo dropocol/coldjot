@@ -29,15 +29,6 @@ vi.mock("bullmq", () => ({
   Job: class {},
 }));
 
-// Break the service-manager ↔ base-processor cycle.
-vi.mock("@/services/service-manager", () => ({
-  ServiceManager: class {
-    static getInstance() {
-      return { getJobManager: () => ({ add: vi.fn() }) };
-    }
-  },
-}));
-
 const mocks = vi.hoisted(() => ({
   processContactShared: vi.fn<(...args: any[]) => Promise<void>>(async () => undefined),
 }));
