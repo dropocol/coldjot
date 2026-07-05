@@ -11,9 +11,6 @@ import {
 import { RATE_LIMIT_CONFIG } from "@/config/rate-limit/constants";
 import { isDevelopment } from "@/config";
 
-// -------------------------------------------
-// -------------------------------------------
-// -------------------------------------------
 
 // Logging utilities
 export const saveToLogFile = (message: string) => {
@@ -56,9 +53,6 @@ export const logErrorAndSave = (message: string) => {
   saveToLogFile(message);
 };
 
-// -------------------------------------------
-// -------------------------------------------
-// -------------------------------------------
 
 // Business hours utilities
 export const isValidBusinessTime = (
@@ -112,9 +106,6 @@ export const isValidBusinessTime = (
   return isWorkDay && isWithinHours;
 };
 
-// -------------------------------------------
-// -------------------------------------------
-// -------------------------------------------
 
 export const nextBusinessStart = (
   date: DateTime,
@@ -151,9 +142,6 @@ export const nextBusinessStart = (
   return candidate;
 };
 
-// -------------------------------------------
-// -------------------------------------------
-// -------------------------------------------
 
 // Unified distribution logic
 export const calculateDistribution = (
@@ -273,9 +261,6 @@ export const calculateDistribution = (
   return defaultDistribution;
 };
 
-// -------------------------------------------
-// -------------------------------------------
-// -------------------------------------------
 
 // Helper for natural distribution
 const addNaturalDistribution = (delayUnit: string): number => {
@@ -294,9 +279,6 @@ const addNaturalDistribution = (delayUnit: string): number => {
   return distribution.minutes;
 };
 
-// -------------------------------------------
-// -------------------------------------------
-// -------------------------------------------
 
 export const calculateBaseDelay = (
   step: SequenceStep,
@@ -366,9 +348,6 @@ export const calculateBaseDelay = (
   return delay;
 };
 
-// -------------------------------------------
-// -------------------------------------------
-// -------------------------------------------
 
 // Time conversion utility
 export const convertToMinutes = (amount: number, unit: string): number => {

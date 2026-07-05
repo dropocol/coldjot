@@ -8,9 +8,6 @@ import {
   ThreadHeaders,
 } from "@coldjot/types";
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Check if the access token needs to be refreshed
@@ -37,9 +34,6 @@ export function shouldRefreshToken(credentials: MailboxCredentials): boolean {
   return needsRefresh ? needsRefresh : false;
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Refresh the access token if needed
@@ -88,9 +82,6 @@ export async function refreshTokenIfNeeded(
   }
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Validate required Gmail credentials
@@ -117,9 +108,6 @@ export function validateGmailCredentials(
   }
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Set OAuth2 credentials with the provided access token and options
@@ -137,9 +125,6 @@ export function setOAuth2Credentials(
   });
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 export async function getEmailThreadInfo(
   gmail: any,

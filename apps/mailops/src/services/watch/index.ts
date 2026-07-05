@@ -360,37 +360,3 @@ export class WatchService {
     }
   }
 }
-
-// // Export the WatchService as the default export
-// export default WatchService;
-
-// // Re-export the WatchCleanupService
-// export { WatchCleanupService } from "./cleanup";
-
-// // Re-export the WatchDebugService (only in development)
-// if (
-//   process.env.NODE_ENV === "development" ||
-//   process.env.WATCH_DEV_MODE === "true"
-// ) {
-//   // This ensures the debug service is only available in development
-//   // eslint-disable-next-line @typescript-eslint/no-var-requires
-//   const { WatchDebugService } = require("./debug");
-//   exports.WatchDebugService = WatchDebugService;
-// }
-
-// // Export the WatchService as the default export
-// export default WatchService;
-
-// // Re-export the WatchCleanupService
-// export { WatchCleanupService } from "./cleanup";
-
-// // Re-export the WatchDebugService (only in development)
-// if (
-//   process.env.NODE_ENV === "development" ||
-//   process.env.WATCH_DEV_MODE === "true"
-// ) {
-//   // This ensures the debug service is only available in development
-//   // eslint-disable-next-line @typescript-eslint/no-var-requires
-//   const { WatchDebugService } = require("./debug");
-//   exports.WatchDebugService = WatchDebugService;
-// }

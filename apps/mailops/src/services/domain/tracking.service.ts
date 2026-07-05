@@ -38,9 +38,7 @@ export interface TrackingService {
   }): Promise<void>;
 }
 
-// ---------------------------------------------------------------------------
 // Implementation (Phase 4a.2)
-// ---------------------------------------------------------------------------
 
 /**
  * Live `TrackingServiceImpl` — the canonical open/click/event path.

@@ -16,9 +16,6 @@ import type {
   SendDraftOptions,
 } from "@coldjot/types";
 
-// -------------------------------------------------------
-// -------------------------------------------------------
-// -------------------------------------------------------
 
 // Gmail Client Class
 export class GmailClientService {
@@ -125,9 +122,6 @@ export class GmailClientService {
   }
 }
 
-// -------------------------------------------------------
-// -------------------------------------------------------
-// -------------------------------------------------------
 
 /**
  * @deprecated This method will be removed in the next major release.
@@ -191,9 +185,6 @@ export async function createGmailDraft({
   }
 }
 
-// -------------------------------------------------------
-// -------------------------------------------------------
-// -------------------------------------------------------
 
 /**
  * @deprecated This method will be removed in the next major release.
@@ -232,9 +223,6 @@ export async function sendGmailDraft({
   }
 }
 
-// -------------------------------------------------------
-// -------------------------------------------------------
-// -------------------------------------------------------
 
 export async function getGmailEmail(accessToken: string, messageId: string) {
   const auth = new google.auth.OAuth2(
@@ -259,9 +247,6 @@ export async function getGmailEmail(accessToken: string, messageId: string) {
   return response.data;
 }
 
-// -------------------------------------------------------
-// -------------------------------------------------------
-// -------------------------------------------------------
 
 export async function getGmailThread(accessToken: string, threadId: string) {
   const auth = new google.auth.OAuth2(
@@ -285,9 +270,6 @@ export async function getGmailThread(accessToken: string, threadId: string) {
   return response.data;
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 // Export singleton instance
 export const gmailClientService = GmailClientService.getInstance();

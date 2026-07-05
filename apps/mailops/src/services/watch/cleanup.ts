@@ -169,20 +169,3 @@ export class WatchCleanupService {
     }
   }
 }
-
-// Get an instance of the cleanup service
-// const watchCleanupService = new WatchCleanupService();
-
-// Option 1: Set a watch to expire soon and let the automatic process handle it
-// await watchCleanupService.setWatchNearExpirationByEmail('your.email@example.com', 3);
-// The next cleanup cycle will detect this watch needs renewal
-
-// Option 2: Force immediate renewal
-// await watchCleanupService.forceRenewWatchByEmail('your.email@example.com');
-
-// Option 3: Manually trigger a cleanup cycle
-// await watchCleanupService.manualCleanup();
-
-// Option 4: Run a comprehensive test of the renewal process
-// const testResult = await watchCleanupService.testWatchRenewalProcess('your.email@example.com');
-// console.log(JSON.stringify(testResult, null, 2));

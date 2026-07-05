@@ -3,9 +3,6 @@ import { google } from "googleapis";
 import { TokenRefreshError } from "@coldjot/types";
 import { getSenderMailbox, updateMailboxCredentials } from "@/lib/mailbox";
 import { JOB_RETRY } from "@/config/queue/policy";
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 // TODO :  halt everything if this fails
 export async function refreshAccessToken(
@@ -72,9 +69,6 @@ export async function refreshAccessToken(
   return null;
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 // Configure Gmail OAuth2 client
 export const oauth2Client = new google.auth.OAuth2(
