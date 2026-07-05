@@ -10,7 +10,7 @@
 
 | Phase | Doc | Status | Sub-branch | Effort |
 |---|---|---|---|---|
-| 0 | [characterization tests](./phase-0-characterization-tests.md) | 🟡 **In progress** — 13/15 groups, 81 cases passing | `refactor/mailops-phase-0-tests` | 2–3 days |
+| 0 | [characterization tests](./phase-0-characterization-tests.md) | 🟡 **In progress** — 14/15 groups, 88 cases passing | `refactor/mailops-phase-0-tests` | 2–3 days |
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ⬜ Not started | `refactor/mailops-phase-1-seams` | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ⬜ Not started | `refactor/mailops-phase-2-controllers` | 1 day |
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ⬜ Not started | `refactor/mailops-phase-3-repos` | 3–4 days |
@@ -30,7 +30,7 @@ Sub-branches use the **hyphen** scheme `refactor/mailops-phase-N-<short>` (git r
 ```
 upgrade/remaining-majors
   └─ refactor/mailops                            ← base; plan docs live here
-       └─ refactor/mailops-phase-0-tests         ← CURRENT (13/15 groups done)
+       └─ refactor/mailops-phase-0-tests         ← CURRENT (14/15 groups done)
             └─ refactor/mailops-phase-1-seams
                  └─ refactor/mailops-phase-2-controllers
                       └─ refactor/mailops-phase-3-repos
@@ -96,6 +96,7 @@ All four architectural decisions are settled — don't re-litigate:
 | **A** | Email send (Gmail API) | `email-service.test.ts` | 6 | ✅ done |
 | **B** | Tracking (open/click/event + rate math) | `tracking-service.test.ts` | 9 | ✅ done |
 | **C** | PubSub inbox sync | `pubsub-handler.test.ts` | 8 | ✅ done |
+| **F** | Mailbox watch | `mailbox-routes.test.ts` | 7 | ✅ done |
 | **E** | Sequence lifecycle | `sequence-controller.test.ts` | 10 | ✅ done |
 | **O** | Watch cleanup | `watch-cleanup.test.ts` | 4 | ✅ done |
 | **J** | Gmail OAuth client + token refresh | `gmail-client.test.ts` | 4 | ✅ done |
@@ -106,10 +107,9 @@ All four architectural decisions are settled — don't re-litigate:
 | **K** | Schedule generator (DST/business hours) | `schedule-generator.test.ts` | 6 | ✅ done |
 | **M** | Email subject resolution | `email-subject.test.ts` | 10 | ✅ done |
 | **L** | Placeholders | `placeholders.test.ts` | 10 | ✅ done |
-| F | Mailbox watch | `mailbox-routes.test.ts` | ~4 | ⬜ not started |
 | G | Tracking pixel + click HTTP | `tracking-routes.test.ts` | ~7 | ⬜ not started |
 
-**Totals:** 13/15 files · **81/~85 cases** · 81 passing · 0 failing · tsc clean · lint clean (warnings only)
+**Totals:** 14/15 files · **88/~85 cases** · 88 passing · 0 failing · tsc clean · lint clean (warnings only)
 
 ### What's pinned so far
 
