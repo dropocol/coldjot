@@ -95,6 +95,7 @@ import type { RunScheduleService } from "@/services/domain/run-schedule.service"
 import { TrackingService as TrackingServiceImpl } from "@/lib/tracking";
 import { SendEmailServiceImpl } from "@/services/domain/send-email.service";
 import { InboxSyncServiceImpl } from "@/services/domain/inbox-sync.service";
+import { LaunchSequenceServiceImpl } from "@/services/domain/launch-sequence.service";
 import { GmailTransport } from "@/adapters/gmail-transport";
 
 // Controller factories
@@ -271,18 +272,20 @@ export function createApp(): App {
     emailEvent
   );
 
-  // launchSequence + runSchedule remain placeholders — production calls the
-  // route handlers / ScheduleProcessor directly. Phase 7 fills these in.
+  // launchSequence is wired (Phase 7.2a). runSchedule remains a placeholder
+  // until Phase 7.2b implements RunScheduleServiceImpl.
+  const launchSequence: LaunchSequenceService = new LaunchSequenceServiceImpl(
+    sequence,
+    businessHours,
+    jobManager,
+    monitoring,
+    rateLimit
+  );
+
   const notYetWired = (name: string): never => {
     throw new Error(
       `composition-root: ${name} is not wired yet. Production should still call the existing route/processor directly.`
     );
-  };
-  const launchSequence: LaunchSequenceService = {
-    launch: async () => notYetWired("launchSequence.launch"),
-    pause: async () => notYetWired("launchSequence.pause"),
-    resume: async () => notYetWired("launchSequence.resume"),
-    reset: async () => notYetWired("launchSequence.reset"),
   };
   const runSchedule: RunScheduleService = {
     tick: async () => notYetWired("runSchedule.tick"),
@@ -304,11 +307,7 @@ export function createApp(): App {
   // ---- Controllers (need jobManager + monitoring + repos + services) -----
   const watchService = new WatchService();
   const sequenceController = createSequenceController({
-    jobManager,
-    monitoringService: monitoring,
-    sequenceRepo: sequence,
-    businessHoursRepo: businessHours,
-    rateLimitService: rateLimit,
+    launchSequenceService: launchSequence,
   });
   const healthController = createHealthController({
     redis: redisClient,

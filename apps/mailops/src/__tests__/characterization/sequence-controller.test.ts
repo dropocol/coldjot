@@ -56,21 +56,27 @@ import express from "express";
 import request from "supertest";
 import { makeSequenceRouter } from "@/routes/sequence";
 import { createSequenceController } from "@/controllers/sequence.controller";
+import {
+  LaunchSequenceServiceImpl,
+} from "@/services/domain/launch-sequence.service";
 import { MonitoringService } from "@/services/monitor/service";
 import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
 import { PrismaBusinessHoursRepository } from "@/repositories/prisma/prisma-business-hours.repo";
 import { rateLimitService } from "@/services/core/rate-limit/service";
 
-// Phase 6.4: the controller is a factory. Construct it with a stub jobManager
-// (addSequenceJob is the hoisted mock), mocked MonitoringService, fake-backed
-// repos, and the mocked rateLimitService.
-const sequenceController = createSequenceController({
-  jobManager: { addSequenceJob: mocks.addSequenceJob } as any,
-  monitoringService: new MonitoringService(new Map()),
-  sequenceRepo: new PrismaSequenceRepository(),
-  businessHoursRepo: new PrismaBusinessHoursRepository(),
-  rateLimitService,
-});
+// Phase 7.2a: the controller takes a LaunchSequenceService. Construct the real
+// impl with a stub jobManager (addSequenceJob is the hoisted mock), the mocked
+// MonitoringService, fake-backed repos, and the mocked rateLimitService. The
+// service's calls (addSequenceJob, startMonitoring, stopMonitoring, resetLimits,
+// resetSequence) line up 1:1 with the hoisted mocks.
+const launchSequenceService = new LaunchSequenceServiceImpl(
+  new PrismaSequenceRepository(),
+  new PrismaBusinessHoursRepository(),
+  { addSequenceJob: mocks.addSequenceJob } as any,
+  new MonitoringService(new Map()),
+  rateLimitService
+);
+const sequenceController = createSequenceController({ launchSequenceService });
 const seqRouter = makeSequenceRouter(sequenceController);
 
 const app = express();
