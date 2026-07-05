@@ -12,7 +12,6 @@ import {
 import { logger } from "@/lib/log";
 import { backOff } from "exponential-backoff";
 import { SequenceContactStatusEnum, EmailEventEnum } from "@coldjot/types";
-import { refreshTokenIfNeeded } from "@/lib/google/gmail/helper";
 import { EmailWatch } from "@prisma/client";
 import { fileLogger } from "@/lib/log/file-logger";
 import {
@@ -23,7 +22,7 @@ import {
   isReplyMessage,
 } from "@/utils/email";
 import { updateSequenceStats } from "@/lib/stats";
-import { GMAIL_API } from "@/config/gmail/constants";
+import { GmailInboxSource } from "@/adapters/gmail-inbox-source";
 import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
 import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
@@ -71,6 +70,8 @@ export class PubSubHandler {
   private readonly emailWatchRepo = new PrismaEmailWatchRepository();
   private readonly emailWatchHistoryRepo = new PrismaEmailWatchHistoryRepository();
   private readonly sequenceContactRepo = new PrismaSequenceContactRepository();
+  // Phase 4c.1: Gmail REST + OAuth surface delegated to the InboxSource adapter.
+  private readonly inboxSource = new GmailInboxSource();
 
   async handleNotification(message: PubSubMessage): Promise<void> {
     try {
@@ -493,8 +494,10 @@ export class PubSubHandler {
   // -----------------------------------------
 
   private async getValidAccessToken(mailbox: any) {
-    return refreshTokenIfNeeded({
-      mailboxId: mailbox.id,
+    // Phase 4c.1: delegated to GmailInboxSource. Mailbox fields are stored in
+    // snake_case on the schema; the MailboxTokenRef interface uses camelCase.
+    return this.inboxSource.getValidAccessToken({
+      id: mailbox.id,
       userId: mailbox.userId,
       accessToken: mailbox.access_token!,
       refreshToken: mailbox.refresh_token!,
@@ -510,26 +513,12 @@ export class PubSubHandler {
     historyId: string,
     accessToken: string
   ): Promise<GmailHistoryResponse> {
-    try {
-      // Remove label filtering to get ALL changes
-      const url = `${GMAIL_API.HISTORY}?startHistoryId=${historyId}&historyTypes=messageAdded&historyTypes=labelAdded&historyTypes=labelRemoved`;
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch history: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data as GmailHistoryResponse;
-    } catch (error) {
-      logger.error({ error }, "Failed to fetch Gmail history");
-      throw error;
-    }
+    // Phase 4c.1: delegated to GmailInboxSource. Throws on non-OK (same as
+    // before); the caller's try/catch maps that into a large-gap fallback.
+    return (await this.inboxSource.fetchHistory({
+      startHistoryId: historyId,
+      accessToken,
+    })) as GmailHistoryResponse;
   }
 
   // -----------------------------------------
@@ -541,125 +530,12 @@ export class PubSubHandler {
     accessToken: string,
     mailbox: { email: string; id: string }
   ): Promise<MessageDetails | null> {
-    try {
-      // Log the attempt to fetch message details with mailbox info
-      logger.debug(
-        {
-          messageId,
-          mailboxId: mailbox.id,
-          mailboxEmail: mailbox.email,
-        },
-        "Attempting to fetch message details"
-      );
-
-      const response = await fetch(
-        `${GMAIL_API.MESSAGES}/${messageId}?format=metadata&metadataHeaders=from&metadataHeaders=subject&metadataHeaders=delivered-to&metadataHeaders=content-type&metadataHeaders=x-failed-recipients&metadataHeaders=in-reply-to&metadataHeaders=references`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      // Handle different response statuses
-      if (response.status === 404) {
-        // For draft messages or recently deleted messages, log and return null
-        logger.info(
-          {
-            messageId,
-            mailboxId: mailbox.id,
-            mailboxEmail: mailbox.email,
-          },
-          "Message not found (possibly a draft or deleted message)"
-        );
-        return null;
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Failed to fetch message: ${response.statusText}. Details: ${errorText}`
-        );
-      }
-
-      const data = (await response.json()) as any;
-      const headers = data.payload?.headers || [];
-
-      // Skip draft messages early
-      if (data.labelIds?.includes("DRAFT")) {
-        logger.debug(
-          {
-            messageId,
-            mailboxId: mailbox.id,
-            mailboxEmail: mailbox.email,
-          },
-          "Skipping draft message"
-        );
-        return null;
-      }
-
-      // Extract message details
-      const from =
-        headers.find(
-          (h: { name: string; value: string }) =>
-            h.name.toLowerCase() === "from"
-        )?.value || "";
-
-      const subject =
-        headers.find(
-          (h: { name: string; value: string }) =>
-            h.name.toLowerCase() === "subject"
-        )?.value || "";
-
-      // Check if message has required data
-      if (!data.id || !data.threadId) {
-        logger.warn(
-          {
-            messageId,
-            mailboxId: mailbox.id,
-            mailboxEmail: mailbox.email,
-          },
-          "Message data missing required fields"
-        );
-        return null;
-      }
-
-      const messageDetails: MessageDetails = {
-        id: data.id,
-        messageId: messageId,
-        threadId: data.threadId,
-        from,
-        subject,
-        labelIds: data.labelIds || [],
-        isReply: isReplyMessage(headers),
-        headers,
-      };
-
-      logger.debug(
-        {
-          messageId,
-          details: messageDetails,
-          mailboxId: mailbox.id,
-          mailboxEmail: mailbox.email,
-        },
-        "Successfully fetched message details"
-      );
-
-      return messageDetails;
-    } catch (error) {
-      // Log error with context but don't throw
-      logger.error(
-        {
-          messageId,
-          mailboxId: mailbox.id,
-          mailboxEmail: mailbox.email,
-          error: error instanceof Error ? error.message : "Unknown error",
-          stack: error instanceof Error ? error.stack : undefined,
-        },
-        "Failed to fetch message details"
-      );
-      return null;
-    }
+    // Phase 4c.1: delegated to GmailInboxSource.
+    return this.inboxSource.fetchMessage({
+      messageId,
+      accessToken,
+      mailbox: { id: mailbox.id, email: mailbox.email },
+    });
   }
 
   // -----------------------------------------
