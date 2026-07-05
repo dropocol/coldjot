@@ -56,17 +56,13 @@ export interface InboxSyncService {
   handleNotification(message: PubSubMessage): Promise<void>;
 }
 
-// ---------------------------------------------------------------------------
 // Watch + mailbox lookup result
-// ---------------------------------------------------------------------------
 
 interface WatchWithMailbox extends EmailWatchRecord {
   mailbox: MailboxWithAliases;
 }
 
-// ---------------------------------------------------------------------------
 // InboxSyncServiceImpl
-// ---------------------------------------------------------------------------
 
 /**
  * Flat orchestrator for Gmail PubSub inbox sync.

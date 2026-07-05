@@ -48,18 +48,12 @@ export const normalizeSubject = (
   return encodeMIMEWords(finalSubject);
 };
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 // Helper Functions
 export const extractEmailFromHeader = (fromHeader: string): string => {
   return fromHeader.match(/<(.+?)>|(.+)/)?.[1] || fromHeader;
 };
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 export const isSenderSequenceOwner = (
   senderEmail: string,
@@ -68,9 +62,6 @@ export const isSenderSequenceOwner = (
   return senderEmail.toLowerCase() === userId.toLowerCase();
 };
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 export const extractPossibleMessageIds = (
   headers: MessagePartHeader[]
@@ -88,9 +79,6 @@ export const extractPossibleMessageIds = (
   );
 };
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Generate a unique MIME boundary
@@ -99,9 +87,6 @@ export function generateMimeBoundary(): string {
   return `m${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Convert HTML content to plain text
@@ -113,9 +98,6 @@ export function convertToPlainText(content: string): string {
     .trim();
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Format sender information
@@ -124,9 +106,6 @@ export function formatSenderInfo(email: string, name?: string): string {
   return name ? `${name} <${email}>` : email;
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Generate a debeaconized ID
@@ -135,9 +114,6 @@ export function generateDebeaconizedId(): string {
   return crypto.randomBytes(8).toString("hex");
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Convert email content to base64url format
@@ -150,9 +126,6 @@ export function convertEmailToBase64Format(content: string): string {
     .replace(/=+$/, "");
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Parse MIME boundary from headers
@@ -165,9 +138,6 @@ export function parseMimeBoundary(headers: string): string {
   return boundaryMatch[1];
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 /**
  * Split email into headers and body parts
@@ -183,14 +153,8 @@ export function splitEmailContent(emailContent: string): {
   };
 }
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 // (hasMessageContent / isExternalSender / isReplyMessage moved to
 // services/inbox-sync/classify.ts in Phase 4c.2 — re-exported at the top of
 // this file for backwards compat. No definitions here.)
 
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------

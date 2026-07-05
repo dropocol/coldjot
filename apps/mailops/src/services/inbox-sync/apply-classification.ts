@@ -12,7 +12,7 @@
  * the lib/stats entrypoint both originals called. Behavior is identical to
  * the two originals end-to-end (Group C cases 1 + 2 pin the rows written).
  */
-import type { HistoryChange } from "@coldjot/types";
+import type { HistoryChange, EmailEventMetadata } from "@coldjot/types";
 import { EmailEventEnum, NotificationType } from "@coldjot/types";
 import type { EmailEventRepository } from "@/repositories/email-event.repo";
 import type { SequenceContactRepository } from "@/repositories/sequence-contact.repo";
@@ -78,7 +78,7 @@ export async function applyClassification(input: {
     return null;
   }
 
-  const metadata =
+  const metadata: EmailEventMetadata =
     change.type === NotificationType.BOUNCE
       ? {
           messageId: change.messageId,
@@ -96,7 +96,7 @@ export async function applyClassification(input: {
     type: eventType,
     sequenceId,
     contactId,
-    metadata: metadata as any,
+    metadata,
   });
 
   const newStatus = nextContactStatus(change.type);

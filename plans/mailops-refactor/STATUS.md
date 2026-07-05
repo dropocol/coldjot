@@ -14,8 +14,8 @@
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ✅ **Done** — interfaces + Prisma impls + createApp() + wiring test + lint rule | `refactor/mailops-phase-1-seams` (merged) | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ✅ **Done** — route files thinned, logic moved to controllers/ | `refactor/mailops-phase-2-controllers` (merged) | 1 day |
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ✅ **Done** — 10/10 aggregates migrated (3.1–3.10), merged `--no-ff` (`4d6571d`). 102/102 tests green. Lint-rule promotion deferred to Phase 4 (8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth). | `refactor/mailops-phase-3-repos` (merged) | 3–4 days |
-| 4 | [split three god-objects](./phase-4-split-god-objects.md) | ✅ **Done** — 4a (tracking) + 4b (email) + 4c (pubsub) all merged `--no-ff` (`44e55df`, `40fe9d2`, <4c-merge>). 98/98 tests green; tsc clean; 0 errors / 260 warnings | `refactor/mailops-phase-4c-pubsub` (merged) | 5–7 days |
-| 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |
+| 4 | [split three god-objects](./phase-4-split-god-objects.md) | ✅ **Done** — 4a (tracking) + 4b (email) + 4c (pubsub) all merged `--no-ff` (`44e55df`, `40fe9d2`, `0bc50fa`). 98/98 tests green; tsc clean; 0 errors / 260 warnings | `refactor/mailops-phase-4c-pubsub` (merged) | 5–7 days |
+| 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ✅ **Done** — 5 files deleted, console sweep, deps pruned. 98/98 tests green; tsc clean; 0 errors / 244 warnings | `refactor/mailops-phase-5-cleanup` (merged) | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
 | 7 | [real test suite](./phase-7-test-suite.md) | ⬜ Not started | `refactor/mailops-phase-7-tests` | 3–4 days |
 
@@ -409,13 +409,75 @@ The rule flips to `error` **after** Phase 5 deletes thread-watch AND Phase 7 col
 
 ---
 
+## Phase 5 progress — dead code cleanup
+
+**Goal:** remove the leftover scaffolding, comment noise, dead files, stray logs, and unused deps that survived Phases 1–4. See [phase-5-dead-code-cleanup.md](./phase-5-dead-code-cleanup.md). **Done — all 7 steps merged.**
+
+**Sub-branch:** `refactor/mailops-phase-5-cleanup` (merged `--no-ff` into `refactor/mailops`).
+
+**Baseline (verified post-Phase-5 merge):** `npm test -w mailops` → 16 files / **98 tests passing**. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → **clean**. `npm run lint -w mailops` → **0 errors, 244 warnings** (was 260 after Phase 4; 271 at Phase 4 start).
+
+### Step tracker
+
+| Step | What | Status | Commit |
+|---|---|---|---|
+| 5.1 | Delete orphaned/dead files | ✅ done | `7a4efc2` |
+| 5.2 | Remove comment-separator noise + commented-out blocks | ✅ done | `92ee07c` |
+| 5.3 | Replace console.log/error with logger; delete PII + noise logs | ✅ done | `631ca82` |
+| 5.4 | Delete unused validateEmailData private method | ✅ done | `cb3c363` |
+| 5.5 | (no-op — tracking barrel was already clean; helper.ts deleted in 5.3) | ✅ done | — |
+| 5.6 | Tighten any-types introduced in Phase 4c | ✅ done | `981e49e` |
+| 5.7 | Remove unused deps (openai, uuid, @types/uuid) | ✅ done | `ec73923` |
+
+### What got deleted / changed
+
+**Files deleted (5):**
+- `services/init.ts` (55 lines) — orphaned; `server.ts` calls `createServiceManager()` directly.
+- `services/jobs/thread-watch/processor.ts` (846 lines) — the dormant ThreadProcessor; commented out in `service-manager.ts`, zero live callers. `InboxSource` is the future seam for any polling impl.
+- `services/watch/debug.ts` (330 lines) — dev-only `WatchDebugService`; only referenced by commented-out re-exports.
+- `lib/google/helper.ts` (1-line re-export shim) — `send-email.service.ts` now imports `getEmailThreadInfo` from `@/lib/google/gmail/helper` directly.
+- `lib/tracking/helper.ts` — dead (`generateTrackingMetadata` had zero callers).
+
+**Comment noise:** stripped 149 `// ---...` separator lines across 10 files; deleted duplicated commented-out re-export cruft in `watch/index.ts`, dead usage-example block in `watch/cleanup.ts`, dead `RateLimitType` alias in `config/redis/keys.ts`.
+
+**Console sweep:** every `console.log/error/warn` converted to pino `logger` (object-first form) or deleted. The PII log at `services/jobs/email/processor.ts:139` (logged full `EmailJob` data) was **deleted, not converted** per the plan. The one remaining `console.error` in `lib/log/file-logger.ts` is marked `// intentional` — it's the logger's own last-resort stderr fallback (routing through pino would risk recursion). Also deleted a stray `console.log(userId)` that leaked the user id.
+
+**Deps removed:** `openai` (used by `apps/web`, not mailops — stray), `uuid` + `@types/uuid` (mailops uses `nanoid`). The SMTP trio (`nodemailer`/`quoted-printable`/`mailcomposer`) was already gone after 4b.
+
+**`any` tightening (5.6, surgical):** the `isValidNotification(data: any)` guard → `unknown` with a `Record<string, unknown>` narrowing; `catch (error: any)` in `records.ts` → `catch (error)` with an `isPrismaUniqueConstraintError(error: unknown)` helper; `metadata as any` in `apply-classification.ts` → typed `EmailEventMetadata`; `createOrUpdateWatchHistory`'s `data: any` → `Record<string, unknown>`. The broader 182 `no-explicit-any` warnings across mailops are pre-existing and out of Phase 5 scope — Phase 7's type-safety pass handles those. Left as-is (faithful to originals): `sanitizeData(data: any): any` (generic log redactor) and the Gmail JSON `as any` cast in `gmail-inbox-source.ts`.
+
+### Key decisions made during Phase 5 (read before resuming)
+
+1. **`lib/google/index.ts` + `lib/google/gmail.ts` are NOT shims** — the plan guessed they'd be re-export shims after 4b/4c, but they hold the live `GmailClientService` + `getGmailSubject` (used by `email-subject.ts`). Only `lib/google/helper.ts` was a true shim (1-line re-export) — that one's deleted.
+2. **`THREAD_WATCHER` queue config stays** — deleting `thread-watch/processor.ts` removed the consumer, but the queue name/registration in `config/queue/index.ts` (4 spots) is frozen BullMQ topology (the plan's "What does NOT change" list). It's now harmless dead *config*, not dead code in `src/`.
+3. **`lib/tracking/index.ts` was already clean** — the plan's 5.5 target barrel shape (no stopgap setters) was already achieved by 4a. The stopgap setters `_setTrackingRepo`/`_setTrackingRepos` the plan mentions didn't exist anymore. 5.5 reduced to deleting `helper.ts` (done in 5.3).
+4. **The lint rule did NOT flip to `error`** — still 7 domain-code residuals (now 6 after thread-watch deletion; the `sequenceHealth` + `$transaction` paths remain for Phase 6/7). The rule flips after Phase 6 unwinds ServiceManager + Phase 7 collapses the tx-client paths.
+5. **Lint warning count: 271 → 244** across Phase 4+5. Most of the drop came from deleting dead files (handler/helper/init/thread-watch/debug) + the dep removal. The remaining 244 are pre-existing `no-explicit-any` (182) + other style warnings — Phase 7 territory.
+
+### Resume guide — Phase 5 is DONE; Phase 6 is next
+
+**Where we are:** Phases 0–5 all merged into `refactor/mailops`. **Phase 6 (kill ServiceManager singleton) is next** — it unwinds the `ServiceManager.getInstance()` wrapper, wires `createApp()` into `server.ts`, and constructor-injects the domain services (the last piece before the Phase 7 test suite). After Phase 6, the `no-restricted-imports` lint rule can flip to `error` (most residuals resolve when ServiceManager goes).
+
+```bash
+cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
+git checkout refactor/mailops
+npm test -w mailops                                    # 16 files / 98 tests passing
+npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
+npm run lint -w mailops                                # 0 errors, 244 warnings
+
+git checkout -b refactor/mailops-phase-6-singleton     # branch off refactor/mailops tip
+```
+Then open [phase-6-kill-service-manager.md](./phase-6-kill-service-manager.md).
+
+---
+
 ## Resume guide
 
-> **Phase 0 + Phase 4 are done.** Phase 5 (dead code cleanup) is the next active phase — see [phase-5-dead-code-cleanup.md](./phase-5-dead-code-cleanup.md). The "Recommended order for the remaining groups" table below is preserved as Phase-0 reference only.
+> **Phases 0–5 are done.** Phase 6 (kill ServiceManager singleton) is the next active phase — see [phase-6-kill-service-manager.md](./phase-6-kill-service-manager.md). The "Recommended order for the remaining groups" table below is preserved as Phase-0 reference only.
 
 ### Get back to a green state
 
-The current working branch is `refactor/mailops` (Phase 0–3 + Phase 4a + 4b + 4c merged). All phase sub-branches are merged; you do not need to checkout an old one.
+The current working branch is `refactor/mailops` (Phases 0–5 merged). All phase sub-branches are merged; you do not need to checkout an old one.
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"

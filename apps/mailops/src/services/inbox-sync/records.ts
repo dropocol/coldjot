@@ -116,10 +116,24 @@ export async function createProcessedMessageRecord(
       threadId,
       type: type.toString(),
     });
-  } catch (error: any) {
-    if (error?.code === "P2002") return;
+  } catch (error) {
+    // P2002 (unique constraint) is benign — the message is already recorded.
+    if (isPrismaUniqueConstraintError(error)) return;
     throw error;
   }
+}
+
+/**
+ * Narrow an unknown caught error to a Prisma P2002 (unique-constraint) violation.
+ * The fake-prisma in tests and Prisma in prod both surface `.code === "P2002"`.
+ */
+function isPrismaUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: unknown }).code === "P2002"
+  );
 }
 
 /**
@@ -130,7 +144,7 @@ export async function createOrUpdateWatchHistory(
   watchId: string,
   historyId: string,
   notificationType: NotificationType,
-  data: any,
+  data: Record<string, unknown>,
   isProcessed = false
 ): Promise<void> {
   await emailWatchHistoryRepo.upsert({

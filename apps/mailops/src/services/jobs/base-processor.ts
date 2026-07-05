@@ -120,7 +120,6 @@ export abstract class BaseProcessor<T = any> {
   }
 
   protected async onActive(job: Job<T>): Promise<void> {
-    console.log("\n\n");
     logger.info(`🚧 🚀 Job started: ${job.id}`);
   }
 

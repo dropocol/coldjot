@@ -1,5 +1,6 @@
 import { EmailAlias, Mailbox, MailboxCredentials } from "@coldjot/types";
 import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
+import { logger } from "@/lib/log";
 
 // Module-level repository singleton — bridges the standalone fns until Phase 4
 // turns these into a proper MailboxService with constructor injection. Matches
@@ -11,7 +12,6 @@ export async function getSequenceMailboxId(
 ): Promise<string | null> {
   const mailboxId = await mailboxRepo.findSequenceMailboxId(sequenceId);
   if (!mailboxId) {
-    // throw new Error("Sequence mailbox not found");
     return null;
   }
   return mailboxId;
@@ -41,8 +41,6 @@ export async function getSenderMailbox(
     accessToken: mailbox.access_token,
     refreshToken: mailbox.refresh_token,
     expiryDate: mailbox.expires_at || 0,
-    // aliases: mailbox.aliases,
-    // defaultAliasId: mailbox.defaultAliasId || undefined,
   };
 }
 
@@ -52,7 +50,6 @@ export async function getSenderMailbox(
 export async function getSequenceMailboxWithId(
   id: string
 ): Promise<Mailbox | null> {
-  console.log("🔍 Getting sequence mailbox with id", id);
   const sequenceMailbox = await mailboxRepo.findSequenceMailboxById(id);
 
   if (
@@ -81,13 +78,6 @@ export async function getSequenceMailbox(
   sequenceId: string,
   userId: string
 ): Promise<Mailbox | null> {
-  console.log(
-    "🔍 Getting sequence mailbox",
-    sequenceMailboxId,
-    sequenceId,
-    userId
-  );
-
   const sequenceMailbox = await mailboxRepo.findSequenceMailbox(
     sequenceMailboxId,
     sequenceId,
@@ -125,8 +115,8 @@ export async function updateMailboxCredentials(
       data.accessToken!,
       data.expiryDate!
     );
-    console.log(`🔄 Updated mailbox: ${mailboxId}`);
+    logger.info({ mailboxId }, "Updated mailbox credentials");
   } catch (error) {
-    console.error(`❌ Error updating mailbox: ${error}`);
+    logger.error({ err: error, mailboxId }, "Error updating mailbox credentials");
   }
 }

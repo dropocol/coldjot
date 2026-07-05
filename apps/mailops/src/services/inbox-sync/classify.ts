@@ -16,9 +16,7 @@ import type {
 } from "@coldjot/types";
 import { NotificationType as NotificationTypeEnum, EmailLabelEnum } from "@coldjot/types";
 
-// ---------------------------------------------------------------------------
 // Message-shape predicates (moved verbatim from utils/email.ts)
-// ---------------------------------------------------------------------------
 
 export const isBounceMessage = (headers: MessagePartHeader[]) => {
   // Common bounce sender patterns
@@ -216,9 +214,7 @@ export const isReplyMessage = (headers: MessagePartHeader[]): boolean => {
   );
 };
 
-// ---------------------------------------------------------------------------
 // Notification classification (moved verbatim from services/pubsub/helper.ts)
-// ---------------------------------------------------------------------------
 
 /**
  * Determine the notification type from message details.
@@ -256,9 +252,7 @@ export const determineNotificationType = async (
   return NotificationTypeEnum.MESSAGE_ADDED;
 };
 
-// ---------------------------------------------------------------------------
 // History-gap math (moved verbatim from services/pubsub/helper.ts)
-// ---------------------------------------------------------------------------
 
 /**
  * Calculate history gap between current and notification history IDs.

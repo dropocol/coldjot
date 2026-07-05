@@ -131,12 +131,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       }
 
       logger.info(`🔍 Fetching mailbox info ${data.sequenceMailboxId}`);
-      // const mailbox = await getSenderMailbox(
-      //   data.userId,
-      //   data.sequenceMailboxId
-      // );
 
-      console.log("🔍 Fetching mailbox info with data", data);
       const mailbox = await getSequenceMailboxWithId(data.sequenceMailboxId);
 
       if (!mailbox) {
@@ -288,21 +283,6 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       );
       await this.handleEmailError(error, data);
       throw error;
-    }
-  }
-
-  private validateEmailData(data: EmailJob): void {
-    if (!data.to) {
-      throw new Error("Email recipient is required");
-    }
-    // if (!data.subject) {
-    //   throw new Error("Email subject is required");
-    // }
-    if (!data.userId) {
-      throw new Error("User ID is required");
-    }
-    if (!data.stepId) {
-      throw new Error("Step ID is required");
     }
   }
 

@@ -71,5 +71,4 @@ export const REDIS_KEYS = {
 } as const;
 
 // Export types for better type safety
-// export type RateLimitType = keyof typeof RATE_LIMIT_TYPES;
 export type RateLimitType = RateLimitEnum;

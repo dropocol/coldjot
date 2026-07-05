@@ -3,9 +3,7 @@ import { google } from "googleapis";
 import { TokenRefreshError } from "@coldjot/types";
 import { getSenderMailbox, updateMailboxCredentials } from "@/lib/mailbox";
 import { JOB_RETRY } from "@/config/queue/policy";
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
+import { logger } from "@/lib/log";
 
 // TODO :  halt everything if this fails
 export async function refreshAccessToken(
@@ -30,13 +28,10 @@ export async function refreshAccessToken(
         throw new Error("No access token returned");
       }
 
-      console.log(`🔄 Token refreshed successfully on attempt ${attempt + 1}`);
+      logger.info({ attempt: attempt + 1, userId, mailboxId }, "Token refreshed");
 
       // Save the new access token
-      console.log(`🔄 Finding mailbox for user ${userId}`);
       const mailbox = await getSenderMailbox(userId, mailboxId);
-
-      console.log(`🔄 Updating mailbox ${mailbox?.id} with new access token`);
       await updateMailboxCredentials(mailboxId, {
         accessToken: credentials.access_token,
         expiryDate: credentials.expiry_date!,
@@ -47,34 +42,26 @@ export async function refreshAccessToken(
       attempt++;
       const err = error as TokenRefreshError;
 
-      // Log the error details
-      console.error(`❌ Token refresh attempt ${attempt} failed:`, {
-        error: err.message,
-        code: err.code,
-        status: err.status,
-      });
+      logger.warn(
+        { attempt, userId, mailboxId, message: err.message, code: err.code, status: err.status },
+        "Token refresh attempt failed"
+      );
 
-      console.log(`🔄 Attempt ${attempt} failed`);
-      console.log(userId);
       // If we've exhausted all retries, throw the error
       if (attempt === maxRetries) {
-        console.error(`❌ Token refresh failed after ${maxRetries} attempts`);
+        logger.error({ userId, mailboxId, attempts: attempt }, "Token refresh failed after retries");
         throw new Error(`Failed to refresh token: ${err.message}`);
       }
 
       // Calculate delay with exponential backoff (1s, 2s, 4s, etc.)
       const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-      console.log(`⏳ Retrying in ${delay}ms...`);
+      logger.debug({ attempt, delay }, "Retrying token refresh");
       await sleep(delay);
     }
   }
 
   return null;
 }
-
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
 
 // Configure Gmail OAuth2 client
 export const oauth2Client = new google.auth.OAuth2(

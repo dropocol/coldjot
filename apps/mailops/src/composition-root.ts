@@ -82,15 +82,11 @@ import {
 } from "@/services/domain/inbox-sync.service";
 import { GmailTransport } from "@/adapters/gmail-transport";
 
-// ---------------------------------------------------------------------------
 // Clock — trivial default impl
-// ---------------------------------------------------------------------------
 
 const systemClock: Clock = { now: () => new Date() };
 
-// ---------------------------------------------------------------------------
 // App graph
-// ---------------------------------------------------------------------------
 
 export interface App {
   // Infra singletons (lazily started by ServiceManager.initialize()).
