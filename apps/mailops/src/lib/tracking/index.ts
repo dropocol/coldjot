@@ -163,12 +163,7 @@ export async function recordEmailOpen(hash: string): Promise<void> {
 
 export async function recordLinkClick(linkId: string): Promise<void> {
   try {
-    const trackedLink = await prisma.trackedLink.findUnique({
-      where: { id: linkId },
-      include: {
-        emailTracking: true,
-      },
-    });
+    const trackedLink = await trackedLinkRepo.findWithTracking(linkId);
 
     if (!trackedLink || !trackedLink.emailTracking) {
       throw new Error("No tracked link found");
@@ -219,12 +214,9 @@ export async function createTrackedLink(
   originalUrl: string
 ): Promise<string> {
   try {
-    const trackedLink = await prisma.trackedLink.create({
-      data: {
-        emailTrackingId,
-        originalUrl,
-        clickCount: 0,
-      },
+    const trackedLink = await trackedLinkRepo.create({
+      emailTrackingId,
+      originalUrl,
     });
     return trackedLink.id;
   } catch (error) {
