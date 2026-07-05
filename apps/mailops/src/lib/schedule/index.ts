@@ -6,12 +6,14 @@ import {
   BusinessHours,
 } from "@coldjot/types";
 import { logger } from "@/lib/log";
-import { prisma } from "@coldjot/database";
 import { RATE_LIMIT_CONFIG } from "@/config/rate-limit/constants";
 import { isDevelopment, BYPASS_BUSINESS_HOURS } from "@/config";
 import { DEFAULT_BUSINESS_HOURS } from "@/config";
 import * as fs from "fs";
 import * as path from "path";
+import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
+
+const sequenceContactRepo = new PrismaSequenceContactRepository();
 import {
   logAndSave,
   logDebugAndSave,
@@ -444,23 +446,15 @@ export class ScheduleGenerator implements ScheduleGenerator {
   private async checkTimeSlotAvailability(
     dateTime: DateTime
   ): Promise<{ minuteAvailable: boolean; hourAvailable: boolean }> {
-    const existingScheduled = await prisma.sequenceContact.count({
-      where: {
-        nextScheduledAt: {
-          gte: dateTime.minus({ minutes: 1 }).toJSDate(),
-          lt: dateTime.plus({ minutes: 1 }).toJSDate(),
-        },
-      },
-    });
+    const existingScheduled = await sequenceContactRepo.countScheduledInWindow(
+      dateTime.minus({ minutes: 1 }).toJSDate(),
+      dateTime.plus({ minutes: 1 }).toJSDate()
+    );
 
-    const existingScheduledHour = await prisma.sequenceContact.count({
-      where: {
-        nextScheduledAt: {
-          gte: dateTime.minus({ hours: 1 }).toJSDate(),
-          lt: dateTime.plus({ hours: 1 }).toJSDate(),
-        },
-      },
-    });
+    const existingScheduledHour = await sequenceContactRepo.countScheduledInWindow(
+      dateTime.minus({ hours: 1 }).toJSDate(),
+      dateTime.plus({ hours: 1 }).toJSDate()
+    );
 
     return {
       minuteAvailable:

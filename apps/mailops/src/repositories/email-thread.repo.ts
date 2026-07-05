@@ -16,9 +16,17 @@ export interface EmailThreadRecord {
   metadata: Record<string, unknown> | null;
 }
 
+/** Thread row with the parent sequence's userId joined (thread-watch). */
+export interface EmailThreadWithSequence extends EmailThreadRecord {
+  sequence: { userId: string };
+}
+
 export interface EmailThreadRepository {
   /** Look up a thread, optionally with the parent sequence. */
-  findByThread(threadId: string, withSequence?: boolean): Promise<EmailThreadRecord | null>;
+  findByThread(
+    threadId: string,
+    withSequence?: boolean
+  ): Promise<EmailThreadRecord | null>;
   /** Fetch just the subject (email-subject resolution). */
   findSubjectByThread(threadId: string): Promise<string | null>;
   /** Fetch sequenceId + contactId for a thread (pubsub routing). */
@@ -35,8 +43,32 @@ export interface EmailThreadRepository {
     subject: string;
     isFake?: boolean;
   }): Promise<EmailThreadRecord>;
-  /** Update thread metadata (thread-watch check cadence). */
-  updateMetadata(threadId: string, metadata: Record<string, unknown>): Promise<void>;
-  /** Mark a thread COMPLETED (no mailbox found, etc.). */
-  markCompleted(threadId: string, reason: string, at: Date): Promise<void>;
+  /**
+   * Find threads that need checking (thread-watch processor). The where clause
+   * is built by the caller (age + lastCheckedAt tiers); passed through as-is.
+   * Ordered by updatedAt desc, lastCheckedAt asc, createdAt asc.
+   */
+  findManyForChecking(
+    where: Record<string, unknown>,
+    take: number
+  ): Promise<EmailThreadWithSequence[]>;
+  /**
+   * Update lastCheckedAt + metadata after a thread-watch check pass.
+   * Both fields are written together (the metadata reflects the check).
+   */
+  updateCheckMetadata(
+    threadId: string,
+    lastCheckedAt: Date,
+    metadata: Record<string, unknown>
+  ): Promise<void>;
+  /**
+   * Mark a thread COMPLETED with merged metadata (thread-watch when no
+   * mailbox is found, etc.). Existing metadata is spread into the new blob.
+   */
+  markCompleted(
+    threadId: string,
+    existingMetadata: Record<string, unknown> | null,
+    reason: string,
+    at: Date
+  ): Promise<void>;
 }

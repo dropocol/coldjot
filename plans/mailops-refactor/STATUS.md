@@ -13,7 +13,7 @@
 | 0 | [characterization tests](./phase-0-characterization-tests.md) | ✅ **Done** — 15/15 groups, 100 cases passing | `refactor/mailops-phase-0-tests` (merged) | 2–3 days |
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ✅ **Done** — interfaces + Prisma impls + createApp() + wiring test + lint rule | `refactor/mailops-phase-1-seams` (merged) | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ✅ **Done** — route files thinned, logic moved to controllers/ | `refactor/mailops-phase-2-controllers` (merged) | 1 day |
-| 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ⬜ Not started | `refactor/mailops-phase-3-repos` | 3–4 days |
+| 3 | [repositories isolate Prisma](./phase-3-repositories.md) | 🟢 **Code done** — 10/10 aggregates migrated (3.1–3.10 done), 102/102 tests green, unmerged. Lint-rule promotion deferred to Phase 4 (8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth). | `refactor/mailops-phase-3-repos` | 3–4 days |
 | 4 | [split three god-objects](./phase-4-split-god-objects.md) | ⬜ Not started | `refactor/mailops-phase-4-split` | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ⬜ Not started | `refactor/mailops-phase-5-cleanup` | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ⬜ Not started | `refactor/mailops-phase-6-singleton` | 2 days |
@@ -30,10 +30,10 @@ Sub-branches use the **hyphen** scheme `refactor/mailops-phase-N-<short>` (git r
 ```
 upgrade/remaining-majors
   └─ refactor/mailops                            ← base; plan docs live here
-       └─ refactor/mailops-phase-0-tests         ← CURRENT (15/15 groups done)
-            └─ refactor/mailops-phase-1-seams
-                 └─ refactor/mailops-phase-2-controllers
-                      └─ refactor/mailops-phase-3-repos
+       └─ refactor/mailops-phase-0-tests         (merged — 15/15 groups)
+            └─ refactor/mailops-phase-1-seams         (merged)
+                 └─ refactor/mailops-phase-2-controllers (merged)
+                      └─ refactor/mailops-phase-3-repos ← CURRENT (6/10 aggregates done; unmerged)
                            └─ refactor/mailops-phase-4-split
                                 └─ refactor/mailops-phase-5-cleanup
                                      └─ refactor/mailops-phase-6-singleton
@@ -156,6 +156,120 @@ All four architectural decisions are settled — don't re-litigate:
 - `src/__tests__/helpers/fake-prisma.ts` — in-memory Prisma stub (create/update/updateMany/findUnique/findFirst/findMany/count/upsert/delete/deleteMany/$transaction + nested relation writes + unique-field registration)
 - `src/__tests__/helpers/fake-gmail.ts` — canned gmail_v1.Gmail (send/get/insert/delete/threads.get) + makeFakeFetch
 - `src/__tests__/helpers/test-context.ts` — vi.mock wiring for @coldjot/database, @/lib/google, @/lib/google/gmail/helper, @/lib/stats via vi.hoisted
+
+---
+
+## Phase 3 progress — repositories isolate Prisma
+
+**Goal:** every `prisma.*` call lives behind a repository. Domain code depends on `*Repository` interfaces, not `@coldjot/database`. See [phase-3-repositories.md](./phase-3-repositories.md).
+
+**Sub-branch:** `refactor/mailops-phase-3-repos` (off `refactor/mailops`, **unmerged**).
+
+**Run:** `npm test -w mailops` → 16 files / 102 tests. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → clean. `npm run lint -w mailops` → 0 errors (8 `@coldjot/database` warnings remain — all Phase 4/5 residuals; see below).
+
+### Aggregate tracker
+
+| Step | Aggregate | Status | Commit |
+|---|---|---|---|
+| 3.1 | EmailTracking | ✅ done | `0109a4c` |
+| 3.2 | EmailEvent | ✅ done | `d0cab22` |
+| 3.3 | TrackedLink + LinkClick (non-tx) | ✅ done | `0371d11` |
+| 3.4 | SequenceStats | ✅ done | `6e7a5f5` |
+| 3.5 | SequenceContact (non-pubsub) | ✅ done | `63b9123` |
+| 3.6 | Sequence + SequenceStep + BusinessHours | ✅ done | `d98f3a9` |
+| 3.7 | Mailbox (+ aliases + SequenceMailbox) | ✅ done | `c07f3b9` |
+| 3.8 | EmailThread | ✅ done | `b9ff61d` |
+| 3.9 | EmailWatch + EmailWatchHistory + ProcessedMessage + pubsub's deferred SequenceContact/EmailThread/Mailbox | ✅ done | `af04e84` |
+| 3.10 | Template + Contact + EmailList + ListSyncRecord | ✅ done | `f58b80c` |
+| final | promote `no-restricted-imports` warn → error; merge to `refactor/mailops` | ⏸️ **Deferred to Phase 4** — 8 residuals are `$transaction` tx clients, SMTP path, sequenceHealth (not 3.x scope) | — |
+
+### What's been migrated (3.1–3.10 — ALL aggregates done)
+
+Direct `prisma.<model>.*` calls have been replaced with repository method calls in:
+- `lib/email/index.ts`, `lib/tracking/index.ts` (standalone fns + TrackingService class — `$transaction` tx-client calls remain, Phase 4a), `lib/stats/index.ts` (`$transaction` tx client remains, Phase 4), `lib/schedule/index.ts`
+- `lib/mailbox/index.ts` (standalone fns — module-level repo singleton), `lib/email-subject.ts` (emailThread + emailTracking + template), `lib/google/gmail/gmail.ts` (GmailClientService)
+- `controllers/sequence.controller.ts` (sequence + businessHours; sequenceHealth residual), `controllers/mailbox.controller.ts`, `controllers/list.controller.ts`
+- `services/jobs/{email,schedule,contact,sequence,list}/` (processor.ts + helper.ts)
+- `services/jobs/thread-watch/processor.ts` (emailThread calls; emailEvent + sequenceContact residuals are 3.2/3.5 misses)
+- `services/monitor/service.ts`
+- `services/pubsub/handler.ts` (EmailEvent + Mailbox + EmailThread + EmailWatch + EmailWatchHistory + SequenceContact)
+- `services/pubsub/helper.ts` (EmailThread + EmailWatch + EmailWatchHistory + ProcessedMessage + SequenceContact + Sequence)
+- `services/watch/index.ts` (Mailbox + EmailWatch), `services/watch/cleanup.ts`, `services/watch/debug.ts`
+
+### Files still importing `@coldjot/database` (8 residuals — all Phase 4/5 scope)
+
+Phase 3 migrated every domain aggregate. The 8 remaining imports are NOT domain-model calls — they're either `$transaction` tx-client usage (needs the raw prisma client for atomicity), the SMTP path (deleted in Phase 4b), or monitor-only models left out of the repo set:
+
+```
+controllers/sequence.controller.ts      ← sequenceHealth in resetSequence (monitor-only model; decide in Phase 4/5)
+lib/google/smtp/gmail.ts                ← SMTP path; Phase 4b deletes this file entirely
+lib/stats/index.ts                      ← $transaction tx client (Phase 4 collapses the divergent rate-math)
+lib/tracking/index.ts                   ← $transaction tx client (Phase 4a deletes the standalone fns)
+services/jobs/schedule/processor.ts     ← sequenceHealth in resetSequence (same as controller)
+services/jobs/sequence/helper.ts        ← sequenceHealth in resetSequence (same as controller)
+services/jobs/thread-watch/processor.ts ← emailEvent + sequenceContact calls (3.2/3.5 misses; sweep up in Phase 4/7)
+services/monitor/service.ts             ← sequenceStats.create in init (monitor-only; Phase 6 unwinds ServiceManager)
+```
+
+**Why the lint rule stays at `warn`:** Flipping `no-restricted-imports` to `error` would break the build on these 8 files. They're out of Phase 3's scope by design (per the locked decisions: `$transaction` blocks stay on the tx client until Phase 4; SMTP is deleted in Phase 4b; `sequenceHealth` is monitor-only). The rule promotes to `error` once Phase 4 collapses the tx-client paths and Phase 4b deletes SMTP. The warning count dropping 22 → 8 across Phase 3 is the progress signal.
+
+**Note:** `lib/google/account/google-account.ts` no longer imports `@coldjot/database` (dead import removed in 3.7 — it only ever called `lib/mailbox` helpers, which were migrated).
+
+### Key decisions made during 3.1–3.6 (read before resuming)
+
+1. **Injection pattern:** BullMQ processors (`EmailProcessor`, `ScheduleProcessor`, `ContactProcessor`) and legacy singletons (`emailService`, `trackingService`) aren't constructed via `createApp()`. Used **private-field-with-default-Prisma-repo** injection (`private readonly foo = new PrismaFooRepository()`) — overridable for tests, no behavior change. Full DI through `createApp()` lands in Phase 6 when `ServiceManager` is unwound. Do NOT try to thread these through the composition root yet.
+2. **Standalone-function stopgap in `lib/tracking`:** module-level repo singletons (`emailTrackingRepo`, `emailEventRepo`, `trackedLinkRepo`, `linkClickRepo`, `sequenceStatsRepo`) bridge the standalone fns (`createEmailTracking`, `recordEmailOpen`, etc.) until Phase 4a deletes them. **Don't extend this pattern to other files** — for classes, use the private-field pattern.
+3. **`$transaction` blocks left on the tx client:** the `linkClick`/`trackedLink` writes inside `lib/tracking`'s `$transaction(async (prisma) => ...)` blocks still call `prisma.linkClick.create` / `prisma.trackedLink.update` / `prisma.emailTracking.update` on the **tx client** (not the repo) — they need atomicity. Phase 4a collapses these. Same for `lib/stats/index.ts`'s `updateSequenceStats` `$transaction`.
+4. **`sequenceStats.updateRaw` + `createWithValues`:** added as escape hatches for the legacy inline rate-math paths (`trackEmailEvent`, `updateTrackingStats`). Phase 4 collapses the divergent rate-math into `updateCounts` and removes these methods.
+5. **Fake-prisma fix:** `handleCreate` in `__tests__/helpers/fake-prisma.ts` was patched so a passed `id: undefined` doesn't shadow the generated UUID (`{ id: randomUUID(), ...args.data, ...(args.data?.id ? { id: args.data.id } : {}) }`). Without this, repo `createPending` calls that omit `id` returned `undefined` ids in tests.
+6. **`SequenceWithDetails` type** keeps BOTH `sequenceMailboxId` (new) and `sequenceMailbox` (legacy nested) so `services/jobs/sequence/processor.ts`'s cast still works. Phase 4 cleans this up.
+7. **`sequenceHealth`** model is NOT in the repository set (monitor-only). Calls in `resetSequence` (`services/jobs/sequence/helper.ts`) and `services/jobs/schedule/processor.ts` remain on `prisma.sequenceHealth`. Decide in 3.9/3.10 whether to add a repo or leave it.
+
+### Key decisions made during 3.7–3.8 (read before resuming)
+
+8. **`SequenceMailbox` joined into the Mailbox repo** (not its own repo). It's a join table binding Mailbox+Alias to a Sequence, with only 3 read call sites, all in `lib/mailbox/index.ts`. Added `findSequenceMailboxId` / `findSequenceMailboxById` / `findSequenceMailbox` to `MailboxRepository` so `lib/mailbox` no longer imports `@coldjot/database`.
+9. **`MailboxRecord` type gaps fixed:** added `name`, `providerAccountId`; `expires_at` retyped `number | null` (was incorrectly `Date | null` — schema is `Int?`, all consumers treat as epoch seconds). `MailboxAliasRecord` introduced (field is `alias`, not `email` — Phase 1 had it wrong).
+10. **`findActiveGmailByEmail(email)`** added — `services/watch/index.ts` queries mailbox by email alone (no userId on hand). The existing `findActiveGmail(userId, email)` is the controller's path.
+11. **`updateTokens(id, accessToken, expiresAtMs)`** — renamed param to `expiresAtMs` to make the unit explicit; the impl divides by 1000 (schema stores seconds, callers pass ms).
+12. **`EmailThread.updateCheckMetadata`** collapses the thread-watch metadata write: takes `(threadId, lastCheckedAt, metadata)` and writes both fields. The original called `new Date()` twice (once for the column, once for the ISO string in metadata); the migrated version uses a single `now` — atomic and more correct.
+13. **`EmailThread.markCompleted`** now takes `existingMetadata` to merge (thread-watch spreads prior metadata into the COMPLETED blob).
+14. **`EmailThread.findManyForChecking(where, take)`** accepts a `Record<string, unknown>` where (built by the caller — age + lastCheckedAt tiers). Kept loose-typed rather than leaking `Prisma.EmailThreadWhereInput` into the repo interface.
+15. **Module-level repo singleton extended to `lib/email-subject.ts` + `services/pubsub/helper.ts`** (both standalone-fn files). This is a controlled extension of the 3.1 `lib/tracking` stopgap — same justification (Phase 4 turns these into services). The `lib/mailbox` standalone fns use the same pattern.
+16. **Residual 3.1/3.2 misses found in 3.8:** `lib/email-subject.ts` had two `emailTracking` calls (`count`, `findFirst`) not migrated in 3.1 — migrated them now via existing repo methods (`countByThread`, `findEarliestSubjectInThread`). `services/jobs/thread-watch/processor.ts` still has `emailEvent` + `sequenceContact` calls (3.2/3.5 misses) — left for now since they're out of 3.8's scope; flag for sweep-up.
+17. **`WatchWithMailbox`** in `services/pubsub/handler.ts` now references `MailboxWithAliases` (from the repo interface) instead of `@prisma/client`'s `Mailbox` & `EmailAlias` types. Dropped the unused `Prisma` import.
+
+### Key decisions made during 3.9–3.10 (read before resuming)
+
+18. **`markTerminalBySequenceContact` returns `{count: number}`** — the pubsub bounce/reply handlers read `updateResult.count` for logging. Changed the return type from `void` and `return` the `updateMany` result.
+19. **`EmailWatchRecord` gained `createdAt` + `updatedAt`** — `services/watch/debug.ts`'s `testWatchRenewalProcess` reads `updatedWatch.updatedAt` to detect renewal. The fields exist on the schema; Phase 1's interface omitted them.
+20. **`pubsub/handler.ts` createNotificationRecord** now generates the `nanoid()` upfront (`recordId`) and returns `{ id: recordId }` instead of relying on the repo's `create` return (which is `void`). The original read `record.id` from the returned Prisma row; the repo no longer returns the row, so the id is captured pre-call. Behavior preserved.
+21. **`pubsub/handler.ts` markNotificationProcessed** dropped the dead `return result` (private fn, never called; repo `markProcessed` returns void).
+22. **`pubsub/handler.ts` sequenceContact.update by id** (~line 1258) → `updateBySequenceAndContact` (composite unique identifies the same row as the id). The `updateBySequenceAndContact` impl sets `completedAt: new Date()` when `completed === true`, so dropping the explicit `completedAt` from the call is behavior-preserving.
+23. **`thread-watch/processor.ts:687` sequenceContact.updateMany left as residual** — it's a status-only bulk update (sets `status: BOUNCED` without `completed`/`completedAt`/`nextScheduledAt`), which doesn't fit `markTerminalBySequenceContact` (that always sets the full terminal markers). Adding a separate method for one call site isn't worth it; sweep up in Phase 4/7.
+24. **`ListRepository` extended** with `findWithSequences(listId)` + `findContactsPage(listId, take, skip)` — the list-sync helper paginates contacts in `BATCH_SIZE` chunks. `contactCount(listId)` kept (processor sorts by it via `listSyncRecord.include.list._count`).
+25. **`ListSyncRecordRepository.updateStatus`/`updateStatusByListSequence`** `error` param widened to `string | null` — the helper's `updateSyncRecordStatus` defaults `error` to `null` (not `undefined`).
+26. **`ContactRecord` retyped** — added `userId`/`createdAt`/`updatedAt` (consumers pass the contact to functions expecting the full shape); `firstName`/`lastName`/`name` changed from `| null` to required `string` (schema has them as `String`, not `String?` — Phase 1 had them wrong).
+27. **Lint rule promotion deferred to Phase 4.** The plan's "final commit" step says flip `no-restricted-imports` to `error` once warning count hits zero. It's at 8, not zero — all residuals are `$transaction` tx clients, SMTP path, or `sequenceHealth` (monitor-only), none of which are Phase 3 scope. Promoting now would break the build. The rule flips to `error` after Phase 4 collapses the tx-client paths and Phase 4b deletes SMTP.
+28. **`pubsub/helper.ts` module-level repo singletons extended** to emailWatch/emailWatchHistory/processedMessage/sequenceContact/sequence — same stopgap pattern as `lib/tracking` and `lib/email-subject`. Phase 4 turns these standalone fns into proper services with constructor injection.
+
+### Per-step recipe (unchanged from the plan doc)
+
+For each remaining aggregate (3.7–3.10):
+1. `grep -rn "prisma\.<model>\." apps/mailops/src` → confirm matching repo method exists; add if missing.
+2. Inject the repo (private-field-with-default for classes; module-level singleton ONLY for `lib/tracking`'s standalone fns).
+3. Replace each call site, diff line-by-line.
+4. `npm test -w mailops` must stay 102/102 green.
+5. Commit: `phase 3.N: migrate <Aggregate> call sites to repository`.
+
+### Resume commands
+
+```bash
+cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
+git checkout refactor/mailops-phase-3-repos
+npm test -w mailops                                   # 102/102 passing
+npx tsc --noEmit -p apps/mailops/tsconfig.json        # clean
+# Next: Step 3.7 (Mailbox). See "Files still importing @coldjot/database" above.
+```
 
 ---
 

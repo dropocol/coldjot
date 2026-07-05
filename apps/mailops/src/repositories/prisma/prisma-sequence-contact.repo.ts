@@ -99,9 +99,9 @@ export class PrismaSequenceContactRepository
     sequenceId: string,
     contactId: string,
     data: { status: string; completed: boolean; completedAt: Date }
-  ): Promise<void> {
+  ): Promise<{ count: number }> {
     // pubsub/handler.ts:971,1136
-    await prisma.sequenceContact.updateMany({
+    return prisma.sequenceContact.updateMany({
       where: {
         sequenceId,
         contactId,

@@ -16,6 +16,11 @@ import {
   serverError,
   type ControllerResult,
 } from "./utils";
+import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
+import { PrismaBusinessHoursRepository } from "@/repositories/prisma/prisma-business-hours.repo";
+
+const sequenceRepo = new PrismaSequenceRepository();
+const businessHoursRepo = new PrismaBusinessHoursRepository();
 
 // Initialize services
 const serviceManager = ServiceManager.getInstance();
@@ -38,43 +43,18 @@ async function getSequenceBusinessHours(
   sequenceId: string,
   userId: string
 ): Promise<BusinessHours> {
-  const settings = await prisma.businessHours.findFirst({
-    where: {
-      userId,
-      sequenceId,
-    },
-  });
+  const settings = await businessHoursRepo.findBySequence(userId, sequenceId);
 
   if (!settings) {
     // create default business hours
-    const defaultSettings = await prisma.businessHours.create({
-      data: {
-        userId,
-        sequenceId,
-        timezone: DEFAULT_BUSINESS_HOURS.timezone,
-        workDays: DEFAULT_BUSINESS_HOURS.workDays,
-        workHoursStart: DEFAULT_BUSINESS_HOURS.workHoursStart,
-        workHoursEnd: DEFAULT_BUSINESS_HOURS.workHoursEnd,
-        type: DEFAULT_BUSINESS_HOURS.type,
-      },
-    });
-
-    return {
-      timezone: defaultSettings.timezone,
-      workDays: defaultSettings.workDays,
-      workHoursStart: defaultSettings.workHoursStart,
-      workHoursEnd: defaultSettings.workHoursEnd,
-      type: defaultSettings.type as BusinessScheduleEnum,
-    };
+    return businessHoursRepo.createForSequence(
+      userId,
+      sequenceId,
+      DEFAULT_BUSINESS_HOURS
+    );
   }
 
-  return {
-    timezone: settings.timezone,
-    workDays: settings.workDays,
-    workHoursStart: settings.workHoursStart,
-    workHoursEnd: settings.workHoursEnd,
-    type: settings.type as BusinessScheduleEnum,
-  };
+  return settings;
 }
 
 export async function launchSequence(
@@ -85,28 +65,10 @@ export async function launchSequence(
     const { userId } = body;
 
     // Get sequence and validate
-    const sequence = await prisma.sequence.findUnique({
-      where: {
-        id,
-        userId,
-      },
-      include: {
-        businessHours: true,
-        steps: {
-          orderBy: { order: "asc" },
-        },
-        contacts: {
-          where: {
-            status: {
-              notIn: ["completed", "opted_out"],
-            },
-          },
-          include: {
-            contact: true,
-          },
-        },
-      },
-    });
+    const sequence = await sequenceRepo.findForLaunch(id, userId, [
+      "completed",
+      "opted_out",
+    ]);
 
     if (!sequence) {
       return notFound("Sequence not found");
@@ -124,12 +86,7 @@ export async function launchSequence(
     const businessHours = await getSequenceBusinessHours(id, userId);
 
     // Update sequence status
-    await prisma.sequence.update({
-      where: { id },
-      data: {
-        status: "active",
-      },
-    });
+    await sequenceRepo.setStatus(id, "active");
 
     const type = ProcessingJobEnum.SEQUENCE;
     // Create and schedule the job
@@ -172,22 +129,14 @@ export async function pauseSequence(
     const { userId } = body;
 
     // Validate sequence ownership
-    const sequence = await prisma.sequence.findUnique({
-      where: {
-        id,
-        userId,
-      },
-    });
+    const sequence = await sequenceRepo.findByIdForUser(id, userId);
 
     if (!sequence) {
       return notFound("Sequence not found");
     }
 
     // Update sequence status
-    await prisma.sequence.update({
-      where: { id },
-      data: { status: "paused" },
-    });
+    await sequenceRepo.setStatus(id, "paused");
 
     // Stop monitoring
     await monitoringService.stopMonitoring(id);
@@ -207,22 +156,14 @@ export async function resumeSequence(
     const { userId } = body;
 
     // Validate sequence ownership
-    const sequence = await prisma.sequence.findUnique({
-      where: {
-        id,
-        userId,
-      },
-    });
+    const sequence = await sequenceRepo.findByIdForUser(id, userId);
 
     if (!sequence) {
       return notFound("Sequence not found");
     }
 
     // Update sequence status
-    await prisma.sequence.update({
-      where: { id },
-      data: { status: "active" },
-    });
+    await sequenceRepo.setStatus(id, "active");
 
     // Resume monitoring
     await monitoringService.startMonitoring(id);
@@ -242,12 +183,7 @@ export async function resetSequenceHandler(
     const { userId } = body;
 
     // Verify sequence ownership
-    const sequence = await prisma.sequence.findUnique({
-      where: {
-        id,
-        userId,
-      },
-    });
+    const sequence = await sequenceRepo.findByIdForUser(id, userId);
 
     if (!sequence) {
       return notFound("Sequence not found");
@@ -266,14 +202,7 @@ export async function resetSequenceHandler(
     logger.info(`Sequence data reset for ${id}`);
 
     // Update sequence status
-    await prisma.sequence.update({
-      where: { id },
-      data: {
-        status: "draft",
-        testMode: false,
-        disableSending: false,
-      },
-    });
+    await sequenceRepo.resetToDraft(id);
     logger.info(`Sequence status reset to draft`);
 
     return ok({

@@ -9,6 +9,8 @@ export interface EmailWatchRecord {
   email: string;
   historyId: string;
   expiration: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface EmailWatchRepository {

@@ -1,7 +1,6 @@
 import { Job, Queue } from "bullmq";
 import { BaseProcessor } from "../base-processor";
 import { logger } from "@/lib/log";
-import { prisma } from "@coldjot/database";
 import {
   SendEmailOptions,
   EmailResult,
@@ -29,16 +28,34 @@ import { replacePlaceholders, validatePlaceholders } from "@/lib/placeholders";
 import { getSequenceMailboxWithId } from "@/lib/mailbox";
 import { gmailClientService } from "@/lib/google";
 import { determineEmailSubject } from "@/lib/email-subject";
+import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
+import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
+import type { EmailEventRepository } from "@/repositories/email-event.repo";
+import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
+import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
+import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
+import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
+import { PrismaTemplateRepository } from "@/repositories/prisma/prisma-template.repo";
+import { PrismaContactRepository } from "@/repositories/prisma/prisma-contact.repo";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
   private serviceManager = ServiceManager.getInstance();
   private jobManager = this.serviceManager.getJobManager();
 
   private scheduleGenerator: ScheduleGenerator;
+  private readonly emailTracking: EmailTrackingRepository;
+  private readonly emailEvent: EmailEventRepository;
+  private readonly sequenceStep = new PrismaSequenceStepRepository();
+  private readonly sequence = new PrismaSequenceRepository();
+  private readonly emailThreadRepo = new PrismaEmailThreadRepository();
+  private readonly templateRepo = new PrismaTemplateRepository();
+  private readonly contactRepo = new PrismaContactRepository();
 
   constructor(queue: Queue) {
     super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL));
     this.scheduleGenerator = scheduleGenerator;
+    this.emailTracking = new PrismaEmailTrackingRepository();
+    this.emailEvent = new PrismaEmailEventRepository();
   }
 
   protected async process(job: Job<EmailJob>): Promise<void> {
@@ -68,10 +85,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     try {
       // Idempotency guard (plan 10): if a sent row already exists for this
       // BullMQ job, a retry is re-running an already-successful send — skip.
-      const alreadySent = await prisma.emailTracking.findFirst({
-        where: { jobId, status: EmailTrackingStatusEnum.SENT },
-        select: { id: true },
-      });
+      const alreadySent = await this.emailTracking.findSentByJobId(jobId);
       if (alreadySent) {
         logger.info({ jobId }, "📧 Email already sent for this job, skipping (idempotency)");
         return { success: true };
@@ -96,9 +110,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       const step = await this.getAndValidateSequenceStep(data.stepId);
 
       // get template info
-      const template = await prisma.template.findUnique({
-        where: { id: step.templateId || "" },
-      });
+      const template = await this.templateRepo.findById(step.templateId || "");
 
       if (template) {
         step.subject = template.subject;
@@ -112,9 +124,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       // Get contact info
       // TODO : Check if the contact is available
       logger.info(`🔍 Fetching contact info ${data.contactId}`);
-      const contact = await prisma.contact.findUnique({
-        where: { id: data.contactId },
-      });
+      const contact = await this.contactRepo.findById(data.contactId);
 
       if (!contact) {
         throw new Error(`Contact ${data.contactId} not found`);
@@ -240,16 +250,14 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
 
         // Save information in EmailThread
         if (step.order === 1) {
-          await prisma.emailThread.create({
-            data: {
-              threadId: emailResult.threadId!,
-              sequenceId: data.sequenceId,
-              contactId: data.contactId,
-              userId: data.userId,
-              firstMessageId: emailResult.messageId!,
-              subject: subjectInfo.originalSubject || "",
-              isFake: emailResult.isFake ?? false,
-            },
+          await this.emailThreadRepo.create({
+            threadId: emailResult.threadId!,
+            sequenceId: data.sequenceId,
+            contactId: data.contactId,
+            userId: data.userId,
+            firstMessageId: emailResult.messageId!,
+            subject: subjectInfo.originalSubject || "",
+            isFake: emailResult.isFake ?? false,
           });
         }
 
@@ -315,19 +323,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
   private async getAndValidateSequenceStep(
     stepId: string
   ): Promise<SequenceStep> {
-    const step = await prisma.sequenceStep.findUnique({
-      where: { id: stepId },
-      include: {
-        sequence: {
-          select: {
-            id: true,
-            userId: true,
-            status: true,
-            name: true,
-          },
-        },
-      },
-    });
+    const step = await this.sequenceStep.findWithSequenceMeta(stepId);
 
     if (!step) {
       logger.error(`❌ Step ${stepId} not found - it may have been deleted`);
@@ -338,7 +334,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     return {
       ...step,
       stepType: step.stepType as StepTypeEnum,
-    } as SequenceStep;
+    } as unknown as SequenceStep;
   }
 
   private async handleSuccessfulEmail(
@@ -347,16 +343,9 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     step: any
   ) {
     // Get the total steps of a sequence
-    const totalSteps = await prisma.sequenceStep.count({
-      where: { sequenceId: data.sequenceId },
-    });
+    const totalSteps = await this.sequenceStep.countInSequence(data.sequenceId);
 
-    const sequence = await prisma.sequence.findUnique({
-      where: { id: data.sequenceId },
-      include: {
-        businessHours: true,
-      },
-    });
+    const sequence = await this.sequence.findWithBusinessHours(data.sequenceId);
 
     if (!sequence) {
       throw new Error(`Sequence ${data.sequenceId} not found`);
@@ -374,10 +363,7 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       // calculate the next step
       const nextStepOrder = step.order + 1;
 
-      const steps = await prisma.sequenceStep.findMany({
-        where: { sequenceId: data.sequenceId },
-        orderBy: { order: "asc" },
-      });
+      const steps = await this.sequenceStep.listBySequence(data.sequenceId);
 
       logger.info(steps, "🚀 ~ EmailProcessor ~ steps:");
 
@@ -465,24 +451,18 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
     }
 
     // Check for existing bounce or reply events
-    const existingEvents = await prisma.emailEvent.findMany({
-      where: {
-        sequenceId: data.sequenceId,
-        contactId: data.contactId,
-        type: {
-          in: ["BOUNCED", "replied"],
-        },
-      },
-    });
+    const hasExisting = await this.emailEvent.existsBySequenceContactInTypes(
+      data.sequenceId,
+      data.contactId,
+      ["BOUNCED", "replied"] as any
+    );
 
-    if (existingEvents.length > 0) {
-      const eventTypes = existingEvents.map((event) => event.type).join(", ");
+    if (hasExisting) {
       logger.warn({
           threadId: data.threadId,
           sequenceId: data.sequenceId,
           contactId: data.contactId,
-          events: existingEvents,
-        }, `⚠️ Thread already has ${eventTypes} event(s). Skipping email send.`);
+        }, `⚠️ Thread already has BOUNCED/replied event(s). Skipping email send.`);
       return false;
     }
 

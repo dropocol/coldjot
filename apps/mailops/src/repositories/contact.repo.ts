@@ -5,10 +5,13 @@
 
 export interface ContactRecord {
   id: string;
+  userId: string;
   email: string;
-  firstName: string | null;
-  lastName: string | null;
-  name: string | null;
+  firstName: string;
+  lastName: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ContactRepository {

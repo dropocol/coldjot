@@ -2,6 +2,7 @@ import { Queue, Job } from "bullmq";
 import { BaseProcessor } from "../base-processor";
 import { logger } from "@/lib/log";
 import { prisma } from "@coldjot/database";
+import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
 import {
   ThreadCheckData,
   EmailEventEnum,
@@ -53,6 +54,9 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
   private readonly SCHEDULER_ID = "thread-monitoring-scheduler";
   private readonly rateLimiter: RateLimiter;
   private readonly concurrencyLimiter: pLimit.Limit;
+  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
+  // For now, default to the Prisma impl — overridable for tests.
+  private readonly emailThreadRepo = new PrismaEmailThreadRepository();
 
   constructor(queue: Queue) {
     super(
@@ -333,22 +337,7 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
       }
     }
 
-    return prisma.emailThread.findMany({
-      where,
-      take: batchSize,
-      orderBy: [
-        { updatedAt: "desc" },
-        { lastCheckedAt: "asc" },
-        { createdAt: "asc" },
-      ],
-      include: {
-        sequence: {
-          select: {
-            userId: true,
-          },
-        },
-      },
-    });
+    return this.emailThreadRepo.findManyForChecking(where, batchSize);
   }
 
   /**
@@ -496,17 +485,12 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
         // Update thread metadata to prevent reprocessing
         await this.updateThreadMetadata(thread, threadAge, false);
         // Mark the thread as completed to prevent further processing
-        await prisma.emailThread.update({
-          where: { threadId: thread.threadId },
-          data: {
-            metadata: {
-              ...thread.metadata,
-              status: "COMPLETED",
-              reason: "NO_MAILBOX_FOUND",
-              completedAt: new Date().toISOString(),
-            },
-          },
-        });
+        await this.emailThreadRepo.markCompleted(
+          thread.threadId,
+          thread.metadata,
+          "NO_MAILBOX_FOUND",
+          new Date()
+        );
         return;
       }
 
@@ -822,25 +806,24 @@ export class ThreadProcessor extends BaseProcessor<ThreadCheckJob> {
     threadAge: number,
     hasNewEvents: boolean
   ): Promise<void> {
+    const now = new Date();
     const nextCheckDelay = this.calculateNextCheckDelay();
     const nextCheckAt = new Date(Date.now() + nextCheckDelay);
 
-    await prisma.emailThread.update({
-      where: { threadId: thread.threadId },
-      data: {
-        lastCheckedAt: new Date(),
-        metadata: {
-          lastCheckedAt: new Date().toISOString(),
-          nextCheckAt: hasNewEvents ? null : nextCheckAt.toISOString(),
-          environment: CURRENT_ENV,
+    await this.emailThreadRepo.updateCheckMetadata(
+      thread.threadId,
+      now,
+      {
+        lastCheckedAt: now.toISOString(),
+        nextCheckAt: hasNewEvents ? null : nextCheckAt.toISOString(),
+        environment: CURRENT_ENV,
+        threadAge,
+        checkFrequency: {
+          env: CURRENT_ENV,
           threadAge,
-          checkFrequency: {
-            env: CURRENT_ENV,
-            threadAge,
-            nextCheckDelay,
-          },
+          nextCheckDelay,
         },
-      },
-    });
+      }
+    );
   }
 }

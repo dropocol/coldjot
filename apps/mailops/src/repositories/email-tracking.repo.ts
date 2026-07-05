@@ -27,6 +27,9 @@ export interface EmailTrackingRecord {
   contactId: string;
   stepId: string;
   openCount: number;
+  openedAt: Date | null;
+  clickedAt: Date | null;
+  jobId: string | null;
   metadata: EmailTrackingMetadata;
 }
 
@@ -62,7 +65,7 @@ export interface EmailTrackingWithOpenEvents extends EmailTrackingRecord {
 
 export interface EmailTrackingWithLink extends EmailTrackingRecord {
   /** The single matching link (empty when not found). */
-  links: { id: string }[];
+  links: { id: string; originalUrl: string }[];
 }
 
 export interface EmailTrackingRepository {
@@ -98,6 +101,8 @@ export interface EmailTrackingRepository {
     contactId: string,
     metadata: Record<string, unknown>
   ): Promise<void>;
+  /** Standalone recordEmailOpen path: increment openCount + set "opened" status only. */
+  incrementOpenStatus(hash: string, setOpenedAt: boolean): Promise<void>;
   /** Set CLICKED status, set clickedAt, write nested CLICKED event. */
   recordClick(
     trackingId: string,

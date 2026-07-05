@@ -1,11 +1,15 @@
-import { prisma } from "@coldjot/database";
 import { WATCH_CONFIG } from "../../config/watch/constants";
 import { WatchService } from "./index";
 import { logger } from "@/lib/log";
+import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
+import { PrismaEmailWatchHistoryRepository } from "@/repositories/prisma/prisma-email-watch-history.repo";
 
 export class WatchCleanupService {
   private watchService: WatchService;
   private cleanupInterval: NodeJS.Timeout | null;
+  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
+  private readonly emailWatchRepo = new PrismaEmailWatchRepository();
+  private readonly emailWatchHistoryRepo = new PrismaEmailWatchHistoryRepository();
 
   constructor() {
     this.watchService = new WatchService();
@@ -96,17 +100,11 @@ export class WatchCleanupService {
       );
 
       // Find watches that need renewal
-      const watchesToRenew = await prisma.emailWatch.findMany({
-        where: {
-          expiration: {
-            lte: renewalBuffer,
-          },
-        },
-      });
+      const watchesToRenew = await this.emailWatchRepo.findDueForRenewal(renewalBuffer);
 
       // Log all watches for debugging in dev mode
       if (WATCH_CONFIG.DEV.ENABLED) {
-        const allWatches = await prisma.emailWatch.findMany();
+        const allWatches = await this.emailWatchRepo.listAll();
         logger.info(
           {
             allWatchesCount: allWatches.length,
@@ -157,14 +155,7 @@ export class WatchCleanupService {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const deleteResult = await prisma.emailWatchHistory.deleteMany({
-        where: {
-          createdAt: {
-            lt: thirtyDaysAgo,
-          },
-          processed: true,
-        },
-      });
+      const deleteResult = await this.emailWatchHistoryRepo.purgeProcessedBefore(thirtyDaysAgo);
 
       logger.info(
         { deletedCount: deleteResult.count },

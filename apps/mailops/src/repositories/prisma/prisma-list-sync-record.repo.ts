@@ -37,7 +37,7 @@ export class PrismaListSyncRecordRepository implements ListSyncRecordRepository 
 
   async updateStatus(
     id: string,
-    data: { status: string; contactsAdded?: number; error?: string }
+    data: { status: string; contactsAdded?: number; error?: string | null }
   ): Promise<void> {
     // jobs/list/processor.ts:102,109,117
     await prisma.listSyncRecord.update({ where: { id }, data });
@@ -46,7 +46,7 @@ export class PrismaListSyncRecordRepository implements ListSyncRecordRepository 
   async updateStatusByListSequence(
     listId: string,
     sequenceId: string,
-    data: { status: string; contactsAdded?: number; error?: string }
+    data: { status: string; contactsAdded?: number; error?: string | null }
   ): Promise<void> {
     // jobs/list/helper.ts:143
     await prisma.listSyncRecord.updateMany({

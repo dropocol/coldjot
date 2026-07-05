@@ -10,6 +10,9 @@ import { logger } from "@/lib/log";
 import { ServiceManager } from "@/services/service-manager";
 import { DEFAULT_ALERT_CONFIG } from "@/config";
 import os from "os";
+import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
+
+const sequenceStatsRepo = new PrismaSequenceStatsRepository();
 import { Queue, QueueEvents } from "bullmq";
 
 export class MonitoringService {
@@ -61,11 +64,12 @@ export class MonitoringService {
   }
 
   private async initializeSequenceStats(sequenceId: string): Promise<void> {
-    const existingStats = await prisma.sequenceStats.findFirst({
-      where: { sequenceId },
-    });
+    const existingStats = await sequenceStatsRepo.getBySequence(sequenceId);
 
     if (!existingStats) {
+      // The monitor initializes a richer row (uniqueOpens, failedEmails, etc.)
+      // than createForSequence zeroes — keep the explicit create via prisma for
+      // field completeness. Phase 4 folds this into the repo properly.
       await prisma.sequenceStats.create({
         data: {
           sequenceId,
@@ -96,9 +100,7 @@ export class MonitoringService {
   ): Promise<SequenceHealth> {
     try {
       // Get sequence stats
-      const stats = await prisma.sequenceStats.findFirst({
-        where: { sequenceId },
-      });
+      const stats = await sequenceStatsRepo.getBySequence(sequenceId);
 
       if (!stats) {
         await this.initializeSequenceStats(sequenceId);

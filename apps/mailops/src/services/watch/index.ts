@@ -1,7 +1,8 @@
 import { logger } from "@/lib/log";
 import { OAuth2Client } from "google-auth-library";
 import { google } from "googleapis";
-import { prisma } from "@coldjot/database";
+import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
+import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
 import { nanoid } from "nanoid";
 import {
   GMAIL_API,
@@ -46,6 +47,10 @@ interface WatchSetupParams {
 export class WatchService {
   private pubSubClient: PubSub;
   private oauth2Client: OAuth2Client;
+  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
+  // For now, default to the Prisma impl — overridable for tests.
+  private readonly mailboxRepo = new PrismaMailboxRepository();
+  private readonly emailWatchRepo = new PrismaEmailWatchRepository();
 
   private TOPIC_NAME: string = `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/${process.env.PUBSUB_TOPIC_NAME}`;
 
@@ -175,18 +180,12 @@ export class WatchService {
       const historyId = currentHistoryId;
 
       // Check for existing watch
-      const existingWatch = await prisma.emailWatch.findUnique({
-        where: { email },
-      });
+      const existingWatch = await this.emailWatchRepo.findByEmail(email);
 
       if (existingWatch) {
-        await prisma.emailWatch.update({
-          where: { email },
-          data: {
-            historyId,
-            expiration,
-            updatedAt: new Date(),
-          },
+        await this.emailWatchRepo.updateByEmail(email, {
+          historyId,
+          expiration,
         });
         logger.info(
           { email, historyId, oldHistoryId: existingWatch.historyId },
@@ -196,14 +195,12 @@ export class WatchService {
       }
 
       // Create new watch record
-      await prisma.emailWatch.create({
-        data: {
-          id: nanoid(),
-          userId,
-          email,
-          historyId,
-          expiration,
-        },
+      await this.emailWatchRepo.create({
+        id: nanoid(),
+        userId,
+        email,
+        historyId,
+        expiration,
       });
 
       logger.info(
@@ -229,9 +226,7 @@ export class WatchService {
 
   async renewWatch(watchId: string): Promise<void> {
     try {
-      const watch = await prisma.emailWatch.findUnique({
-        where: { id: watchId },
-      });
+      const watch = await this.emailWatchRepo.findById(watchId);
 
       if (!watch) {
         throw new Error(`Watch not found: ${watchId}`);
@@ -252,13 +247,9 @@ export class WatchService {
       const expiration = new Date();
       expiration.setDate(expiration.getDate() + WATCH_CONFIG.MAX_WATCH_DAYS);
 
-      await prisma.emailWatch.update({
-        where: { id: watchId },
-        data: {
-          historyId: watchResponse.historyId,
-          expiration,
-          updatedAt: new Date(),
-        },
+      await this.emailWatchRepo.updateById(watchId, {
+        historyId: watchResponse.historyId,
+        expiration,
       });
 
       logger.info({ watchId }, "Successfully renewed watch");
@@ -270,9 +261,7 @@ export class WatchService {
 
   async stopWatch(email: string): Promise<void> {
     try {
-      const watch = await prisma.emailWatch.findUnique({
-        where: { email },
-      });
+      const watch = await this.emailWatchRepo.findByEmail(email);
 
       if (!watch) {
         logger.info({ email }, "No watch found to stop");
@@ -280,13 +269,7 @@ export class WatchService {
       }
 
       // Get the mailbox
-      const mailbox = await prisma.mailbox.findFirst({
-        where: {
-          email,
-          isActive: true,
-          provider: "gmail",
-        },
-      });
+      const mailbox = await this.mailboxRepo.findActiveGmailByEmail(email);
 
       if (!mailbox || !mailbox.access_token) {
         logger.error(
@@ -307,9 +290,7 @@ export class WatchService {
       await gmail.users.stop({ userId: "me" });
 
       if (watch) {
-        await prisma.emailWatch.delete({
-          where: { email },
-        });
+        await this.emailWatchRepo.deleteByEmail(email);
       }
 
       logger.info({ email }, "Successfully stopped watch");
@@ -347,13 +328,7 @@ export class WatchService {
   private async getAccessToken(email: string): Promise<string | null> {
     try {
       // Get the mailbox
-      const mailbox = await prisma.mailbox.findFirst({
-        where: {
-          email: email,
-          isActive: true,
-          provider: "gmail",
-        },
-      });
+      const mailbox = await this.mailboxRepo.findActiveGmailByEmail(email);
 
       if (!mailbox) {
         logger.error({ email }, "No active Google mailbox found");

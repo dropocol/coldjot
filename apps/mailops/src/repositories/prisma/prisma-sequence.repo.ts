@@ -47,6 +47,8 @@ export class PrismaSequenceRepository implements SequenceRepository {
       },
     });
     if (!row) return null;
+    // Keep both the nested sequenceMailbox (legacy consumers) and the
+    // flattened sequenceMailboxId (new consumers).
     return {
       ...row,
       sequenceMailboxId: (row as any).sequenceMailbox?.id,

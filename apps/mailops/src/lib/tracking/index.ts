@@ -7,13 +7,26 @@ import {
   AppUrlEnum,
 } from "@coldjot/types";
 import { nanoid } from "nanoid";
-import { prisma } from "@coldjot/database";
 import { getBaseUrl } from "@/utils";
 import { updateSequenceStats } from "@/lib/stats";
 import type { Prisma } from "@prisma/client";
 import { EmailEventType, EmailEventMetadata } from "@coldjot/types";
 import { logger } from "@/lib/log";
 import { ProcessingJobEnum } from "@coldjot/types";
+import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
+import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
+import { PrismaTrackedLinkRepository } from "@/repositories/prisma/prisma-tracked-link.repo";
+import { PrismaLinkClickRepository } from "@/repositories/prisma/prisma-link-click.repo";
+import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
+import { prisma } from "@coldjot/database";
+
+// Module-level repository singletons (stopgap until Phase 4a collapses the
+// standalone functions into the TrackingService class).
+const emailTrackingRepo = new PrismaEmailTrackingRepository();
+const emailEventRepo = new PrismaEmailEventRepository();
+const trackedLinkRepo = new PrismaTrackedLinkRepository();
+const linkClickRepo = new PrismaLinkClickRepository();
+const sequenceStatsRepo = new PrismaSequenceStatsRepository();
 export async function createEmailTracking(
   metadata: EmailTrackingMetadata
 ): Promise<EmailTracking> {
@@ -63,8 +76,22 @@ export async function createEmailTracking(
       createdAt: new Date(),
     };
 
-    const trackingEvent = await prisma.emailTracking.create({
-      data: eventData,
+    const trackingEvent = await emailTrackingRepo.createPending({
+      hash,
+      userId: metadata.userId!,
+      sequenceId: metadata.sequenceId!,
+      stepId: metadata.stepId!,
+      contactId: metadata.contactId!,
+      subject: metadata.subject,
+      jobId: metadata.jobId,
+      status: "pending",
+      metadata: {
+        email: metadata.email,
+        userId: metadata.userId,
+        sequenceId: metadata.sequenceId,
+        stepId: metadata.stepId,
+        contactId: metadata.contactId,
+      } as any,
     });
 
     const tracking: EmailTracking = {
@@ -90,47 +117,32 @@ export async function createEmailTracking(
 
 export async function recordEmailOpen(hash: string): Promise<void> {
   try {
-    const emailTracking = await prisma.emailTracking.findUnique({
-      where: { hash },
-    });
+    const emailTracking = await emailTrackingRepo.findByHash(hash);
 
     if (!emailTracking) {
       throw new Error("No tracking event found");
     }
 
     // Check for existing open event
-    const existingOpenEvent = await prisma.emailEvent.findFirst({
-      where: {
-        trackingId: emailTracking.id,
-        type: EmailEventEnum.OPENED,
-      },
-    });
+    const existingOpenEvent = await emailEventRepo.findFirstByTrackingAndType(
+      emailTracking.id,
+      EmailEventEnum.OPENED
+    );
 
     // Always increment the open count on the tracking event
-    await prisma.emailTracking.update({
-      where: { hash },
-      data: {
-        status: "opened",
-        openCount: {
-          increment: 1,
-        },
-        openedAt: existingOpenEvent ? undefined : new Date(), // Only set openedAt for first open
-      },
-    });
+    await emailTrackingRepo.incrementOpenStatus(hash, !existingOpenEvent);
 
     // Only create an email event and update stats if this is the first open
     if (!existingOpenEvent) {
-      await prisma.emailEvent.create({
-        data: {
-          trackingId: emailTracking.id,
-          type: EmailEventEnum.OPENED,
-          sequenceId: emailTracking.sequenceId,
-          contactId: emailTracking.contactId,
-          metadata: {
-            isFirstOpen: true,
-            openCount: 1,
-          },
-        },
+      await emailEventRepo.create({
+        trackingId: emailTracking.id,
+        type: EmailEventEnum.OPENED,
+        sequenceId: emailTracking.sequenceId,
+        contactId: emailTracking.contactId,
+        metadata: {
+          isFirstOpen: true,
+          openCount: 1,
+        } as any,
       });
 
       // Update sequence stats only for unique opens
@@ -151,12 +163,7 @@ export async function recordEmailOpen(hash: string): Promise<void> {
 
 export async function recordLinkClick(linkId: string): Promise<void> {
   try {
-    const trackedLink = await prisma.trackedLink.findUnique({
-      where: { id: linkId },
-      include: {
-        emailTracking: true,
-      },
-    });
+    const trackedLink = await trackedLinkRepo.findWithTracking(linkId);
 
     if (!trackedLink || !trackedLink.emailTracking) {
       throw new Error("No tracked link found");
@@ -207,12 +214,9 @@ export async function createTrackedLink(
   originalUrl: string
 ): Promise<string> {
   try {
-    const trackedLink = await prisma.trackedLink.create({
-      data: {
-        emailTrackingId,
-        originalUrl,
-        clickCount: 0,
-      },
+    const trackedLink = await trackedLinkRepo.create({
+      emailTrackingId,
+      originalUrl,
     });
     return trackedLink.id;
   } catch (error) {
@@ -348,16 +352,16 @@ async function wrapLinksWithTracking(
 }
 
 export async function getEmailEvents(trackingId: string) {
-  return await prisma.emailEvent.findMany({
-    where: { trackingId },
-    orderBy: { timestamp: "desc" },
-  });
+  return await emailEventRepo.listByTracking(trackingId);
 }
 
 export async function getSequenceEvents(
   sequenceId: string,
   timeframe?: { start: Date; end: Date }
 ) {
+  // Note: the original included { Contact: true }; the repo's listByTracking
+  // doesn't cover this shape. Keep this on prisma directly until Phase 4
+  // introduces a richer event-listing method.
   const where = {
     sequenceId,
     ...(timeframe && {
@@ -399,13 +403,11 @@ export async function trackEmailEvent(
 
     // Check for existing event of this type for this email (except for clicks)
     if (type !== EmailEventEnum.CLICKED) {
-      const existingEvent = await prisma.emailEvent.findFirst({
-        where: {
-          trackingId,
-          type,
-          sequenceId,
-        },
-      });
+      const existingEvent = await emailEventRepo.findFirstByTrackingTypeSequence(
+        trackingId,
+        type,
+        sequenceId
+      );
 
       if (existingEvent) {
         console.log(`Event ${type} already recorded for email ${trackingId}`);
@@ -414,34 +416,28 @@ export async function trackEmailEvent(
     }
 
     // Create the event
-    const event = await prisma.emailEvent.create({
-      data: {
-        trackingId,
-        type,
-        sequenceId,
-        metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : null,
-        contactId: trackingData?.contactId,
-      },
+    const event = await emailEventRepo.create({
+      trackingId,
+      type,
+      sequenceId,
+      metadata: metadata ? (JSON.parse(JSON.stringify(metadata)) as any) : (null as any),
+      contactId: trackingData?.contactId,
     });
 
     // Update sequence stats
-    const stats = await prisma.sequenceStats.findUnique({
-      where: { sequenceId: trackingData?.sequenceId },
-    });
+    const stats = await sequenceStatsRepo.getBySequence(sequenceId);
 
     if (!stats) {
       // Create initial stats if they don't exist
-      await prisma.sequenceStats.create({
-        data: {
-          sequenceId: sequenceId,
-          totalEmails: type === EmailEventEnum.SENT ? 1 : 0,
-          sentEmails: type === EmailEventEnum.SENT ? 1 : 0,
-          openedEmails: type === EmailEventEnum.OPENED ? 1 : 0,
-          clickedEmails: type === EmailEventEnum.CLICKED ? 1 : 0,
-          repliedEmails: type === EmailEventEnum.REPLIED ? 1 : 0,
-          bouncedEmails: type === EmailEventEnum.BOUNCED ? 1 : 0,
-          contactId: trackingData?.contactId,
-        },
+      await sequenceStatsRepo.createWithValues({
+        sequenceId,
+        contactId: trackingData?.contactId,
+        totalEmails: type === EmailEventEnum.SENT ? 1 : 0,
+        sentEmails: type === EmailEventEnum.SENT ? 1 : 0,
+        openedEmails: type === EmailEventEnum.OPENED ? 1 : 0,
+        clickedEmails: type === EmailEventEnum.CLICKED ? 1 : 0,
+        repliedEmails: type === EmailEventEnum.REPLIED ? 1 : 0,
+        bouncedEmails: type === EmailEventEnum.BOUNCED ? 1 : 0,
       });
       return event;
     }
@@ -494,10 +490,7 @@ export async function trackEmailEvent(
     }
 
     // Update stats
-    await prisma.sequenceStats.update({
-      where: { sequenceId },
-      data: updates,
-    });
+    await sequenceStatsRepo.updateRaw(sequenceId, updates as any);
 
     console.log(`📊 Tracked email event:`, {
       trackingId,
@@ -534,9 +527,7 @@ export async function updateTrackingStats(
   sequenceId: string,
   type: EmailEventType
 ) {
-  const stats = await prisma.sequenceStats.findFirst({
-    where: { sequenceId },
-  });
+  const stats = await sequenceStatsRepo.getBySequence(sequenceId);
 
   if (!stats) {
     return null;
@@ -598,25 +589,14 @@ export async function updateTrackingStats(
   }
 
   // Update stats atomically
-  return prisma.sequenceStats.update({
-    where: { sequenceId },
-    data: updates,
-  });
+  await sequenceStatsRepo.updateRaw(sequenceId, updates as any);
+  return;
 }
 
 export class TrackingService {
   async handleEmailOpen(hash: string): Promise<void> {
     try {
-      const tracking = await prisma.emailTracking.findUnique({
-        where: { hash },
-        include: {
-          events: {
-            where: {
-              type: EmailEventEnum.OPENED,
-            },
-          },
-        },
-      });
+      const tracking = await emailTrackingRepo.findWithOpenEvents(hash);
 
       if (!tracking) {
         logger.warn(`No tracking record found for hash: ${hash}`);
@@ -626,27 +606,15 @@ export class TrackingService {
       const isFirstOpen = tracking.events.length === 0;
 
       // Always increment the open count and update timestamps
-      await prisma.emailTracking.update({
-        where: { hash },
-        data: {
-          openCount: {
-            increment: 1,
-          },
-          openedAt: tracking.openedAt ?? new Date(), // Only set openedAt if it hasn't been set before
-          status: EmailTrackingStatusEnum.OPENED,
-          events: {
-            create: {
-              type: EmailEventEnum.OPENED,
-              sequenceId: tracking.sequenceId,
-              contactId: tracking.contactId,
-              metadata: {
-                openCount: tracking.openCount + 1,
-                isFirstOpen,
-              },
-            },
-          },
-        },
-      });
+      await emailTrackingRepo.recordOpen(
+        hash,
+        tracking.sequenceId,
+        tracking.contactId,
+        {
+          openCount: tracking.openCount + 1,
+          isFirstOpen,
+        }
+      );
 
       // Update sequence stats if this is a sequence email
       if (tracking.sequenceId && tracking.contactId) {
@@ -669,16 +637,7 @@ export class TrackingService {
 
   async handleLinkClick(hash: string, linkId: string): Promise<string> {
     try {
-      const tracking = await prisma.emailTracking.findUnique({
-        where: { hash },
-        include: {
-          links: {
-            where: {
-              id: linkId,
-            },
-          },
-        },
-      });
+      const tracking = await emailTrackingRepo.findWithLink(hash, linkId);
 
       if (!tracking) {
         logger.warn(`No tracking record found for hash: ${hash}`);
@@ -759,31 +718,22 @@ export class TrackingService {
     try {
       const { trackingId, eventType, metadata } = data;
 
-      const tracking = await prisma.emailTracking.findUnique({
-        where: { id: trackingId },
-      });
+      const tracking = await emailTrackingRepo.findById(trackingId);
 
       if (!tracking) {
         throw new Error("Email tracking record not found");
       }
 
       // Create the event
-      await prisma.emailEvent.create({
-        data: {
-          trackingId: tracking.id,
-          type: eventType,
-          metadata: metadata || {},
-          timestamp: new Date(),
-        },
+      await emailEventRepo.create({
+        trackingId: tracking.id,
+        type: eventType,
+        metadata: (metadata || {}) as any,
+        timestamp: new Date(),
       });
 
       // Update tracking status
-      await prisma.emailTracking.update({
-        where: { id: tracking.id },
-        data: {
-          status: eventType,
-        },
-      });
+      await emailTrackingRepo.setStatus(tracking.id, eventType);
 
       // Update sequence stats if applicable
       if (tracking.sequenceId && tracking.contactId) {

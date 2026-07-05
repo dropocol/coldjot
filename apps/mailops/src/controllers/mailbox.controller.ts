@@ -1,7 +1,7 @@
 import { WatchService } from "@/services/watch";
 import { logger } from "@/lib/log";
 import { watchSetupSchema as MailboxWatchSchema } from "@coldjot/types/watch";
-import { prisma } from "@coldjot/database";
+import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
 import {
   ok,
   badRequest,
@@ -11,6 +11,7 @@ import {
 } from "./utils";
 
 const watchService = new WatchService();
+const mailboxRepo = new PrismaMailboxRepository();
 
 /**
  * Setup watch for a mailbox
@@ -55,14 +56,7 @@ export async function setupWatch(body: unknown): Promise<ControllerResult> {
     const { userId, email } = result.data;
 
     // Get the mailbox to verify it exists and is active
-    const mailbox = await prisma.mailbox.findFirst({
-      where: {
-        userId,
-        email,
-        isActive: true,
-        provider: "gmail",
-      },
-    });
+    const mailbox = await mailboxRepo.findActiveGmail(userId, email);
 
     if (!mailbox) {
       logger.error({ userId, email }, "No active Gmail mailbox found for user");

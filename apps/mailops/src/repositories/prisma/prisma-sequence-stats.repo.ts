@@ -54,6 +54,36 @@ export class PrismaSequenceStatsRepository implements SequenceStatsRepository {
     await prisma.sequenceStats.update({ where: { sequenceId }, data });
   }
 
+  async updateRaw(sequenceId: string, data: Record<string, unknown>): Promise<void> {
+    // Legacy inline rate-math path — Phase 4 removes this.
+    await prisma.sequenceStats.update({ where: { sequenceId }, data: data as any });
+  }
+
+  async createWithValues(input: {
+    sequenceId: string;
+    contactId?: string;
+    totalEmails?: number;
+    sentEmails?: number;
+    openedEmails?: number;
+    clickedEmails?: number;
+    repliedEmails?: number;
+    bouncedEmails?: number;
+  }): Promise<SequenceStatsRecord> {
+    const row = await prisma.sequenceStats.create({
+      data: {
+        sequenceId: input.sequenceId,
+        contactId: input.contactId,
+        totalEmails: input.totalEmails ?? 0,
+        sentEmails: input.sentEmails ?? 0,
+        openedEmails: input.openedEmails ?? 0,
+        clickedEmails: input.clickedEmails ?? 0,
+        repliedEmails: input.repliedEmails ?? 0,
+        bouncedEmails: input.bouncedEmails ?? 0,
+      } as any,
+    });
+    return row as unknown as SequenceStatsRecord;
+  }
+
   async deleteBySequence(sequenceId: string): Promise<void> {
     // jobs/sequence/helper.ts:221
     await prisma.sequenceStats.deleteMany({ where: { sequenceId } });

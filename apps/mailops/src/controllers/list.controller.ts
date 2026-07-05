@@ -1,11 +1,13 @@
-import { prisma } from "@coldjot/database";
 import { logger } from "@/lib/log";
+import { PrismaListSyncRecordRepository } from "@/repositories/prisma/prisma-list-sync-record.repo";
 import {
   ok,
   badRequest,
   serverError,
   type ControllerResult,
 } from "./utils";
+
+const listSyncRecordRepo = new PrismaListSyncRecordRepository();
 
 /** Create a sync record for a list (picked up by the watcher). */
 export async function createSyncRecord(
@@ -24,14 +26,7 @@ export async function createSyncRecord(
     }
 
     // Create a sync record that will be picked up by the watcher
-    await prisma.listSyncRecord.create({
-      data: {
-        listId,
-        sequenceId,
-        status: "pending",
-        contactsAdded: 0,
-      },
-    });
+    await listSyncRecordRepo.create({ listId, sequenceId });
 
     logger.info({ listId, sequenceId }, "List sync record created");
 

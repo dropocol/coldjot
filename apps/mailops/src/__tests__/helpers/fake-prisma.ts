@@ -106,7 +106,13 @@ export function makeFakePrisma(): FakePrisma {
 
   function handleCreate(model: ModelName, args: any): Row {
     record(model, "create", args);
-    const data: Row = { id: args.data?.id ?? randomUUID(), ...args.data };
+    // Generated id wins only when the caller didn't provide one (a passed
+    // `id: undefined` would otherwise shadow the generated id after spread).
+    const data: Row = {
+      id: randomUUID(),
+      ...args.data,
+      ...(args.data?.id ? { id: args.data.id } : {}),
+    };
     // Resolve nested creates like { events: { create: {...} } } or
     // { events: { create: [{...},{...}] } } into related model writes.
     // Convention: nested relation name = related model name (Prisma's default).

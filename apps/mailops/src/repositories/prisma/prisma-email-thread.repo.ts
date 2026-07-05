@@ -1,7 +1,8 @@
 import { prisma } from "@coldjot/database";
 import type {
-  EmailThreadRepository,
   EmailThreadRecord,
+  EmailThreadRepository,
+  EmailThreadWithSequence,
 } from "../email-thread.repo";
 
 export class PrismaEmailThreadRepository implements EmailThreadRepository {
@@ -9,7 +10,7 @@ export class PrismaEmailThreadRepository implements EmailThreadRepository {
     threadId: string,
     withSequence = false
   ): Promise<EmailThreadRecord | null> {
-    // pubsub/handler.ts:878,1043,1315 + thread-watch/processor.ts
+    // pubsub/handler.ts (bounce/reply/contact resolution) + thread-watch
     const row = await prisma.emailThread.findUnique({
       where: { threadId },
       ...(withSequence ? { include: { sequence: true } } : {}),
@@ -46,7 +47,7 @@ export class PrismaEmailThreadRepository implements EmailThreadRepository {
     subject: string;
     isFake?: boolean;
   }): Promise<EmailThreadRecord> {
-    // jobs/email/processor.ts:243
+    // jobs/email/processor.ts:252
     const row = await prisma.emailThread.create({
       data: {
         threadId: input.threadId,
@@ -61,23 +62,59 @@ export class PrismaEmailThreadRepository implements EmailThreadRepository {
     return row as unknown as EmailThreadRecord;
   }
 
-  async updateMetadata(
-    threadId: string,
-    metadata: Record<string, unknown>
-  ): Promise<void> {
-    // thread-watch/processor.ts:828
-    await prisma.emailThread.update({
-      where: { threadId },
-      data: { metadata: metadata as any },
+  async findManyForChecking(
+    where: Record<string, unknown>,
+    take: number
+  ): Promise<EmailThreadWithSequence[]> {
+    // jobs/thread-watch/processor.ts:336 — where is built by the caller.
+    const rows = await prisma.emailThread.findMany({
+      where: where as any,
+      take,
+      orderBy: [
+        { updatedAt: "desc" },
+        { lastCheckedAt: "asc" },
+        { createdAt: "asc" },
+      ],
+      include: {
+        sequence: {
+          select: { userId: true },
+        },
+      },
     });
+    return rows as unknown as EmailThreadWithSequence[];
   }
 
-  async markCompleted(threadId: string, reason: string, at: Date): Promise<void> {
-    // thread-watch/processor.ts:499
+  async updateCheckMetadata(
+    threadId: string,
+    lastCheckedAt: Date,
+    metadata: Record<string, unknown>
+  ): Promise<void> {
+    // jobs/thread-watch/processor.ts:828 (updateThreadMetadata)
     await prisma.emailThread.update({
       where: { threadId },
       data: {
-        metadata: { status: "COMPLETED", reason, completedAt: at } as any,
+        lastCheckedAt,
+        metadata: metadata as any,
+      },
+    });
+  }
+
+  async markCompleted(
+    threadId: string,
+    existingMetadata: Record<string, unknown> | null,
+    reason: string,
+    at: Date
+  ): Promise<void> {
+    // jobs/thread-watch/processor.ts:499 — merges existing metadata.
+    await prisma.emailThread.update({
+      where: { threadId },
+      data: {
+        metadata: {
+          ...(existingMetadata ?? {}),
+          status: "COMPLETED",
+          reason,
+          completedAt: at.toISOString(),
+        } as any,
       },
     });
   }
