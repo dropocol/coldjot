@@ -77,6 +77,19 @@ All four architectural decisions are settled — don't re-litigate:
 
 > Future inbox features plug in via the `MailTransport` + `InboxSource` interfaces from Phase 1 — no need to keep dead SMTP/polling code around "just in case".
 
+### Local types stay co-located (no `types/` folder) — decided 2026-07-06
+
+A `apps/mailops/src/types/` folder was considered for "single source of coverage." **Decision: don't create one.** The ~100 type/interface defs across ~30 files fall into 6 categories, and the big groups are *deliberately* co-located with their aggregate/impl:
+
+- **Repository `*Record` + `*Repository` interfaces** (~40 types) — Phase 3's DDD aggregate pattern; the data shape lives with the operations on it.
+- **Adapter interfaces + their DTOs** (`MailTransport` + `SendMessageInput` + `SentMessageDetails`; `InboxSource` + `FetchHistoryInput`) — the DTOs are the interface's parameters.
+- **Domain service interfaces** (`TrackingService`, `SendEmailService`, etc.) — Phase 4 (decision 4b.5) *moved these into* the impl files specifically to stop fragmenting interface from impl. A `types/` folder re-fragments that.
+- **Controller `*Deps`** + **config-derived `typeof` types** — describe one factory's inputs / must live next to the constant.
+
+"Single source of coverage" is already satisfied — each type is defined exactly once. A `types/` folder creates a *second* place to look, not eliminates one. The cross-cutting types (`App` in `composition-root.ts`, `ControllerResult` in `controllers/utils.ts`) stay where they are. If discoverability is ever the real goal, `grep -rn "^export interface" apps/mailops/src` gives the catalog, or an optional `types/index.ts` *re-export barrel* (definitions stay put) is the cheap win — not relocation. Revisit only if a concrete pain point surfaces (circular imports between aggregates, a type shared by 3+ unrelated modules).
+
+
+
 ## Prisma stance
 
 **Prisma 7 is the only ORM. No Drizzle, no raw-SQL layer.** The repository *interfaces* introduced in Phase 1+ exist purely for testability (inject in-memory fakes) and separation of concerns (domain code doesn't import `@prisma/client`). One interface, one Prisma implementation, permanently.
