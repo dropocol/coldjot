@@ -40,6 +40,4 @@ export interface EmailWatchHistoryRepository {
   markProcessed(id: string): Promise<void>;
   /** Purge history older than the cutoff that's already processed. */
   purgeProcessedBefore(cutoff: Date): Promise<{ count: number }>;
-  /** Is there any prior processed message for a thread? */
-  hasOriginalForThread(threadId: string): Promise<boolean>;
 }
