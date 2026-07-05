@@ -10,7 +10,7 @@
 
 | Phase | Doc | Status | Sub-branch | Effort |
 |---|---|---|---|---|
-| 0 | [characterization tests](./phase-0-characterization-tests.md) | 🟡 **In progress** — 9/15 groups, 60 cases passing | `refactor/mailops-phase-0-tests` | 2–3 days |
+| 0 | [characterization tests](./phase-0-characterization-tests.md) | 🟡 **In progress** — 10/15 groups, 63 cases passing | `refactor/mailops-phase-0-tests` | 2–3 days |
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ⬜ Not started | `refactor/mailops-phase-1-seams` | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ⬜ Not started | `refactor/mailops-phase-2-controllers` | 1 day |
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ⬜ Not started | `refactor/mailops-phase-3-repos` | 3–4 days |
@@ -30,7 +30,7 @@ Sub-branches use the **hyphen** scheme `refactor/mailops-phase-N-<short>` (git r
 ```
 upgrade/remaining-majors
   └─ refactor/mailops                            ← base; plan docs live here
-       └─ refactor/mailops-phase-0-tests         ← CURRENT (9/15 groups done)
+       └─ refactor/mailops-phase-0-tests         ← CURRENT (10/15 groups done)
             └─ refactor/mailops-phase-1-seams
                  └─ refactor/mailops-phase-2-controllers
                       └─ refactor/mailops-phase-3-repos
@@ -96,6 +96,7 @@ All four architectural decisions are settled — don't re-litigate:
 | **A** | Email send (Gmail API) | `email-service.test.ts` | 6 | ✅ done |
 | **B** | Tracking (open/click/event + rate math) | `tracking-service.test.ts` | 9 | ✅ done |
 | **C** | PubSub inbox sync | `pubsub-handler.test.ts` | 8 | ✅ done |
+| **I** | Contact sync | `contact-processor.test.ts` | 3 | ✅ done |
 | **H** | List sync | `list-sync.test.ts` | 3 | ✅ done |
 | **D** | Schedule tick | `schedule-processor.test.ts` | 4 | ✅ done |
 | **N** | Rate limiter | `rate-limiter.test.ts` | 4 | ✅ done |
@@ -105,11 +106,10 @@ All four architectural decisions are settled — don't re-litigate:
 | E | Sequence lifecycle | `sequence-controller.test.ts` | ~8 | ⬜ not started |
 | F | Mailbox watch | `mailbox-routes.test.ts` | ~4 | ⬜ not started |
 | G | Tracking pixel + click HTTP | `tracking-routes.test.ts` | ~7 | ⬜ not started |
-| I | Contact sync | `contact-processor.test.ts` | ~2 | ⬜ not started |
 | J | Gmail OAuth client + token refresh | `gmail-client.test.ts` | ~4 | ⬜ not started |
 | O | Watch cleanup | `watch-cleanup.test.ts` | ~3 | ⬜ not started |
 
-**Totals:** 9/15 files · **60/~85 cases** · 60 passing · 0 failing · tsc clean · lint clean (warnings only)
+**Totals:** 10/15 files · **63/~85 cases** · 63 passing · 0 failing · tsc clean · lint clean (warnings only)
 
 ### What's pinned so far
 
