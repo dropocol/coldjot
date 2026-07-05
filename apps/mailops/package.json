@@ -18,6 +18,7 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
+        "test:integration": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://postgres:postgres@localhost:5432/coldjot_test} vitest run --config vitest.integration.config.ts",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {

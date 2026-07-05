@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [master, "refactor/**"]
+  pull_request:
+    branches: [master]
+
+jobs:
+  # Fast tier: lint + typecheck + unit/adapter/processor tests. No DB.
+  test:
+    name: Lint + typecheck + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm run typecheck
+      # Fast tests: unit + adapter + processor + characterization. No DB needed.
+      - run: npm run test
+
+  # Slow tier: repository + integration tests against a real Postgres.
+  # Runs only on PRs (per the Phase 7.8 plan).
+  test-integration:
+    name: Integration tests (Postgres)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: coldjot_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/coldjot_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+      # Apply migrations to the test DB, then run the integration tier.
+      - name: Run Prisma migrations against the test DB
+        run: npx prisma migrate deploy
+        working-directory: packages/database
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL_TEST }}
+      - run: npm run test:integration
