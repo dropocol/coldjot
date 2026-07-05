@@ -10,7 +10,7 @@
 
 | Phase | Doc | Status | Sub-branch | Effort |
 |---|---|---|---|---|
-| 0 | [characterization tests](./phase-0-characterization-tests.md) | 🟡 **In progress** — 3/15 groups, 23 cases passing | `refactor/mailops-phase-0-tests` | 2–3 days |
+| 0 | [characterization tests](./phase-0-characterization-tests.md) | 🟡 **In progress** — 4/15 groups, 33 cases passing | `refactor/mailops-phase-0-tests` | 2–3 days |
 | 1 | [seams + composition root](./phase-1-seams-composition-root.md) | ⬜ Not started | `refactor/mailops-phase-1-seams` | 2–3 days |
 | 2 | [routes → controllers](./phase-2-routes-to-controllers.md) | ⬜ Not started | `refactor/mailops-phase-2-controllers` | 1 day |
 | 3 | [repositories isolate Prisma](./phase-3-repositories.md) | ⬜ Not started | `refactor/mailops-phase-3-repos` | 3–4 days |
@@ -30,7 +30,7 @@ Sub-branches use the **hyphen** scheme `refactor/mailops-phase-N-<short>` (git r
 ```
 upgrade/remaining-majors
   └─ refactor/mailops                            ← base; plan docs live here
-       └─ refactor/mailops-phase-0-tests         ← CURRENT (3/15 groups done)
+       └─ refactor/mailops-phase-0-tests         ← CURRENT (4/15 groups done)
             └─ refactor/mailops-phase-1-seams
                  └─ refactor/mailops-phase-2-controllers
                       └─ refactor/mailops-phase-3-repos
@@ -96,6 +96,7 @@ All four architectural decisions are settled — don't re-litigate:
 | **A** | Email send (Gmail API) | `email-service.test.ts` | 6 | ✅ done |
 | **B** | Tracking (open/click/event + rate math) | `tracking-service.test.ts` | 9 | ✅ done |
 | **C** | PubSub inbox sync | `pubsub-handler.test.ts` | 8 | ✅ done |
+| **L** | Placeholders | `placeholders.test.ts` | 10 | ✅ done |
 | D | Schedule tick | `schedule-processor.test.ts` | ~5 | ⬜ not started |
 | E | Sequence lifecycle | `sequence-controller.test.ts` | ~8 | ⬜ not started |
 | F | Mailbox watch | `mailbox-routes.test.ts` | ~4 | ⬜ not started |
@@ -104,12 +105,11 @@ All four architectural decisions are settled — don't re-litigate:
 | I | Contact sync | `contact-processor.test.ts` | ~2 | ⬜ not started |
 | J | Gmail OAuth client + token refresh | `gmail-client.test.ts` | ~4 | ⬜ not started |
 | K | Schedule generator (DST/business hours) | `schedule-generator.test.ts` | ~5 | ⬜ not started |
-| L | Placeholders | `placeholders.test.ts` | ~4 | ⬜ not started |
 | M | Email subject resolution | `email-subject.test.ts` | ~5 | ⬜ not started |
 | N | Rate limiter | `rate-limiter.test.ts` | ~4 | ⬜ not started |
 | O | Watch cleanup | `watch-cleanup.test.ts` | ~3 | ⬜ not started |
 
-**Totals:** 3/15 files · **23/~85 cases** · 23 passing · 0 failing · tsc clean · lint clean (warnings only)
+**Totals:** 4/15 files · **33/~85 cases** · 33 passing · 0 failing · tsc clean · lint clean (warnings only)
 
 ### What's pinned so far
 
@@ -138,6 +138,16 @@ All four architectural decisions are settled — don't re-litigate:
 - Already-processed → skipped
 - Large history gap → HISTORY_GAP record, watch historyId updated
 - Missing EmailWatch / Mailbox / token → returns early
+
+**Group L — placeholders (10 cases) ✅**
+- `replacePlaceholders`: firstName / lastName / name / email from contact
+- Falls back to `fallbacks.*` when contact field is empty/missing
+- Composes `name` as `'firstName lastName'` (trimmed) when `contact.name` empty
+- Replaces remaining unknown placeholders via fallbacks (any key); leaves unknown placeholders in place when no value exists
+- Falsy content returned unchanged
+- `extractPlaceholders`: deduped + trimmed names; `[]` for falsy/empty content
+- `validatePlaceholders`: `[]` when every placeholder has a contact value or fallback; reports names lacking both
+- Divergence pinned: empty-string contact field treated as MISSING by `validatePlaceholders` (falsy check), even though `replacePlaceholders` would substitute `""`
 
 ### Harness built (reusable)
 
