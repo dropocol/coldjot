@@ -1,4 +1,3 @@
-import { prisma } from "@coldjot/database";
 import { nanoid } from "nanoid";
 import { PUBSUB_CONFIG } from "../../config/pubsub/constants";
 import {
@@ -28,6 +27,9 @@ import { GMAIL_API } from "@/config/gmail/constants";
 import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
 import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
+import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
+import { PrismaEmailWatchHistoryRepository } from "@/repositories/prisma/prisma-email-watch-history.repo";
+import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
 import type { MailboxWithAliases } from "@/repositories/mailbox.repo";
 import {
   sanitizeData,
@@ -66,6 +68,9 @@ export class PubSubHandler {
   private readonly emailEvent = new PrismaEmailEventRepository();
   private readonly mailboxRepo = new PrismaMailboxRepository();
   private readonly emailThreadRepo = new PrismaEmailThreadRepository();
+  private readonly emailWatchRepo = new PrismaEmailWatchRepository();
+  private readonly emailWatchHistoryRepo = new PrismaEmailWatchHistoryRepository();
+  private readonly sequenceContactRepo = new PrismaSequenceContactRepository();
 
   async handleNotification(message: PubSubMessage): Promise<void> {
     try {
@@ -145,9 +150,7 @@ export class PubSubHandler {
   ): Promise<WatchWithMailbox | null> {
     fileLogger.log("debug", "Getting watch record", { email });
 
-    const watch = await prisma.emailWatch.findFirst({
-      where: { email },
-    });
+    const watch = await this.emailWatchRepo.findByEmail(email);
 
     if (!watch) {
       fileLogger.log("debug", "No watch record found", { email });
@@ -175,7 +178,7 @@ export class PubSubHandler {
     );
 
     return {
-      ...watch,
+      ...(watch as EmailWatch),
       mailbox,
     };
   }
@@ -204,28 +207,27 @@ export class PubSubHandler {
       }
 
       logger.info({}, "Creating notification record");
-      const record = await prisma.emailWatchHistory.create({
+      const recordId = nanoid();
+      await this.emailWatchHistoryRepo.create({
+        id: recordId,
+        emailWatchId: watch.id,
+        historyId: notification.historyId.toString(),
+        notificationType: NotificationType.PROCESSING,
+        processed: false,
         data: {
-          id: nanoid(),
-          emailWatchId: watch.id,
-          historyId: notification.historyId.toString(),
-          notificationType: NotificationType.PROCESSING,
-          processed: false,
-          data: {
-            emailAddress: notification.emailAddress,
-            historyId: notification.historyId,
-            type: notification.type,
-          },
+          emailAddress: notification.emailAddress,
+          historyId: notification.historyId,
+          type: notification.type,
         },
       });
 
       fileLogger.log("info", "Created notification record", {
-        recordId: record.id,
+        recordId,
         watchId: watch.id,
         historyId: notification.historyId,
       });
 
-      return record;
+      return { id: recordId };
     } catch (error) {
       fileLogger.log("error", "Failed to create notification record", {
         error: error instanceof Error ? error.message : "Unknown error",
@@ -288,17 +290,12 @@ export class PubSubHandler {
         notificationId,
       });
 
-      const result = await prisma.emailWatchHistory.update({
-        where: { id: notificationId },
-        data: { processed: true },
-      });
+      await this.emailWatchHistoryRepo.markProcessed(notificationId);
 
       fileLogger.log("info", "Marked notification as processed", {
         notificationId,
         success: true,
       });
-
-      return result;
     } catch (error) {
       fileLogger.log("error", "Failed to mark notification as processed", {
         error: error instanceof Error ? error.message : "Unknown error",
@@ -409,12 +406,8 @@ export class PubSubHandler {
         }
       }
 
-      await prisma.emailWatch.update({
-        where: { id: watch.id },
-        data: {
-          historyId: response.historyId,
-          updatedAt: new Date(),
-        },
+      await this.emailWatchRepo.updateById(watch.id, {
+        historyId: response.historyId,
       });
 
       fileLogger.log("info", "Updated watch history ID", {
@@ -453,12 +446,8 @@ export class PubSubHandler {
         email: watch.email,
       });
 
-      await prisma.emailWatch.update({
-        where: { id: watch.id },
-        data: {
-          historyId: latestHistoryId,
-          updatedAt: new Date(),
-        },
+      await this.emailWatchRepo.updateById(watch.id, {
+        historyId: latestHistoryId,
       });
 
       fileLogger.log("info", "Updated watch history ID for large gap", {
@@ -469,18 +458,16 @@ export class PubSubHandler {
 
       const gapSize = Number(BigInt(latestHistoryId) - BigInt(watch.historyId));
 
-      await prisma.emailWatchHistory.create({
+      await this.emailWatchHistoryRepo.create({
+        id: nanoid(),
+        emailWatchId: watch.id,
+        historyId: latestHistoryId,
+        notificationType: "HISTORY_GAP",
+        processed: false,
         data: {
-          id: nanoid(),
-          emailWatchId: watch.id,
-          historyId: latestHistoryId,
-          notificationType: "HISTORY_GAP",
-          processed: false,
-          data: {
-            oldHistoryId: watch.historyId,
-            newHistoryId: latestHistoryId,
-            gapSize,
-          },
+          oldHistoryId: watch.historyId,
+          newHistoryId: latestHistoryId,
+          gapSize,
         },
       });
 
@@ -962,26 +949,15 @@ export class PubSubHandler {
         contactId: emailThread.contactId,
       });
 
-      const updateResult = await prisma.sequenceContact.updateMany({
-        where: {
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-          status: {
-            notIn: [
-              SequenceContactStatusEnum.COMPLETED,
-              SequenceContactStatusEnum.BOUNCED,
-              SequenceContactStatusEnum.OPTED_OUT,
-            ],
-          },
-        },
-        data: {
+      const updateResult = await this.sequenceContactRepo.markTerminalBySequenceContact(
+        emailThread.sequenceId,
+        emailThread.contactId,
+        {
           status: SequenceContactStatusEnum.BOUNCED,
           completed: true,
           completedAt: new Date(),
-          updatedAt: new Date(),
-          nextScheduledAt: null,
-        },
-      });
+        }
+      );
 
       fileLogger.log("info", "Updated sequence contact status", {
         threadId: change.threadId,
@@ -1119,26 +1095,15 @@ export class PubSubHandler {
         contactId: emailThread.contactId,
       });
 
-      const updateResult = await prisma.sequenceContact.updateMany({
-        where: {
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-          status: {
-            notIn: [
-              SequenceContactStatusEnum.COMPLETED,
-              SequenceContactStatusEnum.BOUNCED,
-              SequenceContactStatusEnum.OPTED_OUT,
-            ],
-          },
-        },
-        data: {
+      const updateResult = await this.sequenceContactRepo.markTerminalBySequenceContact(
+        emailThread.sequenceId,
+        emailThread.contactId,
+        {
           status: SequenceContactStatusEnum.REPLIED,
           completed: true,
           completedAt: new Date(),
-          updatedAt: new Date(),
-          nextScheduledAt: null,
-        },
-      });
+        }
+      );
 
       fileLogger.log("info", "Updated sequence contact status", {
         threadId: change.threadId,
@@ -1255,15 +1220,15 @@ export class PubSubHandler {
           threadId: change.threadId,
         });
 
-        await prisma.sequenceContact.update({
-          where: { id: sequenceContact.id },
-          data: {
+        await this.sequenceContactRepo.updateBySequenceAndContact(
+          sequenceContact.sequenceId,
+          sequenceContact.contactId,
+          {
             status: newStatus,
             completed: true,
-            completedAt: new Date(),
             nextScheduledAt: null,
-          },
-        });
+          }
+        );
 
         fileLogger.log("info", "Successfully updated sequence contact status", {
           sequenceContactId: sequenceContact.id,
@@ -1311,14 +1276,10 @@ export class PubSubHandler {
         contactId: emailThread.contactId,
       });
 
-      const sequenceContact = await prisma.sequenceContact.findUnique({
-        where: {
-          sequenceId_contactId: {
-            sequenceId: emailThread.sequenceId,
-            contactId: emailThread.contactId,
-          },
-        },
-      });
+      const sequenceContact = await this.sequenceContactRepo.findBySequenceAndContact(
+        emailThread.sequenceId,
+        emailThread.contactId
+      );
 
       if (sequenceContact) {
         fileLogger.log("debug", "Found sequence contact", {

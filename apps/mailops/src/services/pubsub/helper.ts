@@ -6,15 +6,23 @@ import {
 } from "@coldjot/types";
 import { SequenceContactStatusEnum } from "@coldjot/types";
 import { logger } from "@/lib/log";
-import { prisma } from "@coldjot/database";
 import { nanoid } from "nanoid";
 import { Prisma } from "@prisma/client";
 import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
+import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
+import { PrismaEmailWatchHistoryRepository } from "@/repositories/prisma/prisma-email-watch-history.repo";
+import { PrismaProcessedMessageRepository } from "@/repositories/prisma/prisma-processed-message.repo";
+import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
+import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
 
-// Module-level repo singleton for the standalone helper fns (matches the
-// lib/tracking stopgap pattern). Other Prisma calls in this file (emailWatch,
-// processedMessage, sequenceContact) still defer to 3.5/3.9.
+// Module-level repo singletons for the standalone helper fns (matches the
+// lib/tracking stopgap pattern).
 const emailThreadRepo = new PrismaEmailThreadRepository();
+const emailWatchRepo = new PrismaEmailWatchRepository();
+const emailWatchHistoryRepo = new PrismaEmailWatchHistoryRepository();
+const processedMessageRepo = new PrismaProcessedMessageRepository();
+const sequenceContactRepo = new PrismaSequenceContactRepository();
+const sequenceRepo = new PrismaSequenceRepository();
 import {
   isBounceMessage,
   isExternalSender,
@@ -155,9 +163,7 @@ export const isHistoryIdProcessed = async (
 ): Promise<boolean> => {
   try {
     // First get the watch record to check its initial historyId
-    const watch = await prisma.emailWatch.findUnique({
-      where: { id: watchId },
-    });
+    const watch = await emailWatchRepo.findById(watchId);
 
     if (!watch) {
       logger.warn({ watchId }, "Watch not found when checking history ID");
@@ -183,13 +189,10 @@ export const isHistoryIdProcessed = async (
     }
 
     // Then check if we've already processed this history ID
-    const processedHistory = await prisma.emailWatchHistory.findFirst({
-      where: {
-        emailWatchId: watchId,
-        historyId: notificationHistoryId.toString(),
-        processed: true,
-      },
-    });
+    const processedHistory = await emailWatchHistoryRepo.findProcessed(
+      watchId,
+      notificationHistoryId.toString()
+    );
 
     return !!processedHistory;
   } catch (error) {
@@ -214,9 +217,7 @@ export const isMessageProcessed = async (
 ): Promise<boolean> => {
   try {
     // First check if we have already processed this message using the dedicated table
-    const processedMessage = await prisma.processedMessage.findUnique({
-      where: { messageId },
-    });
+    const processedMessage = await processedMessageRepo.findByMessageId(messageId);
 
     if (processedMessage) {
       logger.debug(
@@ -234,17 +235,10 @@ export const isMessageProcessed = async (
     }
 
     // Get the sequence contact status with minimal fields
-    const sequenceContact = await prisma.sequenceContact.findUnique({
-      where: {
-        sequenceId_contactId: {
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-        },
-      },
-      select: {
-        status: true,
-      },
-    });
+    const sequenceContact = await sequenceContactRepo.findBySequenceAndContact(
+      emailThread.sequenceId,
+      emailThread.contactId
+    );
 
     if (!sequenceContact) {
       return false;
@@ -263,12 +257,10 @@ export const isMessageProcessed = async (
 
     // If the contact is in a final state, record this message as processed
     if (isProcessed) {
-      await prisma.processedMessage.create({
-        data: {
-          messageId,
-          threadId,
-          type: sequenceContact.status,
-        },
+      await processedMessageRepo.create({
+        messageId,
+        threadId,
+        type: sequenceContact.status,
       });
     }
 
@@ -294,23 +286,17 @@ export const canUpdateSequenceContact = async (
   contactId: string,
   newStatus: string
 ): Promise<boolean> => {
-  const sequenceContact = await prisma.sequenceContact.findUnique({
-    where: {
-      sequenceId_contactId: {
-        sequenceId,
-        contactId,
-      },
-    },
-  });
+  const sequenceContact = await sequenceContactRepo.findBySequenceAndContact(
+    sequenceId,
+    contactId
+  );
 
   if (!sequenceContact) {
     return false;
   }
 
   // Don't update if sequence is disabled
-  const sequence = await prisma.sequence.findUnique({
-    where: { id: sequenceId },
-  });
+  const sequence = await sequenceRepo.findWithDetails(sequenceId);
 
   if (!sequence || sequence.disableSending) {
     return false;
@@ -342,12 +328,10 @@ export const createProcessedMessageRecord = async (
   type: NotificationType
 ): Promise<void> => {
   try {
-    await prisma.processedMessage.create({
-      data: {
-        messageId,
-        threadId,
-        type: type.toString(),
-      },
+    await processedMessageRepo.create({
+      messageId,
+      threadId,
+      type: type.toString(),
     });
 
     logger.debug(
@@ -409,13 +393,9 @@ export const isOriginalMessage = async (
   threadId: string,
   messageId: string
 ): Promise<boolean> => {
-  const messages = await prisma.processedMessage.findMany({
-    where: { threadId },
-    orderBy: { createdAt: "asc" },
-    take: 1,
-  });
+  const hasOriginal = await processedMessageRepo.hasOriginalForThread(threadId);
 
-  return messages.length === 0;
+  return !hasOriginal;
 };
 
 /**
@@ -430,23 +410,13 @@ export const createOrUpdateWatchHistory = async (
 ): Promise<void> => {
   try {
     const id = nanoid();
-    await prisma.emailWatchHistory.upsert({
-      where: {
-        id,
-      },
-      create: {
-        id,
-        emailWatchId: watchId,
-        historyId: historyId.toString(),
-        notificationType: notificationType.toString(),
-        processed: isProcessed,
-        data,
-      },
-      update: {
-        notificationType: notificationType.toString(),
-        processed: isProcessed,
-        data,
-      },
+    await emailWatchHistoryRepo.upsert({
+      id,
+      emailWatchId: watchId,
+      historyId: historyId.toString(),
+      notificationType: notificationType.toString(),
+      processed: isProcessed,
+      data,
     });
 
     logger.debug(
@@ -470,17 +440,15 @@ export const createInitialWatchHistory = async (
   historyId: string,
   emailAddress: string
 ): Promise<any> => {
-  return prisma.emailWatchHistory.create({
+  return emailWatchHistoryRepo.create({
+    id: nanoid(),
+    emailWatchId: watchId,
+    historyId: historyId.toString(),
+    notificationType: NotificationType.PROCESSING,
+    processed: false,
     data: {
-      id: nanoid(),
-      emailWatchId: watchId,
-      historyId: historyId.toString(),
-      notificationType: NotificationType.PROCESSING,
-      processed: false,
-      data: {
-        historyId,
-        emailAddress,
-      },
+      historyId,
+      emailAddress,
     },
   });
 };

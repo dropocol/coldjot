@@ -122,7 +122,8 @@ export interface SequenceContactRepository {
   ): Promise<void>;
   /**
    * Mark contacts (matching sequenceId+contactId, not in final statuses) with
-   * a terminal status. Used by pubsub bounce/reply.
+   * a terminal status. Used by pubsub bounce/reply. Returns the count of rows
+   * updated (logged by the caller).
    */
   markTerminalBySequenceContact(
     sequenceId: string,
@@ -132,7 +133,7 @@ export interface SequenceContactRepository {
       completed: boolean;
       completedAt: Date;
     }
-  ): Promise<void>;
+  ): Promise<{ count: number }>;
   /** Bulk-add contacts (list sync, skipDuplicates). */
   addContactsToSequence(
     sequenceId: string,

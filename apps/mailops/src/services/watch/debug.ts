@@ -1,8 +1,8 @@
-import { prisma } from "@coldjot/database";
 import { WATCH_CONFIG } from "../../config/watch/constants";
 import { WatchService } from "./index";
 import { WatchCleanupService } from "./cleanup";
 import { logger } from "@/lib/log";
+import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
 
 /**
  * Debug utilities for testing and troubleshooting Gmail watch functionality
@@ -11,6 +11,8 @@ import { logger } from "@/lib/log";
 export class WatchDebugService {
   private watchService: WatchService;
   private cleanupService: WatchCleanupService;
+  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
+  private readonly emailWatchRepo = new PrismaEmailWatchRepository();
 
   constructor() {
     this.watchService = new WatchService();
@@ -27,9 +29,7 @@ export class WatchDebugService {
 
     try {
       // Get the watch to ensure it exists
-      const watch = await prisma.emailWatch.findUnique({
-        where: { id: watchId },
-      });
+      const watch = await this.emailWatchRepo.findById(watchId);
 
       if (!watch) {
         logger.error({ watchId }, "Watch not found for forced renewal");
@@ -55,9 +55,7 @@ export class WatchDebugService {
 
     try {
       // Get the watch to ensure it exists
-      const watch = await prisma.emailWatch.findFirst({
-        where: { email },
-      });
+      const watch = await this.emailWatchRepo.findByEmail(email);
 
       if (!watch) {
         logger.error({ email }, "Watch not found for forced renewal");
@@ -97,9 +95,7 @@ export class WatchDebugService {
 
     try {
       // Get the watch to ensure it exists
-      const watch = await prisma.emailWatch.findUnique({
-        where: { id: watchId },
-      });
+      const watch = await this.emailWatchRepo.findById(watchId);
 
       if (!watch) {
         logger.error({ watchId }, "Watch not found for expiration update");
@@ -113,10 +109,7 @@ export class WatchDebugService {
       );
 
       // Update the watch expiration time
-      await prisma.emailWatch.update({
-        where: { id: watchId },
-        data: { expiration: newExpiration },
-      });
+      await this.emailWatchRepo.updateById(watchId, { expiration: newExpiration });
 
       logger.info(
         {
@@ -157,9 +150,7 @@ export class WatchDebugService {
 
     try {
       // Get the watch to ensure it exists
-      const watch = await prisma.emailWatch.findFirst({
-        where: { email },
-      });
+      const watch = await this.emailWatchRepo.findByEmail(email);
 
       if (!watch) {
         logger.error({ email }, "Watch not found for expiration update");
@@ -221,9 +212,7 @@ export class WatchDebugService {
       );
 
       // 1. Get the original watch
-      const originalWatch = await prisma.emailWatch.findFirst({
-        where: { email },
-      });
+      const originalWatch = await this.emailWatchRepo.findByEmail(email);
 
       if (!originalWatch) {
         return {
@@ -246,18 +235,14 @@ export class WatchDebugService {
       await this.setWatchNearExpirationByEmail(email, minutesUntilExpiration);
 
       // 3. Get the watch after setting expiration
-      const watchAfterExpiration = await prisma.emailWatch.findFirst({
-        where: { email },
-      });
+      const watchAfterExpiration = await this.emailWatchRepo.findByEmail(email);
 
       // 4. Run a cleanup cycle
       logger.info({ email }, "Running cleanup cycle to test renewal");
       await this.cleanupService.cleanup();
 
       // 5. Get the watch after cleanup
-      const updatedWatch = await prisma.emailWatch.findFirst({
-        where: { email },
-      });
+      const updatedWatch = await this.emailWatchRepo.findByEmail(email);
 
       if (!updatedWatch) {
         return {
