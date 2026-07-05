@@ -11,7 +11,6 @@ import {
 } from "@coldjot/types";
 import { logger } from "@/lib/log";
 import { backOff } from "exponential-backoff";
-import { SequenceContactStatusEnum, EmailEventEnum } from "@coldjot/types";
 import { EmailWatch } from "@prisma/client";
 import { fileLogger } from "@/lib/log/file-logger";
 import {
@@ -21,8 +20,8 @@ import {
   isExternalSender,
   isReplyMessage,
 } from "@/utils/email";
-import { updateSequenceStats } from "@/lib/stats";
 import { GmailInboxSource } from "@/adapters/gmail-inbox-source";
+import { applyClassification } from "@/services/inbox-sync/apply-classification";
 import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
 import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
@@ -729,131 +728,15 @@ export class PubSubHandler {
   // -----------------------------------------
 
   private async processBounce(change: HistoryChange): Promise<void> {
+    // Phase 4c.4: body moved to applyClassification (deduped with processReply).
     try {
-      fileLogger.log(
-        "debug",
-        "Starting bounce processing",
-        sanitizeData({
-          changeId: change.id,
-          threadId: change.threadId,
-          messageId: change.messageId,
-        })
-      );
-
-      const emailThread = await this.emailThreadRepo.findByThread(
-        change.threadId,
-        true
-      );
-
-      if (!emailThread) {
-        fileLogger.log(
-          "warn",
-          "No email thread found for bounce",
-          sanitizeData({
-            threadId: change.threadId,
-            messageId: change.messageId,
-          })
-        );
-        return;
-      }
-
-      fileLogger.log(
-        "debug",
-        "Found email thread for bounce",
-        sanitizeData({
-          threadId: change.threadId,
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-        })
-      );
-
-      const existingBounce = await this.emailEvent.findFirstBySequenceContactType(
-        emailThread.sequenceId,
-        emailThread.contactId,
-        EmailEventEnum.BOUNCED
-      );
-
-      if (existingBounce) {
-        fileLogger.log(
-          "debug",
-          "Bounce already recorded",
-          sanitizeData({
-            threadId: change.threadId,
-            sequenceId: emailThread.sequenceId,
-            contactId: emailThread.contactId,
-            existingBounceId: existingBounce.id,
-          })
-        );
-        return;
-      }
-
-      const sentEvent = await this.emailEvent.findFirstBySequenceContactType(
-        emailThread.sequenceId,
-        emailThread.contactId,
-        EmailEventEnum.SENT
-      );
-
-      if (!sentEvent) {
-        fileLogger.log("warn", "No sent event found for bounce", {
-          threadId: change.threadId,
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-        });
-        return;
-      }
-
-      fileLogger.log("debug", "Found sent event for bounce", {
-        sentEventId: sentEvent.id,
-        trackingId: sentEvent.trackingId,
-      });
-
-      const bounceEvent = await this.emailEvent.create({
-        trackingId: sentEvent.trackingId,
-        type: EmailEventEnum.BOUNCED,
-        sequenceId: emailThread.sequenceId,
-        contactId: emailThread.contactId,
-        metadata: {
-          messageId: change.messageId,
-          threadId: change.threadId,
-          bounceReason: "Email delivery failed",
-        } as any,
-      });
-
-      fileLogger.log("info", "Created bounce event", {
-        bounceEventId: bounceEvent.id,
-        sequenceId: emailThread.sequenceId,
-        contactId: emailThread.contactId,
-      });
-
-      const updateResult = await this.sequenceContactRepo.markTerminalBySequenceContact(
-        emailThread.sequenceId,
-        emailThread.contactId,
-        {
-          status: SequenceContactStatusEnum.BOUNCED,
-          completed: true,
-          completedAt: new Date(),
-        }
-      );
-
-      fileLogger.log("info", "Updated sequence contact status", {
-        threadId: change.threadId,
-        sequenceId: emailThread.sequenceId,
-        contactId: emailThread.contactId,
-        updatedCount: updateResult.count,
-      });
-
-      await updateSequenceStats(
-        emailThread.sequenceId,
-        EmailEventEnum.BOUNCED,
-        emailThread.contactId
-      );
-
-      fileLogger.log("info", "Successfully processed bounce", {
-        threadId: change.threadId,
-        sequenceId: emailThread.sequenceId,
-        contactId: emailThread.contactId,
-        bounceEventId: bounceEvent.id,
-        statusUpdated: updateResult.count > 0,
+      await applyClassification({
+        change,
+        deps: {
+          emailEvent: this.emailEvent,
+          sequenceContact: this.sequenceContactRepo,
+          emailThread: this.emailThreadRepo,
+        },
       });
     } catch (error) {
       fileLogger.log(
@@ -875,131 +758,15 @@ export class PubSubHandler {
   // -----------------------------------------
 
   private async processReply(change: HistoryChange): Promise<void> {
+    // Phase 4c.4: body moved to applyClassification (deduped with processBounce).
     try {
-      fileLogger.log(
-        "debug",
-        "Starting reply processing",
-        sanitizeData({
-          changeId: change.id,
-          threadId: change.threadId,
-          messageId: change.messageId,
-        })
-      );
-
-      const emailThread = await this.emailThreadRepo.findByThread(
-        change.threadId,
-        true
-      );
-
-      if (!emailThread) {
-        fileLogger.log(
-          "warn",
-          "No email thread found for reply",
-          sanitizeData({
-            threadId: change.threadId,
-            messageId: change.messageId,
-          })
-        );
-        return;
-      }
-
-      fileLogger.log(
-        "debug",
-        "Found email thread for reply",
-        sanitizeData({
-          threadId: change.threadId,
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-        })
-      );
-
-      const existingReply = await this.emailEvent.findFirstBySequenceContactType(
-        emailThread.sequenceId,
-        emailThread.contactId,
-        EmailEventEnum.REPLIED
-      );
-
-      if (existingReply) {
-        fileLogger.log(
-          "debug",
-          "Reply already recorded",
-          sanitizeData({
-            threadId: change.threadId,
-            sequenceId: emailThread.sequenceId,
-            contactId: emailThread.contactId,
-            existingReplyId: existingReply.id,
-          })
-        );
-        return;
-      }
-
-      const sentEvent = await this.emailEvent.findFirstBySequenceContactType(
-        emailThread.sequenceId,
-        emailThread.contactId,
-        EmailEventEnum.SENT
-      );
-
-      if (!sentEvent) {
-        fileLogger.log("warn", "No sent event found for reply", {
-          threadId: change.threadId,
-          sequenceId: emailThread.sequenceId,
-          contactId: emailThread.contactId,
-        });
-        return;
-      }
-
-      fileLogger.log("debug", "Found sent event for reply", {
-        sentEventId: sentEvent.id,
-        trackingId: sentEvent.trackingId,
-      });
-
-      const replyEvent = await this.emailEvent.create({
-        trackingId: sentEvent.trackingId,
-        type: EmailEventEnum.REPLIED,
-        sequenceId: emailThread.sequenceId,
-        contactId: emailThread.contactId,
-        metadata: {
-          messageId: change.messageId,
-          threadId: change.threadId,
-          from: change.from,
-        } as any,
-      });
-
-      fileLogger.log("info", "Created reply event", {
-        replyEventId: replyEvent.id,
-        sequenceId: emailThread.sequenceId,
-        contactId: emailThread.contactId,
-      });
-
-      const updateResult = await this.sequenceContactRepo.markTerminalBySequenceContact(
-        emailThread.sequenceId,
-        emailThread.contactId,
-        {
-          status: SequenceContactStatusEnum.REPLIED,
-          completed: true,
-          completedAt: new Date(),
-        }
-      );
-
-      fileLogger.log("info", "Updated sequence contact status", {
-        threadId: change.threadId,
-        sequenceId: emailThread.sequenceId,
-        contactId: emailThread.contactId,
-        updatedCount: updateResult.count,
-      });
-
-      await updateSequenceStats(
-        emailThread.sequenceId,
-        EmailEventEnum.REPLIED,
-        emailThread.contactId
-      );
-
-      fileLogger.log("info", "Successfully processed reply", {
-        threadId: change.threadId,
-        sequenceId: emailThread.sequenceId,
-        contactId: emailThread.contactId,
-        replyEventId: replyEvent.id,
-        statusUpdated: updateResult.count > 0,
+      await applyClassification({
+        change,
+        deps: {
+          emailEvent: this.emailEvent,
+          sequenceContact: this.sequenceContactRepo,
+          emailThread: this.emailThreadRepo,
+        },
       });
     } catch (error) {
       fileLogger.log(
