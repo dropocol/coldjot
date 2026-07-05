@@ -278,11 +278,11 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 
 ## Phase 4 progress — split three god-objects
 
-**Goal:** break `lib/tracking/index.ts`, `lib/email/index.ts`, `services/pubsub/handler.ts` into layered, single-responsibility pieces. See [phase-4-split-god-objects.md](./phase-4-split-god-objects.md). Do 4a → 4b → 4c in order.
+**Goal:** break `lib/tracking/index.ts`, `lib/email/index.ts`, `services/pubsub/handler.ts` into layered, single-responsibility pieces. See [phase-4-split-god-objects.md](./phase-4-split-god-objects.md). Do 4a → 4b → 4c in order. **4a + 4b are merged**; only **4c (pubsub)** remains.
 
-**Sub-branch:** `refactor/mailops-phase-4-split` (off `refactor/mailops`, **4a merged `--no-ff` at `44e55df`**).
+**Sub-branches:** `refactor/mailops-phase-4-split` (4a, merged `--no-ff` at `44e55df`) and `refactor/mailops-phase-4b-email` (4b, merged `--no-ff` at `40fe9d2`) into `refactor/mailops`. **Current HEAD of `refactor/mailops`: `7b87b2d`.**
 
-**Run:** `npm test -w mailops` → 16 files / 98 tests. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → clean. `npm run lint -w mailops` → 0 errors (304 warnings; 8 are `@coldjot/database` — same count as end of Phase 3, but the tracking residual moved from `lib/tracking/index.ts` to `services/domain/tracking.service.ts` where the `$transaction` tx-client belongs).
+**Baseline (verified post-4b merge):** `npm test -w mailops` → 16 files / **98 tests passing**. `npx tsc --noEmit -p apps/mailops/tsconfig.json` → **clean**. `npm run lint -w mailops` → **0 errors, 271 warnings** (7 are `@coldjot/database` residuals — see "Lint stance" below).
 
 ### Step tracker
 
@@ -295,7 +295,7 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 | 4a.5 | Migrate `createEmailTracking` → `TrackingServiceImpl.createTracking`; update EmailProcessor + cases 5a/5b | ✅ done | `2c898dc` |
 | 4b.1 | Extract GmailTransport (`adapters/gmail-transport.ts`); move getSentDetails body | ✅ done | `85fb7ad` |
 | 4b.2+4b.3 | Extract `SendEmailServiceImpl`; migrate EmailProcessor + composition-root | ✅ done | `e5532d7` |
-| 4b.4 | Delete EmailService + `lib/google/smtp/*` + nodemailer; clean lib/tracking barrel | ✅ done | (this branch) |
+| 4b.4 | Delete EmailService + `lib/google/smtp/*` + nodemailer; clean lib/tracking barrel | ✅ done | `8cb9f92` |
 | 4c.1–4c.7 | Split `services/pubsub/handler.ts` → GmailInboxSource + InboxSync pipeline | ⬜ Not started | — |
 
 ### What 4a produced
@@ -304,7 +304,7 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 - `pixel.ts` (17 lines) — pure `generateTrackingPixel`.
 - `link-wrap.ts` (112 lines) — pure `wrapLinksWithTracking` + `addTrackingToEmail` (with `createLink` injected as a callback).
 - `stats.ts` (38 lines) — pure `calculateRates` (single source of truth for rate math).
-- `index.ts` (95 lines) — barrel: re-exports the `TrackingServiceImpl`/`trackingService` from `services/domain/` + the pure helpers; keeps `createTrackedLink` + a no-callback `addTrackingToEmail` shim (their caller `lib/email` migrates in 4b, then the shim + its `console.error`s are deleted).
+- `index.ts` (24 lines) — clean barrel re-exporting the `TrackingServiceImpl`/`trackingService` from `services/domain/` + the pure helpers. (At end of 4a this still held a `createTrackedLink` + no-callback `addTrackingToEmail` shim; 4b deleted both once the live caller moved to the pure version.)
 
 **`services/domain/tracking.service.ts` (284 lines)** — interface + `TrackingServiceImpl` (the canonical open/click/event + `createTracking` path). Constructor-injected repos with Prisma defaults (the Phase 3 private-field-with-default pattern). The `$transaction` block in `handleLinkClick` stays on the tx client (collapses later — flagged residual).
 
@@ -317,7 +317,7 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 3. **`addTrackingToEmail` has TWO surfaces now:** the pure `addTrackingToEmail` in `link-wrap.ts` (takes a `createLink` callback) and a no-callback backwards-compat wrapper in `index.ts` (binds the module-level `trackedLinkRepo`). The wrapper is deleted in 4b when the email service (its only caller) is split.
 4. **`createTracking` body is the cleaned-up `createEmailTracking`** — dropped the dead `eventData` local (the repo call reconstructed it anyway) and the `console.error`. Behavior identical: same `createPending` payload, same returned `EmailTracking` shape. Cases 5a/5b pass against the new method unchanged.
 5. **`lib/tracking/helper.ts` is dead** (`generateTrackingMetadata` has zero callers). Left in place — Phase 5 sweeps dead code. Its `console.log` is the only `console.*` in the tracking directory outside the two shim `console.error`s in `index.ts`.
-6. **Lint count unchanged at 8** `@coldjot/database` warnings. Composition changed: `lib/tracking/index.ts` dropped out; `services/domain/tracking.service.ts` joined (the `$transaction` tx-client for `handleLinkClick`). Promoting `no-restricted-imports` to `error` still waits for the tx-client paths to collapse (now planned as a later Phase 4/7 sweep) + SMTP deletion in 4b.
+6. **Lint at end of 4a:** 8 `@coldjot/database` warnings (unchanged from Phase 3, but `lib/tracking/index.ts` dropped out and `services/domain/tracking.service.ts` joined — the `$transaction` tx-client for `handleLinkClick`). 4b dropped the count to 7 by deleting the SMTP path; see the 4b section below.
 
 ### What 4b produced
 
@@ -338,32 +338,80 @@ git checkout -b refactor/mailops-phase-4-split        # branch off refactor/mail
 5. **`SendEmailService` interface moved** from its own 9-line file into `send-email.service.ts` (interface + impl together, matching how 4a organized tracking.service.ts).
 6. **`lib/tracking/helper.ts` still dead** (`generateTrackingMetadata`, zero callers). Phase 5 sweeps it.
 
-### Resume commands
+### Resume guide — Phase 4c (pubsub) is the ONLY remaining step in Phase 4
 
-4b is **done** on `refactor/mailops-phase-4b-email`. To continue with 4c:
+**Where we are:** 4a + 4b merged into `refactor/mailops` (HEAD `7b87b2d`). The only Phase 4 work left is **4c** — splitting `services/pubsub/handler.ts` (1,308 lines) + `services/pubsub/helper.ts` (454 lines) into a pipeline. After 4c, Phase 4 is done and the lint rule can be promoted.
+
+**Target structure (per [phase-4-split-god-objects.md §4c](./phase-4-split-god-objects.md)):**
+```
+adapters/gmail-inbox-source.ts        GmailInboxSource implements InboxSource (already defined in adapters/inbox-source.ts)
+services/inbox-sync/classify.ts       pure predicates (reply / bounce / original / external)
+services/inbox-sync/states.ts         SequenceContact status transitions per classification
+services/inbox-sync/apply-classification.ts   writes EmailEvent + updates SequenceContact + stats
+services/domain/inbox-sync.service.ts InboxSyncServiceImpl — flat orchestrator (~150 lines)
+```
+Then delete `services/pubsub/handler.ts` + `services/pubsub/helper.ts`; `services/pubsub/client.ts:48` swaps `new PubSubHandler()` → `InboxSyncServiceImpl`. The composition root (`composition-root.ts:181`) already wraps `PubSubHandler` behind the `InboxSyncService` interface — swap the impl.
+
+**7 steps (move-only until 4c.5, the only synthesis step):**
+1. **4c.1** — Extract `GmailInboxSource` (move `getValidAccessToken`/`fetchGmailHistory`/`fetchMessageDetails` verbatim). Update Group C tests to mock `InboxSource` instead of global `fetch`.
+2. **4c.2** — Extract pure classification to `classify.ts` (predicates from `utils/email.ts` + `determineNotificationType` + `calculateHistoryGap`/`isLargeHistoryGap` from `helper.ts`). Re-export from `utils/email.ts` for backwards compat.
+3. **4c.3** — Extract status transitions to `states.ts` (`nextContactStatus`).
+4. **4c.4** — Extract `applyClassification` (dedupe `processBounce` + `processReply`).
+5. **4c.5** — Write `InboxSyncServiceImpl` (the flat orchestrator). **Riskiest step.**
+6. **4c.6** — Swap `pubsub/client.ts` to `InboxSyncService`; delete `handler.ts` + `helper.ts`.
+7. **4c.7** — ThreadProcessor is left alone (Phase 5 deletes it).
+
+**Safety net:** Group C characterization tests (8 cases, `__tests__/characterization/pubsub-handler.test.ts`) pin: reply → REPLIED event + contact update + stats; bounce → BOUNCED + contact update + stats; original message → no event; already-processed → skipped; large history gap → HISTORY_GAP record; missing EmailWatch/Mailbox/token → returns early. They mock `fetch` globally + `@/lib/google/gmail/helper`'s `refreshTokenIfNeeded` via `test-context.ts` — update the wiring in 4c.1 to mock `InboxSource` instead.
+
+**Start 4c in a fresh chat:**
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
-git checkout refactor/mailops                          # after 4b merges
-npm test -w mailops                                    # 98/98 passing
-npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
-# Next: 4c — split services/pubsub/handler.ts (the biggest god-object, 1,308
-# lines). See phase-4-split-god-objects.md §4c. 7 steps; the riskiest split.
+git checkout refactor/mailops                          # 4a+4b merged; HEAD 7b87b2d
+git pull                                               # (if remote exists) confirm up to date
+npm test -w mailops                                    # must show 16 files / 98 tests passing
+npx tsc --noEmit -p apps/mailops/tsconfig.json         # must be clean
+npm run lint -w mailops                                # 0 errors, 271 warnings expected
+
+git checkout -b refactor/mailops-phase-4c-pubsub       # new branch off refactor/mailops tip
 ```
+Then open [phase-4-split-god-objects.md §4c](./phase-4-split-god-objects.md) and start at **4c.1**. Tell the agent: *"Read plans/mailops-refactor/STATUS.md (Phase 4 progress section) and plans/mailops-refactor/phase-4-split-god-objects.md §4c, then do Phase 4c."*
+
+**Verification after each 4c step:** `npm test -w mailops` (must stay 98/98) + `npx tsc --noEmit -p apps/mailops/tsconfig.json` (must stay clean). One commit per step. When all 7 steps are done, merge `--no-ff` into `refactor/mailops`, then promote `no-restricted-imports` from `warn` → `error` in `eslint.config.js` (the 7 residual `@coldjot/database` files all become legitimate after the tx-client paths collapse / `sequenceHealth` decision lands — verify before flipping).
+
+### Lint stance (Phase 4 residuals)
+
+7 files still import `@coldjot/database` directly (down from Phase 3's 8 — 4b removed `lib/google/smtp/gmail.ts`):
+
+```
+controllers/sequence.controller.ts          ← sequenceHealth (monitor-only; Phase 5/6 decision)
+lib/stats/index.ts                          ← $transaction tx client (Phase 7 collapses the rate math)
+services/domain/tracking.service.ts         ← $transaction tx client in handleLinkClick (Phase 7)
+services/jobs/schedule/processor.ts         ← sequenceHealth in resetSequence (same as controller)
+services/jobs/sequence/helper.ts            ← sequenceHealth in resetSequence (same as controller)
+services/jobs/thread-watch/processor.ts     ← emailEvent + sequenceContact (3.2/3.5 misses; Phase 4c/7 sweep)
+services/monitor/service.ts                 ← sequenceStats.create in init (Phase 6 unwinds ServiceManager)
+```
+None of these are 4c scope. The rule flips to `error` **after** 4c merges AND the tx-client paths are addressed. Don't flip it mid-4c.
 
 ---
 
 ## Resume guide
 
+> **Phase 0 is done** — the "Recommended order for the remaining groups" table below is preserved as reference but all 15 groups shipped. **For active work, use the [Phase 4 progress → Resume guide](#resume-guide--phase-4c-pubsub-is-the-only-remaining-step-in-phase-4) above instead.**
+
 ### Get back to a green state
+
+The current working branch is `refactor/mailops` (Phase 0–3 + Phase 4a + 4b merged). All phase sub-branches are merged; you do not need to checkout an old one.
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
-git checkout refactor/mailops-phase-0-tests
+git checkout refactor/mailops
 
 # Sanity check — all green:
-npm test -w mailops                                   # 23 tests, 3 files, all pass
+npm test -w mailops                                   # 16 files / 98 tests pass
 npx tsc --noEmit -p apps/mailops/tsconfig.json        # clean
+npm run lint -w mailops                               # 0 errors, 271 warnings
 ```
 
 ### Recommended order for the remaining groups
