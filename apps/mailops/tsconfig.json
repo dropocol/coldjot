@@ -7,6 +7,7 @@
         "noEmit": true,
         "incremental": false,
         "moduleResolution": "bundler",
+        "types": ["node", "vitest/globals"],
         "paths": {
             "@/*": ["./src/*"],
             "@/lib/*": ["./src/lib/*"],
