@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { PubSubService } from "../services/pubsub/client";
-import { PubSubHandler } from "../services/pubsub/handler";
+import { InboxSyncServiceImpl } from "../services/domain/inbox-sync.service";
 import { logger } from "@/lib/log";
 import { pubSubMessageSchema as PubSubMessageSchema } from "@coldjot/types/pubsub";
 import { verifyPubSubJwt } from "../lib/auth/pubsub";
 
 const router = Router();
 const pubsubService = PubSubService.getInstance();
-const pubsubHandler = new PubSubHandler();
+const inboxSync = new InboxSyncServiceImpl();
 
 // Initialize PubSub service when the router is created
 pubsubService.initialize().catch((error) => {
@@ -47,8 +47,8 @@ router.post("/", async (req, res) => {
     }
 
     // Process the notification
-    // await pubsubHandler.handleNotification(result.data.message);
-    await pubsubHandler.handleNotification(req.body.message);
+    // await inboxSync.handleNotification(result.data.message);
+    await inboxSync.handleNotification(req.body.message);
 
     // Acknowledge the message by returning 200 OK
     res.status(200).send();

@@ -4,8 +4,8 @@
  * Extracted from utils/email.ts + services/pubsub/helper.ts in Phase 4c.2
  * (move-only). Everything here is a pure predicate or pure function — no DB,
  * no fetch, no I/O. `utils/email.ts` re-exports the predicate functions so
- * existing importers (thread-watch processor, the still-live PubSubHandler
- * until 4c.6) keep resolving; the canonical home is now this file.
+ * existing importers (thread-watch processor, GmailInboxSource) keep
+ * resolving; the canonical home is now this file.
  *
  * These are unit-testable in isolation (coverage lands in Phase 7).
  */

@@ -10,7 +10,8 @@
  * Phase 4 swaps the existing-class adapters for new impls that take their
  * dependencies via constructor injection. 4a replaced TrackingService; 4b
  * replaced EmailService with SendEmailServiceImpl (Gmail-API only — SMTP
- * path deleted). PubSubHandler is still the legacy class until 4c.
+ * path deleted); 4c replaced PubSubHandler with InboxSyncServiceImpl (flat
+ * orchestrator over InboxSource + classify + apply-classification).
  */
 
 // Infra singletons (kept as process-wide singletons — locked decision).
@@ -73,10 +74,12 @@ import type { RunScheduleService } from "@/services/domain/run-schedule.service"
 
 // Existing classes (Phase 4 replaces these behind the domain interfaces)
 import { TrackingService as TrackingServiceImpl } from "@/lib/tracking";
-import { PubSubHandler } from "@/services/pubsub/handler";
 import {
   SendEmailServiceImpl,
 } from "@/services/domain/send-email.service";
+import {
+  InboxSyncServiceImpl,
+} from "@/services/domain/inbox-sync.service";
 import { GmailTransport } from "@/adapters/gmail-transport";
 
 // ---------------------------------------------------------------------------
@@ -165,8 +168,11 @@ export function createApp(): App {
 
   // ---- Domain services ---------------------------------------------------
   // Phase 4b: SendEmailServiceImpl replaces the EmailService class — same
-  // behavior (Gmail-API path only; SMTP branch deleted). TrackingService +
-  // PubSubHandler still wrap the existing classes until 4c.
+  // behavior (Gmail-API path only; SMTP branch deleted). Phase 4c:
+  // InboxSyncServiceImpl replaces the PubSubHandler class — same behavior,
+  // flat orchestrator over the extracted InboxSource + classify +
+  // apply-classification pieces. TrackingService still wraps the existing
+  // class until Phase 6 threads it through createApp().
   const sendEmail: SendEmailService = new SendEmailServiceImpl(
     new GmailTransport(),
     emailTracking,
@@ -181,10 +187,15 @@ export function createApp(): App {
     trackEmailEvent: (input) => trackingImpl.trackEmailEvent(input),
   };
 
-  const pubsubHandler = new PubSubHandler();
-  const inboxSync: InboxSyncService = {
-    handleNotification: (message) => pubsubHandler.handleNotification(message),
-  };
+  const inboxSync: InboxSyncService = new InboxSyncServiceImpl(
+    mailbox,
+    emailWatch,
+    emailWatchHistory,
+    processedMessage,
+    emailThread,
+    sequenceContact,
+    emailEvent
+  );
 
   // launchSequence + runSchedule are placeholders until Phase 2 (controllers)
   // and Phase 4 (god-object split) land. They throw if called before then —

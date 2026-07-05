@@ -4,8 +4,8 @@ import crypto from "crypto";
 // Phase 4c.2: the inbox-sync predicates below were moved to
 // services/inbox-sync/classify.ts (their canonical home). They're re-exported
 // here so existing importers — services/jobs/thread-watch (via the @/utils
-// barrel), the still-live PubSubHandler until 4c.6, and the GmailInboxSource
-// adapter — keep resolving without churn. New code should import from
+// barrel, deleted in Phase 5) and the GmailInboxSource adapter — keep
+// resolving without churn. New code should import from
 // @/services/inbox-sync/classify directly.
 export {
   isBounceMessage,

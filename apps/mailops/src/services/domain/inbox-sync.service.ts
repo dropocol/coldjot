@@ -5,7 +5,6 @@ import {
   NotificationType,
   HistoryChange,
   GmailHistoryRecord,
-  DecodedNotification,
 } from "@coldjot/types";
 import { PUBSUB_CONFIG } from "@/config/pubsub/constants";
 import { logger } from "@/lib/log";
@@ -40,6 +39,13 @@ import {
   determineNotificationType,
 } from "@/services/inbox-sync/classify";
 import { applyClassification } from "@/services/inbox-sync/apply-classification";
+import {
+  isHistoryIdProcessed,
+  isMessageProcessed,
+  createProcessedMessageRecord,
+  createOrUpdateWatchHistory,
+} from "@/services/inbox-sync/records";
+import { decodeNotification, sanitizeData } from "@/services/inbox-sync/decode";
 
 /**
  * Domain service interface — handles a Gmail PubSub notification by syncing
@@ -48,62 +54,6 @@ import { applyClassification } from "@/services/inbox-sync/apply-classification"
  */
 export interface InboxSyncService {
   handleNotification(message: PubSubMessage): Promise<void>;
-}
-
-// ---------------------------------------------------------------------------
-// Pure notification / logging helpers (moved from services/pubsub/helper.ts)
-// ---------------------------------------------------------------------------
-
-const SENSITIVE_FIELDS = [
-  "access_token",
-  "refresh_token",
-  "id_token",
-  "accessToken",
-  "refreshToken",
-  "Authorization",
-  "private_key",
-  "client_secret",
-  "api_key",
-];
-
-/** Redact sensitive fields from anything passed to the file logger. */
-function sanitizeData(data: any): any {
-  if (!data) return data;
-  if (typeof data === "string") return data;
-  if (Array.isArray(data)) return data.map((item) => sanitizeData(item));
-  if (typeof data !== "object") return data;
-  const sanitized = { ...data };
-  for (const key in sanitized) {
-    if (SENSITIVE_FIELDS.includes(key)) {
-      sanitized[key] = "[REDACTED]";
-    } else if (typeof sanitized[key] === "object") {
-      sanitized[key] = sanitizeData(sanitized[key]);
-    }
-  }
-  return sanitized;
-}
-
-function isValidNotification(data: any): data is DecodedNotification {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    typeof data.emailAddress === "string" &&
-    (typeof data.historyId === "number" || typeof data.historyId === "string")
-  );
-}
-
-function decodeNotification(message: PubSubMessage): DecodedNotification {
-  try {
-    const decodedData = Buffer.from(message.data, "base64").toString();
-    const parsedData = JSON.parse(decodedData);
-    if (!isValidNotification(parsedData)) {
-      throw new Error("Invalid notification format: missing required fields");
-    }
-    return parsedData;
-  } catch (error) {
-    logger.error({ error }, "Failed to decode notification data");
-    throw new Error("Invalid notification format");
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -241,7 +191,13 @@ export class InboxSyncServiceImpl implements InboxSyncService {
   ): Promise<void> {
     try {
       // 1. Has this historyId already been processed?
-      if (await this.isHistoryIdProcessed(watch.id, historyId)) {
+      if (
+        await isHistoryIdProcessed(
+          { emailWatch: this.emailWatchRepo, emailWatchHistory: this.emailWatchHistoryRepo },
+          watch.id,
+          historyId
+        )
+      ) {
         return;
       }
 
@@ -331,7 +287,18 @@ export class InboxSyncServiceImpl implements InboxSyncService {
         if (processedMessageIds.has(message.id)) continue;
         processedMessageIds.add(message.id);
 
-        if (await this.isMessageProcessed(message.id, message.threadId)) continue;
+        if (
+          await isMessageProcessed(
+            {
+              processedMessage: this.processedMessageRepo,
+              emailThread: this.emailThreadRepo,
+              sequenceContact: this.sequenceContactRepo,
+            },
+            message.id,
+            message.threadId
+          )
+        )
+          continue;
         if (message.labelIds.includes("DRAFT")) continue;
 
         const details = await this.inboxSource.fetchMessage({
@@ -356,14 +323,25 @@ export class InboxSyncServiceImpl implements InboxSyncService {
           from: details.from,
         };
 
-        await this.createProcessedMessageRecord(message.id, message.threadId, messageType);
-        await this.createOrUpdateWatchHistory(watch.id, response.historyId, messageType, {
-          emailAddress: watch.mailbox.email,
-          historyId: response.historyId,
-          type: messageType,
-          messageId: message.id,
-          threadId: message.threadId,
-        });
+        await createProcessedMessageRecord(
+          this.processedMessageRepo,
+          message.id,
+          message.threadId,
+          messageType
+        );
+        await createOrUpdateWatchHistory(
+          this.emailWatchHistoryRepo,
+          watch.id,
+          response.historyId,
+          messageType,
+          {
+            emailAddress: watch.mailbox.email,
+            historyId: response.historyId,
+            type: messageType,
+            messageId: message.id,
+            threadId: message.threadId,
+          }
+        );
 
         if (messageType === NotificationType.BOUNCE || messageType === NotificationType.REPLY) {
           await applyClassification({
@@ -405,97 +383,6 @@ export class InboxSyncServiceImpl implements InboxSyncService {
       notificationType: "HISTORY_GAP",
       processed: false,
       data: { oldHistoryId: watch.historyId, newHistoryId: latestHistoryId, gapSize },
-    });
-  }
-
-  // ---- dedupe / record helpers (ported from services/pubsub/helper.ts) ----
-
-  private async isHistoryIdProcessed(
-    watchId: string,
-    historyId: string
-  ): Promise<boolean> {
-    try {
-      const watch = await this.emailWatchRepo.findById(watchId);
-      if (!watch) return true;
-      const watchHistoryId = parseInt(watch.historyId);
-      const notificationHistoryId = parseInt(historyId);
-      if (notificationHistoryId < watchHistoryId) return true;
-      const processedHistory = await this.emailWatchHistoryRepo.findProcessed(
-        watchId,
-        notificationHistoryId.toString()
-      );
-      return !!processedHistory;
-    } catch (error) {
-      logger.error({ error, watchId, historyId }, "Error checking if history ID was processed");
-      return true;
-    }
-  }
-
-  private async isMessageProcessed(
-    messageId: string,
-    threadId: string
-  ): Promise<boolean> {
-    try {
-      const processedMessage = await this.processedMessageRepo.findByMessageId(messageId);
-      if (processedMessage) return true;
-
-      const emailThread = await this.emailThreadRepo.findSequenceContactByThread(threadId);
-      if (!emailThread) return false;
-
-      const sequenceContact = await this.sequenceContactRepo.findBySequenceAndContact(
-        emailThread.sequenceId,
-        emailThread.contactId
-      );
-      if (!sequenceContact) return false;
-
-      const finalStates = ["COMPLETED", "BOUNCED", "REPLIED", "OPTED_OUT", "UNSUBSCRIBED"];
-      const isProcessed = finalStates.includes(sequenceContact.status);
-      if (isProcessed) {
-        await this.processedMessageRepo.create({
-          messageId,
-          threadId,
-          type: sequenceContact.status,
-        });
-      }
-      return isProcessed;
-    } catch (error) {
-      logger.error({ error, messageId, threadId }, "Error checking if message is processed");
-      return false;
-    }
-  }
-
-  private async createProcessedMessageRecord(
-    messageId: string,
-    threadId: string,
-    type: NotificationType
-  ): Promise<void> {
-    try {
-      await this.processedMessageRepo.create({
-        messageId,
-        threadId,
-        type: type.toString(),
-      });
-    } catch (error: any) {
-      // P2002 (unique constraint) is benign here — the message is already recorded.
-      if (error?.code === "P2002") return;
-      throw error;
-    }
-  }
-
-  private async createOrUpdateWatchHistory(
-    watchId: string,
-    historyId: string,
-    notificationType: NotificationType,
-    data: any,
-    isProcessed = false
-  ): Promise<void> {
-    await this.emailWatchHistoryRepo.upsert({
-      id: nanoid(),
-      emailWatchId: watchId,
-      historyId: historyId.toString(),
-      notificationType: notificationType.toString(),
-      processed: isProcessed,
-      data,
     });
   }
 }
