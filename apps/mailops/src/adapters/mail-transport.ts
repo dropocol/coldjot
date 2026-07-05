@@ -31,7 +31,16 @@ export interface InsertMessageInput {
   labelIds: string[];
 }
 
-export interface MessageDetails {
+/**
+ * Minimal details recovered from a sent message — used by the send-email path
+ * to extract the real Message-ID + thread id after Gmail accepts the send.
+ *
+ * Renamed from `MessageDetails` in Phase 6.6 to avoid colliding with the
+ * richer `MessageDetails` in @coldjot/types (pubsub.ts) — that one carries
+ * id/from/labelIds/isReply and is the inbox-sync message shape, not the
+ * sent-message-details shape.
+ */
+export interface SentMessageDetails {
   messageId: string | undefined;
   subject: string | undefined;
   threadId: string | undefined;
@@ -54,7 +63,7 @@ export interface MailTransport {
     id: string,
     userId: string,
     mailboxId: string
-  ): Promise<MessageDetails>;
+  ): Promise<SentMessageDetails>;
   /** Get a gmail client bound to a user+mailbox (for thread-info fetches). */
   getClient(userId: string, mailboxId: string): Promise<gmail_v1.Gmail>;
 }

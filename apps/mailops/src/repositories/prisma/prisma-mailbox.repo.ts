@@ -3,7 +3,7 @@ import type {
   MailboxAliasRecord,
   MailboxRecord,
   MailboxRepository,
-  MailboxWithAliases,
+  MailboxWithAliasesRecord,
   SequenceMailboxRow,
 } from "../mailbox.repo";
 
@@ -11,13 +11,13 @@ export class PrismaMailboxRepository implements MailboxRepository {
   async findWithAliases(
     id: string,
     userId: string
-  ): Promise<MailboxWithAliases | null> {
+  ): Promise<MailboxWithAliasesRecord | null> {
     // lib/mailbox/index.ts:24
     const row = await prisma.mailbox.findUnique({
       where: { id, userId },
       include: { aliases: true },
     });
-    return row as unknown as MailboxWithAliases | null;
+    return row as unknown as MailboxWithAliasesRecord | null;
   }
 
   async findByIdForUser(
@@ -48,13 +48,13 @@ export class PrismaMailboxRepository implements MailboxRepository {
     return row as unknown as MailboxRecord | null;
   }
 
-  async findWithEmailAliases(email: string): Promise<MailboxWithAliases | null> {
+  async findWithEmailAliases(email: string): Promise<MailboxWithAliasesRecord | null> {
     // pubsub/handler.ts:154
     const row = await prisma.mailbox.findFirst({
       where: { email },
       include: { aliases: true },
     });
-    return row as unknown as MailboxWithAliases | null;
+    return row as unknown as MailboxWithAliasesRecord | null;
   }
 
   async updateTokens(
