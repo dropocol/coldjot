@@ -1,6 +1,20 @@
 import type { MessagePartHeader } from "@coldjot/types";
 import crypto from "crypto";
-import { EmailLabelEnum } from "@coldjot/types";
+
+// Phase 4c.2: the inbox-sync predicates below were moved to
+// services/inbox-sync/classify.ts (their canonical home). They're re-exported
+// here so existing importers — services/jobs/thread-watch (via the @/utils
+// barrel), the still-live PubSubHandler until 4c.6, and the GmailInboxSource
+// adapter — keep resolving without churn. New code should import from
+// @/services/inbox-sync/classify directly.
+export {
+  isBounceMessage,
+  shouldProcessMessage,
+  hasMessageContent,
+  isExternalSender,
+  isReplyMessage,
+} from "@/services/inbox-sync/classify";
+
 // Message ID generation
 export const generateMessageId = (): string => {
   const domain = process.env.EMAIL_DOMAIN || "gmail.com";
@@ -52,160 +66,6 @@ export const isSenderSequenceOwner = (
   userId: string
 ): boolean => {
   return senderEmail.toLowerCase() === userId.toLowerCase();
-};
-
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
-
-// Helper functions for bounce processing
-export const isBounceMessage = (headers: MessagePartHeader[]) => {
-  // Common bounce sender patterns
-  const bounceSenders = [
-    "mailer-daemon@googlemail.com",
-    "postmaster@",
-    "mailerdaemon@",
-    "mailer-daemon@",
-    "mail delivery subsystem",
-    "mail delivery system",
-    "automated-message@",
-    "system-messages@",
-    "noreply@",
-    "no-reply@",
-    "auto-reply@",
-    "autoreply@",
-  ];
-
-  // Common bounce subject patterns
-  const bounceSubjects = [
-    "delivery status notification",
-    "mail delivery failed",
-    "failure notice",
-    "returned mail",
-    "undeliverable",
-    "delivery failed",
-    "failure delivery",
-    "non-delivery report",
-    "delivery problem",
-    "delivery notification",
-    "message delivery failed",
-    "delivery status report",
-    "mail system error",
-    "delayed delivery notification",
-    "permanent delivery failure",
-    "temporary delivery failure",
-    "message blocked",
-    "message not delivered",
-    "auto-reply",
-    "out of office",
-    "automatic reply",
-  ];
-
-  // Extract headers for analysis
-  const fromHeader =
-    headers
-      .find((h) => h.name?.toLowerCase() === "from")
-      ?.value?.toLowerCase() || "";
-  const subjectHeader =
-    headers
-      .find((h) => h.name?.toLowerCase() === "subject")
-      ?.value?.toLowerCase() || "";
-  const contentTypeHeader =
-    headers
-      .find((h) => h.name?.toLowerCase() === "content-type")
-      ?.value?.toLowerCase() || "";
-  const failedRecipientsHeader = headers.find(
-    (h) => h.name?.toLowerCase() === "x-failed-recipients"
-  )?.value;
-  const autoSubmittedHeader =
-    headers
-      .find((h) => h.name?.toLowerCase() === "auto-submitted")
-      ?.value?.toLowerCase() || "";
-  const returnPathHeader =
-    headers
-      .find((h) => h.name?.toLowerCase() === "return-path")
-      ?.value?.toLowerCase() || "";
-  const feedbackTypeHeader =
-    headers
-      .find((h) => h.name?.toLowerCase() === "x-feedback-id")
-      ?.value?.toLowerCase() || "";
-
-  // Check conditions
-  const isFromBounceSender = bounceSenders.some((sender) =>
-    fromHeader.includes(sender)
-  );
-  const hasBouncySubject = bounceSubjects.some((subject) =>
-    subjectHeader.includes(subject)
-  );
-  const hasFailedRecipients = !!failedRecipientsHeader;
-  const isDeliveryStatusReport =
-    contentTypeHeader.includes("report-type=delivery-status") ||
-    contentTypeHeader.includes("delivery-status") ||
-    contentTypeHeader.includes("multipart/report");
-  const isAutoSubmitted =
-    autoSubmittedHeader.includes("auto-generated") ||
-    autoSubmittedHeader.includes("auto-replied") ||
-    autoSubmittedHeader.includes("auto-notified");
-  const isEmptyReturnPath =
-    returnPathHeader === "<>" || returnPathHeader.includes("mailer-daemon");
-  const isFeedbackReport =
-    feedbackTypeHeader.includes("abuse") ||
-    feedbackTypeHeader.includes("bounce");
-
-  // Additional checks for specific mail server responses
-  const hasMailerHeaders = headers.some(
-    (h) =>
-      h.name?.toLowerCase().startsWith("x-failed") ||
-      h.name?.toLowerCase().startsWith("x-bounce") ||
-      h.name?.toLowerCase().includes("delivery-notification")
-  );
-
-  // Return true if any bounce condition is met
-  return (
-    isFromBounceSender ||
-    hasBouncySubject ||
-    hasFailedRecipients ||
-    isDeliveryStatusReport ||
-    isAutoSubmitted ||
-    isEmptyReturnPath ||
-    isFeedbackReport ||
-    hasMailerHeaders
-  );
-};
-
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
-
-// Helper functions for reply processing
-export const shouldProcessMessage = (labelIds: string[]): boolean => {
-  const normalizedLabels = labelIds.map((label) => label.toUpperCase());
-
-  // Don't process if it's in SENT or DRAFT
-  if (
-    normalizedLabels.includes(EmailLabelEnum.SENT) ||
-    normalizedLabels.includes(EmailLabelEnum.DRAFT)
-  ) {
-    return false;
-  }
-
-  // Must be in INBOX or have INBOX/CATEGORY_* label
-  const isInInbox = normalizedLabels.some(
-    (label) =>
-      label === EmailLabelEnum.INBOX ||
-      label.startsWith("CATEGORY_") ||
-      label === EmailLabelEnum.IMPORTANT
-  );
-
-  // Must not be spam or trash
-  const isNotSpamOrTrash = !normalizedLabels.some(
-    (label) =>
-      label === EmailLabelEnum.SPAM ||
-      label === EmailLabelEnum.TRASH ||
-      label === EmailLabelEnum.JUNK
-  );
-
-  return isInInbox && isNotSpamOrTrash;
 };
 
 // -----------------------------------------
@@ -327,74 +187,9 @@ export function splitEmailContent(emailContent: string): {
 // -----------------------------------------
 // -----------------------------------------
 
-/**
- * Check if an email message has content by analyzing its headers
- */
-export const hasMessageContent = (headers: MessagePartHeader[]): boolean => {
-  // Check Content-Type header
-  const contentType =
-    headers.find((h) => h.name?.toLowerCase() === "content-type")?.value || "";
-
-  // Check if it's a multipart message
-  const isMultipart = contentType.toLowerCase().includes("multipart");
-
-  // Check if it has a text or html content type
-  const hasTextContent =
-    contentType.toLowerCase().includes("text/plain") ||
-    contentType.toLowerCase().includes("text/html");
-
-  // Check Content-Length header if present
-  const contentLength = parseInt(
-    headers.find((h) => h.name?.toLowerCase() === "content-length")?.value ||
-      "0"
-  );
-
-  // Consider the message has content if:
-  // 1. It's a multipart message (likely has attachments or multiple parts)
-  // 2. It has text content
-  // 3. It has a positive content length
-  return isMultipart || hasTextContent || contentLength > 0;
-};
-
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
-
-/**
- * Check if an email is from an external sender by comparing against a list of internal emails
- */
-export const isExternalSender = (
-  fromHeader: string,
-  internalEmails: string[]
-): boolean => {
-  // Extract email from the from header
-  const senderEmail =
-    (fromHeader.match(/<(.+?)>/) ||
-      fromHeader.match(/([^<\s]+@[^>\s]+)/) ||
-      [])[1] || fromHeader;
-  const normalizedSender = senderEmail.toLowerCase().trim();
-  const normalizedInternalEmails = internalEmails.map((email) =>
-    email.toLowerCase().trim()
-  );
-
-  return !normalizedInternalEmails.includes(normalizedSender);
-};
-
-// -----------------------------------------
-// -----------------------------------------
-// -----------------------------------------
-
-/**
- * Check if a message is a reply by analyzing its headers
- */
-export const isReplyMessage = (headers: MessagePartHeader[]): boolean => {
-  return headers.some(
-    (h: MessagePartHeader) =>
-      (h.name === "In-Reply-To" && h.value) ||
-      (h.name === "References" && h.value) ||
-      (h.name === "Subject" && h.value?.toLowerCase().startsWith("re:"))
-  );
-};
+// (hasMessageContent / isExternalSender / isReplyMessage moved to
+// services/inbox-sync/classify.ts in Phase 4c.2 — re-exported at the top of
+// this file for backwards compat. No definitions here.)
 
 // -----------------------------------------
 // -----------------------------------------

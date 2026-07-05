@@ -15,6 +15,15 @@ import { PrismaProcessedMessageRepository } from "@/repositories/prisma/prisma-p
 import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
 import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
 
+// Phase 4c.2: classification + history-gap math moved to classify.ts. Re-export
+// so existing handler.ts imports (`calculateHistoryGap`, `isLargeHistoryGap`,
+// `determineNotificationType`) keep resolving until 4c.5/4c.6 deletes the
+// handler.
+export {
+  calculateHistoryGap,
+  isLargeHistoryGap,
+} from "@/services/inbox-sync/classify";
+
 // Module-level repo singletons for the standalone helper fns (matches the
 // lib/tracking stopgap pattern).
 const emailThreadRepo = new PrismaEmailThreadRepository();
@@ -23,11 +32,6 @@ const emailWatchHistoryRepo = new PrismaEmailWatchHistoryRepository();
 const processedMessageRepo = new PrismaProcessedMessageRepository();
 const sequenceContactRepo = new PrismaSequenceContactRepository();
 const sequenceRepo = new PrismaSequenceRepository();
-import {
-  isBounceMessage,
-  isExternalSender,
-  isReplyMessage,
-} from "@/utils/email";
 
 /**
  * Sanitize sensitive data from logs
@@ -99,30 +103,6 @@ export const isValidNotification = (data: any): data is DecodedNotification => {
     typeof data.emailAddress === "string" &&
     (typeof data.historyId === "number" || typeof data.historyId === "string")
   );
-};
-
-/**
- * Calculate history gap between current and notification history IDs
- */
-export const calculateHistoryGap = (
-  currentHistoryId: string,
-  notificationHistoryId: string
-): { gap: number; startHistoryId: string } => {
-  const current = BigInt(currentHistoryId);
-  const notification = BigInt(notificationHistoryId);
-  const gap = Number(notification - current);
-
-  return {
-    gap,
-    startHistoryId: gap < 0 ? notificationHistoryId : currentHistoryId,
-  };
-};
-
-/**
- * Check if history gap is too large
- */
-export const isLargeHistoryGap = (gap: number): boolean => {
-  return Math.abs(gap) > 10000;
 };
 
 /**
@@ -358,32 +338,24 @@ export const createProcessedMessageRecord = async (
 };
 
 /**
- * Determine notification type from message details
+ * Determine notification type from message details.
+ *
+ * Phase 4c.2: the canonical classifier lives in classify.ts and takes the
+ * `hasOriginalForThread` lookup as an injected arg (keeping that module pure).
+ * This wrapper preserves the original 3-arg signature so the still-live
+ * PubSubHandler call site keeps working until 4c.5 writes the new orchestrator.
  */
 export const determineNotificationType = async (
   details: MessageDetails,
   userEmails: string[],
   threadId: string
 ): Promise<NotificationType> => {
-  // Check for bounce first as it's highest priority
-  if (isBounceMessage(details.headers)) {
-    return NotificationType.BOUNCE;
-  }
-
-  // Then check for replies from external senders
-  const isExternal = isExternalSender(details.from, userEmails);
-  if (isExternal && isReplyMessage(details.headers)) {
-    return NotificationType.REPLY;
-  }
-
-  // Check if this is the first message in the thread
-  const isFirstMessage = await isOriginalMessage(threadId, details.messageId);
-  if (isFirstMessage) {
-    return NotificationType.ORIGINAL_MESSAGE;
-  }
-
-  // If none of the above conditions match, it's a regular message
-  return NotificationType.MESSAGE_ADDED;
+  const { determineNotificationType: classify } = await import(
+    "@/services/inbox-sync/classify"
+  );
+  return classify(details, userEmails, threadId, (tid) =>
+    processedMessageRepo.hasOriginalForThread(tid)
+  );
 };
 
 /**
