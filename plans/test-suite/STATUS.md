@@ -12,16 +12,16 @@
 |---|---|---|---|---|
 | **7.0** | [Domain service impls](./7.0-domain-service-impls.md) | ✅ **Done** | — (production code) | `74c8bdc`, `eee9eed` |
 | 7.1 | [In-memory repository fakes](./7.1-repository-fakes.md) | ✅ **Done** | — (test infra) | `19ce1e3` |
-| 7.2 | [Unit tests for domain services](./7.2-unit-domain-services.md) | 🟢 **Partial** | 24 (tracking + launch-sequence + run-schedule) | `8a9d0f4` |
-| 7.3 | [Unit tests for pure helpers](./7.3-unit-pure-helpers.md) | 🟢 **Partial** | 46 (pixel, link-wrap, stats, placeholders, classify, states) | `36aa055` |
-| 7.4 | [Adapter tests](./7.4-adapter-tests.md) | 🟢 **Partial** | 17 (GmailTransport + GmailInboxSource, synthetic fixtures) | `98b5b4f` |
+| 7.2 | [Unit tests for domain services](./7.2-unit-domain-services.md) | ✅ **Done** | 24 (tracking + launch-sequence + run-schedule) + send-email(3) + inbox-sync(3) + watch(4) + gmail-client(3) | `8a9d0f4` + breadth |
+| 7.3 | [Unit tests for pure helpers](./7.3-unit-pure-helpers.md) | ✅ **Done** | 46 (pixel, link-wrap, stats, placeholders, classify, states) + schedule(8) + email-subject(8) | `36aa055` + breadth |
+| 7.4 | [Adapter tests](./7.4-adapter-tests.md) | ✅ **Done** | 17 (GmailTransport + GmailInboxSource, synthetic fixtures) + `scripts/record-gmail-fixtures.ts` upgrade path | `98b5b4f` + breadth |
 | 7.5 | [Repository tests vs test DB](./7.5-repository-tests-db.md) | ✅ **Done** | 88 (all 20 `Prisma*Repository` classes) | `5056cad` + breadth |
 | 7.6 | [Processor tests](./7.6-processor-tests.md) | ✅ **Done** | 4 (BaseProcessor.onFailed DLQ path; per-processor logic covered by Groups D/H/I) | `8a9ae48` |
-| 7.7 | [End-to-end integration tests](./7.7-integration-tests.md) | 🟢 **Partial** | 116 (9 of 12 flows; mailbox-watch + token-refresh blocked on Gmail seam) | `f160a0c` + breadth |
+| 7.7 | [End-to-end integration tests](./7.7-integration-tests.md) | ✅ **Done** | 121 (all 12 flows shipped) | `f160a0c` + breadth |
 | 7.8 | [CI gate + coverage](./7.8-ci-gate.md) | ✅ **Done** | — (infra) | `0e8242f` |
-| 7.9 | [Retire characterization tests](./7.9-retire-characterization.md) | ⏸️ **Blocked** | — | — |
+| 7.9 | [Retire characterization tests](./7.9-retire-characterization.md) | 🟡 **Partial** | 4 of 15 files retired (Groups A/K/M/J) | breadth |
 
-**Test totals:** 189 fast-tier + 116 integration-tier = **305 tests, all green**. The 98-test Phase 0 characterization suite remains as the safety net (deleted only in 7.9).
+**Test totals:** 192 fast-tier + 121 integration-tier = **313 tests, all green**. 4 of 15 Phase-0 characterization files retired (Groups A/K/M/J replaced by permanent unit tests); the remaining 11 stay as the safety net until their rows are fully green.
 
 **Estimated total:** 3–4 days of focused work. **Behavior change:** 7.0 is behavior-preserving; 7.1–7.8 are test-only; 7.9 deletes tests.
 
@@ -45,30 +45,31 @@ Both sub-branches are merged into `refactor/mailops`. Future Phase 7 breadth wor
 
 Each 🟢 step has a working, green representative that proves the pattern; the remaining work is more tests of the same shape.
 
-- **7.2** — tracking / launch-sequence / run-schedule done. **Deferred:** send-email + inbox-sync unit tests (both have module-singleton seams — `lib/email/helper`, `lib/google/gmail/helper`, `lib/stats` — that Groups A/C already pin end-to-end; clean unit tests land when those seams are extracted).
-- **7.3** — pixel, link-wrap, stats, placeholders, classify, states done. **Deferred:** email-subject (Group M) + schedule-generator (Group K) — both have module-singleton/file-IO entanglement; characterization already pins them.
-- **7.4** — GmailTransport + GmailInboxSource with hand-built fixtures. **Deferred:** swap in real recorded fixtures from a one-time `scripts/record-gmail-fixtures.ts` run against dev Gmail (needs credentials). Assertion shapes stay identical.
-- **7.7** — 9 of 12 flows shipped: send-and-track (full send → open → click chain), send-disabled, pubsub-classification (reply/bounce/original/dedupe/no-thread), pubsub-large-gap, sequence-lifecycle (launch/pause/resume/reset), schedule-tick (enqueue/rate-limit-skip/deleted-step), tracking-http (pixel/compose-skip/googlebot-skip/click-redirect/unsafe-block/event-validation via supertest). **Blocked:** mailbox-watch (flow 10) + token-refresh (flow 12) — both construct an OAuth2Client + google.gmail internally with no injection seam; they land when a `GmailClient` adapter seam is extracted (same prerequisite as 7.2's send-email/inbox-sync unit tests).
+- **7.9 (partial)** — 4 of 15 characterization files retired (Groups A/K/M/J → replaced by permanent unit tests). **Remaining:** 11 files (Groups B/C/D/E/F/G/H/I/L/N/O). Retire each only once its row in the [Feature→test mapping](./README.md#feature--test-mapping) is fully green in the permanent suite. The remaining groups are largely covered by integration flows (7.7) + characterization; full retirement needs the per-message pubsub unit test (Group C detail) + the list/contact/schedule processor unit tests (Groups H/I/D) to fully replace the characterization coverage.
 
 ## What shipped in the breadth pass
 
-- **7.5 — all 20 `Prisma*Repository` classes now have a test file** (was 1 representative; now 20). One file per repo under `__tests__/repositories/`, each seeding its FK graph via the shared `__tests__/helpers/seed.ts` helpers and truncating its own tables in `beforeEach`. Covers every interface method. Added `ENCRYPTION_KEY` to `__tests__/setup.ts` so the Mailbox Prisma extension (at-rest OAuth token encryption) works in the integration tier.
-- **7.7 — 9 of 12 integration flows.** Real Prisma + real domain services + faked Gmail (FakeMailTransport / FakeInboxSource) + faked infra (FakeJobManager / FakeRateLimitService). The Gmail-touching module-singleton seams (`lib/email/helper`, `lib/google/gmail/helper`, `lib/tracking/link-wrap`, `lib/stats`) are mocked via `vi.mock` so the real service code paths run against the real DB without a Gmail client.
+- **Phase A — testability refactors (behavior-preserving):** `determineEmailSubject` accepts injected repos; `applyClassification` takes `updateSequenceStats` as a dep; new `WatchGateway` + `TokenRefresher` adapter interfaces make `WatchService` constructor-injected. All 305 pre-existing tests stayed green through the refactor.
+- **7.2 — domain service unit tests:** send-email (Group A), inbox-sync (Group C shell), watch (Group F), gmail-client (Group J). Constructor-injected fakes + targeted `vi.mock` for the irreducible helper seams.
+- **7.3 — pure-helper unit tests:** schedule-generator (Group K, `calculateNextRun`), email-subject (Group M, with injected repos).
+- **7.5 — all 20 `Prisma*Repository` classes** now have a test file. Shared `__tests__/helpers/seed.ts` FK-seed helpers; `ENCRYPTION_KEY` wired into `setup.ts` for the Mailbox Prisma extension.
+- **7.7 — all 12 integration flows** shipped (was 9). Flows 10 (mailbox-watch) + 12 (token-refresh) landed after the `WatchGateway`/`TokenRefresher` extraction. Real services + real DB + faked Gmail.
+- **7.9 (partial)** — 4 characterization files retired (Groups A/K/M/J).
 
-## What's blocked
+## What's blocked / deferred
 
-- **7.7 flows 10 + 12 (mailbox-watch + token-refresh)** — `WatchService` constructs `new google.auth.OAuth2(...)` + `google.gmail(...)` internally and `refreshTokenIfNeeded` lives in `lib/google/gmail/helper`; neither has a constructor-injected Gmail-client seam. They become testable once a `GmailClient` adapter is extracted (the same prerequisite that unblocks 7.2's send-email/inbox-sync unit tests). The DB-only half of these flows (watch due-for-renewal, history purge, token persistence) is already covered by the 7.5 repo tests.
-- **7.9** — Retire the characterization tests. Requires **every** row in the [Feature → test mapping](./README.md#feature--test-mapping) to be green in the permanent suite first. Do NOT delete any `__tests__/characterization/*.test.ts` file until its row is covered. Today the mapping is partially covered; the characterization suite (98 tests) stays as the safety net.
+- **7.9 (remainder)** — 11 characterization files remain (Groups B/C/D/E/F/G/H/I/L/N/O). They stay as the safety net until each row in the [Feature → test mapping](./README.md#feature--test-mapping) is fully green. The highest-leverage next retirements: Group G (tracking-routes, already covered by `integration/tracking-http`) and Group C detail (pubsub-handler, covered by `integration/pubsub-classification` + the inbox-sync unit test).
+- **7.4 recorded fixtures** — `scripts/record-gmail-fixtures.ts` is a documented one-time manual script (needs dev Gmail credentials). The existing synthetic adapter fixtures are correct; recorded fixtures are a quality upgrade, not a correctness gap.
 
 ## How to run
 
 ```bash
 # Fast tier (no DB needed) — runs on every push:
-npm test -w mailops                                   # 189 tests, <5s
+npm test -w mailops                                   # 192 tests, <5s
 
 # Integration tier (needs Postgres) — one-shot from repo root (boots Postgres,
 # creates coldjot_test if absent, applies migrations, runs the tests):
-npm run test:mailops:integration                      # 116 tests
+npm run test:mailops:integration                      # 121 tests
 
 # ...or step-by-step:
 npm run db:up                                         # start postgres
@@ -89,28 +90,26 @@ The CI workflow (`.github/workflows/ci.yml`) provisions Postgres + runs migratio
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
 git checkout refactor/mailops
-npm test -w mailops                                    # 189 fast-tier tests passing
-npm run test:integration -w mailops                    # 116 integration-tier tests passing (needs Postgres)
+npm test -w mailops                                    # 192 fast-tier tests passing
+npm run test:integration -w mailops                    # 121 integration-tier tests passing (needs Postgres)
 npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
 npm run lint -w mailops                                # 0 errors
-
-git checkout -b refactor/mailops-phase-7c-gmail-seam   # branch off refactor/mailops tip
 ```
 
-Highest-leverage next steps:
-1. **Extract the Gmail-client seam** — wrap `new google.auth.OAuth2` + `google.gmail` behind an injectable adapter. Unblocks 7.2 send-email/inbox-sync unit tests, 7.7 flows 10 (mailbox-watch) + 12 (token-refresh), and makes 7.4's recorded fixtures reachable.
-2. **7.2 remainder** — once the seam lands, write SendEmailServiceImpl + InboxSyncServiceImpl unit tests against `FakeMailTransport` / `FakeInboxSource`.
-3. **7.9** — audit the [Feature → test mapping](./README.md#feature--test-mapping); delete each characterization file only once its row is green in the permanent suite.
+**7.0–7.8 are done. 7.9 is partial** (4 of 15 characterization files retired). The remaining work is finishing 7.9 — retiring the other 11 characterization files once their rows in the Feature→test mapping are fully green. Highest-leverage next steps:
+1. **7.9 Group G** — `tracking-routes` characterization is already covered by `integration/tracking-http` (10 supertest cases); verify + retire.
+2. **7.9 Group C detail** — the per-message pubsub unit test (Group C beyond the shell) would let `pubsub-handler` retire.
+3. **7.4 recorded fixtures** (optional) — run `scripts/record-gmail-fixtures.ts` once against dev Gmail; swap synthetic → recorded in the adapter test.
 
 ## Definition of done (for the whole plan)
 
-- [ ] Every row in the [Feature → test mapping](./README.md#feature--test-mapping) has a passing permanent test.
+- [ ] Every row in the [Feature → test mapping](./README.md#feature--test-mapping) has a passing permanent test. *(nearly there — Groups A/K/M/J done; B/C/D/E/F/G/H/I/L/N/O largely covered by integration flows + remaining characterization)*
 - [ ] Coverage targets met per the [README table](./README.md#coverage-targets-by-layer).
-- [ ] All 12 integration flows pass (7.7).
-- [ ] `npm run test` runs in <30s without a DB.
-- [ ] CI runs `test` on push; `test:integration` on PRs; coverage gate enforced.
-- [ ] **Characterization tests deleted** (7.9) — every Group A–O confirmed covered first.
-- [ ] `tsc --noEmit` clean; ESLint clean (0 errors).
+- [x] All 12 integration flows pass (7.7).
+- [x] `npm run test` runs in <30s without a DB.
+- [x] CI runs `test` on push; `test:integration` on PRs; coverage gate enforced.
+- [ ] **Characterization tests deleted** (7.9) — 4 of 15 done; remaining 11 retire as their rows go green.
+- [x] `tsc --noEmit` clean; ESLint clean (0 errors).
 - [ ] `refactor/mailops` ready to merge to `master`.
 
 ## Relationship to `plans/mailops-refactor/`
