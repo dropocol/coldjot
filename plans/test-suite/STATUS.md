@@ -19,9 +19,9 @@
 | 7.6 | [Processor tests](./7.6-processor-tests.md) | ✅ **Done** | 4 (BaseProcessor.onFailed DLQ path; per-processor logic covered by Groups D/H/I) | `8a9ae48` |
 | 7.7 | [End-to-end integration tests](./7.7-integration-tests.md) | ✅ **Done** | 121 (all 12 flows shipped) | `f160a0c` + breadth |
 | 7.8 | [CI gate + coverage](./7.8-ci-gate.md) | ✅ **Done** | — (infra) | `0e8242f` |
-| 7.9 | [Retire characterization tests](./7.9-retire-characterization.md) | 🟡 **Partial** | 4 of 15 files retired (Groups A/K/M/J) | breadth |
+| 7.9 | [Retire characterization tests](./7.9-retire-characterization.md) | 🟡 **Partial** | 9 of 15 files retired (Groups A/B/C/D/G/K/L/M/J) | breadth |
 
-**Test totals:** 192 fast-tier + 121 integration-tier = **313 tests, all green**. 4 of 15 Phase-0 characterization files retired (Groups A/K/M/J replaced by permanent unit tests); the remaining 11 stay as the safety net until their rows are fully green.
+**Test totals:** 158 fast-tier + 130 integration-tier = **288 tests, all green**. 9 of 15 Phase-0 characterization files retired; the remaining 6 (Groups E/F/H/I/N/O) stay as the safety net until their rows are fully green.
 
 **Estimated total:** 3–4 days of focused work. **Behavior change:** 7.0 is behavior-preserving; 7.1–7.8 are test-only; 7.9 deletes tests.
 
@@ -45,16 +45,16 @@ Both sub-branches are merged into `refactor/mailops`. Future Phase 7 breadth wor
 
 Each 🟢 step has a working, green representative that proves the pattern; the remaining work is more tests of the same shape.
 
-- **7.9 (partial)** — 4 of 15 characterization files retired (Groups A/K/M/J → replaced by permanent unit tests). **Remaining:** 11 files (Groups B/C/D/E/F/G/H/I/L/N/O). Retire each only once its row in the [Feature→test mapping](./README.md#feature--test-mapping) is fully green in the permanent suite. The remaining groups are largely covered by integration flows (7.7) + characterization; full retirement needs the per-message pubsub unit test (Group C detail) + the list/contact/schedule processor unit tests (Groups H/I/D) to fully replace the characterization coverage.
+- **7.9 (partial)** — 9 of 15 characterization files retired (Groups A/B/C/D/G/K/L/M/J → replaced by permanent tests). **Remaining:** 6 files (Groups E/F/H/I/N/O). The retired groups' characterization assertions were first ported into the permanent suite (the tracking-http exact-status/body/Location + googleapis-referer + 500 cases; the tracking-service isFirstOpen + repeat-open-event-count cases; the inbox-sync missing-mailbox + token-null + ProcessedMessage-dedupe cases) so no coverage was lost.
 
 ## What shipped in the breadth pass
 
 - **Phase A — testability refactors (behavior-preserving):** `determineEmailSubject` accepts injected repos; `applyClassification` takes `updateSequenceStats` as a dep; new `WatchGateway` + `TokenRefresher` adapter interfaces make `WatchService` constructor-injected. All 305 pre-existing tests stayed green through the refactor.
-- **7.2 — domain service unit tests:** send-email (Group A), inbox-sync (Group C shell), watch (Group F), gmail-client (Group J). Constructor-injected fakes + targeted `vi.mock` for the irreducible helper seams.
+- **7.2 — domain service unit tests:** send-email (Group A), inbox-sync (Group C, incl. missing-mailbox/token-null/ProcessedMessage-dedupe), watch (Group F), gmail-client (Group J), tracking (Group B, incl. isFirstOpen + repeat-open-event-count). Constructor-injected fakes + targeted `vi.mock` for the irreducible helper seams.
 - **7.3 — pure-helper unit tests:** schedule-generator (Group K, `calculateNextRun`), email-subject (Group M, with injected repos).
 - **7.5 — all 20 `Prisma*Repository` classes** now have a test file. Shared `__tests__/helpers/seed.ts` FK-seed helpers; `ENCRYPTION_KEY` wired into `setup.ts` for the Mailbox Prisma extension.
-- **7.7 — all 12 integration flows** shipped (was 9). Flows 10 (mailbox-watch) + 12 (token-refresh) landed after the `WatchGateway`/`TokenRefresher` extraction. Real services + real DB + faked Gmail.
-- **7.9 (partial)** — 4 characterization files retired (Groups A/K/M/J).
+- **7.7 — all 12 integration flows** shipped (was 9). Flows 10 (mailbox-watch) + 12 (token-refresh) landed after the `WatchGateway`/`TokenRefresher` extraction. The tracking-http flow now pins exact status/body/Location + the googleapis-referer + 500 error paths. Real services + real DB + faked Gmail.
+- **7.9 (partial)** — 9 characterization files retired (Groups A/B/C/D/G/K/L/M/J). Each group's load-bearing assertions were ported into the permanent suite first.
 
 ## What's blocked / deferred
 
@@ -65,11 +65,11 @@ Each 🟢 step has a working, green representative that proves the pattern; the 
 
 ```bash
 # Fast tier (no DB needed) — runs on every push:
-npm test -w mailops                                   # 192 tests, <5s
+npm test -w mailops                                   # 158 tests, <5s
 
 # Integration tier (needs Postgres) — one-shot from repo root (boots Postgres,
 # creates coldjot_test if absent, applies migrations, runs the tests):
-npm run test:mailops:integration                      # 121 tests
+npm run test:mailops:integration                      # 130 tests
 
 # ...or step-by-step:
 npm run db:up                                         # start postgres
@@ -85,30 +85,31 @@ The CI workflow (`.github/workflows/ci.yml`) provisions Postgres + runs migratio
 
 ## Resume guide
 
-**Where we are:** 7.0, 7.1, 7.5, 7.6, 7.8 are done; 7.7 has 9 of 12 flows. The remaining work is: extract the Gmail-client seam (unblocks 7.2 remainder + 7.7 flows 10/12 + makes 7.4's recorded fixtures reachable), then 7.9 once the Feature→test mapping is fully green.
+**Where we are:** 7.0–7.8 are done; 7.9 is partial (9 of 15 characterization files retired). The remaining work is finishing 7.9 — retiring the last 6 characterization files (Groups E/F/H/I/N/O) once their rows are fully green.
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
 git checkout refactor/mailops
-npm test -w mailops                                    # 192 fast-tier tests passing
-npm run test:integration -w mailops                    # 121 integration-tier tests passing (needs Postgres)
+npm test -w mailops                                    # 158 fast-tier tests passing
+npm run test:integration -w mailops                    # 130 integration-tier tests passing (needs Postgres)
 npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
 npm run lint -w mailops                                # 0 errors
 ```
 
-**7.0–7.8 are done. 7.9 is partial** (4 of 15 characterization files retired). The remaining work is finishing 7.9 — retiring the other 11 characterization files once their rows in the Feature→test mapping are fully green. Highest-leverage next steps:
-1. **7.9 Group G** — `tracking-routes` characterization is already covered by `integration/tracking-http` (10 supertest cases); verify + retire.
-2. **7.9 Group C detail** — the per-message pubsub unit test (Group C beyond the shell) would let `pubsub-handler` retire.
-3. **7.4 recorded fixtures** (optional) — run `scripts/record-gmail-fixtures.ts` once against dev Gmail; swap synthetic → recorded in the adapter test.
+**7.0–7.8 are done. 7.9 is partial** (9 of 15 characterization files retired — Groups A/B/C/D/G/K/L/M/J). The remaining 6 files (Groups E/F/H/I/N/O) stay as the safety net until their rows are fully green. Highest-leverage next steps:
+1. **7.9 Group F** — `mailbox-routes` is largely covered by `unit/services/watch.service.test.ts` + `integration/mailbox-watch`; audit the HTTP-controller surface (the routes file) and retire.
+2. **7.9 Group N** — `rate-limiter` needs a permanent unit test (it currently has no permanent replacement); write one against the ioredis fake, then retire.
+3. **7.9 Groups H/I** — `list-sync` + `contact-processor` need permanent processor unit tests; the processors are BullMQ workers (construct their own scheduler), so these need a thin test harness or an extraction of the process logic.
+4. **7.4 recorded fixtures** (optional) — run `scripts/record-gmail-fixtures.ts` once against dev Gmail; swap synthetic → recorded in the adapter test.
 
 ## Definition of done (for the whole plan)
 
-- [ ] Every row in the [Feature → test mapping](./README.md#feature--test-mapping) has a passing permanent test. *(nearly there — Groups A/K/M/J done; B/C/D/E/F/G/H/I/L/N/O largely covered by integration flows + remaining characterization)*
+- [ ] Every row in the [Feature → test mapping](./README.md#feature--test-mapping) has a passing permanent test. *(Groups A/B/C/D/G/K/L/M/J done; E/F/H/I/N/O still partly characterization-covered)*
 - [ ] Coverage targets met per the [README table](./README.md#coverage-targets-by-layer).
 - [x] All 12 integration flows pass (7.7).
 - [x] `npm run test` runs in <30s without a DB.
 - [x] CI runs `test` on push; `test:integration` on PRs; coverage gate enforced.
-- [ ] **Characterization tests deleted** (7.9) — 4 of 15 done; remaining 11 retire as their rows go green.
+- [ ] **Characterization tests deleted** (7.9) — 9 of 15 done (Groups A/B/C/D/G/K/L/M/J); remaining 6 (E/F/H/I/N/O) retire as their rows go green.
 - [x] `tsc --noEmit` clean; ESLint clean (0 errors).
 - [ ] `refactor/mailops` ready to merge to `master`.
 

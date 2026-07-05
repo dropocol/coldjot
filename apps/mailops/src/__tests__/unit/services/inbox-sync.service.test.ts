@@ -142,4 +142,64 @@ describe("[Group C] InboxSyncServiceImpl pipeline", () => {
     const creates = emailWatchHistoryRepo.calls.filter((c) => c.method === "create");
     expect(creates.length).toBe(0);
   });
+
+  // ---- Group C gap coverage (ported from the characterization suite) -------
+
+  it("no-ops when the watch exists but the mailbox is missing", async () => {
+    // Watch exists, but no mailbox seeded → getWatchRecord returns null.
+    await emailWatchRepo.create({
+      id: WATCH_ID,
+      userId: "u1",
+      email: EMAIL,
+      historyId: "100",
+      expiration: new Date(2030, 0, 1),
+    });
+    // (deliberately do NOT seed the mailbox)
+
+    await service.handleNotification(message(EMAIL, "200"));
+
+    // No history fetch attempted.
+    expect(inboxSource.calls.some((c) => c.method === "fetchHistory")).toBe(false);
+  });
+
+  it("no-ops when token refresh returns null (no history fetch)", async () => {
+    await seedWatch("100");
+    (inboxSource as any).accessToken = null; // simulate refresh failure
+
+    await service.handleNotification(message(EMAIL, "200"));
+
+    expect(inboxSource.calls.some((c) => c.method === "fetchHistory")).toBe(false);
+  });
+
+  it("skips a message already in ProcessedMessage (per-message dedupe, no fetchMessage)", async () => {
+    await seedWatch("100");
+    inboxSource.accessToken = "tok";
+    // History returns one message whose messageId is already processed.
+    inboxSource.historyResult = {
+      history: [
+        {
+          id: "rec-1",
+          messagesAdded: [{ message: { id: "msg-already", threadId: "thr-1", labelIds: [] } }],
+          labelsAdded: [],
+        },
+      ],
+      historyId: "200",
+    } as any;
+    processedMessageRepo.store.set("pm-1", {
+      id: "pm-1",
+      messageId: "msg-already",
+      threadId: "thr-1",
+      type: "ORIGINAL",
+    } as any);
+    processedMessageRepo.store.index("messageId", "msg-already", "pm-1");
+
+    await service.handleNotification(message(EMAIL, "200"));
+
+    // The message was already processed → no fetchMessage call for it.
+    expect(
+      inboxSource.calls.some(
+        (c) => c.method === "fetchMessage" && (c.args[0] as any)?.messageId === "msg-already"
+      )
+    ).toBe(false);
+  });
 });
