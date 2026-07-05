@@ -1,8 +1,10 @@
 # Mailops Test Suite — the test plan you actually want
 
+> **Status:** in progress — see [`STATUS.md`](./STATUS.md) for the at-a-glance table, what shipped vs. what's deferred, branch layout, run instructions, and resume guide. This README is the plan (why + test layout + coverage contract); STATUS.md tracks execution.
+>
 > **Goal:** now that the mailops refactor (Phases 0–6 in `plans/mailops-refactor/`) has everything injected and singleton-free, write the test suite that *should* exist — fast unit tests, adapter tests against recorded fixtures, repository tests against a real test DB, processor tests, and end-to-end integration tests. **At the end of this plan, every mailops feature has permanent test coverage** (see the [Feature → test mapping](#feature--test-mapping) below).
 >
-> **This is the implementation area for what the refactor tracked as "Phase 7".** It was lifted out of `plans/mailops-refactor/phase-7-test-suite.md` and split into per-step sub-plans (7.1–7.9) so each can be worked, reviewed, and merged on its own.
+> **This is the implementation area for what the refactor tracked as "Phase 7".** It was lifted out of `plans/mailops-refactor/phase-7-test-suite.md` and split into per-step sub-plans (7.0–7.9) so each can be worked, reviewed, and merged on its own.
 
 ## Why this plan exists
 
@@ -21,20 +23,22 @@ Phase 0's characterization tests (`apps/mailops/src/__tests__/characterization/`
 
 ## Sub-plan index
 
+> Detailed per-step status, test counts, and commit refs live in [`STATUS.md`](./STATUS.md). This table is the plan (what each step is + its dependencies); the Status column is a quick token only.
+
 | Step | Sub-plan | Status | Effort | Depends on |
 |---|---|---|---|---|
-| **7.0** | [**Domain service impls (prerequisite)**](./7.0-domain-service-impls.md) | ✅ **Done** — `LaunchSequenceServiceImpl` + `RunScheduleServiceImpl` implemented + wired | 0.5 day | — |
-| 7.1 | [In-memory repository fakes](./7.1-repository-fakes.md) | ✅ **Done** — per-repo fakes + FakeMailTransport/FakeInboxSource + FakeJobManager/FakeRateLimitService | 0.5 day | — |
-| 7.2 | [Unit tests for domain services](./7.2-unit-domain-services.md) | 🟢 **Partial** — tracking + launch-sequence + run-schedule done (24 cases). send-email + inbox-sync deferred (module-singleton seams; Groups A/C pin them) | 1 day | 7.0, 7.1 |
-| 7.3 | [Unit tests for pure helpers](./7.3-unit-pure-helpers.md) | 🟢 **Partial** — pixel, link-wrap, stats, placeholders, classify, states done (46 cases). email-subject + schedule-generator deferred (Groups M/K pin them) | 0.5 day | — |
-| 7.4 | [Adapter tests with recorded fixtures](./7.4-adapter-tests.md) | 🟢 **Partial** — GmailTransport + GmailInboxSource with synthetic fixtures (17 cases). Real recorded fixtures deferred (needs dev Gmail creds) | 0.5 day | 7.1 |
-| 7.5 | [Repository tests against a real test DB](./7.5-repository-tests-db.md) | 🟢 **Partial** — EmailTracking representative done (7 cases) + test-DB wiring proven. Remaining 19 repos follow the same template | 0.5–1 day | — |
-| 7.6 | [Processor tests](./7.6-processor-tests.md) | 🟢 **Partial** — BaseProcessor.onFailed DLQ path done (4 cases). Individual processors covered by Groups D/H/I characterization | 0.5 day | 7.0, 7.1, 7.2 |
-| 7.7 | [End-to-end integration tests (12 flows)](./7.7-integration-tests.md) | 🟢 **Partial** — TrackingServiceImpl-vs-DB representative done (3 cases) + sequential-execution isolation. 11 flows deferred (need faked Gmail / supertest) | 1–1.5 days | 7.0, 7.1–7.6 |
-| 7.8 | [CI gate + coverage enforcement](./7.8-ci-gate.md) | ✅ **Done** — fast/integration test split, turbo wiring, GitHub Action, 80% coverage threshold | 0.5 day | 7.1–7.7 |
-| 7.9 | [Retire the characterization tests](./7.9-retire-characterization.md) | ⏸️ **Blocked** — requires every Feature→test mapping row green (full 7.2/7.7). Do NOT delete characterization files yet | 0.25 day | every row in the mapping is green |
+| **7.0** | [**Domain service impls (prerequisite)**](./7.0-domain-service-impls.md) | ✅ | 0.5 day | — |
+| 7.1 | [In-memory repository fakes](./7.1-repository-fakes.md) | ✅ | 0.5 day | — |
+| 7.2 | [Unit tests for domain services](./7.2-unit-domain-services.md) | 🟢 partial | 1 day | 7.0, 7.1 |
+| 7.3 | [Unit tests for pure helpers](./7.3-unit-pure-helpers.md) | 🟢 partial | 0.5 day | — |
+| 7.4 | [Adapter tests with recorded fixtures](./7.4-adapter-tests.md) | 🟢 partial | 0.5 day | 7.1 |
+| 7.5 | [Repository tests against a real test DB](./7.5-repository-tests-db.md) | 🟢 partial | 0.5–1 day | — |
+| 7.6 | [Processor tests](./7.6-processor-tests.md) | 🟢 partial | 0.5 day | 7.0, 7.1, 7.2 |
+| 7.7 | [End-to-end integration tests (12 flows)](./7.7-integration-tests.md) | 🟢 partial | 1–1.5 days | 7.0, 7.1–7.6 |
+| 7.8 | [CI gate + coverage enforcement](./7.8-ci-gate.md) | ✅ | 0.5 day | 7.1–7.7 |
+| 7.9 | [Retire the characterization tests](./7.9-retire-characterization.md) | ⏸️ blocked | 0.25 day | every row in the mapping is green |
 
-**Totals so far:** 189 fast-tier tests + 10 integration-tier tests, all green. **Behavior change:** 7.0 is behavior-preserving; 7.1–7.8 are test-only.
+**Legend:** ✅ Done · 🟢 Partial (representative shipped, breadth remaining) · ⏸️ Blocked/Deferred. See [`STATUS.md`](./STATUS.md) for what each partial step still needs.
 
 **Legend:** ⬜ Not started · 🟡 In progress · 🟢 Code done, awaiting verification · ✅ Done · ⏸️ Blocked/Deferred
 

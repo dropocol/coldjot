@@ -17,7 +17,7 @@
 | 4 | [split three god-objects](./phase-4-split-god-objects.md) | ✅ **Done** — 4a (tracking) + 4b (email) + 4c (pubsub) all merged `--no-ff` (`44e55df`, `40fe9d2`, `0bc50fa`). 98/98 tests green; tsc clean; 0 errors / 260 warnings | `refactor/mailops-phase-4c-pubsub` (merged) | 5–7 days |
 | 5 | [dead code cleanup](./phase-5-dead-code-cleanup.md) | ✅ **Done** — 5 files deleted, console sweep, deps pruned. 98/98 tests green; tsc clean; 0 errors / 244 warnings | `refactor/mailops-phase-5-cleanup` (merged) | 0.5–1 day |
 | 6 | [kill ServiceManager singleton](./phase-6-kill-service-manager.md) | ✅ **Done** — ServiceManager deleted (297 lines); composition root owns the full graph; controllers → factories; routes → `makeRouter(app)`. 98/98 tests green; tsc clean; 0 errors / 242 warnings | `refactor/mailops-phase-6-singleton` (merged) | 2 days |
-| 7 | [real test suite](../test-suite/README.md) | 🟡 **In progress** — foundation landed: 7.0 (service impls) + 7.1 (fakes) + 7.8 (CI gate) ✅; 7.2/7.3/7.4/7.5/7.6/7.7 🟢 partial (representatives shipped, breadth remaining); 7.9 ⏸️ blocked on full coverage. 189 fast + 10 integration tests green | `refactor/mailops-phase-7-tests` | 3–4 days |
+| 7 | [real test suite](../test-suite/README.md) | 🟡 **In progress** — tracked in [`../test-suite/STATUS.md`](../test-suite/STATUS.md). Do not add Phase 7 detail here. | `refactor/mailops-phase-7-tests` | 3–4 days |
 
 **Estimated total:** ~19–25 days of focused work. Each phase is independently shippable.
 
@@ -538,24 +538,22 @@ The `no-restricted-imports` rule did NOT flip to `error`. The 6 `@coldjot/databa
 
 ### Resume guide — Phase 6 is DONE; Phase 7 is next
 
-**Where we are:** Phases 0–6 all merged into `refactor/mailops`. **Phase 7 (real test suite) is next** — it replaces the Phase 0 characterization tests with a permanent suite organized by layer, and is where `launchSequence` / `runSchedule` finally get wired to real impls.
+**Where we are:** Phases 0–6 all merged into `refactor/mailops`. **Phase 7 (real test suite) is in progress** — it lives in its own plan area now. For status, resume instructions, and what's left, see [`../test-suite/STATUS.md`](../test-suite/STATUS.md). Do not track Phase 7 detail in this file.
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
 git checkout refactor/mailops
-npm test -w mailops                                    # 16 files / 98 tests passing
+npm test -w mailops                                    # fast-tier tests passing
 npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
-npm run lint -w mailops                                # 0 errors, 242 warnings
-
-git checkout -b refactor/mailops-phase-7-tests         # branch off refactor/mailops tip
+npm run lint -w mailops                                # 0 errors
 ```
-Then open the [test-suite plan](../test-suite/README.md) (Phase 7 lifted into its own folder, split into sub-plans 7.1–7.9).
+Then open the [test-suite STATUS](../test-suite/STATUS.md) (Phase 7 lifted into its own folder, split into sub-plans 7.0–7.9).
 
 ---
 
 ## Resume guide
 
-> **Phases 0–6 are done.** Phase 7 (real test suite) is the next active phase — see the [test-suite plan](../test-suite/README.md) (Phase 7 lifted into its own folder, split into sub-plans 7.1–7.9). The "Recommended order for the remaining groups" table below is preserved as Phase-0 reference only.
+> **Phases 0–6 are done. Phase 7 is in progress** — tracked separately in [`../test-suite/STATUS.md`](../test-suite/STATUS.md) (the test suite was lifted into its own plan area). The "Recommended order for the remaining groups" table below is preserved as Phase-0 reference only.
 
 ### Get back to a green state
 
@@ -708,4 +706,4 @@ At the end of Phase 7, every mailops feature has test coverage. Phase 0 characte
 - **`plans/mailops-consolidation/`** — deliberately postponed. This refactor *enables* future consolidation but does not perform it.
 - **`plans/refactor-plan/10` (BullMQ resilience)** — already done; untouched here.
 - **`plans/refactor-plan/03` (service auth + CORS)** — already done; `requireServiceToken` middleware untouched.
-- **`plans/test-suite/`** — the Phase 7 test plan (lifted out of this folder into its own area, split into sub-plans 7.1–7.9). Picks Vitest; Phase 0 + Phase 7 reuse that choice.
+- **`plans/test-suite/`** — the Phase 7 test plan (lifted out of this folder into its own area, split into sub-plans 7.0–7.9). Status tracked in [`test-suite/STATUS.md`](../test-suite/STATUS.md); entry point is [`test-suite/README.md`](../test-suite/README.md). Picks Vitest; Phase 0 + Phase 7 reuse that choice.
