@@ -36,7 +36,18 @@ const ctx = setupTestContext();
 
 import express from "express";
 import request from "supertest";
-import mailboxRouter from "@/routes/mailbox";
+import { makeMailboxRouter } from "@/routes/mailbox";
+import { createMailboxController } from "@/controllers/mailbox.controller";
+import { WatchService } from "@/services/watch";
+import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
+
+// Phase 6.4: routes are factories. Construct the controller with the mocked
+// WatchService (vi.mock above) + the fake-backed PrismaMailboxRepository.
+const mailboxController = createMailboxController({
+  watchService: new WatchService(),
+  mailboxRepo: new PrismaMailboxRepository(),
+});
+const mailboxRouter = makeMailboxRouter(mailboxController);
 
 const app = express();
 app.use(express.json());

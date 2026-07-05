@@ -8,7 +8,7 @@ import { QUEUE_NAMES } from "@/config";
 import { getWorkerOptions } from "@/config";
 import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
 
-import { ServiceManager } from "@/services/service-manager";
+import type { JobManager } from "@/services/jobs/job-manager";
 
 import { SequenceContactStatusEnum, type EmailJob } from "@coldjot/types";
 
@@ -21,12 +21,16 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
   private batchSize: number = CONTACT_PROCESSING_CONFIG.BATCH_SIZE;
   private readonly SCHEDULER_ID = "contact-processing-scheduler";
 
-  private serviceManager = ServiceManager.getInstance();
-  private jobManager = this.serviceManager.getJobManager();
+  private readonly jobManager: JobManager;
   private readonly sequenceContact = new PrismaSequenceContactRepository();
 
-  constructor(queue: Queue) {
-    super(queue, QUEUE_NAMES.CONTACT, getWorkerOptions(QUEUE_NAMES.CONTACT));
+  constructor(
+    queue: Queue,
+    jobManager: JobManager,
+    dlQueues: Map<string, Queue> = new Map()
+  ) {
+    super(queue, QUEUE_NAMES.CONTACT, getWorkerOptions(QUEUE_NAMES.CONTACT), dlQueues);
+    this.jobManager = jobManager;
     this.setupContactProcessingScheduler();
   }
 

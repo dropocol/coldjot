@@ -35,19 +35,15 @@ export interface ScheduleGenerator {
 }
 
 export class ScheduleGenerator implements ScheduleGenerator {
-  private static instance: ScheduleGenerator;
   private defaultRateLimits: RateLimits = RATE_LIMIT_CONFIG.DEFAULT_LIMITS;
   private defaultBusinessHours: BusinessHours = DEFAULT_BUSINESS_HOURS;
 
-  private constructor() {
+  // Phase 6.3: was a private-constructor + getInstance() singleton. The class
+  // is stateless aside from config defaults, so a plain exported instance is
+  // equivalent. Composition root / processors take it via constructor; the
+  // module-level export is the legacy stopgap for the standalone helpers.
+  constructor() {
     logger.info("🕒 Initializing SchedulingService");
-  }
-
-  public static getInstance(): ScheduleGenerator {
-    if (!ScheduleGenerator.instance) {
-      ScheduleGenerator.instance = new ScheduleGenerator();
-    }
-    return ScheduleGenerator.instance;
   }
 
   // -------------------------------------------
@@ -466,5 +462,6 @@ export class ScheduleGenerator implements ScheduleGenerator {
   }
 }
 
-// Export singleton instance
-export const scheduleGenerator = ScheduleGenerator.getInstance();
+// Phase 6.3: plain exported instance (no getInstance singleton). The stateless
+// class is safe to construct eagerly; consumers that want a fake inject one.
+export const scheduleGenerator = new ScheduleGenerator();

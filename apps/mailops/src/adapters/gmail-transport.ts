@@ -5,7 +5,7 @@ import type {
   SendMessageInput,
   SendMessageResult,
   InsertMessageInput,
-  MessageDetails,
+  SentMessageDetails,
 } from "./mail-transport";
 
 /**
@@ -68,7 +68,7 @@ export class GmailTransport implements MailTransport {
     id: string,
     userId: string,
     mailboxId: string
-  ): Promise<MessageDetails> {
+  ): Promise<SentMessageDetails> {
     const gmail = await this.getClient(userId, mailboxId);
     const sentMessage = await gmail.users.messages.get({
       userId: "me",

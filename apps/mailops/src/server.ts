@@ -2,39 +2,25 @@ import express from "express";
 import cors from "cors";
 import { logger } from "@/lib/log";
 import pinoHttp from "pino-http";
-import routes from "./routes";
-import { createServiceManager } from "@/services/service-manager";
-import pubsubRouter from "./routes/pubsub";
-import mailboxRouter from "./routes/mailbox";
-import listsRouter from "./routes/lists";
+import { createApp, initializeApp, shutdownApp } from "@/composition-root";
+import { makeRouter } from "./routes";
+import { makeMailboxRouter } from "./routes/mailbox";
+import { makeListsRouter } from "./routes/lists";
+import { makePubsubRouter } from "./routes/pubsub";
 import { requireServiceToken } from "@/lib/auth/service-auth";
 import { env } from "@/config";
 import { mountBullBoard } from "@/lib/bull-board";
 
 const app = express();
 const port = 3001;
-const serviceManager = createServiceManager();
 
-// Initialize all services, then mount Bull-Board (which needs the queues).
-serviceManager
-  .initialize()
-  .then(() => {
-    try {
-      const router = mountBullBoard(serviceManager);
-      // Gate behind the shared service token (plan 03) so the queue admin UI
-      // is reachable only from the web app / authenticated operators.
-      app.use("/admin/queues", requireServiceToken, router);
-      logger.info("📊 Bull-Board mounted at /admin/queues");
-    } catch (error) {
-      logger.error({ err: error }, "Failed to mount Bull-Board");
-    }
-  })
-  .catch((error) => {
-    logger.error("Failed to initialize services:", error);
-    process.exit(1);
-  });
+// The app graph is constructed once. infra singletons + queues + processors +
+// controllers all live here; server.ts only wires them into Express.
+const mailopsApp = createApp();
 
-// Middleware
+// ---- Middleware (registered before init so requests during boot get a
+//      proper error response rather than hanging) ---------------------------
+
 // Restrict CORS to the known web origin(s) instead of reflecting any origin.
 const allowedOrigins = env.WEB_APP_URL
   ? env.WEB_APP_URL.split(",").map((o) => o.trim()).filter(Boolean)
@@ -68,19 +54,41 @@ const httpLogger = pinoHttp({
     return `request failed with status ${res.statusCode}: ${error.message}`;
   },
 });
-
 app.use(httpLogger);
 
-// Internal routes — require the shared service token. The web app must send
-// X-Service-Token on every call. Public/webhook routes below are exempt.
-app.use("/api", requireServiceToken, routes);
-app.use("/api/mailbox", requireServiceToken, mailboxRouter);
-app.use("/api/lists", requireServiceToken, listsRouter);
+// ---- Initialize infra (Redis, PubSub, memory monitor, watch cleanup),
+//      then mount the routes that depend on it. -------------------------------
 
-// Public/webhook routes — no service token; they have their own protections.
-// PubSub verifies Google's signed JWT inside the route handler.
-app.use("/pubsub", pubsubRouter); // Keep the /pubsub route for Gmail notifications
-app.use("/api/pubsub", pubsubRouter); // Also mounted under /api for consistency
+initializeApp(mailopsApp)
+  .then(() => {
+    // Bull-Board — gate behind the service token (plan 03).
+    const bullBoardQueues = [
+      ...mailopsApp.queues.values(),
+      ...mailopsApp.dlQueues.values(),
+    ];
+    app.use("/admin/queues", requireServiceToken, mountBullBoard(bullBoardQueues));
+    logger.info("📊 Bull-Board mounted at /admin/queues");
+
+    // Internal routes — require the shared service token. The web app must
+    // send X-Service-Token on every call.
+    app.use("/api", requireServiceToken, makeRouter(mailopsApp));
+    app.use("/api/mailbox", requireServiceToken, makeMailboxRouter(mailopsApp.mailboxController));
+    app.use("/api/lists", requireServiceToken, makeListsRouter(mailopsApp.listController));
+
+    // Public/webhook routes — no service token; they have their own protections.
+    // PubSub verifies Google's signed JWT inside the route handler.
+    const pubsubRouter = makePubsubRouter(mailopsApp.inboxSync);
+    app.use("/pubsub", pubsubRouter); // Keep the /pubsub route for Gmail notifications
+    app.use("/api/pubsub", pubsubRouter); // Also mounted under /api for consistency
+  })
+  .catch((error) => {
+    logger.error({ err: error }, "Failed to initialize app");
+    process.exit(1);
+  });
+
+app.use("/check", (req, res) => {
+  res.status(200).json({ message: "OK" });
+});
 
 // Add specific error handling for PubSub routes.
 // NOTE: do not always return 200 — that defeats PubSub retry semantics and
@@ -99,10 +107,6 @@ app.use(
   }
 );
 
-app.use("/check", (req, res) => {
-  res.status(200).json({ message: "OK" });
-});
-
 // Error handling middleware
 app.use(
   (
@@ -118,12 +122,12 @@ app.use(
 
 // Graceful shutdown handling
 process.on("SIGTERM", async () => {
-  await serviceManager.shutdown();
+  await shutdownApp(mailopsApp);
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
-  await serviceManager.shutdown();
+  await shutdownApp(mailopsApp);
   process.exit(0);
 });
 

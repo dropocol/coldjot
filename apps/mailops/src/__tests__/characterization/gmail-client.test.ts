@@ -78,11 +78,10 @@ beforeEach(() => {
 const USER_ID = "usr-1";
 const MAILBOX_ID = "mbx-1";
 
-/** Fresh service — bypass the process singleton. */
+/** Fresh service — Phase 6.3: GmailClientService is now a plain class (no
+ * getInstance singleton), so each test constructs its own. */
 function makeService() {
-  // Reset the static singleton so constructor reads current env.
-  (GmailClientService as any).instance = undefined;
-  return GmailClientService.getInstance();
+  return new GmailClientService();
 }
 
 function seedMailbox(over: Record<string, any> = {}) {

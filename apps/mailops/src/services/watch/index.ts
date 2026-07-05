@@ -47,8 +47,7 @@ interface WatchSetupParams {
 export class WatchService {
   private pubSubClient: PubSub;
   private oauth2Client: OAuth2Client;
-  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
-  // For now, default to the Prisma impl — overridable for tests.
+  // Repos default to Prisma impls; overridable for tests (Phase 3 pattern).
   private readonly mailboxRepo = new PrismaMailboxRepository();
   private readonly emailWatchRepo = new PrismaEmailWatchRepository();
 

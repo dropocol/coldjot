@@ -14,7 +14,6 @@ import {
 } from "@coldjot/types";
 import { rateLimitService } from "@/services/core/rate-limit/service";
 import { trackingService } from "@/services/domain/tracking.service";
-import { ServiceManager } from "@/services/service-manager";
 import {
   updateSequenceContactThreadId,
   updateSequenceContactStatus,
@@ -39,9 +38,6 @@ import { PrismaTemplateRepository } from "@/repositories/prisma/prisma-template.
 import { PrismaContactRepository } from "@/repositories/prisma/prisma-contact.repo";
 
 export class EmailProcessor extends BaseProcessor<EmailJob> {
-  private serviceManager = ServiceManager.getInstance();
-  private jobManager = this.serviceManager.getJobManager();
-
   private scheduleGenerator: ScheduleGenerator;
   private readonly emailTracking: EmailTrackingRepository;
   private readonly emailEvent: EmailEventRepository;
@@ -51,8 +47,8 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
   private readonly templateRepo = new PrismaTemplateRepository();
   private readonly contactRepo = new PrismaContactRepository();
 
-  constructor(queue: Queue) {
-    super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL));
+  constructor(queue: Queue, dlQueues: Map<string, Queue> = new Map()) {
+    super(queue, QUEUE_NAMES.EMAIL, getWorkerOptions(QUEUE_NAMES.EMAIL), dlQueues);
     this.scheduleGenerator = scheduleGenerator;
     this.emailTracking = new PrismaEmailTrackingRepository();
     this.emailEvent = new PrismaEmailEventRepository();

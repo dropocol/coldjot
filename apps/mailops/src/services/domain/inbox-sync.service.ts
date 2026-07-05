@@ -28,7 +28,7 @@ import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-e
 
 import { GmailInboxSource } from "@/adapters/gmail-inbox-source";
 import type { InboxSource } from "@/adapters/inbox-source";
-import type { MailboxWithAliases } from "@/repositories/mailbox.repo";
+import type { MailboxWithAliasesRecord } from "@/repositories/mailbox.repo";
 import type { EmailWatchRecord } from "@/repositories/email-watch.repo";
 import {
   calculateHistoryGap,
@@ -59,7 +59,7 @@ export interface InboxSyncService {
 // Watch + mailbox lookup result
 
 interface WatchWithMailbox extends EmailWatchRecord {
-  mailbox: MailboxWithAliases;
+  mailbox: MailboxWithAliasesRecord;
 }
 
 // InboxSyncServiceImpl

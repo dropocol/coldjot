@@ -26,7 +26,13 @@ export interface MailboxAliasRecord {
   name: string | null;
 }
 
-export interface MailboxWithAliases extends MailboxRecord {
+/**
+ * DAO shape: MailboxRecord + its aliases. Renamed from `MailboxWithAliases`
+ * in Phase 6.6 to avoid colliding with the web-facing `MailboxWithAliases`
+ * in @coldjot/types (mailbox.ts) — that one extends the all-optional
+ * `Mailbox` DTO; this one extends the concrete-column `MailboxRecord`.
+ */
+export interface MailboxWithAliasesRecord extends MailboxRecord {
   aliases: MailboxAliasRecord[];
 }
 
@@ -43,7 +49,7 @@ export interface SequenceMailboxRow {
 
 export interface MailboxRepository {
   /** Load mailbox by id+userId, with aliases. */
-  findWithAliases(id: string, userId: string): Promise<MailboxWithAliases | null>;
+  findWithAliases(id: string, userId: string): Promise<MailboxWithAliasesRecord | null>;
   /** Load mailbox by id+userId (no aliases) — Gmail client construction. */
   findByIdForUser(id: string, userId: string): Promise<MailboxRecord | null>;
   /** Verify an active Gmail mailbox exists for a user+email. */
@@ -51,7 +57,7 @@ export interface MailboxRepository {
   /** Active Gmail mailbox by email alone (watch service — no userId on hand). */
   findActiveGmailByEmail(email: string): Promise<MailboxRecord | null>;
   /** Find any mailbox (active or not) by email, with aliases (pubsub routing). */
-  findWithEmailAliases(email: string): Promise<MailboxWithAliases | null>;
+  findWithEmailAliases(email: string): Promise<MailboxWithAliasesRecord | null>;
   /** Persist refreshed access token + expiry (epoch ms → seconds). */
   updateTokens(id: string, accessToken: string, expiresAtMs: number): Promise<void>;
 

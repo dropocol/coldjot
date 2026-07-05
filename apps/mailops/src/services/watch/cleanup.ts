@@ -7,7 +7,7 @@ import { PrismaEmailWatchHistoryRepository } from "@/repositories/prisma/prisma-
 export class WatchCleanupService {
   private watchService: WatchService;
   private cleanupInterval: NodeJS.Timeout | null;
-  // TODO(phase-6): inject via createApp() once ServiceManager is unwound.
+  // Repos default to Prisma impls; overridable for tests (Phase 3 pattern).
   private readonly emailWatchRepo = new PrismaEmailWatchRepository();
   private readonly emailWatchHistoryRepo = new PrismaEmailWatchHistoryRepository();
 

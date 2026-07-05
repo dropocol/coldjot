@@ -1,18 +1,20 @@
 /**
- * Phase 1 composition root — the ONE place concrete implementations are wired
- * to their interfaces.
+ * Composition root — the ONE place concrete implementations are wired to
+ * their interfaces.
  *
- * IMPORTANT (Phase 1): `server.ts` does NOT call `createApp()` yet. This file
- * exists only so Phases 2–6 have somewhere to migrate *to*. It is exercised
- * solely by `__tests__/wiring.test.ts`. Production boots exactly as it did in
- * Phase 0.
+ * Phase 6: this file owns the full app graph (infra singletons + queues +
+ * processors + repos + domain services + controllers). `server.ts` calls
+ * `createApp()` once, then `initializeApp(app)` to boot the infra, and
+ * `shutdownApp(app)` on SIGTERM/SIGINT. Nothing else reaches for a global
+ * singleton — `ServiceManager` is gone.
  *
- * Phase 4 swaps the existing-class adapters for new impls that take their
- * dependencies via constructor injection. 4a replaced TrackingService; 4b
- * replaced EmailService with SendEmailServiceImpl (Gmail-API only — SMTP
- * path deleted); 4c replaced PubSubHandler with InboxSyncServiceImpl (flat
- * orchestrator over InboxSource + classify + apply-classification).
+ * Build order matters: queues must exist before JobManager / processors /
+ * MonitoringService; repos must exist before domain services; domain services
+ * must exist before processors + controllers.
  */
+
+import { Queue } from "bullmq";
+import Redis, { type Redis as RedisClient } from "ioredis";
 
 // Infra singletons (kept as process-wide singletons — locked decision).
 import { RedisConnection } from "@/services/shared/redis/connection";
@@ -20,8 +22,26 @@ import { MemoryMonitor } from "@/services/core/memory/monitor";
 import { RateLimitService } from "@/services/core/rate-limit/service";
 import { PubSubService } from "@/services/pubsub/client";
 import { WatchCleanupService } from "@/services/watch/cleanup";
+
+// Jobs infrastructure
 import { JobManager } from "@/services/jobs/job-manager";
-import { ServiceManager } from "@/services/service-manager";
+import { BaseProcessor } from "@/services/jobs/base-processor";
+import { SequenceProcessor } from "@/services/jobs/sequence/processor";
+import { EmailProcessor } from "@/services/jobs/email/processor";
+import { ContactProcessor } from "@/services/jobs/contact/processor";
+import { ScheduleProcessor } from "@/services/jobs/schedule/processor";
+import { ListSyncProcessor } from "@/services/jobs/list/processor";
+import { MonitoringService } from "@/services/monitor/service";
+
+// Queue config
+import {
+  QUEUE_NAMES,
+  QUEUE_OPTIONS,
+  DEFAULT_QUEUE_OPTIONS,
+  QUEUE_PREFIX,
+  type QueueName,
+} from "@/config";
+import { JOB_DEFAULTS } from "@/config/queue/policy";
 
 // Adapter interfaces
 import type { Clock } from "@/adapters/clock";
@@ -65,39 +85,95 @@ import { PrismaContactRepository } from "@/repositories/prisma/prisma-contact.re
 import { PrismaListSyncRecordRepository } from "@/repositories/prisma/prisma-list-sync-record.repo";
 import { PrismaListRepository } from "@/repositories/prisma/prisma-list.repo";
 
-// Domain service interfaces
+// Domain service interfaces + impls
 import type { SendEmailService } from "@/services/domain/send-email.service";
 import type { TrackingService } from "@/services/domain/tracking.service";
 import type { InboxSyncService } from "@/services/domain/inbox-sync.service";
 import type { LaunchSequenceService } from "@/services/domain/launch-sequence.service";
 import type { RunScheduleService } from "@/services/domain/run-schedule.service";
 
-// Existing classes (Phase 4 replaces these behind the domain interfaces)
 import { TrackingService as TrackingServiceImpl } from "@/lib/tracking";
-import {
-  SendEmailServiceImpl,
-} from "@/services/domain/send-email.service";
-import {
-  InboxSyncServiceImpl,
-} from "@/services/domain/inbox-sync.service";
+import { SendEmailServiceImpl } from "@/services/domain/send-email.service";
+import { InboxSyncServiceImpl } from "@/services/domain/inbox-sync.service";
 import { GmailTransport } from "@/adapters/gmail-transport";
 
-// Clock — trivial default impl
+// Controller factories
+import {
+  createSequenceController,
+} from "@/controllers/sequence.controller";
+import { createHealthController } from "@/controllers/health.controller";
+import { createMetricsController } from "@/controllers/metrics.controller";
+import { createMailboxController } from "@/controllers/mailbox.controller";
+import { createListController } from "@/controllers/list.controller";
+import { WatchService } from "@/services/watch";
+
+import { logger } from "@/lib/log";
+
+type ProcessorType = BaseProcessor<any>;
+
+// ---- helpers (moved verbatim from the deleted service-manager.ts) ---------
+
+function createQueue(
+  redisClient: RedisClient,
+  queueKey: QueueName,
+  queueName: string,
+  isDlq = false
+): Queue {
+  const queueConfig = {
+    ...DEFAULT_QUEUE_OPTIONS,
+    ...(QUEUE_OPTIONS[queueKey] || {}),
+    ...(isDlq
+      ? {
+          defaultJobOptions: {
+            ...JOB_DEFAULTS,
+            attempts: 1,
+            backoff: undefined,
+          },
+        }
+      : {}),
+    connection: redisClient,
+    prefix: QUEUE_PREFIX.slice(0, -1), // Remove trailing colon; BullMQ adds it.
+  };
+  return new Queue(queueName, queueConfig);
+}
+
+/** Build the primary queues + their paired `*-dl` DLQs (moved from SM). */
+function buildQueues(redisClient: RedisClient): {
+  queues: Map<string, Queue>;
+  dlQueues: Map<string, Queue>;
+} {
+  const queues = new Map<string, Queue>();
+  const dlQueues = new Map<string, Queue>();
+  const queueEntries = Object.entries(QUEUE_NAMES) as [QueueName, string][];
+
+  for (const [queueKey, queueName] of queueEntries) {
+    queues.set(queueName, createQueue(redisClient, queueKey, queueName));
+    const dlName = `${queueName}-dl`;
+    dlQueues.set(dlName, createQueue(redisClient, queueKey, dlName, true));
+  }
+  return { queues, dlQueues };
+}
+
+// ---- App graph -----------------------------------------------------------
 
 const systemClock: Clock = { now: () => new Date() };
 
-// App graph
-
 export interface App {
-  // Infra singletons (lazily started by ServiceManager.initialize()).
+  // Infra singletons (started by initializeApp()).
   redis: RedisConnection;
+  redisClient: RedisClient;
   memoryMonitor: MemoryMonitor;
   rateLimit: RateLimitService;
   pubsub: PubSubService;
   watchCleanup: WatchCleanupService;
-  jobManager: JobManager;
-  serviceManager: ServiceManager;
   clock: Clock;
+
+  // Jobs infrastructure
+  queues: Map<string, Queue>;
+  dlQueues: Map<string, Queue>;
+  jobManager: JobManager;
+  processors: Map<string, ProcessorType>;
+  monitoring: MonitoringService;
 
   // Repositories
   emailTracking: EmailTrackingRepository;
@@ -119,12 +195,19 @@ export interface App {
   listSyncRecord: ListSyncRecordRepository;
   list: ListRepository;
 
-  // Domain services (Phase 4 swaps the impls behind these contracts)
+  // Domain services
   sendEmail: SendEmailService;
   tracking: TrackingService;
   inboxSync: InboxSyncService;
   launchSequence: LaunchSequenceService;
   runSchedule: RunScheduleService;
+
+  // Controllers
+  sequenceController: ReturnType<typeof createSequenceController>;
+  healthController: ReturnType<typeof createHealthController>;
+  metricsController: ReturnType<typeof createMetricsController>;
+  mailboxController: ReturnType<typeof createMailboxController>;
+  listController: ReturnType<typeof createListController>;
 }
 
 export function createApp(): App {
@@ -149,26 +232,21 @@ export function createApp(): App {
   const list = new PrismaListRepository();
 
   // ---- Infra singletons (constructed; NOT started) ----------------------
-  // Per the locked decision: these remain process-wide singletons. Phase 1
-  // references them through their existing getInstance() accessors (Phase 6
-  // removes the ServiceManager wrapper and these singletons). They are NOT
-  // started here — only ServiceManager.initialize() boots Redis/PubSub/etc.,
-  // and createApp() does not call it.
   const redis = RedisConnection.getInstance();
+  const redisClient = redis.getClient();
   const memoryMonitor = MemoryMonitor.getInstance();
   const rateLimit = RateLimitService.getInstance();
   const pubsub = PubSubService.getInstance();
   const watchCleanup = new WatchCleanupService();
-  const serviceManager = ServiceManager.getInstance();
-  const jobManager = serviceManager.getJobManager();
+
+  // ---- Queues + DLQs -----------------------------------------------------
+  const { queues, dlQueues } = buildQueues(redisClient);
+
+  // ---- JobManager + MonitoringService (need the queues map) --------------
+  const jobManager = new JobManager(queues);
+  const monitoring = new MonitoringService(queues, sequenceStats);
 
   // ---- Domain services ---------------------------------------------------
-  // Phase 4b: SendEmailServiceImpl replaces the EmailService class — same
-  // behavior (Gmail-API path only; SMTP branch deleted). Phase 4c:
-  // InboxSyncServiceImpl replaces the PubSubHandler class — same behavior,
-  // flat orchestrator over the extracted InboxSource + classify +
-  // apply-classification pieces. TrackingService still wraps the existing
-  // class until Phase 6 threads it through createApp().
   const sendEmail: SendEmailService = new SendEmailServiceImpl(
     new GmailTransport(),
     emailTracking,
@@ -193,12 +271,11 @@ export function createApp(): App {
     emailEvent
   );
 
-  // launchSequence + runSchedule are placeholders until Phase 2 (controllers)
-  // and Phase 4 (god-object split) land. They throw if called before then —
-  // production code still calls the route handlers / ScheduleProcessor directly.
+  // launchSequence + runSchedule remain placeholders — production calls the
+  // route handlers / ScheduleProcessor directly. Phase 7 fills these in.
   const notYetWired = (name: string): never => {
     throw new Error(
-      `composition-root: ${name} is not wired until Phase 2/4. Production should still call the existing route/processor directly.`
+      `composition-root: ${name} is not wired yet. Production should still call the existing route/processor directly.`
     );
   };
   const launchSequence: LaunchSequenceService = {
@@ -211,15 +288,53 @@ export function createApp(): App {
     tick: async () => notYetWired("runSchedule.tick"),
   };
 
+  // ---- Processors (need queues + DLQs + jobManager + services + repos) ---
+  const processors = new Map<string, ProcessorType>();
+  const processorSpecs: Array<[string, () => ProcessorType]> = [
+    [QUEUE_NAMES.SEQUENCE, () => new SequenceProcessor(queues.get(QUEUE_NAMES.SEQUENCE)!, jobManager, dlQueues)],
+    [QUEUE_NAMES.EMAIL, () => new EmailProcessor(queues.get(QUEUE_NAMES.EMAIL)!, dlQueues)],
+    [QUEUE_NAMES.CONTACT, () => new ContactProcessor(queues.get(QUEUE_NAMES.CONTACT)!, jobManager, dlQueues)],
+    [QUEUE_NAMES.EMAIL_SCHEDULE, () => new ScheduleProcessor(queues.get(QUEUE_NAMES.EMAIL_SCHEDULE)!, jobManager, dlQueues)],
+    [QUEUE_NAMES.LIST_SYNC, () => new ListSyncProcessor(queues.get(QUEUE_NAMES.LIST_SYNC)!, dlQueues)],
+  ];
+  for (const [name, make] of processorSpecs) {
+    processors.set(name, make());
+  }
+
+  // ---- Controllers (need jobManager + monitoring + repos + services) -----
+  const watchService = new WatchService();
+  const sequenceController = createSequenceController({
+    jobManager,
+    monitoringService: monitoring,
+    sequenceRepo: sequence,
+    businessHoursRepo: businessHours,
+    rateLimitService: rateLimit,
+  });
+  const healthController = createHealthController({
+    redis: redisClient,
+    queues,
+    monitoringService: monitoring,
+  });
+  const metricsController = createMetricsController({ monitoringService: monitoring });
+  const mailboxController = createMailboxController({
+    watchService,
+    mailboxRepo: mailbox,
+  });
+  const listController = createListController({ listSyncRecordRepo: listSyncRecord });
+
   return {
     redis,
+    redisClient,
     memoryMonitor,
     rateLimit,
     pubsub,
     watchCleanup,
-    jobManager,
-    serviceManager,
     clock: systemClock,
+    queues,
+    dlQueues,
+    jobManager,
+    processors,
+    monitoring,
     emailTracking,
     emailEvent,
     sequenceContact,
@@ -243,5 +358,75 @@ export function createApp(): App {
     inboxSync,
     launchSequence,
     runSchedule,
+    sequenceController,
+    healthController,
+    metricsController,
+    mailboxController,
+    listController,
   };
+}
+
+// ---- Lifecycle (moved from ServiceManager.initialize / shutdown) ----------
+
+/**
+ * Boot the infra singletons: memory monitor, PubSub (listening for Gmail
+ * notifications → forwards to inboxSync), watch cleanup. Processors start
+ * their BullMQ workers on construction in createApp(); nothing extra here.
+ */
+export async function initializeApp(app: App): Promise<void> {
+  logger.info("🚀 Initializing app...");
+
+  await app.memoryMonitor.startMonitoring();
+  logger.info("📊 Memory monitor started");
+
+  await app.pubsub.initialize();
+  await app.pubsub.startListening();
+  logger.info("📨 PubSub service initialized and listening");
+
+  await app.watchCleanup.start();
+  logger.info("🧹 Watch cleanup service started");
+
+  logger.info("✨ App initialized successfully");
+}
+
+/**
+ * Graceful shutdown — same order as the former ServiceManager.shutdown():
+ * PubSub → memory monitor → processors → queues → DLQs → Redis → watch cleanup.
+ */
+export async function shutdownApp(app: App): Promise<void> {
+  try {
+    logger.info("🛑 Shutting down app...");
+
+    await app.pubsub.stopListening();
+    logger.info("📨 PubSub service stopped");
+
+    await app.memoryMonitor.stopMonitoring();
+    logger.info("📊 Memory monitor stopped");
+
+    for (const [name, processor] of app.processors.entries()) {
+      await processor.close();
+      logger.info(`⚙️ Processor closed: ${name}`);
+    }
+
+    for (const [name, queue] of app.queues.entries()) {
+      await queue.close();
+      logger.info(`📬 Queue closed: ${name}`);
+    }
+
+    for (const [name, queue] of app.dlQueues.entries()) {
+      await queue.close();
+      logger.info(`📬 DLQ closed: ${name}`);
+    }
+
+    await app.redis.close();
+    logger.info("🔌 Redis connection closed");
+
+    await app.watchCleanup.stop();
+    logger.info("📊 Watch cleanup service stopped");
+
+    logger.info("✨ App shutdown complete");
+  } catch (error) {
+    logger.error({ err: error }, "❌ Error during shutdown");
+    throw error;
+  }
 }

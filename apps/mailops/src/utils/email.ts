@@ -1,19 +1,11 @@
 import type { MessagePartHeader } from "@coldjot/types";
 import crypto from "crypto";
 
-// Phase 4c.2: the inbox-sync predicates below were moved to
-// services/inbox-sync/classify.ts (their canonical home). They're re-exported
-// here so existing importers — services/jobs/thread-watch (via the @/utils
-// barrel, deleted in Phase 5) and the GmailInboxSource adapter — keep
-// resolving without churn. New code should import from
-// @/services/inbox-sync/classify directly.
-export {
-  isBounceMessage,
-  shouldProcessMessage,
-  hasMessageContent,
-  isExternalSender,
-  isReplyMessage,
-} from "@/services/inbox-sync/classify";
+// Phase 6.6: the inbox-sync predicates that used to be re-exported here
+// (isBounceMessage / shouldProcessMessage / hasMessageContent /
+// isExternalSender / isReplyMessage) were moved to
+// services/inbox-sync/classify.ts in Phase 4c.2. The shim is gone — import
+// those predicates from @/services/inbox-sync/classify directly.
 
 // Message ID generation
 export const generateMessageId = (): string => {
@@ -155,6 +147,7 @@ export function splitEmailContent(emailContent: string): {
 
 
 // (hasMessageContent / isExternalSender / isReplyMessage moved to
-// services/inbox-sync/classify.ts in Phase 4c.2 — re-exported at the top of
-// this file for backwards compat. No definitions here.)
+// services/inbox-sync/classify.ts in Phase 4c.2 — the shim was removed in
+// Phase 6.6 once the last consumer moved to the direct import. No
+// definitions here.)
 

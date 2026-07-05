@@ -1,6 +1,5 @@
 import { Job, Queue, Worker, WorkerOptions } from "bullmq";
 import { logger } from "@/lib/log";
-import { ServiceManager } from "../service-manager";
 import { STALL_POLICY, JOB_RETRY } from "@/config/queue/policy";
 
 type JobStatus =
@@ -14,13 +13,17 @@ type JobStatus =
 export abstract class BaseProcessor<T = any> {
   protected worker: Worker;
   protected queue: Queue;
+  /** "<name>-dl" → Queue. Empty in tests; the composition root passes the real map. */
+  protected readonly dlQueues: Map<string, Queue>;
 
   constructor(
     queue: Queue,
     name: string,
-    workerOptions: Partial<WorkerOptions> = {}
+    workerOptions: Partial<WorkerOptions> = {},
+    dlQueues: Map<string, Queue> = new Map()
   ) {
     this.queue = queue;
+    this.dlQueues = dlQueues;
     this.worker = new Worker(name, this.process.bind(this), {
       ...workerOptions,
       // Stall-detection policy (plan 10). BullMQ defaults leave these unset,
@@ -100,7 +103,9 @@ export abstract class BaseProcessor<T = any> {
     // removeOnFail retention.
     if (exhausted) {
       try {
-        const dlQueue = ServiceManager.getInstance().getDlQueue(this.worker.name);
+        // Phase 6.2: DLQ map is constructor-injected (no more ServiceManager
+        // singleton reach). Empty map in tests → no DLQ copy.
+        const dlQueue = this.dlQueues.get(`${this.worker.name}-dl`);
         if (dlQueue && dlQueue.name !== this.worker.name) {
           await dlQueue.add(job.name, job.data, { jobId: job.id });
           logger.error({

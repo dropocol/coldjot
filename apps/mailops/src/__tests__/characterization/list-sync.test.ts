@@ -33,17 +33,6 @@ vi.mock("bullmq", () => ({
   Job: class {},
 }));
 
-// Break the service-manager ↔ base-processor ↔ processors circular import
-// chain. ListSyncProcessor itself doesn't use ServiceManager, but importing it
-// pulls in base-processor → service-manager → every processor.
-vi.mock("@/services/service-manager", () => ({
-  ServiceManager: class {
-    static getInstance() {
-      return {};
-    }
-  },
-}));
-
 const mocks = vi.hoisted(() => ({
   syncListToSequences: vi.fn<(listId: string) => Promise<void>>(async () => undefined),
 }));

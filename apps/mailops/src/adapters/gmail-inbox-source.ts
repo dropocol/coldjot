@@ -2,7 +2,7 @@ import type { MessageDetails } from "@coldjot/types";
 import { logger } from "@/lib/log";
 import { refreshTokenIfNeeded } from "@/lib/google/gmail/helper";
 import { GMAIL_API } from "@/config/gmail/constants";
-import { isReplyMessage } from "@/utils/email";
+import { isReplyMessage } from "@/services/inbox-sync/classify";
 import type {
   InboxSource,
   FetchHistoryInput,
