@@ -7,9 +7,10 @@
  * solely by `__tests__/wiring.test.ts`. Production boots exactly as it did in
  * Phase 0.
  *
- * Phase 4 swaps the existing-class adapters (EmailService, TrackingService,
- * PubSubHandler) for new impls that take their dependencies via constructor
- * injection. Until then, the wrappers here bridge method-name mismatches.
+ * Phase 4 swaps the existing-class adapters for new impls that take their
+ * dependencies via constructor injection. 4a replaced TrackingService; 4b
+ * replaced EmailService with SendEmailServiceImpl (Gmail-API only — SMTP
+ * path deleted). PubSubHandler is still the legacy class until 4c.
  */
 
 // Infra singletons (kept as process-wide singletons — locked decision).
@@ -71,9 +72,12 @@ import type { LaunchSequenceService } from "@/services/domain/launch-sequence.se
 import type { RunScheduleService } from "@/services/domain/run-schedule.service";
 
 // Existing classes (Phase 4 replaces these behind the domain interfaces)
-import { EmailService } from "@/lib/email";
 import { TrackingService as TrackingServiceImpl } from "@/lib/tracking";
 import { PubSubHandler } from "@/services/pubsub/handler";
+import {
+  SendEmailServiceImpl,
+} from "@/services/domain/send-email.service";
+import { GmailTransport } from "@/adapters/gmail-transport";
 
 // ---------------------------------------------------------------------------
 // Clock — trivial default impl
@@ -160,15 +164,14 @@ export function createApp(): App {
   const jobManager = serviceManager.getJobManager();
 
   // ---- Domain services ---------------------------------------------------
-  // Phase 1 wraps the existing classes. EmailService.sendEmail → SendEmailService.send
-  // (method-name bridge); TrackingService already matches; PubSubHandler matches
-  // the handleNotification shape. launchSequence + runSchedule slots are filled
-  // by thin adapters that delegate to the existing controller/processor code —
-  // Phase 2/4 replaces these.
-  const emailServiceImpl = new EmailService();
-  const sendEmail: SendEmailService = {
-    send: (options) => emailServiceImpl.sendEmail(options),
-  };
+  // Phase 4b: SendEmailServiceImpl replaces the EmailService class — same
+  // behavior (Gmail-API path only; SMTP branch deleted). TrackingService +
+  // PubSubHandler still wrap the existing classes until 4c.
+  const sendEmail: SendEmailService = new SendEmailServiceImpl(
+    new GmailTransport(),
+    emailTracking,
+    trackedLink
+  );
 
   const trackingImpl = new TrackingServiceImpl();
   const tracking: TrackingService = {

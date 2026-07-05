@@ -1,10 +1,12 @@
 /**
- * Group A — EmailService.sendEmail characterization tests.
+ * Group A — email-send characterization tests.
  *
- * Pins the CURRENT behavior of lib/email/index.ts so the Phase 4b refactor
- * (extract SendEmailServiceImpl + GmailTransport) can be proven non-breaking.
- *
- * Source: lib/email/index.ts (EmailService.sendEmail, lines 46–242).
+ * Originally pinned lib/email/index.ts's EmailService.sendEmail. After Phase
+ * 4b these cases exercise SendEmailServiceImpl.send (services/domain/) — the
+ * Gmail-API-only orchestrator. The SMTP branch, stray null, unused private
+ * methods, and handleSendEmailError are all gone; behavior is otherwise
+ * identical (disableSending shortcut, 1s delay, untracked-copy block,
+ * TOKEN_EXPIRED throw).
  */
 import { vi } from "vitest";
 import { setupTestContext, wasCalledWith } from "@/__tests__/helpers/test-context";
@@ -13,7 +15,7 @@ import { setupTestContext, wasCalledWith } from "@/__tests__/helpers/test-contex
 // inside setupTestContext are hoisted above this import.
 const ctx = setupTestContext();
 
-import { EmailService } from "@/lib/email";
+import { SendEmailServiceImpl } from "@/services/domain/send-email.service";
 import { EmailEventEnum, EmailTrackingStatusEnum } from "@coldjot/types";
 import type { SendEmailOptions } from "@coldjot/types";
 
@@ -85,12 +87,12 @@ function baseOptions(overrides: Partial<SendEmailOptions> = {}): SendEmailOption
   } as SendEmailOptions;
 }
 
-describe("[Group A] EmailService.sendEmail", () => {
+describe("[Group A] SendEmailServiceImpl.send", () => {
   // ---- Case 1: tracked send (happy path) -------------------------------
 
   it("case 1: tracked happy-path send writes EmailTracking(SENT) + EmailEvent(SENT), inserts untracked, deletes original, bumps stats", async () => {
     vi.useFakeTimers();
-    const service = new EmailService();
+    const service = new SendEmailServiceImpl();
     ctx.gmailResponses.send = { id: "msg-99", threadId: "thr-99" };
     ctx.gmailResponses.get = {
       id: "msg-99",
@@ -104,7 +106,7 @@ describe("[Group A] EmailService.sendEmail", () => {
     };
     ctx.gmailResponses.insert = { id: "msg-untracked-99" };
 
-    const promise = service.sendEmail(baseOptions());
+    const promise = service.send(baseOptions());
     await vi.advanceTimersByTimeAsync(1500);
     const result = await promise;
 
@@ -139,8 +141,8 @@ describe("[Group A] EmailService.sendEmail", () => {
   // ---- Case 2: disableSending shortcut ---------------------------------
 
   it("case 2: disableSending returns fake IDs and makes NO Gmail calls", async () => {
-    const service = new EmailService();
-    const result = await service.sendEmail(baseOptions({ disableSending: true }));
+    const service = new SendEmailServiceImpl();
+    const result = await service.send(baseOptions({ disableSending: true }));
 
     expect(result.success).toBe(true);
     expect(result.isFake).toBe(true);
@@ -161,7 +163,7 @@ describe("[Group A] EmailService.sendEmail", () => {
   // ---- Case 3: auth failure throws TOKEN_EXPIRED -----------------------
 
   it("case 3a: 401 from gmail.users.messages.send throws TOKEN_EXPIRED", async () => {
-    const service = new EmailService();
+    const service = new SendEmailServiceImpl();
     const mod = await import("@/lib/google");
     const originalGetClient = (mod.gmailClientService as any).getClient;
     const throwingClient: any = {
@@ -179,7 +181,7 @@ describe("[Group A] EmailService.sendEmail", () => {
     };
     (mod.gmailClientService as any).getClient = async () => throwingClient;
     try {
-      await expect(service.sendEmail(baseOptions())).rejects.toThrow(
+      await expect(service.send(baseOptions())).rejects.toThrow(
         "TOKEN_EXPIRED"
       );
     } finally {
@@ -188,7 +190,7 @@ describe("[Group A] EmailService.sendEmail", () => {
   });
 
   it("case 3b: SMTP 535 / AUTH XOAUTH2 also throws TOKEN_EXPIRED", async () => {
-    const service = new EmailService();
+    const service = new SendEmailServiceImpl();
     const mod = await import("@/lib/google");
     const originalGetClient = (mod.gmailClientService as any).getClient;
     const throwingClient: any = {
@@ -207,7 +209,7 @@ describe("[Group A] EmailService.sendEmail", () => {
     };
     (mod.gmailClientService as any).getClient = async () => throwingClient;
     try {
-      await expect(service.sendEmail(baseOptions())).rejects.toThrow(
+      await expect(service.send(baseOptions())).rejects.toThrow(
         "TOKEN_EXPIRED"
       );
     } finally {
@@ -219,7 +221,7 @@ describe("[Group A] EmailService.sendEmail", () => {
 
   it("case 4: send path waits ~1s between send and get-details (delay pinned)", async () => {
     vi.useFakeTimers();
-    const service = new EmailService();
+    const service = new SendEmailServiceImpl();
     ctx.gmailResponses.send = { id: "msg-7", threadId: "thr-7" };
     ctx.gmailResponses.get = {
       id: "msg-7",
@@ -228,7 +230,7 @@ describe("[Group A] EmailService.sendEmail", () => {
     };
     ctx.gmailResponses.insert = { id: "u7" };
 
-    const promise = service.sendEmail(baseOptions());
+    const promise = service.send(baseOptions());
 
     // Right after send, get should NOT have been called yet (sleeping 1s).
     await vi.advanceTimersByTimeAsync(500);
@@ -245,8 +247,8 @@ describe("[Group A] EmailService.sendEmail", () => {
   it("case 5: empty html causes addTrackingToEmail to throw 'Content and tracking information are required'", async () => {
     // Pin the current behavior: addTrackingToEmail guards on falsy content
     // and throws. This is NOT a success path — it's the documented failure.
-    const service = new EmailService();
-    await expect(service.sendEmail(baseOptions({ html: "" }))).rejects.toThrow(
+    const service = new SendEmailServiceImpl();
+    await expect(service.send(baseOptions({ html: "" }))).rejects.toThrow(
       "Content and tracking information are required"
     );
     // TODO(behavior): this is arguably a bug — empty html should probably

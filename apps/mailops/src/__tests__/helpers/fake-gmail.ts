@@ -40,25 +40,34 @@ const DEFAULT_GET_HEADERS: gmail_v1.Schema$MessagePartHeader[] = [
 export function makeFakeGmail(responses: GmailResponses = {}): FakeGmail {
   const calls: GmailCall[] = [];
 
-  const send = responses.send ?? { id: "msg-1", threadId: "thr-1" };
-  const get = responses.get ?? { id: "msg-1", threadId: "thr-1", payload: { headers: DEFAULT_GET_HEADERS } };
-  const insert = responses.insert ?? { id: "msg-untracked-1" };
-  const thread = responses.thread ?? { messages: [] };
-
+  // NOTE: read the canned responses LAZILY (at call time, not construction
+  // time). test-context memoizes a single fake gmail per test (to mirror the
+  // real GmailClientService client cache), and tests set/override
+  // `ctx.gmailResponses.*` AFTER the fake is constructed in beforeEach. If we
+  // captured the responses up front, the memoized fake would never see the
+  // overrides. Reading `responses.send` etc. inside each handler resolves the
+  // current value on every call.
   const gmail = {
     users: {
       messages: {
         send: async (args: any) => {
           calls.push({ op: "send", args });
-          return { data: send };
+          return { data: responses.send ?? { id: "msg-1", threadId: "thr-1" } };
         },
         get: async (args: any) => {
           calls.push({ op: "get", args });
-          return { data: get };
+          return {
+            data:
+              responses.get ?? {
+                id: "msg-1",
+                threadId: "thr-1",
+                payload: { headers: DEFAULT_GET_HEADERS },
+              },
+          };
         },
         insert: async (args: any) => {
           calls.push({ op: "insert", args });
-          return { data: insert };
+          return { data: responses.insert ?? { id: "msg-untracked-1" } };
         },
         delete: async (args: any) => {
           calls.push({ op: "delete", args });
@@ -68,7 +77,7 @@ export function makeFakeGmail(responses: GmailResponses = {}): FakeGmail {
       threads: {
         get: async (args: any) => {
           calls.push({ op: "threadGet" as any, args });
-          return { data: thread };
+          return { data: responses.thread ?? { messages: [] } };
         },
       },
       // Some code paths touch users.getProfile — stub it.
