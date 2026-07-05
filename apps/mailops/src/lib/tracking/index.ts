@@ -1,11 +1,4 @@
-import {
-  EmailTrackingMetadata,
-  EmailTracking,
-  EmailTrackingEnum,
-} from "@coldjot/types";
-import { nanoid } from "nanoid";
-import { logger } from "@/lib/log";
-import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
+import { EmailTracking } from "@coldjot/types";
 import { PrismaTrackedLinkRepository } from "@/repositories/prisma/prisma-tracked-link.repo";
 
 // The TrackingService class + singleton moved to services/domain/ in 4a.2.
@@ -26,97 +19,16 @@ export {
   wrapLinksWithTracking,
 } from "./link-wrap";
 
-// Module-level repository singletons (stopgap until Phase 4a.5 moves
-// createEmailTracking onto the TrackingService and the addTrackingToEmail
-// caller picks up the pure version directly).
-const emailTrackingRepo = new PrismaEmailTrackingRepository();
+// Module-level repository singleton (stopgap until the addTrackingToEmail
+// caller picks up the pure version directly; trackedLinkRepo is used by
+// createTrackedLink below).
 const trackedLinkRepo = new PrismaTrackedLinkRepository();
 
-export async function createEmailTracking(
-  metadata: EmailTrackingMetadata
-): Promise<EmailTracking> {
-  try {
-    // Validate required fields
-    const requiredFields = [
-      "email",
-      "userId",
-      "sequenceId",
-      "stepId",
-      "contactId",
-    ];
-
-    logger.info("🔍 Creating tracking object");
-
-    const missingFields = requiredFields.filter(
-      (field) => !metadata[field as keyof EmailTrackingMetadata]
-    );
-
-    if (missingFields.length > 0) {
-      throw new Error(
-        `Missing required metadata fields: ${missingFields.join(", ")}`
-      );
-    }
-
-    const hash = await nanoid(48);
-
-    const eventData = {
-      hash,
-      userId: metadata.userId,
-      sequenceId: metadata.sequenceId,
-      stepId: metadata.stepId,
-      contactId: metadata.contactId,
-      status: "pending",
-      subject: metadata.subject,
-      // Stamp the BullMQ job id so the email processor's idempotency guard
-      // can detect a re-attempted job that already sent (plan 10).
-      jobId: metadata.jobId,
-      metadata: {
-        email: metadata.email,
-        userId: metadata.userId,
-        sequenceId: metadata.sequenceId,
-        stepId: metadata.stepId,
-        contactId: metadata.contactId,
-      },
-    };
-
-    const trackingEvent = await emailTrackingRepo.createPending({
-      hash,
-      userId: metadata.userId!,
-      sequenceId: metadata.sequenceId!,
-      stepId: metadata.stepId!,
-      contactId: metadata.contactId!,
-      subject: metadata.subject,
-      jobId: metadata.jobId,
-      status: "pending",
-      metadata: {
-        email: metadata.email,
-        userId: metadata.userId,
-        sequenceId: metadata.sequenceId,
-        stepId: metadata.stepId,
-        contactId: metadata.contactId,
-      } as any,
-    });
-
-    const tracking: EmailTracking = {
-      id: trackingEvent.id,
-      hash,
-      metadata: { ...metadata, hash },
-      type: EmailTrackingEnum.SEQUENCE,
-      pixel: generateTrackingPixelLocal(hash),
-      wrappedLinks: true,
-      trackingId: trackingEvent.id, // Add tracking ID for link association
-    };
-
-    return tracking;
-  } catch (error) {
-    console.error("Error creating email tracking:", error);
-    throw new Error(
-      `Failed to create email tracking: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-  }
-}
+// 4a.5: the standalone createEmailTracking fn moved onto TrackingServiceImpl
+// (services/domain/tracking.service.ts) as createTracking. The EmailProcessor
+// caller now uses trackingService.createTracking. This file no longer defines
+// createEmailTracking; the legacy import path resolves to the re-exported
+// TrackingService above.
 
 // 4a.4: dead standalone exports deleted here — recordEmailOpen,
 // recordLinkClick, getEmailEvents, getSequenceEvents. All had zero live
@@ -152,7 +64,6 @@ export async function createTrackedLink(
 import {
   addTrackingToEmail as addTrackingToEmailImpl,
 } from "./link-wrap";
-import { generateTrackingPixel as generateTrackingPixelLocal } from "./pixel";
 
 export async function addTrackingToEmail(
   content: string,

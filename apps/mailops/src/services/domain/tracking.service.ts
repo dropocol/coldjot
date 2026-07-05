@@ -1,13 +1,31 @@
-import type {
-  EmailEventType,
-  EmailEventMetadata,
+import {
+  EmailEventEnum,
+  EmailTrackingStatusEnum,
+  EmailTrackingEnum,
+  type EmailEventType,
+  type EmailEventMetadata,
+  type EmailTracking,
+  type EmailTrackingMetadata,
 } from "@coldjot/types";
+import { nanoid } from "nanoid";
+import { logger } from "@/lib/log";
+import { updateSequenceStats } from "@/lib/stats";
+import { prisma } from "@coldjot/database";
+import { generateTrackingPixel } from "@/lib/tracking/pixel";
+
+import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
+import type { EmailEventRepository } from "@/repositories/email-event.repo";
+
+import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
+import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 
 /**
  * Domain service interface — what tracking *does*, not how.
  * Phase 4 replaces the current TrackingService impl behind this contract.
  */
 export interface TrackingService {
+  /** Create a 'pending' tracking row + return the domain EmailTracking object. */
+  createTracking(metadata: EmailTrackingMetadata): Promise<EmailTracking>;
   /** Record an email open (creates OPENED event on first open). */
   handleEmailOpen(hash: string): Promise<void>;
   /** Record a link click; returns the redirect URL. */
@@ -23,17 +41,6 @@ export interface TrackingService {
 // ---------------------------------------------------------------------------
 // Implementation (Phase 4a.2)
 // ---------------------------------------------------------------------------
-
-import { EmailEventEnum, EmailTrackingStatusEnum } from "@coldjot/types";
-import { logger } from "@/lib/log";
-import { updateSequenceStats } from "@/lib/stats";
-import { prisma } from "@coldjot/database";
-
-import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
-import type { EmailEventRepository } from "@/repositories/email-event.repo";
-
-import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 
 /**
  * Live `TrackingServiceImpl` — the canonical open/click/event path.
@@ -57,6 +64,59 @@ export class TrackingServiceImpl implements TrackingService {
     private readonly emailTracking: EmailTrackingRepository = new PrismaEmailTrackingRepository(),
     private readonly emailEvent: EmailEventRepository = new PrismaEmailEventRepository()
   ) {}
+
+  async createTracking(metadata: EmailTrackingMetadata): Promise<EmailTracking> {
+    // Validate required fields
+    const requiredFields = [
+      "email",
+      "userId",
+      "sequenceId",
+      "stepId",
+      "contactId",
+    ];
+
+    logger.info("🔍 Creating tracking object");
+
+    const missingFields = requiredFields.filter(
+      (field) => !metadata[field as keyof EmailTrackingMetadata]
+    );
+
+    if (missingFields.length > 0) {
+      throw new Error(
+        `Missing required metadata fields: ${missingFields.join(", ")}`
+      );
+    }
+
+    const hash = await nanoid(48);
+
+    const trackingEvent = await this.emailTracking.createPending({
+      hash,
+      userId: metadata.userId!,
+      sequenceId: metadata.sequenceId!,
+      stepId: metadata.stepId!,
+      contactId: metadata.contactId!,
+      subject: metadata.subject,
+      jobId: metadata.jobId,
+      status: "pending",
+      metadata: {
+        email: metadata.email,
+        userId: metadata.userId,
+        sequenceId: metadata.sequenceId,
+        stepId: metadata.stepId,
+        contactId: metadata.contactId,
+      } as any,
+    });
+
+    return {
+      id: trackingEvent.id,
+      hash,
+      metadata: { ...metadata, hash },
+      type: EmailTrackingEnum.SEQUENCE,
+      pixel: generateTrackingPixel(hash),
+      wrappedLinks: true,
+      trackingId: trackingEvent.id, // link association for addTrackingToEmail
+    };
+  }
 
   async handleEmailOpen(hash: string): Promise<void> {
     try {

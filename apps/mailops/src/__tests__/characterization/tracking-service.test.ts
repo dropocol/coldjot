@@ -19,10 +19,8 @@ import { setupTestContext, wasCalledWith } from "@/__tests__/helpers/test-contex
 
 const ctx = setupTestContext();
 
-import {
-  createEmailTracking,
-  TrackingService,
-} from "@/lib/tracking";
+import { TrackingService } from "@/lib/tracking";
+import { TrackingServiceImpl } from "@/services/domain/tracking.service";
 import {
   EmailEventEnum,
   EmailTrackingStatusEnum,
@@ -207,10 +205,13 @@ describe("[Group B] Tracking — standalone functions", () => {
   // 4a.4: case 4 (recordEmailOpen standalone) deleted — the fn was dead
   // (zero live callers) and is removed from lib/tracking in this step.
 
-  // ---- Case 5: createEmailTracking happy + missing-field --------------
+  // ---- Case 5: TrackingServiceImpl.createTracking happy + missing-field --
+  // (4a.5: migrated from the standalone createEmailTracking fn, which is now
+  // a thin re-export of this method's predecessor. The behavior is identical.)
 
-  it("case 5a: createEmailTracking — creates a 'pending' row with a 48-char hash + jobId stamped", async () => {
-    const tracking = await createEmailTracking({
+  it("case 5a: createTracking — creates a 'pending' row with a 48-char hash + jobId stamped", async () => {
+    const service = new TrackingServiceImpl();
+    const tracking = await service.createTracking({
       ...baseMetadata(),
       jobId: "job-123",
     });
@@ -226,9 +227,10 @@ describe("[Group B] Tracking — standalone functions", () => {
     expect(rows[0].userId).toBe(USER_ID);
   });
 
-  it("case 5b: createEmailTracking — throws when required fields are missing", async () => {
+  it("case 5b: createTracking — throws when required fields are missing", async () => {
+    const service = new TrackingServiceImpl();
     await expect(
-      createEmailTracking({
+      service.createTracking({
         email: "",
         userId: USER_ID,
         sequenceId: SEQ_ID,
