@@ -1,12 +1,12 @@
 import { Queue, Job } from "bullmq";
 import { BaseProcessor } from "../base-processor";
-import { prisma } from "@coldjot/database";
 import { logger } from "@/lib/log";
 
 import { processContactShared } from "@/services/jobs/sequence/helper";
 import { CONTACT_PROCESSING_CONFIG } from "@/config";
 import { QUEUE_NAMES } from "@/config";
 import { getWorkerOptions } from "@/config";
+import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
 
 import { ServiceManager } from "@/services/service-manager";
 
@@ -23,6 +23,7 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
 
   private serviceManager = ServiceManager.getInstance();
   private jobManager = this.serviceManager.getJobManager();
+  private readonly sequenceContact = new PrismaSequenceContactRepository();
 
   constructor(queue: Queue) {
     super(queue, QUEUE_NAMES.CONTACT, getWorkerOptions(QUEUE_NAMES.CONTACT));
@@ -76,27 +77,9 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
       logger.info("👳‍♂️ Checking for new contacts to process");
 
       // Find contacts that haven't been processed yet
-      const newContacts = await prisma.sequenceContact.findMany({
-        where: {
-          status: SequenceContactStatusEnum.NOT_STARTED,
-          lastProcessedAt: null,
-        },
-        include: {
-          sequence: {
-            include: {
-              sequenceMailbox: true,
-              steps: {
-                orderBy: {
-                  order: "asc",
-                },
-              },
-              businessHours: true,
-            },
-          },
-          contact: true,
-        },
-        take: this.batchSize,
-      });
+      const newContacts = await this.sequenceContact.findNewContacts(
+        this.batchSize
+      );
 
       logger.info(`👳‍♂️ Found ${newContacts.length} new contacts to process`);
 

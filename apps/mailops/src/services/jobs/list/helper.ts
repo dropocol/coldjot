@@ -1,5 +1,8 @@
 import { prisma } from "@coldjot/database";
 import { logger } from "@/lib/log";
+import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
+
+const sequenceContactRepo = new PrismaSequenceContactRepository();
 
 const BATCH_SIZE = 1000; // Process contacts in chunks of 1000
 
@@ -173,13 +176,8 @@ async function syncContactsToSequence(
 ): Promise<number> {
   try {
     // Get existing sequence contacts efficiently using a Set
-    const existingContacts = await prisma.sequenceContact.findMany({
-      where: { sequenceId },
-      select: { contactId: true },
-    });
-
     const existingContactIds = new Set(
-      existingContacts.map((contact) => contact.contactId)
+      await sequenceContactRepo.listContactIdsInSequence(sequenceId)
     );
 
     // Filter out contacts that are already in the sequence
@@ -196,15 +194,10 @@ async function syncContactsToSequence(
     const chunkSize = 100;
     for (let i = 0; i < newContacts.length; i += chunkSize) {
       const chunk = newContacts.slice(i, i + chunkSize);
-      await prisma.sequenceContact.createMany({
-        data: chunk.map((contact) => ({
-          sequenceId,
-          contactId: contact.id,
-          status: "not_sent",
-          currentStep: 0,
-        })),
-        skipDuplicates: true,
-      });
+      await sequenceContactRepo.addContactsToSequence(
+        sequenceId,
+        chunk.map((c) => c.id)
+      );
     }
 
     logger.info(

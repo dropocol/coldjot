@@ -30,6 +30,7 @@ import {
 } from "@/config/queue/policy";
 import { ServiceManager } from "@/services/service-manager";
 import { updateSequenceContactStatus } from "../sequence/helper";
+import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
 // Define the type for what we actually need from the sequence
 type SequenceWithRelations = {
   id: string;
@@ -69,6 +70,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
 
   private serviceManager = ServiceManager.getInstance();
   private jobManager = this.serviceManager.getJobManager();
+  private readonly sequenceContact = new PrismaSequenceContactRepository();
 
   constructor(queue: Queue) {
     super(
@@ -130,90 +132,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       }, "🔍 Checking for scheduled emails to process");
       //
       // Find emails that are due to be sent with the correct structure
-      const dueEmails = await prisma.sequenceContact.findMany({
-        where: {
-          AND: [
-            {
-              nextScheduledAt: {
-                lte: new Date(),
-                not: null,
-              },
-            },
-            {
-              AND: [
-                { completed: false },
-                { status: SequenceContactStatusEnum.IN_PROGRESS },
-                {
-                  sequence: {
-                    status: SequenceStatus.ACTIVE,
-                  },
-                },
-              ],
-            },
-          ],
-        },
-        select: {
-          id: true,
-          sequenceId: true,
-          contactId: true,
-          currentStep: true,
-          lastProcessedAt: true,
-          nextScheduledAt: true,
-          completed: true,
-          completedAt: true,
-          createdAt: true,
-          updatedAt: true,
-          failureCount: true,
-          sequence: {
-            select: {
-              id: true,
-              userId: true,
-              status: true,
-              testMode: true,
-              disableSending: true,
-              sequenceMailbox: true,
-              steps: {
-                orderBy: {
-                  order: "asc",
-                },
-                select: {
-                  id: true,
-                  sequenceId: true,
-                  stepType: true,
-                  priority: true,
-                  timing: true,
-                  delayAmount: true,
-                  delayUnit: true,
-                  subject: true,
-                  content: true,
-                  includeSignature: true,
-                  note: true,
-                  order: true,
-                  previousStepId: true,
-                  replyToThread: true,
-                  createdAt: true,
-                  updatedAt: true,
-                  templateId: true,
-                },
-              },
-              businessHours: {
-                select: {
-                  timezone: true,
-                  workDays: true,
-                  workHoursStart: true,
-                  workHoursEnd: true,
-                },
-              },
-            },
-          },
-          contact: {
-            select: {
-              id: true,
-              email: true,
-            },
-          },
-        },
-      });
+      const dueEmails = await this.sequenceContact.findDueContacts(new Date());
 
       // Development mode: Log scheduled times for debugging
       const isDevelopment =
@@ -238,25 +157,19 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       // Process each email
       for (const email of dueEmails) {
         try {
-          // Add the required status field to each step
+          // Add the required status field to each step. The repository already
+          // flattens sequenceMailbox → sequenceMailboxId and attaches the
+          // BusinessScheduleEnum type to businessHours.
           const emailWithStatus: SequenceContactWithRelations = {
             ...email,
             sequence: {
               ...email.sequence,
-              sequenceMailboxId: email.sequence.sequenceMailbox!.id,
-              businessHours: email.sequence.businessHours
-                ? {
-                    ...email.sequence.businessHours,
-                    type: BusinessScheduleEnum.BUSINESS,
-                  }
-                : undefined,
               steps: email.sequence.steps.map((step) => ({
                 ...step,
                 status: StepStatus.ACTIVE,
                 stepType: step.stepType as StepType,
-                priority: step.priority as StepPriority,
                 timing: step.timing as StepTiming,
-              })),
+              })) as any,
             },
           };
 
@@ -446,17 +359,13 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       //   : currentStep.subject;
 
       // Get threadId from SequenceContact if it exists
-      const sequenceContact = await prisma.sequenceContact.findUnique({
-        where: {
-          sequenceId_contactId: {
-            sequenceId: sequence.id,
-            contactId: contact.id,
-          },
-        },
-        select: {
-          threadId: true,
-        },
-      });
+      const sequenceContactThreadId = await this.sequenceContact.findThreadId(
+        sequence.id,
+        contact.id
+      );
+      const sequenceContact = sequenceContactThreadId
+        ? { threadId: sequenceContactThreadId }
+        : null;
 
       // Log thread details for debugging
       logger.info(
@@ -610,14 +519,11 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       const truncatedError = errorMessage.slice(0, 1000);
 
       if (exhausted) {
-        await prisma.sequenceContact.update({
-          where: { id: email.id },
-          data: {
-            failureCount: nextFailureCount,
-            lastError: truncatedError,
-            status: SequenceContactStatusEnum.FAILED,
-            nextScheduledAt: null,
-          },
+        await this.sequenceContact.updateById(email.id, {
+          failureCount: nextFailureCount,
+          lastError: truncatedError,
+          status: SequenceContactStatusEnum.FAILED,
+          nextScheduledAt: null,
         });
         logger.error(
           {
@@ -637,13 +543,10 @@ export class ScheduleProcessor extends BaseProcessor<any> {
           },
           "🔄 Scheduling bounded retry"
         );
-        await prisma.sequenceContact.update({
-          where: { id: email.id },
-          data: {
-            failureCount: nextFailureCount,
-            lastError: truncatedError,
-            nextScheduledAt: nextRetry,
-          },
+        await this.sequenceContact.updateById(email.id, {
+          failureCount: nextFailureCount,
+          lastError: truncatedError,
+          nextScheduledAt: nextRetry,
         });
       }
 
@@ -670,27 +573,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       return { currentTime: new Date() };
     }
 
-    const nextEmail = await prisma.sequenceContact.findFirst({
-      where: {
-        completed: false,
-        nextScheduledAt: {
-          not: null,
-        },
-      },
-      orderBy: {
-        nextScheduledAt: "asc",
-      },
-      select: {
-        id: true,
-        nextScheduledAt: true,
-        currentStep: true,
-        contact: {
-          select: {
-            email: true,
-          },
-        },
-      },
-    });
+    const nextEmail = await this.sequenceContact.peekNextScheduled();
 
     if (!nextEmail) {
       logger.info("📭 No scheduled emails found");
@@ -699,12 +582,12 @@ export class ScheduleProcessor extends BaseProcessor<any> {
 
     logger.info({
       id: nextEmail.id,
-      scheduledTime: nextEmail.nextScheduledAt?.toISOString(),
-      contact: nextEmail.contact.email,
-      step: nextEmail.currentStep,
-      timeUntilSend: nextEmail.nextScheduledAt
+      scheduledTime: nextEmail.scheduledTime?.toISOString(),
+      contact: nextEmail.email,
+      step: nextEmail.step,
+      timeUntilSend: nextEmail.scheduledTime
         ? `${Math.round(
-            (nextEmail.nextScheduledAt.getTime() - Date.now()) / 1000 / 60
+            (nextEmail.scheduledTime.getTime() - Date.now()) / 1000 / 60
           )} minutes`
         : "unknown",
     }, "📧 Next scheduled email");
@@ -713,9 +596,9 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       nextEmail: nextEmail
         ? {
             id: nextEmail.id,
-            scheduledTime: nextEmail.nextScheduledAt,
-            contact: nextEmail.contact.email,
-            step: nextEmail.currentStep,
+            scheduledTime: nextEmail.scheduledTime,
+            contact: nextEmail.email,
+            step: nextEmail.step,
           }
         : undefined,
       currentTime: new Date(),

@@ -12,6 +12,17 @@ import { rateLimitService } from "@/services/core/rate-limit/service";
 import { scheduleGenerator } from "@/lib/schedule";
 import { EmailJob } from "@coldjot/types";
 import { getSenderMailbox } from "@/lib/mailbox";
+import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
+import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
+import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
+import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
+import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
+
+const sequenceContactRepo = new PrismaSequenceContactRepository();
+const emailTrackingRepo = new PrismaEmailTrackingRepository();
+const emailEventRepo = new PrismaEmailEventRepository();
+const sequenceStatsRepo = new PrismaSequenceStatsRepository();
+const sequenceRepo = new PrismaSequenceRepository();
 
 /**
  * Get default business hours if not provided
@@ -45,21 +56,11 @@ export async function updateSequenceContactStatus(
     const completedAt =
       status === SequenceContactStatusEnum.COMPLETED ? new Date() : null;
 
-    await prisma.sequenceContact.update({
-      where: {
-        sequenceId_contactId: {
-          sequenceId: sequenceId,
-          contactId: contactId,
-        },
-      },
-      data: {
-        status,
-        completed: status === SequenceContactStatusEnum.COMPLETED,
-        completedAt,
-        updatedAt: date,
-        lastProcessedAt: date,
-        ...data,
-      },
+    await sequenceContactRepo.updateBySequenceAndContact(sequenceId, contactId, {
+      status,
+      completed: status === SequenceContactStatusEnum.COMPLETED,
+      lastProcessedAt: date,
+      ...data,
     });
   } catch (error) {
     logger.error(`Error updating sequence contact status: ${error}`);
@@ -76,12 +77,9 @@ export async function updateSequenceContactThreadId(
   threadId: string
 ) {
   try {
-    await prisma.sequenceContact.update({
-      where: { sequenceId_contactId: { sequenceId, contactId } },
-      data: {
-        threadId,
-        lastProcessedAt: new Date(),
-      },
+    await sequenceContactRepo.updateBySequenceAndContact(sequenceId, contactId, {
+      threadId,
+      lastProcessedAt: new Date(),
     });
   } catch (error) {
     logger.error(`Error updating sequence contact threadId: ${error}`);
@@ -99,26 +97,15 @@ export async function updateSequenceContactProgress(
   nextScheduledAt: Date
 ) {
   try {
-    await prisma.sequenceContact.upsert({
-      where: {
-        sequenceId_contactId: {
-          sequenceId,
-          contactId,
-        },
-      },
-      update: {
+    await sequenceContactRepo.upsertProgress(
+      sequenceId,
+      contactId,
+      {
         currentStep: currentStepIndex,
         lastProcessedAt: new Date(),
         nextScheduledAt,
-      },
-      create: {
-        sequenceId,
-        contactId,
-        currentStep: currentStepIndex,
-        lastProcessedAt: new Date(),
-        nextScheduledAt,
-      },
-    });
+      }
+    );
   } catch (error) {
     logger.error(`Error updating sequence progress: ${error}`);
     throw error;
@@ -129,17 +116,10 @@ export async function updateSequenceContactProgress(
  * Get active contacts for sequence
  */
 export async function getActiveSequenceContacts(sequenceId: string) {
-  return prisma.sequenceContact.findMany({
-    where: {
-      sequenceId,
-      status: {
-        notIn: ["completed", "opted_out"],
-      },
-    },
-    include: {
-      contact: true,
-    },
-  });
+  return sequenceContactRepo.listActiveWithContacts(sequenceId, [
+    "completed",
+    "opted_out",
+  ]);
 }
 
 /**
@@ -165,12 +145,7 @@ export async function getContactProgress(
   sequenceId: string,
   contactId: string
 ) {
-  return prisma.sequenceContact.findFirst({
-    where: {
-      sequenceId,
-      contactId,
-    },
-  });
+  return sequenceContactRepo.findBySequenceAndContact(sequenceId, contactId);
 }
 
 /**
@@ -181,48 +156,19 @@ export async function resetSequence(sequenceId: string): Promise<void> {
 
   try {
     // Delete all email tracking records
-    await prisma.emailTracking.deleteMany({
-      where: {
-        metadata: {
-          path: ["sequenceId"],
-          equals: sequenceId,
-        },
-      },
-    });
+    await emailTrackingRepo.deleteBySequence(sequenceId);
     logger.info(`✓ Email tracking records deleted`);
 
     // Delete all email events
-    await prisma.emailEvent.deleteMany({
-      where: {
-        sequenceId,
-      },
-    });
+    await emailEventRepo.deleteBySequence(sequenceId);
     logger.info(`✓ Email events deleted`);
 
     // Reset sequence contacts status
-    await prisma.sequenceContact.updateMany({
-      where: {
-        sequenceId,
-      },
-      data: {
-        status: "pending",
-        lastProcessedAt: null,
-        completedAt: null,
-        threadId: null,
-        currentStep: 0,
-        nextScheduledAt: null,
-        completed: false,
-        startedAt: null,
-      },
-    });
+    await sequenceContactRepo.resetBySequence(sequenceId);
     logger.info(`✓ Sequence contacts reset`);
 
     // Reset sequence stats
-    await prisma.sequenceStats.deleteMany({
-      where: {
-        sequenceId,
-      },
-    });
+    await sequenceStatsRepo.deleteBySequence(sequenceId);
     logger.info(`✓ Sequence stats reset`);
 
     // Reset sequence health

@@ -28,12 +28,13 @@ export interface SequenceContactRecord {
 }
 
 export interface UpdateStatusInput {
-  status: SequenceContactStatusEnum | string;
+  status?: SequenceContactStatusEnum | string;
   completed?: boolean;
   lastProcessedAt?: Date | null;
   threadId?: string | null;
   currentStep?: number;
   nextScheduledAt?: Date | null;
+  startedAt?: Date | null;
 }
 
 /** Due-contact graph used by the schedule tick (sequence + steps + mailbox). */
