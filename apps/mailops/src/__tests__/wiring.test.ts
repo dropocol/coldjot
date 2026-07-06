@@ -33,26 +33,6 @@ describe("composition root", () => {
     expect(app.processors.size).toBeGreaterThan(0);
     expect(app.monitoring).toBeDefined();
 
-    // Repositories — every slot wired to a Prisma impl.
-    expect(app.emailTracking).toBeDefined();
-    expect(app.emailEvent).toBeDefined();
-    expect(app.sequenceContact).toBeDefined();
-    expect(app.sequence).toBeDefined();
-    expect(app.sequenceStep).toBeDefined();
-    expect(app.sequenceStats).toBeDefined();
-    expect(app.mailbox).toBeDefined();
-    expect(app.trackedLink).toBeDefined();
-    expect(app.linkClick).toBeDefined();
-    expect(app.emailThread).toBeDefined();
-    expect(app.emailWatch).toBeDefined();
-    expect(app.emailWatchHistory).toBeDefined();
-    expect(app.processedMessage).toBeDefined();
-    expect(app.businessHours).toBeDefined();
-    expect(app.template).toBeDefined();
-    expect(app.contact).toBeDefined();
-    expect(app.listSyncRecord).toBeDefined();
-    expect(app.list).toBeDefined();
-
     // Domain services.
     expect(app.sendEmail).toBeDefined();
     expect(typeof app.sendEmail.send).toBe("function");
@@ -77,12 +57,10 @@ describe("composition root", () => {
     expect(app.listController).toBeDefined();
   });
 
-  it("returns independent repository instances on each call (stateless repos)", () => {
+  it("returns stable infra singletons across calls", () => {
     const a = createApp();
     const b = createApp();
-    // Prisma repos are stateless delegators; distinct instances are fine.
-    expect(a.emailTracking).not.toBe(b.emailTracking);
-    // Infra singletons are process-wide — same instance.
+    // Infra singletons are process-wide — same instance on every createApp().
     expect(a.redis).toBe(b.redis);
   });
 });

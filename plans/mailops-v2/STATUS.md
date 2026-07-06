@@ -16,7 +16,7 @@
 | **1** | [Remaining domain services](./1-domain-services.md) | inbox-sync, run-schedule, send-email, tracking — add methods to extension | ✅ Done | `73cf559` |
 | — | *(extension split into per-aggregate files)* | split `domain-extension.ts` → `domain-extensions/{sequence,email,inbox}.ts` | ✅ Done | `c0012ff` |
 | **2** | [Jobs, watch, monitor, controllers, lib](./2-jobs-watch-monitor-controllers-lib.md) | processors, watch, monitor, mailbox/list controllers, lib helpers | ✅ Done | — |
-| **3** | [Delete the repository layer](./3-delete-repository-layer.md) | remove `repositories/`, repo tests, fakes, composition-root wiring | ⬜ | — |
+| **3** | [Delete the repository layer](./3-delete-repository-layer.md) | remove `repositories/`, repo tests, fakes, composition-root wiring | ✅ Done | — |
 | **4** | [Verify + commit](./4-verify-commit.md) | full gate; confirm no repo imports remain | ⬜ | — |
 
 **Architecture:** Prisma `$extends({ model })` extension methods — queries live as named, reusable methods on the db client (`db.sequence.resetToDraft(id)`), defined in `packages/database/src/domain-extensions/` (split by aggregate: `sequence.ts`, `email.ts`, `inbox.ts`), composed into one extension in `domain-extension.ts`.
@@ -82,9 +82,9 @@ Update each row as you convert it. A sub-plan flips to ✅ when all its rows are
 | Milestone | Status |
 |---|---|
 | `launchSequence` wired with `db` (sub-plan 0) | ✅ |
-| Other services wired with `db` (sub-plans 1–2) | 🟡 Domain services done (sub-plan 1); jobs/watch/monitor/controllers pending (sub-plan 2) |
-| All `new PrismaXRepository()` lines removed (sub-plan 3) | ⬜ |
-| `App` interface `repositories` section removed (sub-plan 3) | ⬜ |
+| Other services wired with `db` (sub-plans 1–2) | ✅ Done (sub-plans 1–2) |
+| All `new PrismaXRepository()` lines removed (sub-plan 3) | ✅ |
+| `App` interface `repositories` section removed (sub-plan 3) | ✅ |
 
 ## Foundation tracker (sub-plan 0)
 
@@ -117,7 +117,7 @@ commit ends green: `npm run -w mailops typecheck` + relevant tests.
 
 ## Resume guide
 
-**Where we are:** sub-plan ⬜ (nothing started). Start with [sub-plan 0](./0-foundation-slice.md) — it exports the `Db` type and converts one service end-to-end as a pattern proof. **The repo files stay in place until sub-plan 3, so every prior sub-plan leaves the app in a working state.**
+**Where we are:** sub-plans 0–3 are done — the repository layer is gone and all consumers (services, jobs, watch, monitor, controllers, lib) call Prisma `$extends` domain methods directly via the injected `db` singleton. Next up is [sub-plan 4](./4-verify-commit.md) — the final full-gate verify + commit pass. (Sub-plan 3 already ran the full gate green here; 4 is the closing confirmation.)
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
@@ -130,18 +130,18 @@ npm run -w mailops test -- <pattern>
 
 ## Definition of done (for the whole plan)
 
-- [ ] `apps/mailops/src/repositories/` directory no longer exists.
-- [ ] `apps/mailops/src/__tests__/repositories/` directory no longer exists.
-- [ ] Repo fakes deleted from `__tests__/helpers/fakes/` (adapter fakes kept if still used).
-- [ ] `grep -r "@/repositories" apps/mailops/src/` returns no output.
-- [ ] All domain services take `db: Db` (no repo deps).
-- [ ] Domain-service tests moved to integration tier; passing against Postgres.
+- [x] `apps/mailops/src/repositories/` directory no longer exists.
+- [x] `apps/mailops/src/__tests__/repositories/` directory no longer exists.
+- [x] Repo fakes deleted from `__tests__/helpers/fakes/` (adapter fakes kept if still used).
+- [x] `grep -r "@/repositories" apps/mailops/src/` returns no output.
+- [x] All domain services take `db: Db` (no repo deps).
+- [x] Domain-service tests moved to integration tier; passing against Postgres.
 - [ ] Pure-helper unit tests (46) still pass, unchanged.
-- [ ] `npm run -w mailops typecheck` clean.
+- [x] `npm run -w mailops typecheck` clean.
 - [ ] `npm run -w mailops lint` 0 errors.
-- [ ] `npm run -w mailops test` green (fast tier).
-- [ ] `npm run -w mailops test:integration` green (needs Postgres).
-- [ ] [Per-consumer tracker](#per-consumer-tracker) all ✅.
+- [x] `npm run -w mailops test` green (fast tier).
+- [x] `npm run -w mailops test:integration` green (needs Postgres).
+- [x] [Per-consumer tracker](#per-consumer-tracker) all ✅.
 
 ## Solved pitfalls (don't re-hit these)
 

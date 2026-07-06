@@ -47,45 +47,6 @@ import { JOB_DEFAULTS } from "@/config/queue/policy";
 // Adapter interfaces
 import type { Clock } from "@/adapters/clock";
 
-// Repository interfaces + Prisma impls
-import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
-import type { EmailEventRepository } from "@/repositories/email-event.repo";
-import type { SequenceContactRepository } from "@/repositories/sequence-contact.repo";
-import type { SequenceRepository } from "@/repositories/sequence.repo";
-import type { SequenceStepRepository } from "@/repositories/sequence-step.repo";
-import type { SequenceStatsRepository } from "@/repositories/sequence-stats.repo";
-import type { MailboxRepository } from "@/repositories/mailbox.repo";
-import type { TrackedLinkRepository } from "@/repositories/tracked-link.repo";
-import type { LinkClickRepository } from "@/repositories/link-click.repo";
-import type { EmailThreadRepository } from "@/repositories/email-thread.repo";
-import type { EmailWatchRepository } from "@/repositories/email-watch.repo";
-import type { EmailWatchHistoryRepository } from "@/repositories/email-watch-history.repo";
-import type { ProcessedMessageRepository } from "@/repositories/processed-message.repo";
-import type { BusinessHoursRepository } from "@/repositories/business-hours.repo";
-import type { TemplateRepository } from "@/repositories/template.repo";
-import type { ContactRepository } from "@/repositories/contact.repo";
-import type { ListSyncRecordRepository } from "@/repositories/list-sync-record.repo";
-import type { ListRepository } from "@/repositories/list.repo";
-
-import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
-import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
-import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
-import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
-import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
-import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
-import { PrismaTrackedLinkRepository } from "@/repositories/prisma/prisma-tracked-link.repo";
-import { PrismaLinkClickRepository } from "@/repositories/prisma/prisma-link-click.repo";
-import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
-import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
-import { PrismaEmailWatchHistoryRepository } from "@/repositories/prisma/prisma-email-watch-history.repo";
-import { PrismaProcessedMessageRepository } from "@/repositories/prisma/prisma-processed-message.repo";
-import { PrismaBusinessHoursRepository } from "@/repositories/prisma/prisma-business-hours.repo";
-import { PrismaTemplateRepository } from "@/repositories/prisma/prisma-template.repo";
-import { PrismaContactRepository } from "@/repositories/prisma/prisma-contact.repo";
-import { PrismaListSyncRecordRepository } from "@/repositories/prisma/prisma-list-sync-record.repo";
-import { PrismaListRepository } from "@/repositories/prisma/prisma-list.repo";
-
 // Domain service interfaces + impls
 import type { SendEmailService } from "@/services/domain/send-email.service";
 import type { TrackingService } from "@/services/domain/tracking.service";
@@ -178,26 +139,6 @@ export interface App {
   processors: Map<string, ProcessorType>;
   monitoring: MonitoringService;
 
-  // Repositories
-  emailTracking: EmailTrackingRepository;
-  emailEvent: EmailEventRepository;
-  sequenceContact: SequenceContactRepository;
-  sequence: SequenceRepository;
-  sequenceStep: SequenceStepRepository;
-  sequenceStats: SequenceStatsRepository;
-  mailbox: MailboxRepository;
-  trackedLink: TrackedLinkRepository;
-  linkClick: LinkClickRepository;
-  emailThread: EmailThreadRepository;
-  emailWatch: EmailWatchRepository;
-  emailWatchHistory: EmailWatchHistoryRepository;
-  processedMessage: ProcessedMessageRepository;
-  businessHours: BusinessHoursRepository;
-  template: TemplateRepository;
-  contact: ContactRepository;
-  listSyncRecord: ListSyncRecordRepository;
-  list: ListRepository;
-
   // Domain services
   sendEmail: SendEmailService;
   tracking: TrackingService;
@@ -214,26 +155,6 @@ export interface App {
 }
 
 export function createApp(): App {
-  // ---- Repositories (stateless; safe to construct eagerly) ---------------
-  const emailTracking = new PrismaEmailTrackingRepository();
-  const emailEvent = new PrismaEmailEventRepository();
-  const sequenceContact = new PrismaSequenceContactRepository();
-  const sequence = new PrismaSequenceRepository();
-  const sequenceStep = new PrismaSequenceStepRepository();
-  const sequenceStats = new PrismaSequenceStatsRepository();
-  const mailbox = new PrismaMailboxRepository();
-  const trackedLink = new PrismaTrackedLinkRepository();
-  const linkClick = new PrismaLinkClickRepository();
-  const emailThread = new PrismaEmailThreadRepository();
-  const emailWatch = new PrismaEmailWatchRepository();
-  const emailWatchHistory = new PrismaEmailWatchHistoryRepository();
-  const processedMessage = new PrismaProcessedMessageRepository();
-  const businessHours = new PrismaBusinessHoursRepository();
-  const template = new PrismaTemplateRepository();
-  const contact = new PrismaContactRepository();
-  const listSyncRecord = new PrismaListSyncRecordRepository();
-  const list = new PrismaListRepository();
-
   // ---- Infra singletons (constructed; NOT started) ----------------------
   const redis = RedisConnection.getInstance();
   const redisClient = redis.getClient();
@@ -266,9 +187,8 @@ export function createApp(): App {
   const inboxSync: InboxSyncService = new InboxSyncServiceImpl(prisma);
 
   // launchSequence + runSchedule are both wired (Phase 7.2a + 7.2b).
-  // mailops v2: launchSequence takes `db` (Prisma-direct); the sequence +
-  // businessHours repo instances are still constructed below for the other
-  // consumers that haven't been converted yet (sub-plans 1–2).
+  // mailops v2: domain services take `db` (= `prisma`) directly — Prisma's
+  // `$extends` domain methods replace the former repository layer.
   const launchSequence: LaunchSequenceService = new LaunchSequenceServiceImpl(
     prisma,
     jobManager,
@@ -309,7 +229,7 @@ export function createApp(): App {
   const mailboxController = createMailboxController({
     watchService,
   });
-  const listController = createListController({ listSyncRecordRepo: listSyncRecord });
+  const listController = createListController();
 
   return {
     redis,
@@ -324,24 +244,6 @@ export function createApp(): App {
     jobManager,
     processors,
     monitoring,
-    emailTracking,
-    emailEvent,
-    sequenceContact,
-    sequence,
-    sequenceStep,
-    sequenceStats,
-    mailbox,
-    trackedLink,
-    linkClick,
-    emailThread,
-    emailWatch,
-    emailWatchHistory,
-    processedMessage,
-    businessHours,
-    template,
-    contact,
-    listSyncRecord,
-    list,
     sendEmail,
     tracking,
     inboxSync,

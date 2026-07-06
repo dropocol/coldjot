@@ -1,38 +1,15 @@
 /**
- * Barrel for the Phase 7 in-memory fakes + stubs.
+ * Barrel for the test fakes + stubs.
  *
- * Per-repo fakes implement the `*Repository` interfaces with in-memory Maps;
- * `FakeMailTransport` + `FakeInboxSource` implement the adapter interfaces;
- * `FakeJobManager` + `FakeRateLimitService` are call-recording stubs for the
- * infra collaborators.
+ * mailops v2: the per-repo fakes are gone (the repository layer was deleted —
+ * the Prisma `$extends` extension methods + a real Postgres-backed `prisma`
+ * singleton replace them in tests). What remains:
+ *   - `FakeMailTransport` / `FakeInboxSource` — fake the Gmail adapters.
+ *   - `FakeJobManager` / `FakeRateLimitService` — call-recording stubs for the
+ *     infra collaborators.
+ *   - `FakeBase` / `genId` (from `base.ts`) — still used by `mail-transport.fake`.
  */
-export { FakeBase, MemoryStore, genId } from "./base";
-export type { RecordedCall } from "./base";
-
-export { FakeEmailTrackingRepository } from "./email-tracking.fake";
-export { FakeEmailEventRepository } from "./email-event.fake";
-export { FakeTrackedLinkRepository } from "./tracked-link.fake";
-export { FakeLinkClickRepository } from "./link-click.fake";
-
-export {
-  FakeSequenceRepository,
-  FakeSequenceStepRepository,
-  FakeSequenceContactRepository,
-  FakeSequenceStatsRepository,
-  FakeBusinessHoursRepository,
-} from "./sequence.fake";
-
-export {
-  FakeEmailThreadRepository,
-  FakeProcessedMessageRepository,
-  FakeEmailWatchRepository,
-  FakeEmailWatchHistoryRepository,
-  FakeMailboxRepository,
-  FakeContactRepository,
-  FakeTemplateRepository,
-  FakeListRepository,
-  FakeListSyncRecordRepository,
-} from "./inbox-sync-repos.fake";
+export { FakeBase, genId } from "./base";
 
 export { FakeMailTransport, FakeInboxSource } from "./mail-transport.fake";
 export { FakeJobManager, FakeRateLimitService } from "./stubs";
