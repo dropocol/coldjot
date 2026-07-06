@@ -104,8 +104,11 @@ export function SequenceStepEditor({
           </SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-6">
-          <div className="space-y-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col flex-1 overflow-hidden"
+        >
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
             <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
               <Mail className="h-6 w-6 text-primary" />
               <div>
@@ -125,6 +128,7 @@ export function SequenceStepEditor({
                   <RadioGroup
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    className="space-y-3"
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="immediate" id="immediate" />
@@ -176,7 +180,7 @@ export function SequenceStepEditor({
               />
 
               {timing === "delay" && delayAmount && delayUnit && (
-                <div className="mt-4 p-4 bg-muted rounded-lg">
+                <div className="mt-2 p-4 bg-muted rounded-lg">
                   <h4 className="text-sm font-medium mb-2">
                     Estimated Next Send Time
                   </h4>
@@ -228,7 +232,7 @@ export function SequenceStepEditor({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>
               Back
             </Button>
