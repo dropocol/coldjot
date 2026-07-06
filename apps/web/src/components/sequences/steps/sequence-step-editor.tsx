@@ -127,7 +127,7 @@ export function SequenceStepEditor({
                 render={({ field }) => (
                   <RadioGroup
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                     className="space-y-3"
                   >
                     <div className="flex items-center space-x-2">
@@ -155,7 +155,7 @@ export function SequenceStepEditor({
                             render={({ field }) => (
                               <Select
                                 onValueChange={field.onChange}
-                                defaultValue={field.value as DelayUnit}
+                                value={field.value as DelayUnit}
                                 disabled={timing !== "delay"}
                               >
                                 <SelectTrigger className="w-[120px]">
@@ -198,7 +198,7 @@ export function SequenceStepEditor({
                 name="priority"
                 control={control}
                 render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value}>
+                  <RadioGroup onValueChange={field.onChange} value={field.value}>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="high" id="high" />
