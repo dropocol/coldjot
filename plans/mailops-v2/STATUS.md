@@ -17,7 +17,7 @@
 | — | *(extension split into per-aggregate files)* | split `domain-extension.ts` → `domain-extensions/{sequence,email,inbox}.ts` | ✅ Done | `c0012ff` |
 | **2** | [Jobs, watch, monitor, controllers, lib](./2-jobs-watch-monitor-controllers-lib.md) | processors, watch, monitor, mailbox/list controllers, lib helpers | ✅ Done | — |
 | **3** | [Delete the repository layer](./3-delete-repository-layer.md) | remove `repositories/`, repo tests, fakes, composition-root wiring | ✅ Done | — |
-| **4** | [Verify + commit](./4-verify-commit.md) | full gate; confirm no repo imports remain | ⬜ | — |
+| **4** | [Verify + commit](./4-verify-commit.md) | full gate; confirm no repo imports remain | ✅ Done | — |
 
 **Architecture:** Prisma `$extends({ model })` extension methods — queries live as named, reusable methods on the db client (`db.sequence.resetToDraft(id)`), defined in `packages/database/src/domain-extensions/` (split by aggregate: `sequence.ts`, `email.ts`, `inbox.ts`), composed into one extension in `domain-extension.ts`.
 
@@ -117,7 +117,7 @@ commit ends green: `npm run -w mailops typecheck` + relevant tests.
 
 ## Resume guide
 
-**Where we are:** sub-plans 0–3 are done — the repository layer is gone and all consumers (services, jobs, watch, monitor, controllers, lib) call Prisma `$extends` domain methods directly via the injected `db` singleton. Next up is [sub-plan 4](./4-verify-commit.md) — the final full-gate verify + commit pass. (Sub-plan 3 already ran the full gate green here; 4 is the closing confirmation.)
+**Where we are:** ✅ **Plan complete.** All sub-plans (0–4) are done. The repository layer is gone; every consumer calls Prisma `$extends` domain methods directly via the injected `db` (`= prisma`) singleton. Full gate green: typecheck clean, lint 0 errors, fast tier 116 passed, integration tier 52 passed against real Postgres. `refactor/mailops-v2` is ready to live with before merging to `master` (don't merge yet — see [After this plan](#relationship-to-other-plans)).
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
@@ -136,9 +136,9 @@ npm run -w mailops test -- <pattern>
 - [x] `grep -r "@/repositories" apps/mailops/src/` returns no output.
 - [x] All domain services take `db: Db` (no repo deps).
 - [x] Domain-service tests moved to integration tier; passing against Postgres.
-- [ ] Pure-helper unit tests (46) still pass, unchanged.
+- [x] Pure-helper unit tests still pass, unchanged (fast tier: 116 passed).
 - [x] `npm run -w mailops typecheck` clean.
-- [ ] `npm run -w mailops lint` 0 errors.
+- [x] `npm run -w mailops lint` 0 errors (247 pre-existing warnings, unrelated).
 - [x] `npm run -w mailops test` green (fast tier).
 - [x] `npm run -w mailops test:integration` green (needs Postgres).
 - [x] [Per-consumer tracker](#per-consumer-tracker) all ✅.
