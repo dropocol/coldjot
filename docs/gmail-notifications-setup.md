@@ -1,175 +1,127 @@
-# Gmail Notifications Setup Guide
+# Setting Up Email Reply Notifications (Optional)
 
-This guide explains how to set up Gmail notifications using Google Cloud PubSub and Gmail API push notifications.
+To receive real-time notifications when users reply to emails sent through ColdJot, you can set up Google Cloud PubSub. This section guides you through the process.
 
-## Prerequisites
+> **Prerequisite:** Complete the [Getting Started](./getting-started.md) guide first, including Google OAuth setup.
 
-- Google Cloud Project
-- Gmail API enabled
-- Cloud PubSub API enabled
-- Service account with proper permissions
-- Domain-wide delegation configured (for workspace accounts)
+## Table of Contents
 
-## 1. Service Account Setup
+- [1. Create a Google Cloud Service Account](#1-create-a-google-cloud-service-account)
+- [2. Configure PubSub Topic and Subscription](#2-configure-pubsub-topic-and-subscription)
+- [3. Set Up Tunneling with ngrok](#3-set-up-tunneling-with-ngrok)
+- [4. Configure Gmail API to Use Your PubSub Topic](#4-configure-gmail-api-to-use-your-pubsub-topic)
+- [5. Update Environment Variables](#5-update-environment-variables)
+- [6. Restart Your Development Server](#6-restart-your-development-server)
+- [Troubleshooting](#troubleshooting)
 
-1. Create a service account in Google Cloud Console:
+## 1. Create a Google Cloud Service Account
 
-   ```bash
-   # Create service account
-   gcloud iam service-accounts create coldjot-service-account-dev \
-     --display-name="ColdJot Service Account Dev"
-   ```
+1. Go to the [Google Cloud Console Credentials page](https://console.cloud.google.com/apis/credentials)
+2. Select your project
+3. Click "Create Credentials" and select "Service Account"
+4. Give your service account a name (e.g., "coldjot-pubsub")
+5. Assign the following roles:
+   - Pub/Sub Subscriber
+   - Pub/Sub Viewer
+   - Pub/Sub Publisher
+6. Click "Done" to create the service account
+7. Find your new service account in the list and click on it
+8. Go to the "Keys" tab and click "Add Key" → "Create new key"
+9. Select JSON format and click "Create"
+10. Save the downloaded JSON file securely
 
-2. Grant required roles:
+## 2. Configure PubSub Topic and Subscription
 
-   ```bash
-   # Add required roles
-   gcloud projects add-iam-policy-binding radiant-clone-447816-m7 \
-     --member="serviceAccount:coldjot-service-account-dev@radiant-clone-447816-m7.iam.gserviceaccount.com" \
-     --role="roles/pubsub.publisher"
+1. In the Google Cloud Console, navigate to [Pub/Sub Topics](https://console.cloud.google.com/cloudpubsub/topic)
+2. Click "Create Topic"
+3. Name your topic (e.g., "coldjot-email-replies")
+4. Click "Create"
+5. On the topic details page, click "Create Subscription"
+6. Name your subscription (e.g., "coldjot-email-replies-sub")
+7. Set the delivery type to "Push"
+8. For the endpoint URL, you'll need a public URL that points to your local development environment (we'll set this up in the next step)
+9. Under "Authentication", select "Enable authentication"
+10. Choose the service account you created earlier
+11. Click "Create"
 
-   gcloud projects add-iam-policy-binding radiant-clone-447816-m7 \
-     --member="serviceAccount:coldjot-service-account-dev@radiant-clone-447816-m7.iam.gserviceaccount.com" \
-     --role="roles/pubsub.subscriber"
+## 3. Set Up Tunneling with ngrok
 
-   gcloud projects add-iam-policy-binding radiant-clone-447816-m7 \
-     --member="serviceAccount:coldjot-service-account-dev@radiant-clone-447816-m7.iam.gserviceaccount.com" \
-     --role="roles/pubsub.viewer"
-   ```
+Since your development environment runs locally, you need a way to receive webhook notifications from Google Cloud. [ngrok](https://ngrok.com/our-product/secure-tunnels) provides a secure tunnel to your localhost.
 
-3. Enable Domain-Wide Delegation:
-   - Go to Google Cloud Console > IAM & Admin > Service Accounts
-   - Find your service account and enable Domain-Wide Delegation
-   - Add the following OAuth scopes in Google Workspace Admin:
-     ```
-     https://www.googleapis.com/auth/gmail.modify
-     https://www.googleapis.com/auth/gmail.readonly
-     https://www.googleapis.com/auth/gmail.metadata
-     ```
-
-## 2. PubSub Setup
-
-1. Create the topic:
-
-   ```bash
-   # Create PubSub topic
-   gcloud pubsub topics create coldjot-gmail-notification
-   ```
-
-2. Grant permissions:
+1. Sign up for a free ngrok account at [ngrok.com](https://ngrok.com)
+2. Download and install ngrok
+3. Authenticate ngrok with your auth token:
 
    ```bash
-   # Allow service account to publish
-   gcloud pubsub topics add-iam-policy-binding coldjot-gmail-notification \
-     --member="serviceAccount:coldjot-service-account-dev@radiant-clone-447816-m7.iam.gserviceaccount.com" \
-     --role="roles/pubsub.publisher"
-
-   # Allow Gmail API to publish
-   gcloud pubsub topics add-iam-policy-binding coldjot-gmail-notification \
-     --member="serviceAccount:gmail-api-push@system.gserviceaccount.com" \
-     --role="roles/pubsub.publisher"
+   ngrok config add-authtoken YOUR_AUTH_TOKEN
    ```
 
-3. Create push subscription:
+4. Start ngrok to create a tunnel to your mailops service:
 
    ```bash
-   # Create subscription with push endpoint
-   gcloud pubsub subscriptions create coldjot-subscription \
-     --topic coldjot-gmail-notification \
-     --push-endpoint=https://your-domain.com/pubsub \
-     --message-retention-duration=7d \
-     --ack-deadline=60
+   ngrok http 3001
    ```
 
-4. Grant subscription permissions:
-   ```bash
-   # Allow service account to subscribe
-   gcloud pubsub subscriptions add-iam-policy-binding coldjot-subscription \
-     --member="serviceAccount:coldjot-service-account-dev@radiant-clone-447816-m7.iam.gserviceaccount.com" \
-     --role="roles/pubsub.subscriber"
+5. ngrok will provide you with a public URL (e.g., `https://abc123.ngrok.io`)
+6. Copy this URL and update your PubSub subscription endpoint URL to:
+
+   ```
+   https://YOUR_NGROK_URL/api/webhooks/pubsub
    ```
 
-## 3. Environment Configuration
+7. Also update your `.env` file with this URL:
 
-Add the following to your `.env` file:
+   ```
+   PUBSUB_AUDIENCE=https://YOUR_NGROK_URL/api/webhooks/pubsub
+   ```
+
+## 4. Configure Gmail API to Use Your PubSub Topic
+
+1. Go back to your PubSub topic in the Google Cloud Console
+2. Click on the "Permissions" tab
+3. Click "Add Principal"
+4. Add `gmail-api-push@system.gserviceaccount.com` as a principal
+5. Assign the "Pub/Sub Publisher" role
+6. Click "Save"
+
+## 5. Update Environment Variables
+
+Open your `apps/mailops/env/.env.development` file and add the following variables:
 
 ```env
-# Google Cloud Project
-GOOGLE_CLOUD_PROJECT=radiant-clone-447816-m7
-
 # PubSub Configuration
-PUBSUB_SUBSCRIPTION_NAME=coldjot-subscription
-PUBSUB_TOPIC_NAME=coldjot-gmail-notification
-PUBSUB_AUDIENCE=https://your-domain.com/pubsub
+GOOGLE_CLOUD_PROJECT=your-project-id           # Your Google Cloud Project ID
+PUBSUB_SUBSCRIPTION_NAME=coldjot-email-replies-sub  # Your subscription name
+PUBSUB_TOPIC_NAME=coldjot-email-replies        # Your topic name
+PUBSUB_AUDIENCE=https://YOUR_NGROK_URL/api/webhooks/pubsub  # Your ngrok URL + path
 
-# Service Account
-GOOGLE_SERVICE_ACCOUNT_EMAIL=coldjot-service-account-dev@radiant-clone-447816-m7.iam.gserviceaccount.com
-GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="your-private-key"
+# Google Service Account (from the downloaded JSON key file)
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key content\n-----END PRIVATE KEY-----\n"
 ```
 
-## 4. Watch Setup Implementation
+> [!NOTE]
+> For the private key, make sure to:
+>
+> 1. Include the entire key including the BEGIN and END lines
+> 2. Replace newlines with `\n` characters
+> 3. Enclose the entire key in double quotes
 
-The watch setup requires:
+## 6. Restart Your Development Server
 
-1. Gmail OAuth2 credentials for the user
-2. PubSub topic properly configured
-3. Push subscription endpoint accessible
+After configuring everything, restart your development server to apply the changes:
 
-Key implementation points:
-
-```typescript
-const watchRequest = {
-  userId: "me",
-  requestBody: {
-    labelIds: ["INBOX"],
-    topicName: `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/${process.env.PUBSUB_TOPIC_NAME}`,
-    labelFilterAction: "include",
-  },
-};
+```bash
+npm run dev
 ```
-
-## 5. Verification
-
-1. Check topic permissions:
-
-   ```bash
-   gcloud pubsub topics get-iam-policy coldjot-gmail-notification
-   ```
-
-2. Check subscription:
-
-   ```bash
-   gcloud pubsub subscriptions get-iam-policy coldjot-subscription
-   ```
-
-3. Verify endpoint accessibility:
-   ```bash
-   curl -X POST https://your-domain.com/pubsub \
-     -H "Content-Type: application/json" \
-     -d '{"message": "test"}'
-   ```
 
 ## Troubleshooting
 
-1. **403 Unauthorized Error**: Check service account permissions and OAuth scopes
-2. **PubSub Connection Issues**: Verify endpoint is publicly accessible
-3. **Watch Setup Fails**: Ensure Gmail API is enabled and has proper permissions
-4. **No Notifications**: Check subscription configuration and acknowledgment
+- **Webhook Verification Errors**: Ensure your ngrok URL is correctly set in both the PubSub subscription and your environment variables.
+- **Authentication Issues**: Verify that your service account has the correct permissions and that the key is properly formatted in your `.env` file.
+- **No Notifications**: Check that the Gmail API is properly configured to use your PubSub topic and that the `gmail-api-push@system.gserviceaccount.com` account has publisher permissions.
+- **ngrok Connection Issues**: Make sure ngrok is running and that you're using the current URL (ngrok URLs change each time you restart unless you have a paid plan).
 
-## Security Considerations
+---
 
-1. Always use HTTPS for push endpoints
-2. Implement proper authentication for your endpoints
-3. Keep service account keys secure
-4. Regularly rotate credentials
-5. Monitor API quotas and usage
-
-## Maintenance
-
-1. Watches expire after 7 days - implement renewal logic
-2. Monitor failed deliveries and handle retries
-3. Implement proper error handling and logging
-4. Set up monitoring for the subscription
-5. Regular testing of the notification flow
-
-gmail-api-push@system.gserviceaccount.com is needed in Pub/Sub roles with publisher access
+`gmail-api-push@system.gserviceaccount.com` must be added as a Pub/Sub Publisher on your topic for Gmail push notifications to work.
