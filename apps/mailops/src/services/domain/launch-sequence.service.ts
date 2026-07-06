@@ -11,14 +11,14 @@ import {
   BusinessScheduleEnum,
   ProcessingJobEnum,
   type ProcessingJob,
+  type SequenceWithLaunchGraph,
 } from "@coldjot/types";
+import type { Db } from "@coldjot/database";
 import { logger } from "@/lib/log";
 
 import type { JobManager } from "@/services/jobs/job-manager";
 import type { MonitoringService } from "@/services/monitor/service";
 import type { RateLimitService } from "@/services/core/rate-limit/service";
-import type { SequenceRepository } from "@/repositories/sequence.repo";
-import type { BusinessHoursRepository } from "@/repositories/business-hours.repo";
 
 import { resetSequence } from "@/services/jobs/sequence/helper";
 
@@ -77,13 +77,14 @@ export interface LaunchSequenceService {
  *   - reset:  stop monitoring → reset rate limits → wipe tracking/events/
  *     contacts/stats/health → reset sequence status to draft.
  *
- * All dependencies are constructor-injected (no Prisma defaults — this service
- * is only ever constructed by the composition root).
+ * mailops v2: data access goes through the `db` client's domain extension
+ * methods (`db.sequence.findForLaunch`, `db.businessHours.createForSequence`,
+ * etc.), defined once in `packages/database/src/domain-extension.ts` and
+ * composed onto the Prisma client. No repository layer.
  */
 export class LaunchSequenceServiceImpl implements LaunchSequenceService {
   constructor(
-    private readonly sequenceRepo: SequenceRepository,
-    private readonly businessHoursRepo: BusinessHoursRepository,
+    private readonly db: Db,
     private readonly jobManager: JobManager,
     private readonly monitoring: MonitoringService,
     private readonly rateLimitService: Pick<RateLimitService, "resetLimits">
@@ -94,10 +95,11 @@ export class LaunchSequenceServiceImpl implements LaunchSequenceService {
     userId: string
   ): Promise<{ jobId: string; contactCount: number; stepCount: number }> {
     // Get sequence and validate.
-    const sequence = await this.sequenceRepo.findForLaunch(sequenceId, userId, [
-      "completed",
-      "opted_out",
-    ]);
+    const sequence = await this.db.sequence.findForLaunch(
+      sequenceId,
+      userId,
+      ["completed", "opted_out"]
+    );
 
     if (!sequence) {
       throw new SequenceNotFoundError();
@@ -118,7 +120,7 @@ export class LaunchSequenceServiceImpl implements LaunchSequenceService {
     );
 
     // Update sequence status.
-    await this.sequenceRepo.setStatus(sequenceId, "active");
+    await this.db.sequence.setStatus(sequenceId, "active");
 
     const processingJob: ProcessingJob = {
       sequenceId,
@@ -144,27 +146,27 @@ export class LaunchSequenceServiceImpl implements LaunchSequenceService {
   }
 
   async pause(sequenceId: string, userId: string): Promise<void> {
-    const sequence = await this.sequenceRepo.findByIdForUser(sequenceId, userId);
+    const sequence = await this.db.sequence.findByIdForUser(sequenceId, userId);
     if (!sequence) {
       throw new SequenceNotFoundError();
     }
 
-    await this.sequenceRepo.setStatus(sequenceId, "paused");
+    await this.db.sequence.setStatus(sequenceId, "paused");
     this.monitoring.stopMonitoring(sequenceId);
   }
 
   async resume(sequenceId: string, userId: string): Promise<void> {
-    const sequence = await this.sequenceRepo.findByIdForUser(sequenceId, userId);
+    const sequence = await this.db.sequence.findByIdForUser(sequenceId, userId);
     if (!sequence) {
       throw new SequenceNotFoundError();
     }
 
-    await this.sequenceRepo.setStatus(sequenceId, "active");
+    await this.db.sequence.setStatus(sequenceId, "active");
     await this.monitoring.startMonitoring(sequenceId);
   }
 
   async reset(sequenceId: string, userId: string): Promise<void> {
-    const sequence = await this.sequenceRepo.findByIdForUser(sequenceId, userId);
+    const sequence = await this.db.sequence.findByIdForUser(sequenceId, userId);
     if (!sequence) {
       throw new SequenceNotFoundError();
     }
@@ -178,7 +180,7 @@ export class LaunchSequenceServiceImpl implements LaunchSequenceService {
     await resetSequence(sequenceId);
     logger.info(`Sequence data reset for ${sequenceId}`);
 
-    await this.sequenceRepo.resetToDraft(sequenceId);
+    await this.db.sequence.resetToDraft(sequenceId);
     logger.info(`Sequence status reset to draft`);
   }
 
@@ -187,12 +189,12 @@ export class LaunchSequenceServiceImpl implements LaunchSequenceService {
     sequenceId: string,
     userId: string
   ): Promise<BusinessHours> {
-    const settings = await this.businessHoursRepo.findBySequence(
+    const settings = await this.db.businessHours.findBySequence(
       userId,
       sequenceId
     );
     if (!settings) {
-      return this.businessHoursRepo.createForSequence(
+      return this.db.businessHours.createForSequence(
         userId,
         sequenceId,
         DEFAULT_BUSINESS_HOURS

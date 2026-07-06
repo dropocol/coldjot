@@ -24,8 +24,6 @@ import {
   SequenceHasNoContactsError,
   LaunchSequenceServiceImpl,
 } from "@/services/domain/launch-sequence.service";
-import { PrismaSequenceRepository } from "@/repositories/prisma/prisma-sequence.repo";
-import { PrismaBusinessHoursRepository } from "@/repositories/prisma/prisma-business-hours.repo";
 import {
   seedUser,
   seedSequence,
@@ -62,8 +60,7 @@ const rateLimit = {
 };
 
 const service = new LaunchSequenceServiceImpl(
-  new PrismaSequenceRepository(),
-  new PrismaBusinessHoursRepository(),
+  prisma,
   jobManager as any,
   monitoring as any,
   rateLimit as any
@@ -165,6 +162,12 @@ describe("sequence lifecycle (LaunchSequenceServiceImpl vs real DB)", () => {
     expect(seq?.status).toBe(SequenceStatus.ACTIVE);
   });
 
+  it("pause throws SequenceNotFoundError on a missing sequence", async () => {
+    await expect(service.pause("no-such-seq", USER_ID)).rejects.toBeInstanceOf(
+      SequenceNotFoundError
+    );
+  });
+
   it("reset stops monitoring, resets rate limits, and sets status back to draft", async () => {
     await prisma.sequence.update({
       where: { id: SEQ_ID },
@@ -179,5 +182,11 @@ describe("sequence lifecycle (LaunchSequenceServiceImpl vs real DB)", () => {
     expect(seq?.disableSending).toBe(false);
     expect(monitoring.stopped).toContain(SEQ_ID);
     expect(rateLimit.resetCalls).toHaveLength(1);
+  });
+
+  it("reset throws SequenceNotFoundError on a missing sequence", async () => {
+    await expect(service.reset("no-such-seq", USER_ID)).rejects.toBeInstanceOf(
+      SequenceNotFoundError
+    );
   });
 });

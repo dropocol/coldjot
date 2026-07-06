@@ -62,6 +62,67 @@ export interface BusinessHours {
   type: BusinessScheduleType;
 }
 
+// ─── Repository record shapes (mailops v2: lived in *.repo.ts, now here) ──────
+
+/**
+ * Base shape of a Sequence row as read from the DB. Narrower than the full
+ * `Sequence` type (which is the API response shape); this is the persistence
+ * record. Owned here so both the database package (Prisma extension) and
+ * mailops consumers share one definition.
+ */
+export interface SequenceRecord {
+  id: string;
+  userId: string;
+  status: string;
+  testMode: boolean;
+  disableSending: boolean;
+}
+
+/**
+ * Sequence + businessHours + active contacts + steps — the graph
+ * `launch-sequence` needs to validate + dispatch a launch.
+ */
+export interface SequenceWithLaunchGraph extends SequenceRecord {
+  businessHours: BusinessHours | null;
+  steps: Array<{ id: string; order: number }>;
+  contacts: Array<{
+    id: string;
+    contactId: string;
+    status: string;
+    contact: { id: string; email: string };
+  }>;
+}
+
+/**
+ * Sequence + sequenceMailbox + steps + businessHours — the graph used by the
+ * sequence/email processors. Carries both the nested `sequenceMailbox`
+ * relation and the flattened `sequenceMailboxId` for legacy consumers.
+ */
+export interface SequenceWithDetails extends SequenceRecord {
+  sequenceMailboxId: string;
+  sequenceMailbox?: { id: string } | null;
+  businessHours: BusinessHours | null;
+  steps: Array<{
+    id: string;
+    sequenceId: string;
+    order: number;
+    stepType: string;
+    priority: any;
+    timing: string;
+    delayAmount: number | null;
+    delayUnit: string | null;
+    subject: string | null;
+    content: string | null;
+    includeSignature: boolean | null;
+    note: string | null;
+    previousStepId: string | null;
+    replyToThread: boolean | null;
+    templateId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+}
+
 // ─── Core types ──────────────────────────────────────────────────────────────
 
 export interface SequenceStep {

@@ -15,6 +15,7 @@
 
 import { Queue } from "bullmq";
 import Redis, { type Redis as RedisClient } from "ioredis";
+import { prisma } from "@coldjot/database";
 
 // Infra singletons (kept as process-wide singletons — locked decision).
 import { RedisConnection } from "@/services/shared/redis/connection";
@@ -274,9 +275,11 @@ export function createApp(): App {
   );
 
   // launchSequence + runSchedule are both wired (Phase 7.2a + 7.2b).
+  // mailops v2: launchSequence takes `db` (Prisma-direct); the sequence +
+  // businessHours repo instances are still constructed below for the other
+  // consumers that haven't been converted yet (sub-plans 1–2).
   const launchSequence: LaunchSequenceService = new LaunchSequenceServiceImpl(
-    sequence,
-    businessHours,
+    prisma,
     jobManager,
     monitoring,
     rateLimit

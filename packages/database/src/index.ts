@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { encrypt, decrypt, isEncrypted } from "./crypto";
+import { domainExtension } from "./domain-extension";
 
 /**
  * OAuth token fields stored at rest, encrypted. These exist on both the
@@ -92,28 +93,34 @@ function createPrismaClient() {
     log: enableSqlLog ? ["query", "error", "warn"] : ["error", "warn"],
   });
 
-  return base.$extends({
-    name: "tokenEncryption",
-    result: {
-      mailbox: { ...decryptOnRead },
-      account: { ...decryptOnRead },
-    },
-    query: {
-      mailbox: { ...encryptOnWrite },
-      account: { ...encryptOnWrite },
-    },
-  });
+  return base
+    .$extends({
+      name: "tokenEncryption",
+      result: {
+        mailbox: { ...decryptOnRead },
+        account: { ...decryptOnRead },
+      },
+      query: {
+        mailbox: { ...encryptOnWrite },
+        account: { ...encryptOnWrite },
+      },
+    })
+    .$extends(domainExtension);
 }
 
 // The extended client has a distinct type from the bare PrismaClient. Cache it
 // on globalThis to avoid spawning one client per hot-reload in dev.
-type ExtendedClient = ReturnType<typeof createPrismaClient>;
+//
+// `Db` is the public type consumers inject when they want Prisma-direct access
+// (mailops v2). It captures the $extends above (token encryption), so callers
+// get the extension's type — never use bare `new PrismaClient()` for DB work.
+export type Db = ReturnType<typeof createPrismaClient>;
 declare global {
   // eslint-disable-next-line no-var
-  var __prismaExtended: ExtendedClient | undefined;
+  var __prismaExtended: Db | undefined;
 }
 
-export const prisma: ExtendedClient =
+export const prisma: Db =
   globalThis.__prismaExtended ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production")
