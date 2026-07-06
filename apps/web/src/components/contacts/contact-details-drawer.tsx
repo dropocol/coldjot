@@ -19,7 +19,7 @@ export default function ContactDetailsDrawer({
 }: ContactDetailsDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent className="data-[side=right]:w-[400px] data-[side=right]:sm:w-[540px] data-[side=right]:sm:max-w-[540px]">
         <SheetHeader>
           <SheetTitle className="text-2xl font-bold">
             {contact.firstName} {contact.lastName}

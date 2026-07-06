@@ -6,7 +6,13 @@ import { Button } from "@coldjot/ui/components/button";
 import { Input } from "@coldjot/ui/components/input";
 import { Label } from "@coldjot/ui/components/label";
 import type { StepData } from "@coldjot/types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@coldjot/ui/components/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@coldjot/ui/components/select";
 import { Textarea } from "@coldjot/ui/components/textarea";
 import { RadioGroup, RadioGroupItem } from "@coldjot/ui/components/radio-group";
 import { Loader2, Mail } from "lucide-react";
@@ -43,17 +49,16 @@ export function SequenceStepEditor({
   initialData,
 }: SequenceStepEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, watch, control, reset } =
-    useForm<StepFormData>({
-      defaultValues: {
-        type: "manual_email",
-        timing: initialData?.timing || "immediate",
-        priority: initialData?.priority || "medium",
-        delayAmount: initialData?.delayAmount || 30,
-        delayUnit: initialData?.delayUnit || "minutes",
-        note: initialData?.note || "",
-      },
-    });
+  const { register, handleSubmit, watch, control, reset } = useForm<StepFormData>({
+    defaultValues: {
+      type: "manual_email",
+      timing: initialData?.timing || "immediate",
+      priority: initialData?.priority || "medium",
+      delayAmount: initialData?.delayAmount || 30,
+      delayUnit: initialData?.delayUnit || "minutes",
+      note: initialData?.note || "",
+    },
+  });
 
   // Reset form when initialData changes
   useEffect(() => {
@@ -97,18 +102,13 @@ export function SequenceStepEditor({
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-[600px] sm:max-w-[600px]">
+      <SheetContent className="data-[side=right]:w-[600px] data-[side=right]:sm:max-w-[600px]">
         <SheetHeader>
-          <SheetTitle>
-            {initialData ? "Edit Sequence Step" : "Add Sequence Step"}
-          </SheetTitle>
+          <SheetTitle>{initialData ? "Edit Sequence Step" : "Add Sequence Step"}</SheetTitle>
         </SheetHeader>
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col flex-1 overflow-hidden"
-        >
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-6 pt-0 space-y-8">
             <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
               <Mail className="h-6 w-6 text-primary" />
               <div>
@@ -161,10 +161,12 @@ export function SequenceStepEditor({
                                 <SelectTrigger className="w-[120px]">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent side="bottom" alignItemWithTrigger={false} className="p-1">
-                                  <SelectItem value="minutes">
-                                    minutes
-                                  </SelectItem>
+                                <SelectContent
+                                  side="bottom"
+                                  alignItemWithTrigger={false}
+                                  className="p-1"
+                                >
+                                  <SelectItem value="minutes">minutes</SelectItem>
                                   <SelectItem value="hours">hours</SelectItem>
                                   <SelectItem value="days">days</SelectItem>
                                 </SelectContent>
@@ -181,13 +183,10 @@ export function SequenceStepEditor({
 
               {timing === "delay" && delayAmount && delayUnit && (
                 <div className="mt-2 p-4 bg-muted rounded-lg">
-                  <h4 className="text-sm font-medium mb-2">
-                    Estimated Next Send Time
-                  </h4>
+                  <h4 className="text-sm font-medium mb-2">Estimated Next Send Time</h4>
                   <div className="text-sm text-muted-foreground"></div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    * Actual send time may vary based on business hours and
-                    holidays
+                    * Actual send time may vary based on business hours and holidays
                   </p>
                 </div>
               )}
@@ -199,10 +198,7 @@ export function SequenceStepEditor({
                 name="priority"
                 control={control}
                 render={({ field }) => (
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value}>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="high" id="high" />

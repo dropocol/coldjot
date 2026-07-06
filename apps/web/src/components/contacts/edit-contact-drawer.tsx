@@ -53,7 +53,7 @@ export default function EditContactDrawer({
 
   return (
     <Sheet open onOpenChange={onClose}>
-      <SheetContent className="w-[800px] sm:max-w-[800px] h-[100dvh] p-0">
+      <SheetContent className="data-[side=right]:w-[800px] data-[side=right]:sm:max-w-[800px] h-[100dvh] p-0">
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="flex flex-col h-full"

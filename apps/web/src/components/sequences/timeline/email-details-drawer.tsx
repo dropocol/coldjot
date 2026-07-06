@@ -42,7 +42,7 @@ export function EmailDetailsDrawer({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-[800px]">
+      <SheetContent className="data-[side=right]:w-full data-[side=right]:sm:max-w-[800px]">
         <SheetHeader>
           <SheetTitle className="text-xl">{email.subject}</SheetTitle>
         </SheetHeader>

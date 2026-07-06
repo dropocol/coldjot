@@ -51,7 +51,7 @@ export const ListDetailsDrawer = ({
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-[400px] sm:w-[540px]">
+      <SheetContent side="right" className="data-[side=right]:w-[400px] data-[side=right]:sm:w-[540px] data-[side=right]:sm:max-w-[540px]">
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between">
             <span>{list.name}</span>

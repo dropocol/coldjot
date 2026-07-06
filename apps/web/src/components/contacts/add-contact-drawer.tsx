@@ -10,19 +10,9 @@ import { Input } from "@coldjot/ui/components/input";
 import { Label } from "@coldjot/ui/components/label";
 import { Alert, AlertDescription } from "@coldjot/ui/components/alert";
 import { Card } from "@coldjot/ui/components/card";
-import {
-  Loader2,
-  FileSpreadsheet,
-  Plus,
-  X,
-  Upload,
-  FileUp,
-} from "lucide-react";
+import { Loader2, FileSpreadsheet, Plus, X, Upload, FileUp } from "lucide-react";
 import Papa from "papaparse";
-import {
-  useCreateContact,
-  useBatchCreateContacts,
-} from "@/hooks/queries/use-contacts";
+import { useCreateContact, useBatchCreateContacts } from "@/hooks/queries/use-contacts";
 import type { CreateContactInput } from "@coldjot/types/schemas";
 
 type FormData = {
@@ -48,19 +38,14 @@ interface ParsedContacts {
   file: File;
 }
 
-export default function AddContactModal({
-  onClose,
-  onAdd,
-}: AddContactModalProps) {
+export default function AddContactModal({ onClose, onAdd }: AddContactModalProps) {
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<FormData>();
   const [selectedMethod, setSelectedMethod] = useState<string>("manual");
-  const [parsedContacts, setParsedContacts] = useState<ParsedContacts | null>(
-    null
-  );
+  const [parsedContacts, setParsedContacts] = useState<ParsedContacts | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createContact = useCreateContact();
@@ -95,16 +80,11 @@ export default function AddContactModal({
           const contacts = (results.data as Record<string, unknown>[])
             .slice(0, 1000)
             .map((row) => ({
-              firstName:
-                (row["First Name"] as string) || (row.firstName as string) || "",
-              lastName:
-                (row["Last Name"] as string) || (row.lastName as string) || "",
+              firstName: (row["First Name"] as string) || (row.firstName as string) || "",
+              lastName: (row["Last Name"] as string) || (row.lastName as string) || "",
               email: (row.Email as string) || (row.email as string) || "",
             }))
-            .filter(
-              (contact) =>
-                contact.email && contact.firstName && contact.lastName
-            );
+            .filter((contact) => contact.email && contact.firstName && contact.lastName);
 
           if (contacts.length === 0) {
             toast.error("No valid contacts found in CSV");
@@ -135,9 +115,7 @@ export default function AddContactModal({
     if (!parsedContacts) return;
 
     try {
-      const data = await batchCreate.mutateAsync(
-        parsedContacts.contacts as CreateContactInput[]
-      );
+      const data = await batchCreate.mutateAsync(parsedContacts.contacts as CreateContactInput[]);
       toast.success(
         `Successfully imported ${data.imported} contacts${
           data.skipped ? ` (${data.skipped} skipped)` : ""
@@ -171,7 +149,7 @@ export default function AddContactModal({
 
   return (
     <Sheet open onOpenChange={onClose}>
-      <SheetContent className="w-[800px] sm:max-w-[800px] h-[100dvh] p-0">
+      <SheetContent className="data-[side=right]:w-[600px] data-[side=right]:sm:max-w-[600px] h-[100dvh] p-0">
         <div className="flex flex-col h-full">
           <SheetHeader className="px-6 py-4 border-b">
             <SheetTitle>Add New Contact</SheetTitle>
@@ -214,9 +192,7 @@ export default function AddContactModal({
                           </div>
                           <div className="flex-1">
                             <h3 className="font-medium">{method.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {method.description}
-                            </p>
+                            <p className="text-sm text-muted-foreground">{method.description}</p>
                           </div>
                         </div>
                       </Card>
@@ -237,9 +213,7 @@ export default function AddContactModal({
                           placeholder="Enter first name"
                         />
                         {errors.firstName && (
-                          <p className="text-sm text-destructive">
-                            {errors.firstName.message}
-                          </p>
+                          <p className="text-sm text-destructive">{errors.firstName.message}</p>
                         )}
                       </div>
 
@@ -253,9 +227,7 @@ export default function AddContactModal({
                           placeholder="Enter last name"
                         />
                         {errors.lastName && (
-                          <p className="text-sm text-destructive">
-                            {errors.lastName.message}
-                          </p>
+                          <p className="text-sm text-destructive">{errors.lastName.message}</p>
                         )}
                       </div>
                     </div>
@@ -275,9 +247,7 @@ export default function AddContactModal({
                         placeholder="Enter email address"
                       />
                       {errors.email && (
-                        <p className="text-sm text-destructive">
-                          {errors.email.message}
-                        </p>
+                        <p className="text-sm text-destructive">{errors.email.message}</p>
                       )}
                     </div>
                   </form>
@@ -293,8 +263,8 @@ export default function AddContactModal({
                         <div className="text-center">
                           <h3 className="font-medium">Upload CSV File</h3>
                           <p className="text-sm text-muted-foreground mt-1">
-                            Your CSV should include columns for: First Name,
-                            Last Name, and Email Address
+                            Your CSV should include columns for: First Name, Last Name, and Email
+                            Address
                           </p>
                         </div>
                         <Input
@@ -308,8 +278,7 @@ export default function AddContactModal({
                         {parsedContacts && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <FileSpreadsheet className="h-4 w-4" />
-                            {parsedContacts.file.name} (
-                            {parsedContacts.contacts.length} contacts)
+                            {parsedContacts.file.name} ({parsedContacts.contacts.length} contacts)
                             <Button
                               variant="ghost"
                               size="icon"
@@ -335,10 +304,7 @@ export default function AddContactModal({
                 Cancel
               </Button>
               {selectedMethod === "manual" ? (
-                <Button
-                  onClick={handleSubmit(onSubmit)}
-                  disabled={isSubmitting}
-                >
+                <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
