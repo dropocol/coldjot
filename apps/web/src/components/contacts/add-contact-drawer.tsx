@@ -149,7 +149,7 @@ export default function AddContactModal({ onClose, onAdd }: AddContactModalProps
 
   return (
     <Sheet open onOpenChange={onClose}>
-      <SheetContent className="data-[side=right]:w-[600px] data-[side=right]:sm:max-w-[600px] h-[100dvh] p-0">
+      <SheetContent className="data-[side=right]:w-[800px] data-[side=right]:sm:max-w-[800px] h-[100dvh] p-0">
         <div className="flex flex-col h-full">
           <SheetHeader className="px-6 py-4 border-b">
             <SheetTitle>Add New Contact</SheetTitle>
