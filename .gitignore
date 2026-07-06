@@ -74,6 +74,9 @@ scripts/reset.py
 
 prompts/
 
+# Local-only planning docs — keep on disk, never commit
+plans/
+
 secrets/*
 notes/*
 **/lexical-playgroundtheme/next-monorepo
