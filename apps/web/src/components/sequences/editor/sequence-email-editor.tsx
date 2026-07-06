@@ -237,7 +237,7 @@ export function SequenceEmailEditor({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-11/12 sm:w-full sm:max-w-full h-screen flex flex-col">
+      <DialogContent className="w-11/12 sm:w-full sm:max-w-[90%] h-screen flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle>{initialData ? "Edit Email" : "Create Email"}</DialogTitle>
         </DialogHeader>
