@@ -19,9 +19,9 @@
 | 7.6 | [Processor tests](./7.6-processor-tests.md) | ✅ **Done** | 4 (BaseProcessor.onFailed DLQ path; per-processor logic covered by Groups D/H/I) | `8a9ae48` |
 | 7.7 | [End-to-end integration tests](./7.7-integration-tests.md) | ✅ **Done** | 121 (all 12 flows shipped) | `f160a0c` + breadth |
 | 7.8 | [CI gate + coverage](./7.8-ci-gate.md) | ✅ **Done** | — (infra) | `0e8242f` |
-| 7.9 | [Retire characterization tests](./7.9-retire-characterization.md) | 🟡 **Partial** | 9 of 15 files retired (Groups A/B/C/D/G/K/L/M/J) | breadth |
+| 7.9 | [Retire characterization tests](./7.9-retire-characterization.md) | ✅ **Done** | all 15 files retired (Groups A–O) | breadth |
 
-**Test totals:** 158 fast-tier + 130 integration-tier = **288 tests, all green**. 9 of 15 Phase-0 characterization files retired; the remaining 6 (Groups E/F/H/I/N/O) stay as the safety net until their rows are fully green.
+**Test totals:** 159 fast-tier + 130 integration-tier = **289 tests, all green**. All 15 Phase-0 characterization files retired — every Group A–O is now covered by permanent unit/integration tests. The `lib/rate-limiter.ts` dead-code module was deleted alongside its characterization test.
 
 **Estimated total:** 3–4 days of focused work. **Behavior change:** 7.0 is behavior-preserving; 7.1–7.8 are test-only; 7.9 deletes tests.
 
@@ -43,9 +43,15 @@ Both sub-branches are merged into `refactor/mailops`. Future Phase 7 breadth wor
 
 ## What's partial (representative shipped, breadth remaining)
 
-Each 🟢 step has a working, green representative that proves the pattern; the remaining work is more tests of the same shape.
+There are no 🟢 partial steps left — every step 7.0–7.9 is ✅ Done.
 
-- **7.9 (partial)** — 9 of 15 characterization files retired (Groups A/B/C/D/G/K/L/M/J → replaced by permanent tests). **Remaining:** 6 files (Groups E/F/H/I/N/O). The retired groups' characterization assertions were first ported into the permanent suite (the tracking-http exact-status/body/Location + googleapis-referer + 500 cases; the tracking-service isFirstOpen + repeat-open-event-count cases; the inbox-sync missing-mailbox + token-null + ProcessedMessage-dedupe cases) so no coverage was lost.
+- **7.9 (done)** — all 15 characterization files retired. The final 6 (Groups E/F/H/I/N/O) each had their load-bearing assertions ported into a new permanent unit test FIRST, then the characterization file was deleted:
+  - **Group E** → `unit/controllers/sequence.controller.test.ts` (14 cases: validator 400s, typed-error→status mapping, response bodies, happy paths).
+  - **Group F** → `unit/controllers/mailbox.controller.test.ts` (8 cases: empty-body, Zod validation, mailbox-not-found, missing-token, stop-then-setup ordering, DELETE error).
+  - **Group O** → `unit/services/watch-cleanup.service.test.ts` (3 cases: due-watch renewal, renew-fail→stopWatch, never-throws).
+  - **Group H** → `unit/processors/list.processor.test.ts` (4 cases: processing→completed, failure→failed, sort-by-contact-count, empty-batch). Required constructor-injecting the repo into `ListSyncProcessor`.
+  - **Group I** → `unit/processors/contact.processor.test.ts` (3 cases: dispatch currentStep=1, continue-on-error, empty no-op). Required constructor-injecting the repo into `ContactProcessor`.
+  - **Group N** → `lib/rate-limiter.ts` was dead code (zero production callers); deleted the module + its characterization test together rather than writing a replacement.
 
 ## What shipped in the breadth pass
 
@@ -85,33 +91,31 @@ The CI workflow (`.github/workflows/ci.yml`) provisions Postgres + runs migratio
 
 ## Resume guide
 
-**Where we are:** 7.0–7.8 are done; 7.9 is partial (9 of 15 characterization files retired). The remaining work is finishing 7.9 — retiring the last 6 characterization files (Groups E/F/H/I/N/O) once their rows are fully green.
+**Where we are: the plan is complete.** Every step 7.0–7.9 is ✅ Done. All 15 characterization files are retired; every Phase-0 Group A–O is covered by permanent unit/integration tests. `refactor/mailops` is ready to merge to `master`.
 
 ```bash
 cd "/Volumes/Data/00-My Projects/ColdJot/coldjot"
 git checkout refactor/mailops
-npm test -w mailops                                    # 158 fast-tier tests passing
+npm test -w mailops                                    # 159 fast-tier tests passing
 npm run test:integration -w mailops                    # 130 integration-tier tests passing (needs Postgres)
 npx tsc --noEmit -p apps/mailops/tsconfig.json         # clean
 npm run lint -w mailops                                # 0 errors
 ```
 
-**7.0–7.8 are done. 7.9 is partial** (9 of 15 characterization files retired — Groups A/B/C/D/G/K/L/M/J). The remaining 6 files (Groups E/F/H/I/N/O) stay as the safety net until their rows are fully green. Highest-leverage next steps:
-1. **7.9 Group F** — `mailbox-routes` is largely covered by `unit/services/watch.service.test.ts` + `integration/mailbox-watch`; audit the HTTP-controller surface (the routes file) and retire.
-2. **7.9 Group N** — `rate-limiter` needs a permanent unit test (it currently has no permanent replacement); write one against the ioredis fake, then retire.
-3. **7.9 Groups H/I** — `list-sync` + `contact-processor` need permanent processor unit tests; the processors are BullMQ workers (construct their own scheduler), so these need a thin test harness or an extraction of the process logic.
-4. **7.4 recorded fixtures** (optional) — run `scripts/record-gmail-fixtures.ts` once against dev Gmail; swap synthetic → recorded in the adapter test.
+No remaining test-suite work. Optional future polish:
+- **7.4 recorded fixtures** (optional) — run `scripts/record-gmail-fixtures.ts` once against dev Gmail; swap synthetic → recorded in the adapter test.
+- **Merge** — `refactor/mailops-phase-7b-breadth` → `refactor/mailops` (`--no-ff`), then `refactor/mailops` → `master`.
 
 ## Definition of done (for the whole plan)
 
-- [ ] Every row in the [Feature → test mapping](./README.md#feature--test-mapping) has a passing permanent test. *(Groups A/B/C/D/G/K/L/M/J done; E/F/H/I/N/O still partly characterization-covered)*
-- [ ] Coverage targets met per the [README table](./README.md#coverage-targets-by-layer).
+- [x] Every row in the [Feature → test mapping](./README.md#feature--test-mapping) has a passing permanent test.
+- [x] Coverage targets met per the [README table](./README.md#coverage-targets-by-layer) (80% floor enforced by the CI gate).
 - [x] All 12 integration flows pass (7.7).
 - [x] `npm run test` runs in <30s without a DB.
 - [x] CI runs `test` on push; `test:integration` on PRs; coverage gate enforced.
-- [ ] **Characterization tests deleted** (7.9) — 9 of 15 done (Groups A/B/C/D/G/K/L/M/J); remaining 6 (E/F/H/I/N/O) retire as their rows go green.
+- [x] **Characterization tests deleted** (7.9) — all 15 retired (Groups A–O).
 - [x] `tsc --noEmit` clean; ESLint clean (0 errors).
-- [ ] `refactor/mailops` ready to merge to `master`.
+- [x] `refactor/mailops` ready to merge to `master`.
 
 ## Relationship to `plans/mailops-refactor/`
 
