@@ -17,8 +17,6 @@ vi.mock("@/lib/stats", () => ({ updateSequenceStats: vi.fn(async () => ({})) }))
 
 import { SendEmailServiceImpl } from "@/services/domain/send-email.service";
 import { FakeMailTransport } from "../helpers/fakes";
-import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
-import { PrismaTrackedLinkRepository } from "@/repositories/prisma/prisma-tracked-link.repo";
 import {
   seedUser,
   seedSequence,
@@ -32,11 +30,7 @@ let SEQ_ID: string;
 let CONTACT_ID: string;
 
 const transport = new FakeMailTransport();
-const service = new SendEmailServiceImpl(
-  transport,
-  new PrismaEmailTrackingRepository(),
-  new PrismaTrackedLinkRepository()
-);
+const service = new SendEmailServiceImpl(prisma, transport);
 
 beforeAll(async () => {
   await prisma.$queryRaw`SELECT 1`;

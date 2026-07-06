@@ -13,7 +13,7 @@
 | Step | Sub-plan | Scope | Status | Commit(s) |
 |---|---|---|---|---|
 | **0** | [Foundation + launch-sequence slice](./0-foundation-slice.md) | Export `Db`; create `domainExtension`; convert 1 service + tests end-to-end | ✅ Done | _(uncommitted on `refactor/mailops-v2`)_ |
-| **1** | [Remaining domain services](./1-domain-services.md) | inbox-sync, run-schedule, send-email, tracking — add methods to extension | ⬜ | — |
+| **1** | [Remaining domain services](./1-domain-services.md) | inbox-sync, run-schedule, send-email, tracking — add methods to extension | ✅ Done | — |
 | **2** | [Jobs, watch, monitor, controllers, lib](./2-jobs-watch-monitor-controllers-lib.md) | processors, watch, monitor, mailbox/list controllers, lib helpers | ⬜ | — |
 | **3** | [Delete the repository layer](./3-delete-repository-layer.md) | remove `repositories/`, repo tests, fakes, composition-root wiring | ⬜ | — |
 | **4** | [Verify + commit](./4-verify-commit.md) | full gate; confirm no repo imports remain | ⬜ | — |
@@ -33,10 +33,10 @@ Update each row as you convert it. A sub-plan flips to ✅ when all its rows are
 | File | `db` injected? | Extension methods used? | Type imports cleaned? | Test moved to integration? | Status |
 |---|---|---|---|---|---|
 | `launch-sequence.service.ts` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `inbox-sync.service.ts` | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `run-schedule.service.ts` | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `send-email.service.ts` | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `tracking.service.ts` | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `inbox-sync.service.ts` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `run-schedule.service.ts` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `send-email.service.ts` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `tracking.service.ts` | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ### Jobs / watch / monitor (sub-plan 2)
 
@@ -76,7 +76,7 @@ Update each row as you convert it. A sub-plan flips to ✅ when all its rows are
 | Milestone | Status |
 |---|---|
 | `launchSequence` wired with `db` (sub-plan 0) | ✅ |
-| Other services wired with `db` (sub-plans 1–2) | ⬜ |
+| Other services wired with `db` (sub-plans 1–2) | 🟡 Domain services done (sub-plan 1); jobs/watch/monitor/controllers pending (sub-plan 2) |
 | All `new PrismaXRepository()` lines removed (sub-plan 3) | ⬜ |
 | `App` interface `repositories` section removed (sub-plan 3) | ⬜ |
 

@@ -24,9 +24,6 @@ import { EmailEventEnum, NotificationType } from "@coldjot/types";
 vi.mock("@/lib/stats", () => ({ updateSequenceStats: vi.fn(async () => ({})) }));
 
 import { applyClassification } from "@/services/inbox-sync/apply-classification";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
-import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
-import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
 import {
   seedUser,
   seedSequence,
@@ -40,9 +37,9 @@ let SEQ_ID: string;
 let CONTACT_ID: string;
 
 const deps = {
-  emailEvent: new PrismaEmailEventRepository(),
-  sequenceContact: new PrismaSequenceContactRepository(),
-  emailThread: new PrismaEmailThreadRepository(),
+  emailEvent: prisma.emailEvent,
+  sequenceContact: prisma.sequenceContact,
+  emailThread: prisma.emailThread,
 };
 
 beforeAll(async () => {

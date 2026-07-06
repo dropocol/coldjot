@@ -251,12 +251,11 @@ export function createApp(): App {
 
   // ---- Domain services ---------------------------------------------------
   const sendEmail: SendEmailService = new SendEmailServiceImpl(
+    prisma,
     new GmailTransport(),
-    emailTracking,
-    trackedLink
   );
 
-  const trackingImpl = new TrackingServiceImpl();
+  const trackingImpl = new TrackingServiceImpl(prisma);
   const tracking: TrackingService = {
     createTracking: (metadata) => trackingImpl.createTracking(metadata),
     handleEmailOpen: (hash) => trackingImpl.handleEmailOpen(hash),
@@ -264,15 +263,7 @@ export function createApp(): App {
     trackEmailEvent: (input) => trackingImpl.trackEmailEvent(input),
   };
 
-  const inboxSync: InboxSyncService = new InboxSyncServiceImpl(
-    mailbox,
-    emailWatch,
-    emailWatchHistory,
-    processedMessage,
-    emailThread,
-    sequenceContact,
-    emailEvent
-  );
+  const inboxSync: InboxSyncService = new InboxSyncServiceImpl(prisma);
 
   // launchSequence + runSchedule are both wired (Phase 7.2a + 7.2b).
   // mailops v2: launchSequence takes `db` (Prisma-direct); the sequence +
@@ -286,8 +277,7 @@ export function createApp(): App {
   );
 
   const runSchedule: RunScheduleService = new RunScheduleServiceImpl(
-    sequenceContact,
-    sequenceStep,
+    prisma,
     jobManager,
     rateLimit
   );

@@ -102,3 +102,12 @@ export interface GmailHistoryRecord {
     message: GmailMessageMetadata;
   }>;
 }
+
+// ─── Repository record shapes (concrete DB columns) ─────────────────────────
+
+export interface ProcessedMessageRecord {
+  id: string;
+  messageId: string;
+  threadId: string;
+  type: string;
+}

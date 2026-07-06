@@ -18,18 +18,13 @@ import { EmailEventEnum } from "@coldjot/types";
 vi.mock("@/lib/stats", () => ({ updateSequenceStats: vi.fn(async () => ({})) }));
 
 import { TrackingServiceImpl } from "@/services/domain/tracking.service";
-import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 
 const USER_ID = "itest-tracking-user";
 const SEQ_ID = "itest-tracking-seq";
 const STEP_ID = "itest-tracking-step";
 const CONTACT_ID = "itest-tracking-contact";
 
-const service = new TrackingServiceImpl(
-  new PrismaEmailTrackingRepository(),
-  new PrismaEmailEventRepository()
-);
+const service = new TrackingServiceImpl(prisma);
 
 async function truncate() {
   await prisma.linkClick.deleteMany();
@@ -128,5 +123,29 @@ describe("TrackingServiceImpl against real DB", () => {
       where: { trackingId: tracking.id, type: EmailEventEnum.CLICKED },
     });
     expect(clicked).not.toBeNull();
+  });
+
+  it("createTracking throws when required metadata fields are missing", async () => {
+    await expect(
+      service.createTracking({
+        email: "x@example.com",
+        userId: "",
+        sequenceId: SEQ_ID,
+        stepId: STEP_ID,
+        contactId: CONTACT_ID,
+      } as any)
+    ).rejects.toThrow(/Missing required metadata fields/);
+  });
+
+  it("handleLinkClick on an unknown hash throws 'Invalid tracking data'", async () => {
+    await expect(service.handleLinkClick("no-such-hash", "lid")).rejects.toThrow(
+      /Invalid tracking data/
+    );
+  });
+
+  it("trackEmailEvent throws when the tracking row is missing", async () => {
+    await expect(
+      service.trackEmailEvent({ trackingId: "nope", eventType: EmailEventEnum.SPAM })
+    ).rejects.toThrow(/Email tracking record not found/);
   });
 });

@@ -1,8 +1,7 @@
 import { Queue, Job } from "bullmq";
 import { BaseProcessor } from "../base-processor";
 import { logger } from "@/lib/log";
-import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
-import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
+import { prisma } from "@coldjot/database";
 import { JobManager } from "@/services/jobs/job-manager";
 import {
   RunScheduleServiceImpl,
@@ -29,7 +28,6 @@ export class ScheduleProcessor extends BaseProcessor<any> {
   private readonly SCHEDULER_ID = "email-sending-scheduler";
 
   private readonly jobManager: JobManager;
-  private readonly sequenceContact = new PrismaSequenceContactRepository();
   private readonly service: RunScheduleService;
 
   constructor(
@@ -45,14 +43,12 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       dlQueues
     );
     this.jobManager = jobManager;
-    // Default to a real RunScheduleServiceImpl so `new ScheduleProcessor(q, jm)`
-    // (the Group D characterization test) works. The composition root passes
-    // its own instance.
+    // Default to a real RunScheduleServiceImpl backed by the prisma singleton.
+    // The composition root passes its own instance.
     this.service =
       service ??
       new RunScheduleServiceImpl(
-        this.sequenceContact,
-        new PrismaSequenceStepRepository(),
+        prisma,
         this.jobManager
       );
 
@@ -120,7 +116,7 @@ export class ScheduleProcessor extends BaseProcessor<any> {
       return { currentTime: new Date() };
     }
 
-    const nextEmail = await this.sequenceContact.peekNextScheduled();
+    const nextEmail = await prisma.sequenceContact.peekNextScheduled();
 
     if (!nextEmail) {
       logger.info("📭 No scheduled emails found");

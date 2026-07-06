@@ -37,3 +37,24 @@ export enum WatchErrorCode {
   RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
   WATCH_EXPIRED = "watch_expired",
 }
+
+// ─── Repository record shapes (concrete DB columns) ─────────────────────────
+
+export interface EmailWatchRecord {
+  id: string;
+  userId: string;
+  email: string;
+  historyId: string;
+  expiration: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EmailWatchHistoryRecord {
+  id: string;
+  emailWatchId: string;
+  historyId: string;
+  notificationType: string;
+  processed: boolean;
+  data: Record<string, unknown>;
+}

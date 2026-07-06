@@ -10,14 +10,8 @@ import {
 import { nanoid } from "nanoid";
 import { logger } from "@/lib/log";
 import { updateSequenceStats } from "@/lib/stats";
-import { prisma } from "@coldjot/database";
+import { prisma, type Db } from "@coldjot/database";
 import { generateTrackingPixel } from "@/lib/tracking/pixel";
-
-import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
-import type { EmailEventRepository } from "@/repositories/email-event.repo";
-
-import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 
 /**
  * Domain service interface — what tracking *does*, not how.
@@ -47,21 +41,13 @@ export interface TrackingService {
  * functions that used to live in `lib/tracking/index.ts` are deleted in 4a.4
  * (open / click / generic-event standalones) and 4a.3 (stats standalones).
  *
- * Repositories are constructor-injected with Prisma defaults so `new
- * TrackingServiceImpl()` works for the characterization tests (the defaults
- * import `prisma` from `@coldjot/database`, which the test harness mocks). The
- * composition root passes real repos; Phase 6 threads this through `createApp()`
- * properly.
- *
- * NOTE: `handleLinkClick`'s linkClick + trackedLink + emailTracking writes
- * remain on the `$transaction` tx client for atomicity. Phase 4 collapses
- * these — the lint rule stays at `warn` until then (see STATUS.md).
+ * mailops v2: data access goes through the `db` client's domain extension
+ * methods (`db.emailTracking.createPending`, `db.emailEvent.record`, etc.).
+ * The `handleLinkClick` transaction uses raw Prisma on the `tx` client
+ * (extension methods aren't available inside `$transaction` callbacks).
  */
 export class TrackingServiceImpl implements TrackingService {
-  constructor(
-    private readonly emailTracking: EmailTrackingRepository = new PrismaEmailTrackingRepository(),
-    private readonly emailEvent: EmailEventRepository = new PrismaEmailEventRepository()
-  ) {}
+  constructor(private readonly db: Db = prisma) {}
 
   async createTracking(metadata: EmailTrackingMetadata): Promise<EmailTracking> {
     // Validate required fields
@@ -87,7 +73,7 @@ export class TrackingServiceImpl implements TrackingService {
 
     const hash = await nanoid(48);
 
-    const trackingEvent = await this.emailTracking.createPending({
+    const trackingEvent = await this.db.emailTracking.createPending({
       hash,
       userId: metadata.userId!,
       sequenceId: metadata.sequenceId!,
@@ -118,7 +104,7 @@ export class TrackingServiceImpl implements TrackingService {
 
   async handleEmailOpen(hash: string): Promise<void> {
     try {
-      const tracking = await this.emailTracking.findWithOpenEvents(hash);
+      const tracking = await this.db.emailTracking.findWithOpenEvents(hash);
 
       if (!tracking) {
         logger.warn(`No tracking record found for hash: ${hash}`);
@@ -128,7 +114,7 @@ export class TrackingServiceImpl implements TrackingService {
       const isFirstOpen = tracking.events.length === 0;
 
       // Always increment the open count and update timestamps
-      await this.emailTracking.recordOpen(
+      await this.db.emailTracking.recordOpen(
         hash,
         tracking.sequenceId,
         tracking.contactId,
@@ -159,7 +145,7 @@ export class TrackingServiceImpl implements TrackingService {
 
   async handleLinkClick(hash: string, linkId: string): Promise<string> {
     try {
-      const tracking = await this.emailTracking.findWithLink(hash, linkId);
+      const tracking = await this.db.emailTracking.findWithLink(hash, linkId);
 
       if (!tracking) {
         logger.warn(`No tracking record found for hash: ${hash}`);
@@ -240,14 +226,14 @@ export class TrackingServiceImpl implements TrackingService {
     try {
       const { trackingId, eventType, metadata } = data;
 
-      const tracking = await this.emailTracking.findById(trackingId);
+      const tracking = await this.db.emailTracking.findById(trackingId);
 
       if (!tracking) {
         throw new Error("Email tracking record not found");
       }
 
-      // Create the event
-      await this.emailEvent.create({
+      // Create the event (named `record` on the extension to avoid shadowing Prisma's `create`)
+      await this.db.emailEvent.record({
         trackingId: tracking.id,
         type: eventType,
         metadata: (metadata || {}) as any,
@@ -255,7 +241,7 @@ export class TrackingServiceImpl implements TrackingService {
       });
 
       // Update tracking status
-      await this.emailTracking.setStatus(tracking.id, eventType);
+      await this.db.emailTracking.setStatus(tracking.id, eventType);
 
       // Update sequence stats if applicable
       if (tracking.sequenceId && tracking.contactId) {
@@ -275,8 +261,7 @@ export class TrackingServiceImpl implements TrackingService {
 }
 
 /**
- * Process-wide singleton — used by the route controller until Phase 6 threads
- * the service through `createApp()`. The composition root constructs its own
- * instance (with the same default repos).
+ * Process-wide singleton — used by the route controller until sub-plan 2
+ * threads the service through the composition root.
  */
-export const trackingService = new TrackingServiceImpl();
+export const trackingService = new TrackingServiceImpl(prisma);

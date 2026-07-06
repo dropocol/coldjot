@@ -5,31 +5,16 @@ import {
   NotificationType,
   HistoryChange,
   GmailHistoryRecord,
+  type MailboxWithAliasesRecord,
+  type EmailWatchRecord,
 } from "@coldjot/types";
+import type { Db } from "@coldjot/database";
 import { PUBSUB_CONFIG } from "@/config/pubsub/constants";
 import { logger } from "@/lib/log";
 import { fileLogger } from "@/lib/log/file-logger";
 
-import type { MailboxRepository } from "@/repositories/mailbox.repo";
-import type { EmailWatchRepository } from "@/repositories/email-watch.repo";
-import type { EmailWatchHistoryRepository } from "@/repositories/email-watch-history.repo";
-import type { ProcessedMessageRepository } from "@/repositories/processed-message.repo";
-import type { EmailThreadRepository } from "@/repositories/email-thread.repo";
-import type { SequenceContactRepository } from "@/repositories/sequence-contact.repo";
-import type { EmailEventRepository } from "@/repositories/email-event.repo";
-
-import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
-import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
-import { PrismaEmailWatchHistoryRepository } from "@/repositories/prisma/prisma-email-watch-history.repo";
-import { PrismaProcessedMessageRepository } from "@/repositories/prisma/prisma-processed-message.repo";
-import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
-import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
-
 import { GmailInboxSource } from "@/adapters/gmail-inbox-source";
 import type { InboxSource } from "@/adapters/inbox-source";
-import type { MailboxWithAliasesRecord } from "@/repositories/mailbox.repo";
-import type { EmailWatchRecord } from "@/repositories/email-watch.repo";
 import {
   calculateHistoryGap,
   isLargeHistoryGap,
@@ -93,13 +78,7 @@ export class InboxSyncServiceImpl implements InboxSyncService {
   private readonly backoffSeconds = PUBSUB_CONFIG.BACKOFF_SECONDS;
 
   constructor(
-    private readonly mailboxRepo: MailboxRepository = new PrismaMailboxRepository(),
-    private readonly emailWatchRepo: EmailWatchRepository = new PrismaEmailWatchRepository(),
-    private readonly emailWatchHistoryRepo: EmailWatchHistoryRepository = new PrismaEmailWatchHistoryRepository(),
-    private readonly processedMessageRepo: ProcessedMessageRepository = new PrismaProcessedMessageRepository(),
-    private readonly emailThreadRepo: EmailThreadRepository = new PrismaEmailThreadRepository(),
-    private readonly sequenceContactRepo: SequenceContactRepository = new PrismaSequenceContactRepository(),
-    private readonly emailEventRepo: EmailEventRepository = new PrismaEmailEventRepository(),
+    private readonly db: Db,
     private readonly inboxSource: InboxSource = new GmailInboxSource()
   ) {}
 
@@ -153,10 +132,10 @@ export class InboxSyncServiceImpl implements InboxSyncService {
   private async getWatchRecord(
     email: string
   ): Promise<WatchWithMailbox | null> {
-    const watch = await this.emailWatchRepo.findByEmail(email);
+    const watch = await this.db.emailWatch.findByEmail(email);
     if (!watch) return null;
 
-    const mailbox = await this.mailboxRepo.findWithEmailAliases(email);
+    const mailbox = await this.db.mailbox.findWithEmailAliases(email);
     if (!mailbox) {
       fileLogger.log("warn", "No mailbox found for watch", { email, watchId: watch.id });
       return null;
@@ -189,7 +168,7 @@ export class InboxSyncServiceImpl implements InboxSyncService {
       // 1. Has this historyId already been processed?
       if (
         await isHistoryIdProcessed(
-          { emailWatch: this.emailWatchRepo, emailWatchHistory: this.emailWatchHistoryRepo },
+          { emailWatch: this.db.emailWatch, emailWatchHistory: this.db.emailWatchHistory },
           watch.id,
           historyId
         )
@@ -242,7 +221,7 @@ export class InboxSyncServiceImpl implements InboxSyncService {
       }
 
       // 6. Advance the watch's historyId.
-      await this.emailWatchRepo.updateById(watch.id, {
+      await this.db.emailWatch.updateById(watch.id, {
         historyId: response.historyId,
       });
     } catch (error) {
@@ -286,9 +265,9 @@ export class InboxSyncServiceImpl implements InboxSyncService {
         if (
           await isMessageProcessed(
             {
-              processedMessage: this.processedMessageRepo,
-              emailThread: this.emailThreadRepo,
-              sequenceContact: this.sequenceContactRepo,
+              processedMessage: this.db.processedMessage,
+              emailThread: this.db.emailThread,
+              sequenceContact: this.db.sequenceContact,
             },
             message.id,
             message.threadId
@@ -308,7 +287,7 @@ export class InboxSyncServiceImpl implements InboxSyncService {
           details,
           userEmails,
           message.threadId,
-          (tid) => this.processedMessageRepo.hasOriginalForThread(tid)
+          (tid) => this.db.processedMessage.hasOriginalForThread(tid)
         );
 
         const change: HistoryChange = {
@@ -320,13 +299,13 @@ export class InboxSyncServiceImpl implements InboxSyncService {
         };
 
         await createProcessedMessageRecord(
-          this.processedMessageRepo,
+          this.db.processedMessage,
           message.id,
           message.threadId,
           messageType
         );
         await createOrUpdateWatchHistory(
-          this.emailWatchHistoryRepo,
+          this.db.emailWatchHistory,
           watch.id,
           response.historyId,
           messageType,
@@ -343,9 +322,9 @@ export class InboxSyncServiceImpl implements InboxSyncService {
           await applyClassification({
             change,
             deps: {
-              emailEvent: this.emailEventRepo,
-              sequenceContact: this.sequenceContactRepo,
-              emailThread: this.emailThreadRepo,
+              emailEvent: this.db.emailEvent,
+              sequenceContact: this.db.sequenceContact,
+              emailThread: this.db.emailThread,
             },
           });
         }
@@ -370,9 +349,9 @@ export class InboxSyncServiceImpl implements InboxSyncService {
     watch: WatchWithMailbox,
     latestHistoryId: string
   ): Promise<void> {
-    await this.emailWatchRepo.updateById(watch.id, { historyId: latestHistoryId });
+    await this.db.emailWatch.updateById(watch.id, { historyId: latestHistoryId });
     const gapSize = Number(BigInt(latestHistoryId) - BigInt(watch.historyId));
-    await this.emailWatchHistoryRepo.create({
+    await this.db.emailWatchHistory.record({
       id: nanoid(),
       emailWatchId: watch.id,
       historyId: latestHistoryId,

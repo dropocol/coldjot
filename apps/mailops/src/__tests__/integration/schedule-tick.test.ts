@@ -11,8 +11,6 @@ import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { prisma } from "@coldjot/database";
 import { SequenceStatus } from "@coldjot/types";
 import { RunScheduleServiceImpl } from "@/services/domain/run-schedule.service";
-import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
-import { PrismaSequenceStepRepository } from "@/repositories/prisma/prisma-sequence-step.repo";
 import { FakeJobManager, FakeRateLimitService } from "../helpers/fakes";
 import {
   seedUser,
@@ -37,8 +35,7 @@ const scheduleGen = {
 };
 
 const service = new RunScheduleServiceImpl(
-  new PrismaSequenceContactRepository(),
-  new PrismaSequenceStepRepository(),
+  prisma,
   jobManager as any,
   rateLimit,
   scheduleGen as any
@@ -160,5 +157,41 @@ describe("schedule tick (RunScheduleServiceImpl vs real DB)", () => {
         (j) => j.sequenceId === SEQ_ID && j.contactId === CONTACT_ID
       )
     ).toBe(false);
+  });
+
+  it("bumps failureCount + schedules a retry when calculateNextRun returns null", async () => {
+    // Seed a due contact at step 1.
+    await prisma.sequenceContact.create({
+      data: {
+        sequenceId: SEQ_ID,
+        contactId: CONTACT_ID,
+        status: "in_progress",
+        currentStep: 1,
+        nextScheduledAt: new Date(Date.now() - 60_000),
+      },
+    });
+    // Override the schedule generator to return null (force the retry path).
+    const failingGen = { calculateNextRun: async () => null };
+    const failingService = new RunScheduleServiceImpl(
+      prisma,
+      jobManager as any,
+      rateLimit,
+      failingGen as any
+    );
+    const out = await failingService.tick();
+    expect(out.enqueued).toBe(0);
+    // The contact row now has a bumped failureCount + a nextScheduledAt set to
+    // a future retry time + a lastError mentioning "next send time".
+    const row = await prisma.sequenceContact.findFirst({
+      where: { sequenceId: SEQ_ID, contactId: CONTACT_ID },
+    });
+    expect(row?.failureCount).toBeGreaterThanOrEqual(1);
+    expect(row?.nextScheduledAt).not.toBeNull();
+    expect(row?.nextScheduledAt!.getTime()).toBeGreaterThan(Date.now());
+    expect(row?.lastError).toMatch(/next send time/i);
+    // Clean up so later suites don't see this row.
+    await prisma.sequenceContact.deleteMany({
+      where: { sequenceId: SEQ_ID, contactId: CONTACT_ID },
+    });
   });
 });

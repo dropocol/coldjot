@@ -14,16 +14,14 @@
  */
 import type { HistoryChange, EmailEventMetadata } from "@coldjot/types";
 import { EmailEventEnum, NotificationType } from "@coldjot/types";
-import type { EmailEventRepository } from "@/repositories/email-event.repo";
-import type { SequenceContactRepository } from "@/repositories/sequence-contact.repo";
-import type { EmailThreadRepository } from "@/repositories/email-thread.repo";
+import type { Db } from "@coldjot/database";
 import { updateSequenceStats } from "@/lib/stats";
 import { nextContactStatus } from "./states";
 
 export interface ApplyClassificationDeps {
-  emailEvent: EmailEventRepository;
-  sequenceContact: SequenceContactRepository;
-  emailThread: EmailThreadRepository;
+  emailEvent: Db["emailEvent"];
+  sequenceContact: Db["sequenceContact"];
+  emailThread: Db["emailThread"];
   /** Stats bump (defaults to the lib/stats singleton). Injectable for tests. */
   updateStats?: typeof updateSequenceStats;
 }
@@ -93,7 +91,7 @@ export async function applyClassification(input: {
           from: change.from,
         };
 
-  const created = await emailEvent.create({
+  const created = await emailEvent.record({
     trackingId: sentEvent.trackingId,
     type: eventType,
     sequenceId,

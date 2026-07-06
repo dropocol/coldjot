@@ -4,6 +4,7 @@ import {
   type EmailResult,
   type SendEmailOptions,
 } from "@coldjot/types";
+import type { Db } from "@coldjot/database";
 import { logger } from "@/lib/log";
 import { updateSequenceStats } from "@/lib/stats";
 import { addTrackingToEmail } from "@/lib/tracking/link-wrap";
@@ -16,11 +17,7 @@ import {
 
 import type { MailTransport } from "@/adapters/mail-transport";
 import { GmailTransport } from "@/adapters/gmail-transport";
-
-import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
-import type { TrackedLinkRepository } from "@/repositories/tracked-link.repo";
-import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
-import { PrismaTrackedLinkRepository } from "@/repositories/prisma/prisma-tracked-link.repo";
+import { prisma } from "@coldjot/database";
 
 /**
  * Domain service interface — sends an email and writes the tracking row +
@@ -42,15 +39,14 @@ export interface SendEmailService {
  *   - untracked-copy insert + delete-original (delete errors logged, not thrown)
  *   - 401 / 535+AUTH XOAUTH2 → throws TOKEN_EXPIRED
  *
- * Repositories + transport are constructor-injected with Prisma/Gmail defaults
- * (the Phase 3 private-field-with-default pattern) so `new SendEmailServiceImpl()`
- * works for the characterization tests; the composition root passes real deps.
+ * mailops v2: data access goes through the `db` client's domain extension
+ * methods (`db.emailTracking.markSent`, `db.trackedLink.create`, etc.). The
+ * transport is the only non-db collaborator.
  */
 export class SendEmailServiceImpl implements SendEmailService {
   constructor(
-    private readonly transport: MailTransport = new GmailTransport(),
-    private readonly emailTracking: EmailTrackingRepository = new PrismaEmailTrackingRepository(),
-    private readonly trackedLink: TrackedLinkRepository = new PrismaTrackedLinkRepository()
+    private readonly db: Db,
+    private readonly transport: MailTransport
   ) {}
 
   async send(options: SendEmailOptions): Promise<EmailResult> {
@@ -89,7 +85,7 @@ export class SendEmailServiceImpl implements SendEmailService {
         options.tracking,
         async (id, url) =>
           (
-            await this.trackedLink.create({
+            await this.db.trackedLink.createLink({
               emailTrackingId: id,
               originalUrl: url,
             })
@@ -203,7 +199,7 @@ export class SendEmailServiceImpl implements SendEmailService {
     sent: { id: string; threadId?: string }
   ): Promise<void> {
     logger.info("📝 Updating email tracking record");
-    await this.emailTracking.markSent(
+    await this.db.emailTracking.markSent(
       options.tracking.id,
       {
         messageId: sent.id,
@@ -239,7 +235,7 @@ export class SendEmailServiceImpl implements SendEmailService {
 }
 
 /**
- * Process-wide singleton — used by the EmailProcessor until Phase 6 threads
- * the service through `createApp()`.
+ * Process-wide singleton — used by the EmailProcessor until sub-plan 2
+ * converts the processor to take `db` + the service via the composition root.
  */
-export const sendEmailService = new SendEmailServiceImpl();
+export const sendEmailService = new SendEmailServiceImpl(prisma, new GmailTransport());

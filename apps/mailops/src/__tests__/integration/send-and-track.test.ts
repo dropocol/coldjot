@@ -63,9 +63,6 @@ vi.mock("@/lib/tracking/link-wrap", async () => {
 import { SendEmailServiceImpl } from "@/services/domain/send-email.service";
 import { TrackingServiceImpl } from "@/services/domain/tracking.service";
 import { FakeMailTransport } from "../helpers/fakes";
-import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
-import { PrismaTrackedLinkRepository } from "@/repositories/prisma/prisma-tracked-link.repo";
 import {
   seedUser,
   seedSequence,
@@ -79,15 +76,8 @@ let SEQ_ID: string;
 let CONTACT_ID: string;
 
 const transport = new FakeMailTransport();
-const sendService = new SendEmailServiceImpl(
-  transport,
-  new PrismaEmailTrackingRepository(),
-  new PrismaTrackedLinkRepository()
-);
-const trackingService = new TrackingServiceImpl(
-  new PrismaEmailTrackingRepository(),
-  new PrismaEmailEventRepository()
-);
+const sendService = new SendEmailServiceImpl(prisma, transport);
+const trackingService = new TrackingServiceImpl(prisma);
 
 beforeAll(async () => {
   await prisma.$queryRaw`SELECT 1`;
@@ -167,10 +157,37 @@ describe("send-and-track (SendEmailServiceImpl + TrackingServiceImpl vs real DB)
     await trackingService.handleLinkClick(tracking.hash, link!.id);
     const linkAfter = await prisma.trackedLink.findUnique({ where: { id: link!.id } });
     expect(linkAfter?.clickCount).toBe(1);
+
     expect(
       await prisma.emailEvent.findFirst({
         where: { trackingId: tracking.id, type: EmailEventEnum.CLICKED },
       })
     ).not.toBeNull();
+  });
+
+  it("send throws TOKEN_EXPIRED when the transport rejects with status 401", async () => {
+    const trackingHash = `${SCOPE}-hash-401`;
+    const tracking = await seedEmailTracking(trackingHash, USER_ID, SEQ_ID, CONTACT_ID);
+    const err: any = new Error("Unauthorized");
+    err.status = 401;
+    transport.sendError = err;
+    try {
+      await expect(
+        sendService.send({
+          userId: USER_ID,
+          mailbox: { id: `${SCOPE}-mb`, email: "sender@example.com" } as any,
+          to: "recipient@example.com",
+          subject: "test",
+          html: "<p>hi</p>",
+          tracking: { id: tracking.id, hash: tracking.hash, pixel: "", wrappedLinks: false } as any,
+          sequenceId: SEQ_ID,
+          contactId: CONTACT_ID,
+          stepId: `${SCOPE}-step`,
+          disableSending: false,
+        } as any)
+      ).rejects.toThrow("TOKEN_EXPIRED");
+    } finally {
+      transport.sendError = null;
+    }
   });
 });

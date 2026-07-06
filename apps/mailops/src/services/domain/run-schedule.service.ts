@@ -8,8 +8,10 @@ import {
   StepTiming,
   type EmailJob,
   type SequenceStep,
+  type DueContactGraph,
   SequenceContactStatusEnum,
 } from "@coldjot/types";
+import type { Db } from "@coldjot/database";
 import { logger } from "@/lib/log";
 import { rateLimitService as defaultRateLimitService } from "@/services/core/rate-limit/service";
 import { scheduleGenerator as defaultScheduleGenerator } from "@/lib/schedule";
@@ -22,8 +24,6 @@ import { updateSequenceContactStatus } from "@/services/jobs/sequence/helper";
 import type { JobManager } from "@/services/jobs/job-manager";
 import type { RateLimitService } from "@/services/core/rate-limit/service";
 import type { ScheduleGenerator } from "@/lib/schedule";
-import type { SequenceContactRepository, DueContactGraph } from "@/repositories/sequence-contact.repo";
-import type { SequenceStepRepository } from "@/repositories/sequence-step.repo";
 
 // ---- Interface -----------------------------------------------------------
 
@@ -59,8 +59,7 @@ export interface RunScheduleService {
  */
 export class RunScheduleServiceImpl implements RunScheduleService {
   constructor(
-    private readonly sequenceContact: SequenceContactRepository,
-    private readonly sequenceStep: SequenceStepRepository,
+    private readonly db: Db,
     private readonly jobManager: JobManager,
     private readonly rateLimitService: Pick<
       RateLimitService,
@@ -77,7 +76,7 @@ export class RunScheduleServiceImpl implements RunScheduleService {
       "🔍 Checking for scheduled emails to process"
     );
 
-    const dueEmails = await this.sequenceContact.findDueContacts(new Date());
+    const dueEmails = await this.db.sequenceContact.findDueContacts(new Date());
 
     // Development mode: log scheduled times for debugging.
     const isDevelopment = process.env.APP_ENV === "development";
@@ -242,7 +241,7 @@ export class RunScheduleServiceImpl implements RunScheduleService {
       );
 
       // Get threadId from SequenceContact if it exists.
-      const sequenceContactThreadId = await this.sequenceContact.findThreadId(
+      const sequenceContactThreadId = await this.db.sequenceContact.findThreadId(
         sequence.id,
         contact.id
       );
@@ -366,7 +365,7 @@ export class RunScheduleServiceImpl implements RunScheduleService {
       const truncatedError = errorMessage.slice(0, 1000);
 
       if (exhausted) {
-        await this.sequenceContact.updateById(email.id, {
+        await this.db.sequenceContact.updateById(email.id, {
           failureCount: nextFailureCount,
           lastError: truncatedError,
           status: SequenceContactStatusEnum.FAILED,
@@ -390,7 +389,7 @@ export class RunScheduleServiceImpl implements RunScheduleService {
           },
           "🔄 Scheduling bounded retry"
         );
-        await this.sequenceContact.updateById(email.id, {
+        await this.db.sequenceContact.updateById(email.id, {
           failureCount: nextFailureCount,
           lastError: truncatedError,
           nextScheduledAt: nextRetry,
@@ -421,7 +420,7 @@ export class RunScheduleServiceImpl implements RunScheduleService {
       `❌ Step not found for sequence: ${sequence.id} | currentStep: ${email.currentStep} with total steps: ${sequence.steps.length}`
     );
 
-    const stepExists = await this.sequenceStep.findBySequenceAndOrder(
+    const stepExists = await this.db.sequenceStep.findBySequenceAndOrder(
       sequence.id,
       email.currentStep
     );

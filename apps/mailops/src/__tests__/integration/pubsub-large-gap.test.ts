@@ -14,13 +14,6 @@ import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { prisma } from "@coldjot/database";
 import { InboxSyncServiceImpl } from "@/services/domain/inbox-sync.service";
 import { FakeInboxSource } from "../helpers/fakes";
-import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
-import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
-import { PrismaEmailWatchHistoryRepository } from "@/repositories/prisma/prisma-email-watch-history.repo";
-import { PrismaProcessedMessageRepository } from "@/repositories/prisma/prisma-processed-message.repo";
-import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
-import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
 import { seedUser, seedMailbox } from "../helpers/seed";
 
 const SCOPE = "it-gap";
@@ -28,16 +21,7 @@ let USER_ID: string;
 let WATCH_ID: string;
 const EMAIL = `${SCOPE}@example.com`;
 
-const service = new InboxSyncServiceImpl(
-  new PrismaMailboxRepository(),
-  new PrismaEmailWatchRepository(),
-  new PrismaEmailWatchHistoryRepository(),
-  new PrismaProcessedMessageRepository(),
-  new PrismaEmailThreadRepository(),
-  new PrismaSequenceContactRepository(),
-  new PrismaEmailEventRepository(),
-  new FakeInboxSource()
-);
+const service = new InboxSyncServiceImpl(prisma, new FakeInboxSource());
 
 beforeAll(async () => {
   await prisma.$queryRaw`SELECT 1`;

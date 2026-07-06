@@ -12,12 +12,8 @@
  */
 import { nanoid } from "nanoid";
 import { NotificationType } from "@coldjot/types";
+import type { Db } from "@coldjot/database";
 import { logger } from "@/lib/log";
-import type { EmailWatchRepository } from "@/repositories/email-watch.repo";
-import type { EmailWatchHistoryRepository } from "@/repositories/email-watch-history.repo";
-import type { ProcessedMessageRepository } from "@/repositories/processed-message.repo";
-import type { EmailThreadRepository } from "@/repositories/email-thread.repo";
-import type { SequenceContactRepository } from "@/repositories/sequence-contact.repo";
 
 // Final (terminal) SequenceContact statuses — a message arriving for a contact
 // in any of these is treated as already-processed.
@@ -35,7 +31,7 @@ const FINAL_STATES = [
  * prevent duplicate processing — same as the original).
  */
 export async function isHistoryIdProcessed(
-  repos: { emailWatch: EmailWatchRepository; emailWatchHistory: EmailWatchHistoryRepository },
+  repos: { emailWatch: Db["emailWatch"]; emailWatchHistory: Db["emailWatchHistory"] },
   watchId: string,
   historyId: string
 ): Promise<boolean> {
@@ -65,9 +61,9 @@ export async function isHistoryIdProcessed(
  */
 export async function isMessageProcessed(
   repos: {
-    processedMessage: ProcessedMessageRepository;
-    emailThread: EmailThreadRepository;
-    sequenceContact: SequenceContactRepository;
+    processedMessage: Db["processedMessage"];
+    emailThread: Db["emailThread"];
+    sequenceContact: Db["sequenceContact"];
   },
   messageId: string,
   threadId: string
@@ -87,7 +83,7 @@ export async function isMessageProcessed(
 
     const isProcessed = FINAL_STATES.includes(sequenceContact.status);
     if (isProcessed) {
-      await repos.processedMessage.create({
+      await repos.processedMessage.record({
         messageId,
         threadId,
         type: sequenceContact.status,
@@ -105,13 +101,13 @@ export async function isMessageProcessed(
  * message is already recorded. Other errors propagate.
  */
 export async function createProcessedMessageRecord(
-  processedMessageRepo: ProcessedMessageRepository,
+  processedMessageRepo: Db["processedMessage"],
   messageId: string,
   threadId: string,
   type: NotificationType
 ): Promise<void> {
   try {
-    await processedMessageRepo.create({
+    await processedMessageRepo.record({
       messageId,
       threadId,
       type: type.toString(),
@@ -140,14 +136,14 @@ function isPrismaUniqueConstraintError(error: unknown): boolean {
  * Upsert a watch-history record for a processed notification.
  */
 export async function createOrUpdateWatchHistory(
-  emailWatchHistoryRepo: EmailWatchHistoryRepository,
+  emailWatchHistoryRepo: Db["emailWatchHistory"],
   watchId: string,
   historyId: string,
   notificationType: NotificationType,
   data: Record<string, unknown>,
   isProcessed = false
 ): Promise<void> {
-  await emailWatchHistoryRepo.upsert({
+  await emailWatchHistoryRepo.upsertRecord({
     id: nanoid(),
     emailWatchId: watchId,
     historyId: historyId.toString(),

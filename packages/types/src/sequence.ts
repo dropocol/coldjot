@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BusinessScheduleEnum } from "./enums";
+import { BusinessScheduleEnum, SequenceContactStatusEnum } from "./enums";
 import type { SequenceMailbox } from "./mailbox";
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
@@ -333,3 +333,108 @@ export const updateSequenceStepSchema = z
   })
   .strict();
 export type UpdateSequenceStepInput = z.infer<typeof updateSequenceStepSchema>;
+
+// ─── SequenceContact record shapes (mailops v2) ──────────────────────────────
+
+export interface SequenceContactRecord {
+  id: string;
+  sequenceId: string;
+  contactId: string;
+  status: SequenceContactStatusEnum | string;
+  currentStep: number;
+  lastProcessedAt: Date | null;
+  nextScheduledAt: Date | null;
+  completed: boolean;
+  completedAt: Date | null;
+  startedAt: Date | null;
+  threadId: string | null;
+  failureCount: number;
+  lastError: string | null;
+}
+
+export interface UpdateStatusInput {
+  status?: SequenceContactStatusEnum | string;
+  completed?: boolean;
+  lastProcessedAt?: Date | null;
+  threadId?: string | null;
+  currentStep?: number;
+  nextScheduledAt?: Date | null;
+  startedAt?: Date | null;
+}
+
+/** Due-contact graph used by the schedule tick (sequence + steps + mailbox). */
+export interface DueContactGraph {
+  id: string;
+  sequenceId: string;
+  contactId: string;
+  currentStep: number;
+  lastProcessedAt: Date | null;
+  nextScheduledAt: Date | null;
+  completed: boolean;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  failureCount: number;
+  sequence: {
+    id: string;
+    userId: string;
+    status: string;
+    testMode: boolean;
+    disableSending: boolean;
+    sequenceMailboxId: string;
+    businessHours?: BusinessHours;
+    steps: Array<{
+      id: string;
+      order: number;
+      stepType: string;
+      timing: string;
+      delayAmount: number | null;
+      delayUnit: string | null;
+      subject: string | null;
+      content: string | null;
+      includeSignature: boolean | null;
+      note: string | null;
+      previousStepId: string | null;
+      replyToThread: boolean | null;
+      templateId: string | null;
+    }>;
+  };
+  contact: { id: string; email: string };
+}
+
+/** New-contact graph used by the contact processor. */
+export interface NewContactGraph {
+  id: string;
+  sequenceId: string;
+  contactId: string;
+  sequence: {
+    id: string;
+    sequenceMailbox: { id: string } | null;
+    steps: Array<{ id: string; order: number }>;
+    businessHours: BusinessHours | null;
+  };
+  contact: { id: string; email: string };
+}
+
+// ─── SequenceStep record shapes (mailops v2) ──────────────────────────────────
+
+export interface SequenceStepRecord {
+  id: string;
+  sequenceId: string;
+  order: number;
+  stepType: string;
+  timing: string;
+  delayAmount: number | null;
+  delayUnit: string | null;
+  subject: string | null;
+  content: string | null;
+  includeSignature: boolean | null;
+  note: string | null;
+  previousStepId: string | null;
+  replyToThread: boolean | null;
+  templateId: string | null;
+}
+
+export interface StepWithSequenceMeta extends SequenceStepRecord {
+  sequence: { id: string; userId: string; status: string; name: string };
+}
