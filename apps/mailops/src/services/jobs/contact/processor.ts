@@ -22,15 +22,17 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
   private readonly SCHEDULER_ID = "contact-processing-scheduler";
 
   private readonly jobManager: JobManager;
-  private readonly sequenceContact = new PrismaSequenceContactRepository();
+  private readonly sequenceContact: PrismaSequenceContactRepository;
 
   constructor(
     queue: Queue,
     jobManager: JobManager,
-    dlQueues: Map<string, Queue> = new Map()
+    dlQueues: Map<string, Queue> = new Map(),
+    sequenceContact: PrismaSequenceContactRepository = new PrismaSequenceContactRepository()
   ) {
     super(queue, QUEUE_NAMES.CONTACT, getWorkerOptions(QUEUE_NAMES.CONTACT), dlQueues);
     this.jobManager = jobManager;
+    this.sequenceContact = sequenceContact;
     this.setupContactProcessingScheduler();
   }
 

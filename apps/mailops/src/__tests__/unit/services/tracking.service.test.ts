@@ -115,6 +115,13 @@ describe("TrackingServiceImpl.handleEmailOpen", () => {
     });
   });
 
+  it("first open passes isFirstOpen:true in the recordOpen metadata", async () => {
+    await seedRow([]);
+    await service.handleEmailOpen("h1");
+    const call = emailTracking.calls.find((c) => c.method === "recordOpen");
+    expect(call?.args[3]).toMatchObject({ isFirstOpen: true });
+  });
+
   it("repeat open: still recordOpen + stats with isUniqueOpen:false", async () => {
     const row = await seedRow([]);
     emailTracking.events.set({ id: "e1", trackingId: row.id, type: "OPENED" as any });
@@ -122,6 +129,24 @@ describe("TrackingServiceImpl.handleEmailOpen", () => {
     expect(statsMock).toHaveBeenCalledWith("seq1", EmailEventEnum.OPENED, "ct1", {
       isUniqueOpen: false,
     });
+  });
+
+  it("repeat open passes isFirstOpen:false + a second OPENED event is created", async () => {
+    const row = await seedRow([]);
+    emailTracking.events.set({ id: "e1", trackingId: row.id, type: "OPENED" as any });
+    await service.handleEmailOpen("h1");
+
+    // isFirstOpen:false on the repeat (the count-based contract).
+    const call = emailTracking.calls.find(
+      (c) => c.method === "recordOpen" && (c.args[3] as any)?.isFirstOpen === false
+    );
+    expect(call).toBeTruthy();
+
+    // A second OPENED event was written (event-per-open, not deduped).
+    const openedEvents = emailTracking.events.filter(
+      (e) => e.trackingId === row.id && e.type === ("OPENED" as EmailEventEnum)
+    );
+    expect(openedEvents.length).toBeGreaterThanOrEqual(2);
   });
 
   it("unknown hash: no-op (no recordOpen, no stats)", async () => {

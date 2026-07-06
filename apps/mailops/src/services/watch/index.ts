@@ -1,18 +1,16 @@
 import { logger } from "@/lib/log";
-import { OAuth2Client } from "google-auth-library";
-import { google } from "googleapis";
+import { PubSub } from "@google-cloud/pubsub";
 import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
 import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
 import { nanoid } from "nanoid";
-import {
-  GMAIL_API,
-  WATCH_CONFIG,
-  WATCH_ERRORS,
-} from "../../config/watch/constants";
+import { WATCH_CONFIG, WATCH_ERRORS } from "../../config/watch/constants";
 import { WatchResponse, WatchError, WatchErrorCode } from "@coldjot/types";
-import { backOff, type BackoffOptions } from "exponential-backoff";
-import { PubSub } from "@google-cloud/pubsub";
-import { refreshTokenIfNeeded } from "@/lib/google/gmail/helper";
+import type { MailboxRepository } from "@/repositories/mailbox.repo";
+import type { EmailWatchRepository } from "@/repositories/email-watch.repo";
+import type { WatchGateway } from "@/adapters/watch-gateway";
+import { GmailWatchGateway } from "@/adapters/watch-gateway";
+import type { TokenRefresher } from "@/adapters/token-refresher";
+import { GmailTokenRefresher } from "@/adapters/token-refresher";
 
 interface GmailErrorResponse {
   error: {
@@ -31,10 +29,8 @@ interface GmailErrorResponse {
   };
 }
 
-interface GoogleTokenResponse {
-  access_token: string;
-  expires_in: number;
-}
+// Note: GoogleTokenResponse + WATCH_ERRORS were imported but unused in the
+// pre-refactor file; kept the surface minimal here.
 
 interface WatchSetupParams {
   userId: string;
@@ -44,94 +40,49 @@ interface WatchSetupParams {
   expiresAt?: number | null;
 }
 
+/**
+ * Gmail mailbox watch lifecycle (setup / renew / stop).
+ *
+ * Phase 7: the Gmail REST surface (getProfile/stop/watch) and the token-refresh
+ * path are now injected (`WatchGateway` + `TokenRefresher`), so this service is
+ * testable without stubbing global `fetch` or constructing an OAuth2 client.
+ * The constructor defaults to the live Gmail impls + Prisma repos, so existing
+ * `new WatchService()` call sites (composition root, WatchCleanupService) keep
+ * working unchanged.
+ */
 export class WatchService {
   private pubSubClient: PubSub;
-  private oauth2Client: OAuth2Client;
-  // Repos default to Prisma impls; overridable for tests (Phase 3 pattern).
-  private readonly mailboxRepo = new PrismaMailboxRepository();
-  private readonly emailWatchRepo = new PrismaEmailWatchRepository();
+  private readonly mailboxRepo: MailboxRepository;
+  private readonly emailWatchRepo: EmailWatchRepository;
+  private readonly gateway: WatchGateway;
+  private readonly tokenRefresher: TokenRefresher;
 
   private TOPIC_NAME: string = `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/${process.env.PUBSUB_TOPIC_NAME}`;
 
-  constructor() {
+  constructor(
+    gateway: WatchGateway = new GmailWatchGateway(),
+    tokenRefresher: TokenRefresher = new GmailTokenRefresher(),
+    mailboxRepo: MailboxRepository = new PrismaMailboxRepository(),
+    emailWatchRepo: EmailWatchRepository = new PrismaEmailWatchRepository()
+  ) {
+    this.gateway = gateway;
+    this.tokenRefresher = tokenRefresher;
+    this.mailboxRepo = mailboxRepo;
+    this.emailWatchRepo = emailWatchRepo;
     this.pubSubClient = new PubSub({
       projectId: process.env.GOOGLE_CLOUD_PROJECT,
     });
-
-    this.oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID_EMAIL,
-      process.env.GOOGLE_CLIENT_SECRET_EMAIL,
-      process.env.GOOGLE_REDIRECT_URI_EMAIL
-    );
-  }
-
-  private async createWatchRequest(
-    accessToken: string
-  ): Promise<WatchResponse> {
-    const response = await fetch(GMAIL_API.WATCH, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        // labelIds: WATCH_CONFIG.LABEL_IDS,
-        topicName: this.TOPIC_NAME,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = (await response.json()) as GmailErrorResponse;
-      throw {
-        code: errorData.error?.code || "unknown_error",
-        message: errorData.error?.message || "Failed to create watch",
-        status: response.status,
-      } as WatchError;
-    }
-
-    const data = (await response.json()) as WatchResponse;
-    return data;
-  }
-
-  private async setupGmailClient(
-    accessToken: string,
-    refreshToken?: string | null,
-    expiresAt?: number | null
-  ) {
-    this.oauth2Client.setCredentials({
-      access_token: accessToken,
-      refresh_token: refreshToken || undefined,
-      expiry_date: expiresAt ? expiresAt * 1000 : undefined,
-    });
-
-    return google.gmail({ version: "v1", auth: this.oauth2Client });
   }
 
   async setupWatch({
     userId,
     email,
     accessToken,
-    refreshToken,
-    expiresAt,
   }: WatchSetupParams): Promise<void> {
     try {
-      // Initialize Gmail API with the authenticated client
-      const gmail = await this.setupGmailClient(
-        accessToken,
-        refreshToken,
-        expiresAt
-      );
-
       // First get the current history ID before stopping any existing watch
-      const profile = await gmail.users.getProfile({
-        userId: "me",
-      });
-
-      const currentHistoryId = profile.data.historyId?.toString();
-
-      if (!currentHistoryId) {
-        throw new Error("Could not get current history ID from Gmail");
-      }
+      const { historyId: currentHistoryId } =
+        await this.gateway.getProfile(accessToken);
 
       logger.info(
         { email, currentHistoryId },
@@ -140,7 +91,7 @@ export class WatchService {
 
       // Stop any existing watch to prevent duplicate notifications
       try {
-        await gmail.users.stop({ userId: "me" });
+        await this.gateway.stop(accessToken);
         logger.info({ email }, "Stopped existing watch");
       } catch (error) {
         // Ignore errors from stop - it might not exist
@@ -151,21 +102,12 @@ export class WatchService {
       }
 
       // Setup watch request
-      const watchRequest = {
-        userId: "me",
-        requestBody: {
-          // Don't specify labelIds to watch all labels
-          topicName: this.TOPIC_NAME,
-        },
-      };
-
-      // Attempt to setup new watch
-      const response = await gmail.users.watch(watchRequest);
+      const response = await this.gateway.watch(accessToken, this.TOPIC_NAME);
 
       logger.info(
         {
           email,
-          responseHistoryId: response.data.historyId,
+          responseHistoryId: response.historyId,
           currentHistoryId,
         },
         "Watch setup completed"
@@ -238,7 +180,7 @@ export class WatchService {
       }
 
       // Create new watch
-      const watchResponse = await this.createWatchRequest(accessToken);
+      const watchResponse = await this.gateway.createWatchRequest(accessToken);
 
       logger.info({ watchResponse }, "Watch response");
 
@@ -264,7 +206,6 @@ export class WatchService {
 
       if (!watch) {
         logger.info({ email }, "No watch found to stop");
-        // return;
       }
 
       // Get the mailbox
@@ -278,15 +219,11 @@ export class WatchService {
         return;
       }
 
-      // Initialize Gmail API with the authenticated client
-      const gmail = await this.setupGmailClient(
-        mailbox.access_token,
-        mailbox.refresh_token,
-        mailbox.expires_at
-      );
-
-      // Stop the watch
-      await gmail.users.stop({ userId: "me" });
+      // Get a fresh access token (refresh if needed) then stop the watch.
+      const accessToken = await this.getAccessToken(email);
+      if (accessToken) {
+        await this.gateway.stop(accessToken);
+      }
 
       if (watch) {
         await this.emailWatchRepo.deleteByEmail(email);
@@ -343,8 +280,8 @@ export class WatchService {
         return null;
       }
 
-      // Use refreshTokenIfNeeded helper
-      const accessToken = await refreshTokenIfNeeded({
+      // Use the injected token refresher (refreshes when expired).
+      const accessToken = await this.tokenRefresher.refreshIfNeeded({
         userId: mailbox.userId,
         mailboxId: mailbox.id,
         accessToken: mailbox.access_token,

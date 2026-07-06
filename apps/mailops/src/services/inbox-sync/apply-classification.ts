@@ -24,6 +24,8 @@ export interface ApplyClassificationDeps {
   emailEvent: EmailEventRepository;
   sequenceContact: SequenceContactRepository;
   emailThread: EmailThreadRepository;
+  /** Stats bump (defaults to the lib/stats singleton). Injectable for tests. */
+  updateStats?: typeof updateSequenceStats;
 }
 
 /**
@@ -38,7 +40,7 @@ export async function applyClassification(input: {
   deps: ApplyClassificationDeps;
 }): Promise<string | null> {
   const { change, deps } = input;
-  const { emailEvent, sequenceContact, emailThread } = deps;
+  const { emailEvent, sequenceContact, emailThread, updateStats = updateSequenceStats } = deps;
 
   if (change.type !== NotificationType.BOUNCE && change.type !== NotificationType.REPLY) {
     return null;
@@ -108,7 +110,7 @@ export async function applyClassification(input: {
     });
   }
 
-  await updateSequenceStats(sequenceId, eventType, contactId);
+  await updateStats(sequenceId, eventType, contactId);
 
   return created.id;
 }

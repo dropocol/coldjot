@@ -33,3 +33,10 @@ process.env.MAILOPS_PUBSUB_ENABLED = "false";
 process.env.WEB_APP_URL = "http://localhost:4000";
 process.env.MAILOPS_API_URL = "http://localhost:3001";
 process.env.TRACK_API_URL = "http://localhost:3001";
+
+// Required by packages/database's Prisma extension to encrypt OAuth tokens at
+// rest (Mailbox.access_token). The integration tier writes real mailbox rows,
+// so this must be set; a deterministic test key is fine.
+if (!process.env.ENCRYPTION_KEY) {
+  process.env.ENCRYPTION_KEY = "test-encryption-key-32-bytes-long!!";
+}

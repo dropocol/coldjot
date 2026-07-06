@@ -26,6 +26,9 @@
         "db:studio": "dotenv -e env/.env.development -- prisma studio",
         "db:deploy:prod": "dotenv -e env/.env.production -- prisma migrate deploy",
         "db:seed:prod": "dotenv -e env/.env.production -- prisma db seed",
+        "db:test:create": "psql ${DATABASE_URL_TEST:-postgresql://postgres:postgres@localhost:5432/coldjot_test} -tc \"SELECT 1 FROM pg_database WHERE datname = 'coldjot_test'\" | grep -q 1 || psql postgresql://postgres:postgres@localhost:5432/postgres -c \"CREATE DATABASE coldjot_test;\"",
+        "db:test:deploy": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://postgres:postgres@localhost:5432/coldjot_test} prisma migrate deploy",
+        "db:test:setup": "npm run db:test:create && npm run db:test:deploy",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit"
     },
