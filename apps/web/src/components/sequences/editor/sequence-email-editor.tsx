@@ -12,8 +12,22 @@ import { TemplateCommand } from "@/components/templates/template-command";
 import type { EmailData } from "@coldjot/types";
 import { toast } from "sonner";
 import { Switch } from "@coldjot/ui/components/switch";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@coldjot/ui/components/tooltip";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@coldjot/ui/components/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@coldjot/ui/components/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@coldjot/ui/components/alert-dialog";
 import { cn } from "@coldjot/ui/lib/utils";
 import { api } from "@/lib/http/api-client";
 
@@ -44,21 +58,15 @@ export function SequenceEmailEditor({
 }: SequenceEmailEditorProps) {
   const [content, setContent] = useState(initialData?.content || "");
   const [subject, setSubject] = useState(initialData?.subject || "");
-  const [includeSignature, setIncludeSignature] = useState(
-    initialData?.includeSignature ?? true
-  );
-  const [replyToThread, setReplyToThread] = useState(
-    initialData?.replyToThread ?? false
-  );
+  const [includeSignature, setIncludeSignature] = useState(initialData?.includeSignature ?? true);
+  const [replyToThread, setReplyToThread] = useState(initialData?.replyToThread ?? false);
   const [_isSending, _setIsSending] = useState(false);
   const [_isSendingTest, setIsSendingTest] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
-  const [currentTemplateId, setCurrentTemplateId] = useState<
-    string | undefined
-  >(initialData?.templateId);
-  const [isTemplateUnlinked, setIsTemplateUnlinked] = useState(
-    !initialData?.templateId
+  const [currentTemplateId, setCurrentTemplateId] = useState<string | undefined>(
+    initialData?.templateId
   );
+  const [isTemplateUnlinked, setIsTemplateUnlinked] = useState(!initialData?.templateId);
   const [showUnlinkAlert, setShowUnlinkAlert] = useState(false);
 
   const isEditorDisabled = Boolean(currentTemplateId) && !isTemplateUnlinked;
@@ -86,9 +94,7 @@ export function SequenceEmailEditor({
         }
       } catch (_error) {
         if (isMounted) {
-          toast.error(
-            "Failed to load template content. Unlinking from template."
-          );
+          toast.error("Failed to load template content. Unlinking from template.");
           setIsTemplateUnlinked(true);
           setCurrentTemplateId(undefined);
           if (initialData) {
@@ -231,11 +237,9 @@ export function SequenceEmailEditor({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-11/12 sm:w-[100%] max-w-[100%] h-[100vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>
-            {initialData ? "Edit Email" : "Create Email"}
-          </DialogTitle>
+      <DialogContent className="w-11/12 sm:w-full sm:max-w-full h-screen flex flex-col">
+        <DialogHeader className="shrink-0">
+          <DialogTitle>{initialData ? "Edit Email" : "Create Email"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
@@ -243,21 +247,18 @@ export function SequenceEmailEditor({
             {/* Left column */}
             <div className="flex flex-col gap-4 min-h-0">
               {previousStepId && (
-                <div className="flex-shrink-0 flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                <div className="shrink-0 flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                   <div className="space-y-0.5">
                     <Label>Reply to Previous Email</Label>
                     <div className="text-sm text-muted-foreground">
                       Send this email as a reply to the previous step's thread
                     </div>
                   </div>
-                  <Switch
-                    checked={replyToThread}
-                    onCheckedChange={setReplyToThread}
-                  />
+                  <Switch checked={replyToThread} onCheckedChange={setReplyToThread} />
                 </div>
               )}
 
-              <div className="flex-shrink-0 space-y-4">
+              <div className="shrink-0 space-y-4">
                 <Label htmlFor="subject">Subject</Label>
                 <div className="relative">
                   <Input
@@ -279,24 +280,19 @@ export function SequenceEmailEditor({
                     disabled={isLoadingTemplate}
                   />
                   <Label htmlFor="unlink-template">
-                    {isLoadingTemplate
-                      ? "Loading template..."
-                      : "Unlink from template"}
+                    {isLoadingTemplate ? "Loading template..." : "Unlink from template"}
                   </Label>
                   <TooltipProvider delay={300}>
                     <Tooltip>
-                      <TooltipTrigger
-                        type="button"
-                        onClick={(e) => e.preventDefault()}
-                      >
+                      <TooltipTrigger type="button" onClick={(e) => e.preventDefault()}>
                         <div className="p-0.5 hover:bg-muted rounded-sm cursor-help">
                           <Info className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="right" className="max-w-[260px]">
                         <p className="text-sm">
-                          Unlinking allows you to edit the content freely.
-                          Changes won't affect the original template.
+                          Unlinking allows you to edit the content freely. Changes won't affect the
+                          original template.
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -305,15 +301,11 @@ export function SequenceEmailEditor({
               )}
 
               <div className="flex-1 min-h-0">
-                {isLoadingTemplate &&
-                currentTemplateId &&
-                !isTemplateUnlinked ? (
+                {isLoadingTemplate && currentTemplateId && !isTemplateUnlinked ? (
                   <div className="h-full flex items-center justify-center bg-muted/10 rounded-md">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        Loading template content...
-                      </p>
+                      <p className="text-sm text-muted-foreground">Loading template content...</p>
                     </div>
                   </div>
                 ) : (
@@ -429,17 +421,14 @@ export function SequenceEmailEditor({
             <AlertDialogHeader>
               <AlertDialogTitle>Unlink from Template?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will disconnect the email from the template, allowing you
-                to edit the content freely. Any changes you make won't affect
-                the original template, and future template updates won't be
-                reflected here. This action can't be undone.
+                This will disconnect the email from the template, allowing you to edit the content
+                freely. Any changes you make won't affect the original template, and future template
+                updates won't be reflected here. This action can't be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmUnlink}>
-                Unlink Template
-              </AlertDialogAction>
+              <AlertDialogAction onClick={confirmUnlink}>Unlink Template</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

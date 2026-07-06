@@ -61,7 +61,7 @@ export function ContactListSelector({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Select Contacts</DialogTitle>
         </DialogHeader>
