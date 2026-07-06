@@ -3,14 +3,21 @@ import {
   BusinessScheduleEnum,
   SequenceStatus,
   type BusinessHours,
+  type ContactRecord,
   type DueContactGraph,
+  type ListContactRow,
+  type ListSyncRecord,
+  type ListSyncRecordWithCount,
+  type ListWithSequences,
   type NewContactGraph,
   type SequenceContactRecord,
   type SequenceMailboxRow,
   type SequenceRecord,
+  type SequenceStatsRecord,
   type SequenceStepRecord,
   type SequenceWithDetails,
   type SequenceWithLaunchGraph,
+  type StatsCounts,
   type StepWithSequenceMeta,
   type UpdateStatusInput,
 } from "@coldjot/types";
@@ -620,6 +627,259 @@ export const sequenceModels = {
         include: { alias: true, mailbox: true },
       });
       return row as unknown as SequenceMailboxRow | null;
+    },
+  },
+
+  // ── emailList (list sync) ───────────────────────────────────────────────
+
+  emailList: {
+    /** Contact count for a list (used by the list-sync processor to sort). */
+    async contactCount(this: unknown, listId: string): Promise<number> {
+      const ctx = Prisma.getExtensionContext(this);
+      // jobs/list/processor.ts reads this via listSyncRecord.include.list._count.
+      // The repository exposes it directly so the call site can migrate.
+      const row = await ctx.findUnique({
+        where: { id: listId },
+        select: { _count: { select: { contacts: true } } },
+      });
+      return row?._count?.contacts ?? 0;
+    },
+
+    /** Load a list with the sequences attached to it (sync routing). */
+    async findWithSequences(
+      this: unknown,
+      listId: string
+    ): Promise<ListWithSequences | null> {
+      const ctx = Prisma.getExtensionContext(this);
+      // jobs/list/helper.ts:17 — list + attached sequence ids.
+      const row = await ctx.findUnique({
+        where: { id: listId },
+        include: {
+          sequences: { select: { id: true } },
+        },
+      });
+      return row as unknown as ListWithSequences | null;
+    },
+
+    /** Fetch a page of contacts on a list (sync batches contacts in chunks). */
+    async findContactsPage(
+      this: unknown,
+      listId: string,
+      take: number,
+      skip: number
+    ): Promise<ListContactRow[]> {
+      const ctx = Prisma.getExtensionContext(this);
+      // jobs/list/helper.ts:67 — paginated contact fetch for batch sync.
+      const row = await ctx.findUnique({
+        where: { id: listId },
+        include: {
+          contacts: { take, skip },
+        },
+      });
+      return (row?.contacts ?? []) as unknown as ListContactRow[];
+    },
+  },
+
+  // ── listSyncRecord (list→sequence sync jobs) ────────────────────────────
+
+  listSyncRecord: {
+    /** Enqueue a new list→sequence sync job. (Named `record` to avoid shadowing Prisma's built-in `create`.) */
+    async record(
+      this: unknown,
+      input: {
+        listId: string;
+        sequenceId: string;
+      }
+    ): Promise<ListSyncRecord> {
+      const ctx = Prisma.getExtensionContext(this);
+      // routes/lists/index.ts:22
+      const row = await ctx.create({
+        data: {
+          listId: input.listId,
+          sequenceId: input.sequenceId,
+          status: "pending",
+          contactsAdded: 0,
+        },
+      });
+      return row as unknown as ListSyncRecord;
+    },
+
+    /** Poll pending sync records ordered oldest-first, with list contact counts. */
+    async findPending(
+      this: unknown,
+      batchSize: number
+    ): Promise<ListSyncRecordWithCount[]> {
+      const ctx = Prisma.getExtensionContext(this);
+      // jobs/list/processor.ts:75
+      const rows = await ctx.findMany({
+        where: { status: "pending" },
+        orderBy: { createdAt: "asc" },
+        take: batchSize,
+        include: {
+          list: { select: { _count: { select: { contacts: true } } } },
+        },
+      });
+      return rows as unknown as ListSyncRecordWithCount[];
+    },
+
+    /** Mark a record processing/completed/failed. */
+    async updateStatus(
+      this: unknown,
+      id: string,
+      data: { status: string; contactsAdded?: number; error?: string | null }
+    ): Promise<void> {
+      const ctx = Prisma.getExtensionContext(this);
+      // jobs/list/processor.ts:102,109,117
+      await ctx.update({ where: { id }, data });
+    },
+
+    /** Bulk update by listId+sequenceId (reconciliation helper). */
+    async updateStatusByListSequence(
+      this: unknown,
+      listId: string,
+      sequenceId: string,
+      data: { status: string; contactsAdded?: number; error?: string | null }
+    ): Promise<void> {
+      const ctx = Prisma.getExtensionContext(this);
+      // jobs/list/helper.ts:143
+      await ctx.updateMany({
+        where: {
+          listId,
+          sequenceId,
+          status: { in: ["pending", "processing"] },
+        },
+        data: { ...data, updatedAt: new Date() },
+      });
+    },
+  },
+
+  // ── sequenceStats ───────────────────────────────────────────────────────
+  // NOTE: today's codebase calls `findUnique({ where: { sequenceId } })` on a
+  // non-PK field. The interface normalizes this to findFirst; the rate-math
+  // consolidation lands in Phase 4.
+
+  sequenceStats: {
+    /** Fetch stats for a sequence (findFirst by sequenceId). */
+    async getBySequence(
+      this: unknown,
+      sequenceId: string
+    ): Promise<SequenceStatsRecord | null> {
+      const ctx = Prisma.getExtensionContext(this);
+      // lib/tracking/index.ts:537 + lib/stats/index.ts:63
+      const row = await ctx.findFirst({ where: { sequenceId } });
+      return row as unknown as SequenceStatsRecord | null;
+    },
+
+    /** Initialize a zeroed stats row. */
+    async createForSequence(
+      this: unknown,
+      sequenceId: string,
+      contactId?: string
+    ): Promise<SequenceStatsRecord> {
+      const ctx = Prisma.getExtensionContext(this);
+      // lib/tracking/index.ts:434 + lib/stats/index.ts:68 + monitor/service.ts:69
+      const row = await ctx.create({
+        data: {
+          sequenceId,
+          contactId,
+          totalEmails: 0,
+          sentEmails: 0,
+          openedEmails: 0,
+          clickedEmails: 0,
+          repliedEmails: 0,
+          bouncedEmails: 0,
+          openRate: 0,
+          clickRate: 0,
+          replyRate: 0,
+          bounceRate: 0,
+        } as any,
+      });
+      return row as unknown as SequenceStatsRecord;
+    },
+
+    /** Increment counters + recompute rates. */
+    async updateCounts(
+      this: unknown,
+      sequenceId: string,
+      counts: StatsCounts
+    ): Promise<void> {
+      const ctx = Prisma.getExtensionContext(this);
+      // lib/tracking/index.ts:497,601 — increment + recompute rates inline.
+      // Phase 4 collapses the divergent rate-math paths into one helper.
+      const data: Record<string, number> = {};
+      if (counts.totalEmails) data.totalEmails = { increment: counts.totalEmails } as any;
+      if (counts.sentEmails) data.sentEmails = { increment: counts.sentEmails } as any;
+      if (counts.openedEmails) data.openedEmails = { increment: counts.openedEmails } as any;
+      if (counts.clickedEmails) data.clickedEmails = { increment: counts.clickedEmails } as any;
+      if (counts.repliedEmails) data.repliedEmails = { increment: counts.repliedEmails } as any;
+      if (counts.bouncedEmails) data.bouncedEmails = { increment: counts.bouncedEmails } as any;
+      await ctx.update({ where: { sequenceId }, data });
+    },
+
+    /** Raw update — accepts a Prisma-shaped data object (legacy rate-math path). */
+    async updateRaw(
+      this: unknown,
+      sequenceId: string,
+      data: Record<string, unknown>
+    ): Promise<void> {
+      const ctx = Prisma.getExtensionContext(this);
+      // Legacy inline rate-math path — Phase 4 removes this.
+      await ctx.update({ where: { sequenceId }, data: data as any });
+    },
+
+    /** Create with explicit field values (legacy trackEmailEvent init path). */
+    async createWithValues(
+      this: unknown,
+      input: {
+        sequenceId: string;
+        contactId?: string;
+        totalEmails?: number;
+        sentEmails?: number;
+        openedEmails?: number;
+        clickedEmails?: number;
+        repliedEmails?: number;
+        bouncedEmails?: number;
+      }
+    ): Promise<SequenceStatsRecord> {
+      const ctx = Prisma.getExtensionContext(this);
+      const row = await ctx.create({
+        data: {
+          sequenceId: input.sequenceId,
+          contactId: input.contactId,
+          totalEmails: input.totalEmails ?? 0,
+          sentEmails: input.sentEmails ?? 0,
+          openedEmails: input.openedEmails ?? 0,
+          clickedEmails: input.clickedEmails ?? 0,
+          repliedEmails: input.repliedEmails ?? 0,
+          bouncedEmails: input.bouncedEmails ?? 0,
+        } as any,
+      });
+      return row as unknown as SequenceStatsRecord;
+    },
+
+    /** Bulk delete by sequenceId (sequence reset). */
+    async deleteBySequence(
+      this: unknown,
+      sequenceId: string
+    ): Promise<void> {
+      const ctx = Prisma.getExtensionContext(this);
+      // jobs/sequence/helper.ts:221
+      await ctx.deleteMany({ where: { sequenceId } });
+    },
+  },
+
+  // ── contact ────────────────────────────────────────────────────────────
+
+  contact: {
+    /** Fetch a contact by id (outgoing email). */
+    async findById(
+      this: unknown,
+      id: string
+    ): Promise<ContactRecord | null> {
+      const ctx = Prisma.getExtensionContext(this);
+      // jobs/email/processor.ts:115
+      const row = await ctx.findUnique({ where: { id } });
+      return row as unknown as ContactRecord | null;
     },
   },
 };

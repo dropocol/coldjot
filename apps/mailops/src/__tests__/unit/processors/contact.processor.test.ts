@@ -1,10 +1,12 @@
 /**
  * Unit tests for ContactProcessor.processNewContacts (Group I).
  *
- * Phase 7.9: the processor now constructor-injects its repo (Phase A refactor),
- * so the orchestration is testable with a fake repo + a mocked
- * `processContactShared` helper + a mocked `bullmq`. Covers: dispatching each
- * new contact with currentStep=1, continue-on-error, and the empty-batch no-op.
+ * Phase 7.9 / mailops-v2: the processor now uses the `prisma` domain extension
+ * (`this.db.sequenceContact.findNewContacts`) from `@coldjot/database` instead of
+ * a constructor-injected repo. The DB layer is mocked here; the orchestration is
+ * exercised with a mocked `processContactShared` helper + a mocked `bullmq`.
+ * Covers: dispatching each new contact with currentStep=1, continue-on-error,
+ * and the empty-batch no-op.
  *
  * Replaces the Group I characterization test (contact-processor). The DB layer
  * (findNewContacts) is covered by repositories/prisma-sequence-contact.repo.test.ts.
@@ -30,6 +32,17 @@ vi.mock("@/services/jobs/sequence/helper", () => ({
   processContactShared: sharedMock.processContactShared,
 }));
 
+// The processor reads `prisma.sequenceContact.findNewContacts` off the
+// `@coldjot/database` extension. Hoist the fake so the factory can reference it.
+const dbMock = vi.hoisted(() => ({
+  sequenceContact: {
+    findNewContacts: vi.fn<(batchSize?: number) => Promise<any[]>>(async () => []),
+  },
+}));
+vi.mock("@coldjot/database", () => ({
+  prisma: { sequenceContact: dbMock.sequenceContact },
+}));
+
 import { ContactProcessor } from "@/services/jobs/contact/processor";
 
 function makeContact(id: string) {
@@ -48,15 +61,13 @@ let newContacts: any[];
 beforeEach(() => {
   vi.clearAllMocks();
   newContacts = [];
+  dbMock.sequenceContact.findNewContacts.mockImplementation(async () => newContacts.slice());
 });
 
 function makeProcessor() {
   const queue = new (require("bullmq").Queue)("contact-test");
   const jobManager = { add: vi.fn(async () => ({ id: "j-1" })) };
-  const fakeRepo = {
-    findNewContacts: vi.fn(async () => newContacts.slice()),
-  };
-  processor = new ContactProcessor(queue as any, jobManager as any, new Map(), fakeRepo as any);
+  processor = new ContactProcessor(queue as any, jobManager as any, new Map());
 }
 
 describe("[Group I] ContactProcessor.processNewContacts", () => {

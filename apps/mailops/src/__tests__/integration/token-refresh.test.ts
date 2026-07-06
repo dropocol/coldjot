@@ -4,9 +4,9 @@
  * Phase 7.7 flow 12 (Group J): the token-refresh path. `WatchService.getAccessToken`
  * (private) calls the injected `TokenRefresher` when the mailbox token is
  * expired; the renewed token is then handed to the gateway. This test wires the
- * real WatchService against real repos + a fake gateway + a fake token refresher
- * that simulates expiry-then-refresh, asserting the renewed token reaches the
- * gateway.
+ * real WatchService against the real Prisma client + a fake gateway + a fake
+ * token refresher that simulates expiry-then-refresh, asserting the renewed
+ * token reaches the gateway.
  *
  * Replaces the Group J characterization test's token-refresh coverage.
  */
@@ -15,8 +15,6 @@ import { prisma } from "@coldjot/database";
 import { WatchService } from "@/services/watch";
 import type { WatchGateway, ProfileResult } from "@/adapters/watch-gateway";
 import type { TokenRefresher } from "@/adapters/token-refresher";
-import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
-import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
 import { seedUser, seedMailbox } from "../helpers/seed";
 
 const SCOPE = "it-token";
@@ -54,12 +52,7 @@ class ExpiringTokenRefresher implements TokenRefresher {
 
 const gateway = new TokenCapturingGateway();
 const tokenRefresher = new ExpiringTokenRefresher();
-const service = new WatchService(
-  gateway,
-  tokenRefresher,
-  new PrismaMailboxRepository(),
-  new PrismaEmailWatchRepository()
-);
+const service = new WatchService(gateway, tokenRefresher, prisma);
 
 beforeAll(async () => {
   await prisma.$queryRaw`SELECT 1`;

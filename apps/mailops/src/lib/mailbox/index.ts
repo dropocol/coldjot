@@ -1,16 +1,11 @@
 import { EmailAlias, Mailbox, MailboxCredentials } from "@coldjot/types";
-import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
+import { prisma } from "@coldjot/database";
 import { logger } from "@/lib/log";
-
-// Module-level repository singleton — bridges the standalone fns until Phase 4
-// turns these into a proper MailboxService with constructor injection. Matches
-// the same stopgap pattern used in lib/tracking.
-const mailboxRepo = new PrismaMailboxRepository();
 
 export async function getSequenceMailboxId(
   sequenceId: string
 ): Promise<string | null> {
-  const mailboxId = await mailboxRepo.findSequenceMailboxId(sequenceId);
+  const mailboxId = await prisma.sequenceMailbox.findSequenceMailboxId(sequenceId);
   if (!mailboxId) {
     return null;
   }
@@ -24,7 +19,7 @@ export async function getSenderMailbox(
   userId: string,
   mailboxId: string
 ): Promise<Mailbox | null> {
-  const mailbox = await mailboxRepo.findWithAliases(mailboxId, userId);
+  const mailbox = await prisma.mailbox.findWithAliases(mailboxId, userId);
 
   if (
     !mailbox?.providerAccountId ||
@@ -50,7 +45,7 @@ export async function getSenderMailbox(
 export async function getSequenceMailboxWithId(
   id: string
 ): Promise<Mailbox | null> {
-  const sequenceMailbox = await mailboxRepo.findSequenceMailboxById(id);
+  const sequenceMailbox = await prisma.sequenceMailbox.findSequenceMailboxById(id);
 
   if (
     !sequenceMailbox?.mailbox.providerAccountId ||
@@ -78,7 +73,7 @@ export async function getSequenceMailbox(
   sequenceId: string,
   userId: string
 ): Promise<Mailbox | null> {
-  const sequenceMailbox = await mailboxRepo.findSequenceMailbox(
+  const sequenceMailbox = await prisma.sequenceMailbox.findSequenceMailbox(
     sequenceMailboxId,
     sequenceId,
     userId
@@ -110,7 +105,7 @@ export async function updateMailboxCredentials(
   data: Partial<MailboxCredentials>
 ) {
   try {
-    await mailboxRepo.updateTokens(
+    await prisma.mailbox.updateTokens(
       mailboxId,
       data.accessToken!,
       data.expiryDate!

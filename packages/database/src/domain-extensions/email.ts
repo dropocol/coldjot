@@ -9,6 +9,7 @@ import {
   type EmailTrackingWithLink,
   type EmailTrackingWithOpenEvents,
   type SentDetails,
+  type TemplateRecord,
   type TrackedLinkRecord,
   type TrackedLinkWithTracking,
 } from "@coldjot/types";
@@ -419,6 +420,33 @@ export const emailModels = {
         where: { id: linkId },
         data: { clickCount: { increment: 1 }, updatedAt: at },
       });
+    },
+  },
+
+  template: {
+    /** Fetch just the subject (email-subject resolution). */
+    async findSubject(
+      this: unknown,
+      id: string
+    ): Promise<string | null> {
+      const ctx = Prisma.getExtensionContext(this);
+      // lib/email-subject.ts:71,196,238,258,291
+      const row = await ctx.findUnique({
+        where: { id },
+        select: { subject: true },
+      });
+      return row?.subject ?? null;
+    },
+
+    /** Fetch subject + content (email send). */
+    async findById(
+      this: unknown,
+      id: string
+    ): Promise<TemplateRecord | null> {
+      const ctx = Prisma.getExtensionContext(this);
+      // jobs/email/processor.ts:99
+      const row = await ctx.findUnique({ where: { id } });
+      return row as unknown as TemplateRecord | null;
     },
   },
 };

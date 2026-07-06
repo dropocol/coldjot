@@ -2,34 +2,17 @@ import { gmail_v1 } from "googleapis";
 import { getGmailSubject } from "./google/gmail";
 import type { SequenceStep, SubjectInfo } from "@coldjot/types";
 import { logger } from "./log";
-import { PrismaEmailThreadRepository } from "@/repositories/prisma/prisma-email-thread.repo";
-import { PrismaEmailTrackingRepository } from "@/repositories/prisma/prisma-email-tracking.repo";
-import { PrismaTemplateRepository } from "@/repositories/prisma/prisma-template.repo";
-import type { EmailThreadRepository } from "@/repositories/email-thread.repo";
-import type { EmailTrackingRepository } from "@/repositories/email-tracking.repo";
-import type { TemplateRepository } from "@/repositories/template.repo";
+import type { Db } from "@coldjot/database";
 import { replacePlaceholders } from "@/lib/placeholders";
 import type { Contact } from "@prisma/client";
 
-/**
- * Optional injected repositories. Callers that pass their own instances (tests,
- * the composition root) bypass the module-level singletons; the bare call site
- * in services/jobs/email/processor.ts omits this and gets the Prisma defaults.
- */
-export interface DetermineEmailSubjectDeps {
-  emailThread: EmailThreadRepository;
-  emailTracking: EmailTrackingRepository;
-  template: TemplateRepository;
-}
-
 export async function determineEmailSubject(
+  db: Db,
   step: SequenceStep,
   threadId?: string,
   gmail?: gmail_v1.Gmail,
-  contact?: Contact,
-  deps: DetermineEmailSubjectDeps = DEFAULT_DEPS
+  contact?: Contact
 ): Promise<SubjectInfo> {
-  const { emailThread: emailThreadRepo, emailTracking: emailTrackingRepo, template: templateRepo } = deps;
   logger.info({
     stepId: step.id,
     threadId,
@@ -63,7 +46,7 @@ export async function determineEmailSubject(
     let existingEmails = 0;
 
     if (threadId) {
-      existingEmails = await emailTrackingRepo.countByThread(threadId);
+      existingEmails = await db.emailTracking.countByThread(threadId);
       // It's a new thread if:
       // 1. replyToThread is false (regardless of order number) OR
       // 2. There are no existing emails in the thread
@@ -84,7 +67,7 @@ export async function determineEmailSubject(
 
       // Try to get subject from template if templateId exists
       if (step.templateId) {
-        const templateSubject = await templateRepo.findSubject(step.templateId);
+        const templateSubject = await db.template.findSubject(step.templateId);
 
         logger.debug({
           templateId: step.templateId,
@@ -120,7 +103,7 @@ export async function determineEmailSubject(
       try {
         // First try to get from emailThreads
         const emailThreadSubject =
-          await emailThreadRepo.findSubjectByThread(threadId);
+          await db.emailThread.findSubjectByThread(threadId);
 
         logger.debug({
           threadId,
@@ -149,7 +132,7 @@ export async function determineEmailSubject(
 
         // If not in emailThreads, try emailTracking
         const trackingSubject =
-          await emailTrackingRepo.findEarliestSubjectInThread(threadId);
+          await db.emailTracking.findEarliestSubjectInThread(threadId);
 
         logger.debug({
           threadId,
@@ -198,7 +181,7 @@ export async function determineEmailSubject(
           let fallbackSubject: string | null = null;
 
           if (step.templateId) {
-            fallbackSubject = await templateRepo.findSubject(step.templateId);
+            fallbackSubject = await db.template.findSubject(step.templateId);
           }
 
           const baseSubject = fallbackSubject || step.subject || "No Subject";
@@ -236,7 +219,7 @@ export async function determineEmailSubject(
         let fallbackSubject: string | null = null;
 
         if (step.templateId) {
-          fallbackSubject = await templateRepo.findSubject(step.templateId);
+          fallbackSubject = await db.template.findSubject(step.templateId);
         }
 
         const baseSubject = fallbackSubject || step.subject || "No Subject";
@@ -252,7 +235,7 @@ export async function determineEmailSubject(
     let fallbackSubject: string | null = null;
 
     if (step.templateId) {
-      fallbackSubject = await templateRepo.findSubject(step.templateId);
+      fallbackSubject = await db.template.findSubject(step.templateId);
     }
 
     const baseSubject = fallbackSubject || step.subject || "No Subject";
@@ -281,7 +264,7 @@ export async function determineEmailSubject(
       let fallbackSubject: string | null = null;
 
       if (step.templateId) {
-        fallbackSubject = await templateRepo.findSubject(step.templateId);
+        fallbackSubject = await db.template.findSubject(step.templateId);
       }
 
       const baseSubject = fallbackSubject || step.subject || "No Subject";
@@ -298,14 +281,3 @@ export async function determineEmailSubject(
     }
   }
 }
-
-/**
- * Default deps — the Prisma repo singletons. Kept as a single object so the
- * bare call site (no deps arg) keeps working identically to before this fn
- * accepted injected repos.
- */
-const DEFAULT_DEPS: DetermineEmailSubjectDeps = {
-  emailThread: new PrismaEmailThreadRepository(),
-  emailTracking: new PrismaEmailTrackingRepository(),
-  template: new PrismaTemplateRepository(),
-};

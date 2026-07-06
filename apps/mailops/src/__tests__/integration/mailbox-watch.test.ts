@@ -2,7 +2,7 @@
  * Integration test — mailbox watch lifecycle (setup / stop).
  *
  * Phase 7.7 flow 10 (Group F): exercises the real WatchService → real Prisma
- * repos → real DB, with a fake WatchGateway + TokenRefresher standing in for
+ * client → real DB, with a fake WatchGateway + TokenRefresher standing in for
  * the Gmail REST surface. Asserts the watch row is created/updated/deleted
  * correctly and the gateway is called in the right order. Replaces the Group F
  * characterization test end-to-end.
@@ -12,8 +12,6 @@ import { prisma } from "@coldjot/database";
 import { WatchService } from "@/services/watch";
 import type { WatchGateway, ProfileResult } from "@/adapters/watch-gateway";
 import type { TokenRefresher } from "@/adapters/token-refresher";
-import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
-import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
 import { seedUser, seedMailbox } from "../helpers/seed";
 
 const SCOPE = "it-watch";
@@ -47,12 +45,7 @@ class FakeTokenRefresher implements TokenRefresher {
 }
 
 const gateway = new FakeWatchGateway();
-const service = new WatchService(
-  gateway,
-  new FakeTokenRefresher(),
-  new PrismaMailboxRepository(),
-  new PrismaEmailWatchRepository()
-);
+const service = new WatchService(gateway, new FakeTokenRefresher(), prisma);
 
 beforeAll(async () => {
   await prisma.$queryRaw`SELECT 1`;

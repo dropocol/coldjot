@@ -3,7 +3,7 @@ import { encode as base64Encode } from "js-base64";
 
 import type { gmail_v1 } from "googleapis";
 import { logger } from "@/lib/log";
-import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
+import { prisma } from "@coldjot/database";
 import {
   validateGmailCredentials,
   refreshTokenIfNeeded,
@@ -20,11 +20,6 @@ import type {
 // Gmail Client Class
 export class GmailClientService {
   private config: GmailClientConfig;
-  // Phase 6.3: was a private-constructor + getInstance() singleton. Now a
-  // plain constructable class — overridable mailboxRepo for tests, and the
-  // module-level export below is the legacy stopgap for callers not yet
-  // threaded through createApp().
-  private readonly mailboxRepo = new PrismaMailboxRepository();
 
   constructor() {
     this.config = {
@@ -65,7 +60,7 @@ export class GmailClientService {
       );
 
       // Lets get user mailbox here instead of passing it in
-      const mailbox = await this.mailboxRepo.findByIdForUser(mailboxId, userId);
+      const mailbox = await prisma.mailbox.findByIdForUser(mailboxId, userId);
 
       if (!mailbox) {
         throw new Error("Mailbox not found");

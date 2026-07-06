@@ -2,10 +2,12 @@
  * Unit tests for the mailbox controller + routes (Group F).
  *
  * Phase 7.9: the controller is a factory (`createMailboxController`) taking
- * `watchService` + `mailboxRepo` — both injectable as fakes. The route factory
- * (`makeMailboxRouter`) mounts them behind Express. We drive the routes with
- * supertest and assert the full HTTP contract the characterization test pinned:
- * empty-body 400, Zod validation 400, mailbox-not-found 404,
+ * `watchService` (injectable as a fake). The controller reads the mailbox via
+ * `prisma.mailbox.findActiveGmail` directly, so `@coldjot/database` is mocked
+ * here and `findActiveGmail` is stubbed per test. The route factory
+ * (`makeMailboxRouter`) mounts the controller behind Express. We drive the
+ * routes with supertest and assert the full HTTP contract the characterization
+ * test pinned: empty-body 400, Zod validation 400, mailbox-not-found 404,
  * missing-access-token 400, the stop-then-setup ordering, the happy path 200,
  * and the DELETE error path.
  *
@@ -14,19 +16,29 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import request from "supertest";
 import express from "express";
+
+// Mock @coldjot/database: the controller calls prisma.mailbox.findActiveGmail.
+// `findActiveGmail` is a prisma extension method, so we stub it per test below.
+// Use vi.hoisted so the mock fn exists when the hoisted vi.mock factory runs.
+const { findActiveGmail } = vi.hoisted(() => ({
+  findActiveGmail: vi.fn(async () => null as any),
+}));
+vi.mock("@coldjot/database", () => ({
+  prisma: {
+    mailbox: { findActiveGmail },
+  },
+}));
+
 import { createMailboxController } from "@/controllers/mailbox.controller";
 import { makeMailboxRouter } from "@/routes/mailbox";
-import { FakeMailboxRepository } from "@/__tests__/helpers/fakes/inbox-sync-repos.fake";
 
 const watchService = {
   setupWatch: vi.fn(async () => ({})),
   stopWatch: vi.fn(async () => ({})),
 };
-const mailboxRepo = new FakeMailboxRepository();
 
 const controller = createMailboxController({
   watchService: watchService as any,
-  mailboxRepo,
 });
 
 const app = express();
@@ -38,7 +50,7 @@ const EMAIL = "watched@example.com";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mailboxRepo.reset();
+  findActiveGmail.mockResolvedValue(null as any);
 });
 
 describe("[Group F] POST /mailbox/watch", () => {
@@ -62,7 +74,7 @@ describe("[Group F] POST /mailbox/watch", () => {
   });
 
   it("mailbox with no access_token → 400 'Mailbox requires authentication'", async () => {
-    mailboxRepo.store.set("mbox-1", {
+    findActiveGmail.mockResolvedValue({
       id: "mbox-1",
       userId: USER_ID,
       email: EMAIL,
@@ -76,7 +88,7 @@ describe("[Group F] POST /mailbox/watch", () => {
   });
 
   it("happy path → 200; stopWatch called before setupWatch; setupWatch gets the mailbox tokens", async () => {
-    mailboxRepo.store.set("mbox-1", {
+    findActiveGmail.mockResolvedValue({
       id: "mbox-1",
       userId: USER_ID,
       email: EMAIL,
@@ -86,9 +98,6 @@ describe("[Group F] POST /mailbox/watch", () => {
       refresh_token: "rfr",
       expires_at: 2000000000,
     } as any);
-    // findActiveGmail filters by userId + email + isActive + provider; the fake
-    // doesn't index those, so seed via the same shape the controller queries.
-    mailboxRepo.findActiveGmail = vi.fn(async () => mailboxRepo.store.get("mbox-1") as any);
 
     const res = await request(app).post("/mailbox/watch").send({ userId: USER_ID, email: EMAIL });
 
@@ -109,14 +118,14 @@ describe("[Group F] POST /mailbox/watch", () => {
   });
 
   it("setupWatch throw → 500 'Failed to setup watch'", async () => {
-    mailboxRepo.findActiveGmail = vi.fn(async () => ({
+    findActiveGmail.mockResolvedValue({
       id: "mbox-1",
       userId: USER_ID,
       email: EMAIL,
       isActive: true,
       provider: "gmail",
       access_token: "tok",
-    } as any));
+    } as any);
     watchService.setupWatch.mockRejectedValueOnce(new Error("boom"));
 
     const res = await request(app).post("/mailbox/watch").send({ userId: USER_ID, email: EMAIL });

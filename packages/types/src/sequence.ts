@@ -438,3 +438,40 @@ export interface SequenceStepRecord {
 export interface StepWithSequenceMeta extends SequenceStepRecord {
   sequence: { id: string; userId: string; status: string; name: string };
 }
+
+// ─── SequenceStats record shapes (mailops v2: lived in sequence-stats.repo.ts) ──
+
+/**
+ * Narrow SequenceStats row shape as read by the repository. Distinct from the
+ * richer `SequenceStats` API type above; this is the persistence record owned
+ * here so the database extension and mailops share one definition.
+ */
+export interface SequenceStatsRecord {
+  sequenceId: string;
+  totalEmails: number;
+  sentEmails: number;
+  openedEmails: number;
+  uniqueOpens?: number | null;
+  clickedEmails: number;
+  repliedEmails: number;
+  bouncedEmails: number;
+  failedEmails?: number | null;
+  unsubscribed?: number | null;
+  interested?: number | null;
+  peopleContacted?: number | null;
+  openRate: number;
+  clickRate: number;
+  replyRate: number;
+  bounceRate: number;
+  contactId?: string | null;
+}
+
+/** Partial counter set used by `updateCounts` (increment + recompute rates). */
+export interface StatsCounts {
+  totalEmails?: number;
+  sentEmails?: number;
+  openedEmails?: number;
+  clickedEmails?: number;
+  repliedEmails?: number;
+  bouncedEmails?: number;
+}

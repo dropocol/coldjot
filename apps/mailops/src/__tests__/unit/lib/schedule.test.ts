@@ -17,16 +17,17 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-// The DELAY path calls `sequenceContactRepo.countScheduledInWindow` (a module-
-// level singleton inside lib/schedule) for the rate-limit slot check. Mock the
-// Prisma impl so it returns 0 (no slots taken) — isolates the timing math from
-// the DB. The characterization test achieved this via the bulk `@coldjot/database`
-// mock; we scope it to just the repo method here.
-vi.mock("@/repositories/prisma/prisma-sequence-contact.repo", () => ({
-  PrismaSequenceContactRepository: class {
-    async countScheduledInWindow() {
-      return 0;
-    }
+// The DELAY path calls `prisma.sequenceContact.countScheduledInWindow` (the
+// extension method on the db client) for the rate-limit slot check. Mock
+// @coldjot/database so it returns 0 (no slots taken) — isolates the timing
+// math from the DB.
+vi.mock("@coldjot/database", () => ({
+  prisma: {
+    sequenceContact: {
+      async countScheduledInWindow() {
+        return 0;
+      },
+    },
   },
 }));
 

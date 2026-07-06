@@ -1,7 +1,7 @@
 import type { WatchService } from "@/services/watch";
 import { logger } from "@/lib/log";
 import { watchSetupSchema as MailboxWatchSchema } from "@coldjot/types/watch";
-import type { MailboxRepository } from "@/repositories/mailbox.repo";
+import { prisma } from "@coldjot/database";
 import {
   ok,
   badRequest,
@@ -13,11 +13,10 @@ import {
 /** Phase 6.4: mailbox controller is a factory (deps from composition root). */
 export interface MailboxControllerDeps {
   watchService: WatchService;
-  mailboxRepo: MailboxRepository;
 }
 
 export function createMailboxController(deps: MailboxControllerDeps) {
-  const { watchService, mailboxRepo } = deps;
+  const { watchService } = deps;
 
   /**
    * Setup watch for a mailbox
@@ -62,7 +61,7 @@ export function createMailboxController(deps: MailboxControllerDeps) {
       const { userId, email } = result.data;
 
       // Get the mailbox to verify it exists and is active
-      const mailbox = await mailboxRepo.findActiveGmail(userId, email);
+      const mailbox = await prisma.mailbox.findActiveGmail(userId, email);
 
       if (!mailbox) {
         logger.error({ userId, email }, "No active Gmail mailbox found for user");

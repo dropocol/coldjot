@@ -9,29 +9,24 @@ import {
 import { logger } from "@/lib/log";
 import { DEFAULT_ALERT_CONFIG } from "@/config";
 import os from "os";
-import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
-import type { SequenceStatsRepository } from "@/repositories/sequence-stats.repo";
 import { Queue, QueueEvents } from "bullmq";
 
 /**
  * Phase 6.1: MonitoringService no longer takes the ServiceManager — it only
  * ever used it for `getQueue(name)` to read queue job counts. It now holds the
- * queues map directly, plus a constructor-injected SequenceStatsRepository
- * (default Prisma impl) instead of the module-level singleton.
+ * queues map directly. mailops v2: sequence stats access goes through the
+ * `prisma` client's `sequenceStats` extension methods directly.
  */
 export class MonitoringService {
   private defaultAlertConfig: AlertConfig = DEFAULT_ALERT_CONFIG;
   private queues: Map<string, Queue>;
-  private sequenceStatsRepo: SequenceStatsRepository;
   private checkIntervals: Map<string, NodeJS.Timeout> = new Map();
   private queueEvents: Map<string, QueueEvents> = new Map();
 
   constructor(
-    queues: Map<string, Queue>,
-    sequenceStatsRepo: SequenceStatsRepository = new PrismaSequenceStatsRepository()
+    queues: Map<string, Queue>
   ) {
     this.queues = queues;
-    this.sequenceStatsRepo = sequenceStatsRepo;
   }
 
   /** Look up a queue by name (throws if missing). */
@@ -82,7 +77,7 @@ export class MonitoringService {
   }
 
   private async initializeSequenceStats(sequenceId: string): Promise<void> {
-    const existingStats = await this.sequenceStatsRepo.getBySequence(sequenceId);
+    const existingStats = await prisma.sequenceStats.getBySequence(sequenceId);
 
     if (!existingStats) {
       // The monitor initializes a richer row (uniqueOpens, failedEmails, etc.)
@@ -118,7 +113,7 @@ export class MonitoringService {
   ): Promise<SequenceHealth> {
     try {
       // Get sequence stats
-      const stats = await this.sequenceStatsRepo.getBySequence(sequenceId);
+      const stats = await prisma.sequenceStats.getBySequence(sequenceId);
 
       if (!stats) {
         await this.initializeSequenceStats(sequenceId);

@@ -1,11 +1,5 @@
 import { logger } from "@/lib/log";
-import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
-import { PrismaListRepository } from "@/repositories/prisma/prisma-list.repo";
-import { PrismaListSyncRecordRepository } from "@/repositories/prisma/prisma-list-sync-record.repo";
-
-const sequenceContactRepo = new PrismaSequenceContactRepository();
-const listRepo = new PrismaListRepository();
-const listSyncRecordRepo = new PrismaListSyncRecordRepository();
+import { prisma } from "@coldjot/database";
 
 const BATCH_SIZE = 1000; // Process contacts in chunks of 1000
 
@@ -17,7 +11,7 @@ export async function syncListToSequences(listId: string) {
     logger.info({ listId }, "Starting list sync job");
 
     // Get the list with its sequences first (without contacts)
-    const list = await listRepo.findWithSequences(listId);
+    const list = await prisma.emailList.findWithSequences(listId);
 
     if (!list) {
       logger.warn({ listId }, "List not found");
@@ -30,7 +24,7 @@ export async function syncListToSequences(listId: string) {
     }
 
     // Get total contact count
-    const totalContactCount = await listRepo.contactCount(listId);
+    const totalContactCount = await prisma.emailList.contactCount(listId);
     logger.info(
       {
         listId,
@@ -51,7 +45,7 @@ export async function syncListToSequences(listId: string) {
 
         // Process contacts in batches
         while (processedCount < totalContactCount) {
-          const contacts = await listRepo.findContactsPage(
+          const contacts = await prisma.emailList.findContactsPage(
             listId,
             BATCH_SIZE,
             processedCount
@@ -126,7 +120,7 @@ async function updateSyncRecordStatus(
   error: string | null = null
 ): Promise<void> {
   try {
-    await listSyncRecordRepo.updateStatusByListSequence(
+    await prisma.listSyncRecord.updateStatusByListSequence(
       listId,
       sequenceId,
       { status, contactsAdded, error }
@@ -150,7 +144,7 @@ async function syncContactsToSequence(
   try {
     // Get existing sequence contacts efficiently using a Set
     const existingContactIds = new Set(
-      await sequenceContactRepo.listContactIdsInSequence(sequenceId)
+      await prisma.sequenceContact.listContactIdsInSequence(sequenceId)
     );
 
     // Filter out contacts that are already in the sequence
@@ -167,7 +161,7 @@ async function syncContactsToSequence(
     const chunkSize = 100;
     for (let i = 0; i < newContacts.length; i += chunkSize) {
       const chunk = newContacts.slice(i, i + chunkSize);
-      await sequenceContactRepo.addContactsToSequence(
+      await prisma.sequenceContact.addContactsToSequence(
         sequenceId,
         chunk.map((c) => c.id)
       );

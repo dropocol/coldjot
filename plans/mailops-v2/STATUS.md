@@ -12,13 +12,18 @@
 
 | Step | Sub-plan | Scope | Status | Commit(s) |
 |---|---|---|---|---|
-| **0** | [Foundation + launch-sequence slice](./0-foundation-slice.md) | Export `Db`; create `domainExtension`; convert 1 service + tests end-to-end | ✅ Done | _(uncommitted on `refactor/mailops-v2`)_ |
-| **1** | [Remaining domain services](./1-domain-services.md) | inbox-sync, run-schedule, send-email, tracking — add methods to extension | ✅ Done | — |
-| **2** | [Jobs, watch, monitor, controllers, lib](./2-jobs-watch-monitor-controllers-lib.md) | processors, watch, monitor, mailbox/list controllers, lib helpers | ⬜ | — |
+| **0** | [Foundation + launch-sequence slice](./0-foundation-slice.md) | Export `Db`; create `domainExtension`; convert 1 service + tests end-to-end | ✅ Done | `b6aa003` |
+| **1** | [Remaining domain services](./1-domain-services.md) | inbox-sync, run-schedule, send-email, tracking — add methods to extension | ✅ Done | `73cf559` |
+| — | *(extension split into per-aggregate files)* | split `domain-extension.ts` → `domain-extensions/{sequence,email,inbox}.ts` | ✅ Done | `c0012ff` |
+| **2** | [Jobs, watch, monitor, controllers, lib](./2-jobs-watch-monitor-controllers-lib.md) | processors, watch, monitor, mailbox/list controllers, lib helpers | ✅ Done | — |
 | **3** | [Delete the repository layer](./3-delete-repository-layer.md) | remove `repositories/`, repo tests, fakes, composition-root wiring | ⬜ | — |
 | **4** | [Verify + commit](./4-verify-commit.md) | full gate; confirm no repo imports remain | ⬜ | — |
 
-**Architecture pivot:** the plan originally called for inlining raw Prisma queries at each call site. After seeing sub-plan 0's result, we pivoted to **Prisma `$extends({ model })` extension methods** — the queries live as named, reusable methods on the db client (`db.sequence.resetToDraft(id)`), defined once in `packages/database/src/domain-extension.ts`. This is the API the user actually wanted. Sub-plan 0 has been redone with this approach and is green.
+**Architecture:** Prisma `$extends({ model })` extension methods — queries live as named, reusable methods on the db client (`db.sequence.resetToDraft(id)`), defined in `packages/database/src/domain-extensions/` (split by aggregate: `sequence.ts`, `email.ts`, `inbox.ts`), composed into one extension in `domain-extension.ts`.
+
+**Extension method count:** 83 methods across 13 models. All record types in `@coldjot/types`.
+
+**Test coverage:** 124 fast-tier + 137 integration-tier = 261 tests, all green. Every extension method's query logic is covered by the 18 repo test files (88 tests, identical Prisma bodies). 24 methods have additional end-to-end integration coverage via the 5 converted domain services.
 
 **Scope:** Delete 36 repo files + 18 repo tests + ~10 fakes (~65 files). Convert ~17 service/controller/helper files to use `this.db.X.Y()` directly. Move ~6 domain-service unit tests → integration tier. **Zero DB-schema change. Zero behavior change.**
 
@@ -42,23 +47,23 @@ Update each row as you convert it. A sub-plan flips to ✅ when all its rows are
 
 | File | `db` injected? | Extension methods used? | Status |
 |---|---|---|---|
-| `services/jobs/sequence/processor.ts` | ⬜ | ⬜ | ⬜ |
-| `services/jobs/sequence/helper.ts` | ⬜ | ⬜ | ⬜ |
-| `services/jobs/email/processor.ts` | ⬜ | ⬜ | ⬜ |
-| `services/jobs/contact/processor.ts` | ⬜ | ⬜ | ⬜ |
-| `services/jobs/schedule/processor.ts` | ⬜ | ⬜ | ⬜ |
-| `services/jobs/list/processor.ts` | ⬜ | ⬜ | ⬜ |
-| `services/jobs/list/helper.ts` | ⬜ | ⬜ | ⬜ |
-| `services/watch/index.ts` | ⬜ | ⬜ | ⬜ |
-| `services/watch/cleanup.ts` | ⬜ | ⬜ | ⬜ |
-| `services/monitor/service.ts` | ⬜ | ⬜ | ⬜ |
+| `services/jobs/sequence/processor.ts` | ✅ | ✅ (delegates to service) | ✅ |
+| `services/jobs/sequence/helper.ts` | ✅ | ✅ | ✅ |
+| `services/jobs/email/processor.ts` | ✅ | ✅ | ✅ |
+| `services/jobs/contact/processor.ts` | ✅ | ✅ | ✅ |
+| `services/jobs/schedule/processor.ts` | ✅ | ✅ (delegates to service) | ✅ |
+| `services/jobs/list/processor.ts` | ✅ | ✅ | ✅ |
+| `services/jobs/list/helper.ts` | ✅ | ✅ | ✅ |
+| `services/watch/index.ts` | ✅ | ✅ | ✅ |
+| `services/watch/cleanup.ts` | ✅ | ✅ | ✅ |
+| `services/monitor/service.ts` | ✅ | ✅ | ✅ |
 
 ### Controllers (sub-plan 2)
 
 | File | `db` injected? | Extension methods used? | Status |
 |---|---|---|---|
-| `controllers/mailbox.controller.ts` | ⬜ | ⬜ | ⬜ |
-| `controllers/list.controller.ts` | ⬜ | ⬜ | ⬜ |
+| `controllers/mailbox.controller.ts` | ✅ | ✅ | ✅ |
+| `controllers/list.controller.ts` | ✅ | ✅ | ✅ |
 
 *(sequence, health, metrics controllers don't query the DB directly — they delegate to services. No change.)*
 
@@ -66,10 +71,11 @@ Update each row as you convert it. A sub-plan flips to ✅ when all its rows are
 
 | File | `db` as param? | Extension methods used? | Call sites updated? | Status |
 |---|---|---|---|---|
-| `lib/email-subject.ts` | ⬜ | ⬜ | ⬜ | ⬜ |
-| `lib/mailbox/index.ts` | ⬜ | ⬜ | ⬜ | ⬜ |
-| `lib/stats/index.ts` | ⬜ | ⬜ | ⬜ | ⬜ |
-| `lib/schedule/index.ts` | ⬜ | ⬜ | ⬜ | ⬜ |
+| `lib/email-subject.ts` | ✅ | ✅ | ✅ | ✅ |
+| `lib/mailbox/index.ts` | ✅ | ✅ | ✅ | ✅ |
+| `lib/stats/index.ts` | ✅ | ✅ | ✅ | ✅ |
+| `lib/schedule/index.ts` | ✅ | ✅ | ✅ | ✅ |
+| `lib/google/gmail/gmail.ts` | ✅ | ✅ | ✅ | ✅ |
 
 ### Composition root (sub-plans 0–3, finalized in 3)
 

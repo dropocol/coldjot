@@ -1,8 +1,10 @@
 /**
  * Unit tests for ListSyncProcessor.processSyncRecords (Group H).
  *
- * Phase 7.9: the processor now constructor-injects its repo (Phase A refactor),
- * so the orchestration is testable with a fake repo + a mocked `syncListToSequences`
+ * Phase 7.9 / mailops-v2: the processor now uses the `prisma` domain extension
+ * (`this.db.listSyncRecord.findPending` / `.updateStatus`) from
+ * `@coldjot/database` instead of a constructor-injected repo. The DB layer is
+ * mocked here; the orchestration is exercised with a mocked `syncListToSequences`
  * helper + a mocked `bullmq` (the scheduler runs in the constructor). Covers the
  * state-machine transitions (processing → completed / failed), the sort-by-
  * contact-count, the empty-batch early return, and the failure path.
@@ -33,6 +35,18 @@ vi.mock("bullmq", () => ({
 const syncMock = vi.hoisted(() => ({ syncListToSequences: vi.fn(async () => ({})) }));
 vi.mock("@/services/jobs/list/helper", () => ({
   syncListToSequences: syncMock.syncListToSequences,
+}));
+
+// The processor reads `prisma.listSyncRecord.*` off the `@coldjot/database`
+// extension. Hoist the fake so the factory can reference it.
+const dbMock = vi.hoisted(() => ({
+  listSyncRecord: {
+    findPending: vi.fn<(limit?: number) => Promise<any[]>>(async () => []),
+    updateStatus: vi.fn<(id: string, data: any) => Promise<void>>(async () => undefined),
+  },
+}));
+vi.mock("@coldjot/database", () => ({
+  prisma: { listSyncRecord: dbMock.listSyncRecord },
 }));
 
 import { ListSyncProcessor } from "@/services/jobs/list/processor";
@@ -74,8 +88,13 @@ beforeEach(() => {
 
 async function makeProcessor(pending: any[] = []) {
   fakeRepo = makeFakeRepo(pending);
+  // Wire the @coldjot/database mock to behave like the old fake repo.
+  dbMock.listSyncRecord.findPending.mockImplementation(async () => pending.slice());
+  dbMock.listSyncRecord.updateStatus.mockImplementation(async (id: string, data: any) => {
+    fakeRepo.updates.push({ id, data });
+  });
   const queue = new (require("bullmq").Queue)("list-sync-test");
-  processor = new ListSyncProcessor(queue as any, new Map(), fakeRepo as any);
+  processor = new ListSyncProcessor(queue as any, new Map());
   // processSyncRecords is private; invoke it directly.
   await (processor as any).processSyncRecords();
 }

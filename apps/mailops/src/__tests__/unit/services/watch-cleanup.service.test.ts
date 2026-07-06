@@ -1,14 +1,16 @@
 /**
  * Unit tests for WatchCleanupService.cleanup (Group O).
  *
- * Phase 7.9: `WatchCleanupService` constructs its own `WatchService` + two Prisma
- * repos internally, so we mock the three modules (`@/services/watch/index` +
- * the two repo impls) and assert the cleanup orchestration: due-watch renewal,
- * the renew-fail → stopWatch fallback, the 30-day history purge, and the
- * never-throws contract.
+ * Phase 7.9: `WatchCleanupService` constructs its own `WatchService` and reads
+ * the watch/history aggregates through the `prisma` client's domain extension
+ * methods (mailops v2). We mock `@/services/watch/index` (so the renewal
+ * callbacks are controllable) and `@coldjot/database` (so the prisma extension
+ * methods are stubs), then assert the cleanup orchestration: due-watch
+ * renewal, the renew-fail → stopWatch fallback, the 30-day history purge, and
+ * the never-throws contract.
  *
- * Replaces the Group O characterization test (watch-cleanup). The collaborator
- * repos are also covered directly by the 7.5 repo tests (findDueForRenewal,
+ * Replaces the Group O characterization test (watch-cleanup). The extension
+ * methods are also covered directly by the 7.5 repo tests (findDueForRenewal,
  * purgeProcessedBefore); this file covers the orchestration that wires them.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -17,10 +19,11 @@ const mocks = vi.hoisted(() => {
   // WatchService methods called by cleanup.
   const renewWatch = vi.fn(async () => undefined);
   const stopWatch = vi.fn(async () => undefined);
-  // EmailWatchRepository state.
+  // emailWatch extension state.
   const dueWatches: any[] = [];
   const findDueForRenewal = vi.fn(async () => dueWatches.slice());
-  // EmailWatchHistoryRepository state.
+  const listAll = vi.fn(async () => dueWatches.slice());
+  // emailWatchHistory extension state.
   let purgedWith: Date | null = null;
   const purgeProcessedBefore = vi.fn(async (cutoff: Date) => {
     purgedWith = cutoff;
@@ -31,6 +34,7 @@ const mocks = vi.hoisted(() => {
     stopWatch,
     dueWatches,
     findDueForRenewal,
+    listAll,
     purgeProcessedBefore,
     getPurgedCutoff: () => purgedWith,
     reset: () => {
@@ -47,15 +51,15 @@ vi.mock("@/services/watch/index", () => ({
   },
 }));
 
-vi.mock("@/repositories/prisma/prisma-email-watch.repo", () => ({
-  PrismaEmailWatchRepository: class {
-    findDueForRenewal = mocks.findDueForRenewal;
-  },
-}));
-
-vi.mock("@/repositories/prisma/prisma-email-watch-history.repo", () => ({
-  PrismaEmailWatchHistoryRepository: class {
-    purgeProcessedBefore = mocks.purgeProcessedBefore;
+vi.mock("@coldjot/database", () => ({
+  prisma: {
+    emailWatch: {
+      findDueForRenewal: mocks.findDueForRenewal,
+      listAll: mocks.listAll,
+    },
+    emailWatchHistory: {
+      purgeProcessedBefore: mocks.purgeProcessedBefore,
+    },
   },
 }));
 
@@ -66,6 +70,7 @@ beforeEach(() => {
   mocks.renewWatch.mockResolvedValue(undefined);
   mocks.stopWatch.mockClear();
   mocks.findDueForRenewal.mockClear();
+  mocks.listAll.mockClear();
   mocks.purgeProcessedBefore.mockClear();
   mocks.reset();
 });

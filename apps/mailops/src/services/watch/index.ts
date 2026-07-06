@@ -1,12 +1,9 @@
 import { logger } from "@/lib/log";
 import { PubSub } from "@google-cloud/pubsub";
-import { PrismaMailboxRepository } from "@/repositories/prisma/prisma-mailbox.repo";
-import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
+import { prisma, type Db } from "@coldjot/database";
 import { nanoid } from "nanoid";
 import { WATCH_CONFIG, WATCH_ERRORS } from "../../config/watch/constants";
 import { WatchResponse, WatchError, WatchErrorCode } from "@coldjot/types";
-import type { MailboxRepository } from "@/repositories/mailbox.repo";
-import type { EmailWatchRepository } from "@/repositories/email-watch.repo";
 import type { WatchGateway } from "@/adapters/watch-gateway";
 import { GmailWatchGateway } from "@/adapters/watch-gateway";
 import type { TokenRefresher } from "@/adapters/token-refresher";
@@ -52,8 +49,7 @@ interface WatchSetupParams {
  */
 export class WatchService {
   private pubSubClient: PubSub;
-  private readonly mailboxRepo: MailboxRepository;
-  private readonly emailWatchRepo: EmailWatchRepository;
+  private readonly db: Db;
   private readonly gateway: WatchGateway;
   private readonly tokenRefresher: TokenRefresher;
 
@@ -62,13 +58,11 @@ export class WatchService {
   constructor(
     gateway: WatchGateway = new GmailWatchGateway(),
     tokenRefresher: TokenRefresher = new GmailTokenRefresher(),
-    mailboxRepo: MailboxRepository = new PrismaMailboxRepository(),
-    emailWatchRepo: EmailWatchRepository = new PrismaEmailWatchRepository()
+    db: Db = prisma
   ) {
     this.gateway = gateway;
     this.tokenRefresher = tokenRefresher;
-    this.mailboxRepo = mailboxRepo;
-    this.emailWatchRepo = emailWatchRepo;
+    this.db = db;
     this.pubSubClient = new PubSub({
       projectId: process.env.GOOGLE_CLOUD_PROJECT,
     });
@@ -121,10 +115,10 @@ export class WatchService {
       const historyId = currentHistoryId;
 
       // Check for existing watch
-      const existingWatch = await this.emailWatchRepo.findByEmail(email);
+      const existingWatch = await this.db.emailWatch.findByEmail(email);
 
       if (existingWatch) {
-        await this.emailWatchRepo.updateByEmail(email, {
+        await this.db.emailWatch.updateByEmail(email, {
           historyId,
           expiration,
         });
@@ -136,7 +130,7 @@ export class WatchService {
       }
 
       // Create new watch record
-      await this.emailWatchRepo.create({
+      await this.db.emailWatch.record({
         id: nanoid(),
         userId,
         email,
@@ -167,7 +161,7 @@ export class WatchService {
 
   async renewWatch(watchId: string): Promise<void> {
     try {
-      const watch = await this.emailWatchRepo.findById(watchId);
+      const watch = await this.db.emailWatch.findById(watchId);
 
       if (!watch) {
         throw new Error(`Watch not found: ${watchId}`);
@@ -188,7 +182,7 @@ export class WatchService {
       const expiration = new Date();
       expiration.setDate(expiration.getDate() + WATCH_CONFIG.MAX_WATCH_DAYS);
 
-      await this.emailWatchRepo.updateById(watchId, {
+      await this.db.emailWatch.updateById(watchId, {
         historyId: watchResponse.historyId,
         expiration,
       });
@@ -202,14 +196,14 @@ export class WatchService {
 
   async stopWatch(email: string): Promise<void> {
     try {
-      const watch = await this.emailWatchRepo.findByEmail(email);
+      const watch = await this.db.emailWatch.findByEmail(email);
 
       if (!watch) {
         logger.info({ email }, "No watch found to stop");
       }
 
       // Get the mailbox
-      const mailbox = await this.mailboxRepo.findActiveGmailByEmail(email);
+      const mailbox = await this.db.mailbox.findActiveGmailByEmail(email);
 
       if (!mailbox || !mailbox.access_token) {
         logger.error(
@@ -226,7 +220,7 @@ export class WatchService {
       }
 
       if (watch) {
-        await this.emailWatchRepo.deleteByEmail(email);
+        await this.db.emailWatch.deleteByEmail(email);
       }
 
       logger.info({ email }, "Successfully stopped watch");
@@ -264,7 +258,7 @@ export class WatchService {
   private async getAccessToken(email: string): Promise<string | null> {
     try {
       // Get the mailbox
-      const mailbox = await this.mailboxRepo.findActiveGmailByEmail(email);
+      const mailbox = await this.db.mailbox.findActiveGmailByEmail(email);
 
       if (!mailbox) {
         logger.error({ email }, "No active Google mailbox found");

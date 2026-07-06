@@ -1,5 +1,5 @@
 import { logger } from "@/lib/log";
-import type { ListSyncRecordRepository } from "@/repositories/list-sync-record.repo";
+import { prisma } from "@coldjot/database";
 import {
   ok,
   badRequest,
@@ -8,12 +8,9 @@ import {
 } from "./utils";
 
 /** Phase 6.4: list controller is a factory (deps from composition root). */
-export interface ListControllerDeps {
-  listSyncRecordRepo: ListSyncRecordRepository;
-}
+export interface ListControllerDeps {}
 
-export function createListController(deps: ListControllerDeps) {
-  const { listSyncRecordRepo } = deps;
+export function createListController(_deps: ListControllerDeps = {}) {
 
   /** Create a sync record for a list (picked up by the watcher). */
   async function createSyncRecord(
@@ -32,7 +29,7 @@ export function createListController(deps: ListControllerDeps) {
       }
 
       // Create a sync record that will be picked up by the watcher
-      await listSyncRecordRepo.create({ listId, sequenceId });
+      await prisma.listSyncRecord.record({ listId, sequenceId });
 
       logger.info({ listId, sequenceId }, "List sync record created");
 

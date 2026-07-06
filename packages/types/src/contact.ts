@@ -31,3 +31,21 @@ export const batchCreateContactsSchema = z.object({
   contacts: z.array(createContactSchema).min(1).max(1000),
 });
 export type BatchCreateContactsInput = z.infer<typeof batchCreateContactsSchema>;
+
+// ─── Repository record shapes (mailops v2: lived in contact.repo.ts, now here) ──
+
+/**
+ * Narrow projection of a Contact row as read for outgoing email. Distinct from
+ * the API-shape `Contact` above; this is the persistence record owned here so
+ * the database extension and mailops share one definition.
+ */
+export interface ContactRecord {
+  id: string;
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

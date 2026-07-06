@@ -1,14 +1,12 @@
 /**
  * Unit tests for GmailClientService.getClient (Group J).
  *
- * Phase 7.2: `GmailClientService` builds the OAuth2 client + google.gmail
- * handle internally, so googleapis + the gmail helper are mocked (same as the
- * characterization test). The mailbox lookup now goes through the
- * `FakeMailboxRepository` injected via the class's overridable field (Phase 6.3
- * already made the repo overridable for tests).
+ * mailops v2: `GmailClientService` calls `prisma.mailbox.findByIdForUser`
+ * directly (via the domain extension). Mock `@coldjot/database` with an
+ * in-memory mailbox store so the test stays DB-free.
  *
  * Covers: token refresh + credential wiring, "Mailbox not found", and refresh-
- * failure propagation. Replaces the Group J characterization test.
+ * failure propagation.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
@@ -18,6 +16,10 @@ const mocks = vi.hoisted(() => ({
   setOAuth2Credentials: vi.fn((_auth: any, _token: string, _c: any) => undefined),
   gmailFactory: vi.fn((_o: any) => ({ _isGmail: true })) as any,
   OAuth2: vi.fn((..._a: any[]) => ({ _isAuth: true })) as any,
+  mailboxStore: new Map<string, any>(),
+  findByIdForUser: vi.fn(async (id: string) =>
+    mocks.mailboxStore.get(id) ?? null
+  ),
 }));
 
 vi.mock("googleapis", () => ({
@@ -33,21 +35,21 @@ vi.mock("@/lib/google/gmail/helper", () => ({
   setOAuth2Credentials: mocks.setOAuth2Credentials,
 }));
 
+vi.mock("@coldjot/database", () => ({
+  prisma: {
+    mailbox: {
+      findByIdForUser: mocks.findByIdForUser,
+    },
+  },
+}));
+
 import { GmailClientService } from "@/lib/google/gmail/gmail";
-import { FakeMailboxRepository } from "@/__tests__/helpers/fakes/inbox-sync-repos.fake";
 
 const USER_ID = "usr-1";
 const MAILBOX_ID = "mbx-1";
 
-function makeService(mailboxRepo: FakeMailboxRepository) {
-  const svc = new GmailClientService();
-  // Phase 6.3 made the repo overridable; reach in for the test.
-  (svc as any).mailboxRepo = mailboxRepo;
-  return svc;
-}
-
-function seedMailbox(repo: FakeMailboxRepository, over: Record<string, any> = {}) {
-  repo.store.set(MAILBOX_ID, {
+function seedMailbox(over: Record<string, any> = {}) {
+  mocks.mailboxStore.set(MAILBOX_ID, {
     id: MAILBOX_ID,
     userId: USER_ID,
     email: "user@example.com",
@@ -58,24 +60,28 @@ function seedMailbox(repo: FakeMailboxRepository, over: Record<string, any> = {}
     provider: "gmail",
     isActive: true,
     name: null,
-  } as any);
-  Object.assign(repo.store.get(MAILBOX_ID)!, over);
+    ...over,
+  });
 }
 
 beforeEach(() => {
+  mocks.mailboxStore.clear();
   mocks.validateGmailCredentials.mockClear();
   mocks.refreshTokenIfNeeded.mockClear();
   mocks.refreshTokenIfNeeded.mockResolvedValue("fresh-access-token");
   mocks.setOAuth2Credentials.mockClear();
   mocks.gmailFactory.mockClear();
   mocks.OAuth2.mockClear();
+  mocks.findByIdForUser.mockClear();
+  mocks.findByIdForUser.mockImplementation(async (id: string) =>
+    mocks.mailboxStore.get(id) ?? null
+  );
 });
 
 describe("[Group J] GmailClientService.getClient", () => {
   it("refreshes the token, sets credentials on a new OAuth2 client, returns google.gmail(auth)", async () => {
-    const repo = new FakeMailboxRepository();
-    seedMailbox(repo);
-    const svc = makeService(repo);
+    seedMailbox();
+    const svc = new GmailClientService();
 
     const gmail = await svc.getClient(USER_ID, MAILBOX_ID);
 
@@ -97,8 +103,7 @@ describe("[Group J] GmailClientService.getClient", () => {
   });
 
   it('throws "Mailbox not found" when the mailbox is absent', async () => {
-    const repo = new FakeMailboxRepository();
-    const svc = makeService(repo);
+    const svc = new GmailClientService();
 
     await expect(svc.getClient(USER_ID, MAILBOX_ID)).rejects.toThrow(
       "Mailbox not found"
@@ -106,10 +111,9 @@ describe("[Group J] GmailClientService.getClient", () => {
   });
 
   it("propagates a token-refresh failure", async () => {
-    const repo = new FakeMailboxRepository();
-    seedMailbox(repo);
+    seedMailbox();
     mocks.refreshTokenIfNeeded.mockRejectedValue(new Error("refresh failed"));
-    const svc = makeService(repo);
+    const svc = new GmailClientService();
 
     await expect(svc.getClient(USER_ID, MAILBOX_ID)).rejects.toThrow(
       "refresh failed"

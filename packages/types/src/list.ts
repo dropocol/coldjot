@@ -42,3 +42,39 @@ export const setListContactsSchema = z.object({
   contactIds: z.array(z.string().min(1)).min(1),
 });
 export type SetListContactsInput = z.infer<typeof setListContactsSchema>;
+
+// ─── Repository record shapes (mailops v2: lived in list.repo.ts, now here) ────
+
+/** Just the id of a sequence attached to a list (sync routing). */
+export interface ListSequenceRef {
+  id: string;
+}
+
+/** A list with the sequence ids attached to it (syncListToSequences). */
+export interface ListWithSequences {
+  id: string;
+  sequences: ListSequenceRef[];
+}
+
+/** A row of contacts on a list (paginated batch sync). */
+export interface ListContactRow {
+  id: string;
+  email: string;
+}
+
+// ─── ListSyncRecord record shapes (mailops v2: lived in list-sync-record.repo.ts) ─
+
+/** A list→sequence sync job record. */
+export interface ListSyncRecord {
+  id: string;
+  listId: string;
+  sequenceId: string;
+  status: string;
+  contactsAdded: number;
+  error: string | null;
+  createdAt: Date;
+}
+
+export interface ListSyncRecordWithCount extends ListSyncRecord {
+  list: { _count: { contacts: number } };
+}

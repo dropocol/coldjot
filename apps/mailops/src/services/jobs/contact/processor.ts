@@ -6,7 +6,7 @@ import { processContactShared } from "@/services/jobs/sequence/helper";
 import { CONTACT_PROCESSING_CONFIG } from "@/config";
 import { QUEUE_NAMES } from "@/config";
 import { getWorkerOptions } from "@/config";
-import { PrismaSequenceContactRepository } from "@/repositories/prisma/prisma-sequence-contact.repo";
+import { prisma } from "@coldjot/database";
 
 import type { JobManager } from "@/services/jobs/job-manager";
 
@@ -22,17 +22,15 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
   private readonly SCHEDULER_ID = "contact-processing-scheduler";
 
   private readonly jobManager: JobManager;
-  private readonly sequenceContact: PrismaSequenceContactRepository;
+  private readonly db = prisma;
 
   constructor(
     queue: Queue,
     jobManager: JobManager,
-    dlQueues: Map<string, Queue> = new Map(),
-    sequenceContact: PrismaSequenceContactRepository = new PrismaSequenceContactRepository()
+    dlQueues: Map<string, Queue> = new Map()
   ) {
     super(queue, QUEUE_NAMES.CONTACT, getWorkerOptions(QUEUE_NAMES.CONTACT), dlQueues);
     this.jobManager = jobManager;
-    this.sequenceContact = sequenceContact;
     this.setupContactProcessingScheduler();
   }
 
@@ -83,7 +81,7 @@ export class ContactProcessor extends BaseProcessor<ContactProcessingJob> {
       logger.info("👳‍♂️ Checking for new contacts to process");
 
       // Find contacts that haven't been processed yet
-      const newContacts = await this.sequenceContact.findNewContacts(
+      const newContacts = await this.db.sequenceContact.findNewContacts(
         this.batchSize
       );
 

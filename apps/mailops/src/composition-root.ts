@@ -247,7 +247,7 @@ export function createApp(): App {
 
   // ---- JobManager + MonitoringService (need the queues map) --------------
   const jobManager = new JobManager(queues);
-  const monitoring = new MonitoringService(queues, sequenceStats);
+  const monitoring = new MonitoringService(queues);
 
   // ---- Domain services ---------------------------------------------------
   const sendEmail: SendEmailService = new SendEmailServiceImpl(
@@ -308,7 +308,6 @@ export function createApp(): App {
   const metricsController = createMetricsController({ monitoringService: monitoring });
   const mailboxController = createMailboxController({
     watchService,
-    mailboxRepo: mailbox,
   });
   const listController = createListController({ listSyncRecordRepo: listSyncRecord });
 

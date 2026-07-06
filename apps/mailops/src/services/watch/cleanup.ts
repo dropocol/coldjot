@@ -1,15 +1,14 @@
 import { WATCH_CONFIG } from "../../config/watch/constants";
 import { WatchService } from "./index";
 import { logger } from "@/lib/log";
-import { PrismaEmailWatchRepository } from "@/repositories/prisma/prisma-email-watch.repo";
-import { PrismaEmailWatchHistoryRepository } from "@/repositories/prisma/prisma-email-watch-history.repo";
+import { prisma } from "@coldjot/database";
 
 export class WatchCleanupService {
   private watchService: WatchService;
   private cleanupInterval: NodeJS.Timeout | null;
-  // Repos default to Prisma impls; overridable for tests (Phase 3 pattern).
-  private readonly emailWatchRepo = new PrismaEmailWatchRepository();
-  private readonly emailWatchHistoryRepo = new PrismaEmailWatchHistoryRepository();
+  // mailops v2: data access goes through the `prisma` client's domain extension
+  // methods directly.
+  private readonly db = prisma;
 
   constructor() {
     this.watchService = new WatchService();
@@ -100,11 +99,11 @@ export class WatchCleanupService {
       );
 
       // Find watches that need renewal
-      const watchesToRenew = await this.emailWatchRepo.findDueForRenewal(renewalBuffer);
+      const watchesToRenew = await this.db.emailWatch.findDueForRenewal(renewalBuffer);
 
       // Log all watches for debugging in dev mode
       if (WATCH_CONFIG.DEV.ENABLED) {
-        const allWatches = await this.emailWatchRepo.listAll();
+        const allWatches = await this.db.emailWatch.listAll();
         logger.info(
           {
             allWatchesCount: allWatches.length,
@@ -155,7 +154,7 @@ export class WatchCleanupService {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const deleteResult = await this.emailWatchHistoryRepo.purgeProcessedBefore(thirtyDaysAgo);
+      const deleteResult = await this.db.emailWatchHistory.purgeProcessedBefore(thirtyDaysAgo);
 
       logger.info(
         { deletedCount: deleteResult.count },

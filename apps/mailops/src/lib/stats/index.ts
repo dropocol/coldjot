@@ -3,11 +3,6 @@ import type { EmailEventType } from "@coldjot/types";
 import { EmailEventEnum } from "@coldjot/types";
 import type { Prisma } from "@prisma/client";
 import { logger } from "@/lib/log";
-import { PrismaEmailEventRepository } from "@/repositories/prisma/prisma-email-event.repo";
-import { PrismaSequenceStatsRepository } from "@/repositories/prisma/prisma-sequence-stats.repo";
-
-const emailEventRepo = new PrismaEmailEventRepository();
-const sequenceStatsRepo = new PrismaSequenceStatsRepository();
 
 /**
  * Calculate rates based on current stats
@@ -37,7 +32,7 @@ const getExistingEventCount = async (params: {
   contactId: string;
   type: EmailEventType;
 }) => {
-  const count = await emailEventRepo.countBySequenceContactType(
+  const count = await prisma.emailEvent.countBySequenceContactType(
     params.sequenceId,
     params.contactId,
     params.type
@@ -255,7 +250,7 @@ export const updateSequenceStats = async (
  * Get sequence stats with default values
  */
 export const getSequenceStats = async (sequenceId: string) => {
-  const stats = await sequenceStatsRepo.getBySequence(sequenceId);
+  const stats = await prisma.sequenceStats.getBySequence(sequenceId);
 
   if (!stats) {
     return {

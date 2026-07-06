@@ -1,7 +1,7 @@
 import { Queue, Job } from "bullmq";
 import { BaseProcessor } from "../base-processor";
 import { logger } from "@/lib/log";
-import { PrismaListSyncRecordRepository } from "@/repositories/prisma/prisma-list-sync-record.repo";
+import { prisma } from "@coldjot/database";
 import { getWorkerOptions, getRateLimits } from "@/config";
 import { QUEUE_NAMES } from "@/config";
 import { syncListToSequences } from "./helper";
@@ -16,12 +16,11 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
   private readonly CHECK_INTERVAL = 30000; // 5 seconds
   private readonly MAX_CONCURRENT_SYNCS = 3; // Maximum number of concurrent syncs
   private readonly concurrencyLimit: pLimit.Limit;
-  private readonly listSyncRecordRepo: PrismaListSyncRecordRepository;
+  private readonly db = prisma;
 
   constructor(
     queue: Queue,
-    dlQueues: Map<string, Queue> = new Map(),
-    listSyncRecordRepo: PrismaListSyncRecordRepository = new PrismaListSyncRecordRepository()
+    dlQueues: Map<string, Queue> = new Map()
   ) {
     super(
       queue,
@@ -30,7 +29,6 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
       dlQueues
     );
 
-    this.listSyncRecordRepo = listSyncRecordRepo;
     // Initialize concurrency limiter
     this.concurrencyLimit = pLimit(this.MAX_CONCURRENT_SYNCS);
 
@@ -79,7 +77,7 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
       logger.info("📋 Starting list sync processing");
 
       // Find all pending sync records
-      const syncRecords = await this.listSyncRecordRepo.findPending(10);
+      const syncRecords = await this.db.listSyncRecord.findPending(10);
 
       if (syncRecords.length === 0) return;
 
@@ -95,20 +93,20 @@ export class ListSyncProcessor extends BaseProcessor<ListSyncJob> {
         sortedRecords.map((record) =>
           this.concurrencyLimit(async () => {
             try {
-              await this.listSyncRecordRepo.updateStatus(record.id, {
+              await this.db.listSyncRecord.updateStatus(record.id, {
                 status: "processing",
               });
 
               await syncListToSequences(record.listId);
 
-              await this.listSyncRecordRepo.updateStatus(record.id, {
+              await this.db.listSyncRecord.updateStatus(record.id, {
                 status: "completed",
               });
 
               logger.info(`📋 Processed list sync record ${record.id}`);
             } catch (error) {
               logger.error({ err: error }, `📋 ❌ Error processing sync record ${record.id}`);
-              await this.listSyncRecordRepo.updateStatus(record.id, {
+              await this.db.listSyncRecord.updateStatus(record.id, {
                 status: "failed",
                 error: error instanceof Error ? error.message : String(error),
               });
