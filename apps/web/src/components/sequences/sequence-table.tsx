@@ -61,6 +61,7 @@ interface Sequence {
 interface SequenceTableProps {
   sequences: Sequence[];
   showCreateModal: boolean;
+  onOpenCreateModal: () => void;
   onCloseCreateModal: () => void;
   onAddSequence: (sequence: Sequence) => void;
   isLoading: boolean;
@@ -74,6 +75,7 @@ interface SequenceTableProps {
 export function SequenceTable({
   sequences,
   showCreateModal,
+  onOpenCreateModal,
   onCloseCreateModal,
   onAddSequence,
   isLoading,
@@ -158,19 +160,26 @@ export function SequenceTable({
 
   if (sequences.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="flex justify-center mb-4">
-          <ScrollText className="h-12 w-12 text-muted-foreground" />
+      <>
+        <div className="text-center py-12">
+          <div className="flex justify-center mb-4">
+            <ScrollText className="h-12 w-12 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">Create your first sequence</h3>
+          <p className="text-muted-foreground mb-4">
+            Start creating email sequences to automate your outreach.
+          </p>
+          <Button onClick={onOpenCreateModal}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Sequence
+          </Button>
         </div>
-        <h3 className="text-lg font-medium mb-2">Create your first sequence</h3>
-        <p className="text-muted-foreground mb-4">
-          Start creating email sequences to automate your outreach.
-        </p>
-        <Button onClick={() => onCloseCreateModal()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Sequence
-        </Button>
-      </div>
+        <CreateSequenceModal
+          open={showCreateModal}
+          onClose={onCloseCreateModal}
+          onSuccess={handleCreateSuccess}
+        />
+      </>
     );
   }
 
