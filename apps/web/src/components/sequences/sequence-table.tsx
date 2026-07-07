@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@coldjot/ui/components/button";
+import { Checkbox } from "@coldjot/ui/components/checkbox";
 import {
   Table,
   TableBody,
@@ -70,6 +71,7 @@ interface SequenceTableProps {
   total: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  onSelectedSequencesChange?: (sequenceIds: string[]) => void;
 }
 
 export function SequenceTable({
@@ -84,8 +86,10 @@ export function SequenceTable({
   total,
   onPageChange,
   onPageSizeChange,
+  onSelectedSequencesChange,
 }: SequenceTableProps) {
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [selectedSequences, setSelectedSequences] = useState<Set<string>>(new Set());
   const router = useRouter();
   const qc = useQueryClient();
 
@@ -144,6 +148,29 @@ export function SequenceTable({
     }
   };
 
+  const handleCheckboxChange = (sequenceId: string, checked: boolean) => {
+    setSelectedSequences((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(sequenceId);
+      } else {
+        next.delete(sequenceId);
+      }
+      return next;
+    });
+  };
+
+  // Notify parent component when selected sequences change
+  useEffect(() => {
+    if (onSelectedSequencesChange) {
+      const sequenceIds = Array.from(selectedSequences);
+      onSelectedSequencesChange(sequenceIds);
+    }
+    // Intentionally only re-runs when the selection changes; the parent callback
+    // is treated as stable to avoid notification loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSequences]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -188,6 +215,18 @@ export function SequenceTable({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[40px] pl-3">
+              <Checkbox
+                checked={selectedSequences.size === sequences.length}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedSequences(new Set(sequences.map((s) => s.id)));
+                  } else {
+                    setSelectedSequences(new Set());
+                  }
+                }}
+              />
+            </TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Schedule</TableHead>
@@ -199,6 +238,14 @@ export function SequenceTable({
         <TableBody>
           {sequences.map((sequence) => (
             <TableRow key={sequence.id} className="hover:bg-muted/50">
+              <TableCell className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={selectedSequences.has(sequence.id)}
+                  onCheckedChange={(checked) =>
+                    handleCheckboxChange(sequence.id, checked as boolean)
+                  }
+                />
+              </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted-foreground/70" />

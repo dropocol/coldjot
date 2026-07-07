@@ -77,6 +77,22 @@ export function useDeleteList() {
   });
 }
 
+/**
+ * Bulk-delete lists (HARD-DELETE only — lists have no soft-delete/trash).
+ * On success, invalidates the lists query cache so views refresh.
+ */
+export function useBulkDeleteLists() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (listIds: string[]) =>
+      api.post<{ success: boolean; deleted: number }>(
+        "/api/lists/bulk-delete",
+        { listIds }
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.lists.all }),
+  });
+}
+
 /** Add a single contact to a list (POST /api/lists/[id]/contacts). */
 export function useAddContactToList(id: string) {
   const qc = useQueryClient();

@@ -31,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@coldjot/ui/components/alert-dialog";
+import { Checkbox } from "@coldjot/ui/components/checkbox";
 import { useRouter } from "next/navigation";
 import { PaginationControls } from "@/components/pagination";
 import { useLists, useCreateList, useDeleteList } from "@/hooks/queries/use-lists";
@@ -44,6 +45,7 @@ interface EmailListsViewProps {
   limit: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  onSelectedListsChange?: (ids: string[]) => void;
 }
 
 type EmailListWithCount = EmailList & {
@@ -61,10 +63,12 @@ const EmailListsView = ({
   limit,
   onPageChange,
   onPageSizeChange,
+  onSelectedListsChange,
 }: EmailListsViewProps) => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [deletingList, setDeletingList] = useState<EmailList | null>(null);
+  const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set());
 
   const { data, isLoading, isFetching, refetch } = useLists({
     page,
@@ -80,6 +84,17 @@ const EmailListsView = ({
     // Parent callback is treated as stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFetching]);
+
+  // Notify parent component when selected lists change
+  useEffect(() => {
+    if (onSelectedListsChange) {
+      const listIds = Array.from(selectedLists);
+      onSelectedListsChange(listIds);
+    }
+    // Intentionally only re-runs when the selection changes; the parent callback
+    // is treated as stable to avoid notification loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLists]);
 
   const lists = (data?.lists ?? []) as EmailListWithCount[];
   const total = data?.total ?? 0;
@@ -119,6 +134,18 @@ const EmailListsView = ({
     onPageChange(1);
   };
 
+  const handleCheckboxChange = (listId: string, checked: boolean) => {
+    setSelectedLists((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(listId);
+      } else {
+        next.delete(listId);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-4">
       {error && (
@@ -155,6 +182,18 @@ const EmailListsView = ({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px] pl-3">
+                  <Checkbox
+                    checked={selectedLists.size === lists.length && lists.length > 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedLists(new Set(lists.map((l) => l.id)));
+                      } else {
+                        setSelectedLists(new Set());
+                      }
+                    }}
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Contacts</TableHead>
                 {/* <TableHead>Tags</TableHead> */}
@@ -166,8 +205,20 @@ const EmailListsView = ({
                 <TableRow
                   key={list.id}
                   className="hover:bg-muted/50 cursor-pointer"
-                  onClick={() => router.push(`/lists/${list.id}`)}
+                  onClick={(e) => {
+                    if (!(e.target as HTMLElement).closest(".checkbox-cell")) {
+                      router.push(`/lists/${list.id}`);
+                    }
+                  }}
                 >
+                  <TableCell className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedLists.has(list.id)}
+                      onCheckedChange={(checked) =>
+                        handleCheckboxChange(list.id, checked as boolean)
+                      }
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium">{list.name}</div>
                     {list.description && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, SendHorizonal, ListPlus, Trash2 } from "lucide-react";
+import { Plus, SendHorizonal, ListPlus, Trash2, Contact as ContactIcon } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalSearch } from "@coldjot/ui/components/local-search";
@@ -145,7 +145,11 @@ export default function ContactsPage() {
     <div className="max-w-5xl mx-auto py-8 space-y-6">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <PageHeader title="Contacts" description="Manage your contacts." />
+          <PageHeader
+            icon={ContactIcon}
+            title="Contacts"
+            description="Manage your contacts."
+          />
           <div className="flex items-center gap-3">
             {selectedContacts.length > 0 ? (
               <>

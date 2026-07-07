@@ -7,6 +7,7 @@
 export * from "./common";
 export * from "./contact";
 export * from "./list";
+export * from "./template";
 export * from "./sequence";
 export * from "./email";
 export * from "./watch";

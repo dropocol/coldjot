@@ -43,6 +43,17 @@ export const setListContactsSchema = z.object({
 });
 export type SetListContactsInput = z.infer<typeof setListContactsSchema>;
 
+/**
+ * Bulk-delete (hard-only) a set of lists. Unlike contacts, lists have no
+ * soft-delete/tombstone column, so this always PURGES. The implicit M:N join
+ * (`_EmailListContacts`) auto-cascades on list delete, so no child cleanup is
+ * needed. `listIds` is capped to keep the request bounded.
+ */
+export const bulkDeleteListsSchema = z.object({
+  listIds: z.array(z.string().min(1)).min(1).max(1000),
+});
+export type BulkDeleteListsInput = z.infer<typeof bulkDeleteListsSchema>;
+
 // ─── Repository record shapes (mailops v2: lived in list.repo.ts, now here) ────
 
 /** Just the id of a sequence attached to a list (sync routing). */

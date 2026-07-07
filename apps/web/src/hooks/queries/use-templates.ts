@@ -79,3 +79,20 @@ export function useDeleteTemplate() {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.templates.all }),
   });
 }
+
+/**
+ * Bulk hard-delete templates (POST /api/templates/bulk-delete, body
+ * { templateIds }). Templates have no soft-delete column, so this is
+ * purge-only. On success, invalidates the templates query cache.
+ */
+export function useBulkDeleteTemplates() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (templateIds: string[]) =>
+      api.post<{ success: boolean; deleted: number }>(
+        "/api/templates/bulk-delete",
+        { templateIds }
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.templates.all }),
+  });
+}

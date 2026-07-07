@@ -220,7 +220,7 @@ export function ContactList({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]">
+                  <TableHead className="w-[40px] pl-3">
                     <Checkbox
                       checked={selectedContacts.size === contacts.length}
                       onCheckedChange={(checked) => {
