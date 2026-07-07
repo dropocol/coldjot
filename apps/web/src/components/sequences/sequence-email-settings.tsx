@@ -243,7 +243,7 @@ export function SequenceEmailSettings({
               </div>
             </div>
             <Select
-              value={settings.sequenceMailbox?.mailboxId || undefined}
+              value={settings.sequenceMailbox?.mailboxId ?? ""}
               onValueChange={(v) => handleMailboxChange(v as string)}
               disabled={isLoading || mailboxes.length === 0}
             >

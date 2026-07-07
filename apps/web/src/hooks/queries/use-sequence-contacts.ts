@@ -80,14 +80,14 @@ export function useBulkAddContactsToSequence(sequenceId: string) {
   });
 }
 
-/** Add every contact from one or more lists (POST .../contacts/list). */
+/** Add every contact from a list (POST .../contacts/list). */
 export function useAddListContactsToSequence(sequenceId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (listIds: string[]) =>
+    mutationFn: (listId: string) =>
       api.post<{ message: string; added?: number; skipped?: number }>(
         `/api/sequences/${sequenceId}/contacts/list`,
-        { listIds }
+        { listId }
       ),
     onSuccess: () => invalidateContacts(qc, sequenceId),
   });

@@ -36,7 +36,7 @@ export function ListSelector({ sequenceId, onListSelected }: ListSelectorProps) 
 
   const handleSelectList = async (list: EmailList) => {
     try {
-      await addListContacts.mutateAsync([list.id]);
+      await addListContacts.mutateAsync(list.id);
       toast.success(`Added ${list.contacts.length} contacts from ${list.name}`);
       setOpen(false);
       onListSelected();

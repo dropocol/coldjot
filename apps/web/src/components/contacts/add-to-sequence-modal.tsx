@@ -88,7 +88,7 @@ export function AddToSequenceModal({
     try {
       // Case 1: Adding all contacts from a list
       if (isFromList && listId) {
-        const data = await addListContacts.mutateAsync([listId]);
+        const data = await addListContacts.mutateAsync(listId);
         toast.success(
           `Added ${data.added ?? 0} contacts from ${listName} to sequence${
             data.skipped ? ` (${data.skipped} already in sequence)` : ""
