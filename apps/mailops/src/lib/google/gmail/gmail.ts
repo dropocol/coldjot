@@ -24,7 +24,7 @@ export class GmailClientService {
   constructor() {
     this.config = {
       clientId: process.env.GOOGLE_CLIENT_ID_EMAIL!,
-      clientSecret: process.env.GOOGLE_SECRET_EMAIL!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET_EMAIL!,
       redirectUri: process.env.GOOGLE_REDIRECT_URI_EMAIL!,
     };
   }

@@ -46,6 +46,15 @@ const envSchema = z.object({
   // service-auth middleware fails closed (rejects all internal requests).
   SERVICE_INTERNAL_TOKEN: z.string().min(16),
 
+  // Field-encryption passphrase for OAuth tokens at rest. MUST match the web
+  // app's ENCRYPTION_KEY: the web app encrypts tokens during Gmail login, and
+  // mailops decrypts/re-encrypts them on every refresh. A mismatch (or missing
+  // value) makes token persistence throw "ENCRYPTION_KEY is not set", which
+  // surfaces as a send failure deep in the email processor. Validated here so
+  // mailops fails fast at boot instead of mid-send.
+  ENCRYPTION_KEY: z.string().min(16, "ENCRYPTION_KEY is required"),
+  ENCRYPTION_KEY_OLD: z.string().optional(),
+
   // Google Mailbox OAuth2 (Gmail send/read). Required for sending mail.
   GOOGLE_CLIENT_ID_EMAIL: z.string().min(1, "GOOGLE_CLIENT_ID_EMAIL is required"),
   GOOGLE_CLIENT_SECRET_EMAIL: z
