@@ -1,4 +1,4 @@
-import { prisma, SequenceMailbox } from "@coldjot/database";
+import { Prisma, prisma, SequenceMailbox } from "@coldjot/database";
 import {
   BusinessHours,
   BusinessScheduleEnum,
@@ -52,6 +52,21 @@ export async function updateSequenceContactStatus(
       ...data,
     });
   } catch (error) {
+    // P2025 = no matching SequenceContact row. This happens when a contact is
+    // removed (or the sequence reset) between enqueue and this update — most
+    // commonly in handleSuccessfulEmail, which runs AFTER the email is already
+    // sent. Re-throwing would fail the job and trigger retries that can only
+    // re-send (the idempotency guard catches it, but burning attempts on a
+    // contact that's no longer enrolled is pointless). Log and move on.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      logger.warn(
+        `SequenceContact not found for ${contactId} / ${sequenceId} (removed mid-flight?); skipping status update to ${status}`
+      );
+      return;
+    }
     logger.error(`Error updating sequence contact status: ${error}`);
     throw error;
   }
