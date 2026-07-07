@@ -22,6 +22,7 @@ export async function GET(
       where: {
         id,
         userId: session.user.id,
+        deletedAt: null,
       },
     });
 
@@ -146,18 +147,22 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    // Prisma throws P2025 if the row doesn't exist (or belongs to another user,
-    // since the where-clause is scoped by userId). Translate that to 404.
-    const deletedContact = await prisma.contact.delete({
-      where: {
-        id,
-        userId: session.user.id,
-      },
+    // Soft-delete: set deletedAt, keep the row + all FK children intact
+    // (analytics, sequences, threads keep their contactId attribution).
+    // Only soft-delete if currently active (deletedAt: null) — idempotent.
+    // updateMany accepts a non-unique where (userId + deletedAt); update() does
+    // not. count === 0 means not-found, not-owned, or already-deleted → 404.
+    const result = await prisma.contact.updateMany({
+      where: { id, userId: session.user.id, deletedAt: null },
+      data: { deletedAt: new Date() },
     });
 
-    return NextResponse.json({ success: true, data: deletedContact });
+    if (result.count === 0) {
+      return notFound("Contact not found");
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    if (isNotFound(error)) return notFound("Contact not found");
     logger.error("Error deleting contact:", error);
     return NextResponse.json(
       { error: "Failed to delete contact" },

@@ -1,10 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, SendHorizonal, ListPlus } from "lucide-react";
+import { Plus, SendHorizonal, ListPlus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalSearch } from "@coldjot/ui/components/local-search";
 import { Button } from "@coldjot/ui/components/button";
+import { Label } from "@coldjot/ui/components/label";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@coldjot/ui/components/radio-group";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@coldjot/ui/components/alert-dialog";
 import { ContactList } from "../../components/contacts/contact-list";
 import { Separator } from "@coldjot/ui/components/separator";
 import AddContactModal from "@/components/contacts/add-contact-drawer";
@@ -12,6 +27,11 @@ import { Contact } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";
 import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal";
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
+import {
+  useBulkDeleteContacts,
+  useRestoreContacts,
+} from "@/hooks/queries/use-contacts";
+import type { BulkDeleteMode } from "@coldjot/types";
 
 export default function ContactsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -25,6 +45,10 @@ export default function ContactsPage() {
   >([]);
   const [showSequenceModal, setShowSequenceModal] = useState(false);
   const [showAddToListDrawer, setShowAddToListDrawer] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<BulkDeleteMode>("soft");
+  const bulkDelete = useBulkDeleteContacts();
+  const restore = useRestoreContacts();
   const pagination = usePagination({ enableInfiniteScroll: false });
 
   const handleSearch = (value: string) => {
@@ -74,6 +98,49 @@ export default function ContactsPage() {
     setShowAddToListDrawer(false);
   };
 
+  const handleBulkDelete = async () => {
+    // Capture ids before clearing selection — the Undo action needs them.
+    const idsToDelete = [...selectedContacts];
+    try {
+      const res = await bulkDelete.mutateAsync({
+        contactIds: idsToDelete,
+        mode: deleteMode,
+      });
+      // Clear selection so the bulk bar disappears (it renders on non-empty selection).
+      setSelectedContacts([]);
+      setDeleteDialogOpen(false);
+      if (deleteMode === "hard") {
+        toast.success(
+          `Permanently deleted ${res.deleted} contact${res.deleted === 1 ? "" : "s"}.`
+        );
+      } else {
+        toast(
+          `Moved ${res.deleted} contact${res.deleted === 1 ? "" : "s"} to trash`,
+          {
+            action: {
+              label: "Undo",
+              onClick: async () => {
+                try {
+                  await restore.mutateAsync(idsToDelete);
+                  toast.success("Contacts restored");
+                } catch {
+                  toast.error("Failed to restore contacts");
+                }
+              },
+            },
+          }
+        );
+      }
+    } catch {
+      toast.error("Failed to delete contacts");
+    }
+  };
+
+  const openDeleteDialog = () => {
+    setDeleteMode("soft");
+    setDeleteDialogOpen(true);
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-8 space-y-6">
       <div className="flex flex-col gap-6">
@@ -89,6 +156,14 @@ export default function ContactsPage() {
                 <Button variant="default" onClick={handleBulkAddToSequence}>
                   <SendHorizonal className="h-4 w-4 mr-2" />
                   Send {selectedContacts.length} to Sequence
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={openDeleteDialog}
+                  disabled={bulkDelete.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete {selectedContacts.length}
                 </Button>
               </>
             ) : (
@@ -149,6 +224,68 @@ export default function ContactsPage() {
           isMultiple={true}
         />
       )}
+
+      {/* Bulk delete confirm dialog with soft/hard mode picker */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {selectedContacts.length} contact
+              {selectedContacts.length === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose how to delete these contacts.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <RadioGroup
+            value={deleteMode}
+            onValueChange={(v) => setDeleteMode(v as BulkDeleteMode)}
+            className="gap-3"
+          >
+            <div className="flex items-start gap-2">
+              <RadioGroupItem value="soft" id="del-soft" className="mt-0.5" />
+              <Label htmlFor="del-soft" className="flex-col items-start gap-0.5 cursor-pointer">
+                <span className="font-medium">Move to trash</span>
+                <span className="block text-muted-foreground text-sm font-normal leading-snug">
+                  Contacts are hidden. Analytics, sequences, and threads keep
+                  their attribution. Restorable.
+                </span>
+              </Label>
+            </div>
+            <div className="flex items-start gap-2">
+              <RadioGroupItem value="hard" id="del-hard" className="mt-0.5" />
+              <Label htmlFor="del-hard" className="flex-col items-start gap-0.5 cursor-pointer">
+                <span className="font-medium text-destructive">
+                  Delete permanently
+                </span>
+                <span className="block text-muted-foreground text-sm font-normal leading-snug">
+                  Removes the contacts <strong>and all their data</strong>:
+                  analytics, events, tracking, threads, sequence enrollments.
+                  Cannot be undone.
+                </span>
+              </Label>
+            </div>
+          </RadioGroup>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDelete.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant={deleteMode === "hard" ? "destructive" : "default"}
+              onClick={handleBulkDelete}
+              disabled={bulkDelete.isPending}
+            >
+              {bulkDelete.isPending
+                ? "Deleting..."
+                : deleteMode === "hard"
+                  ? "Delete permanently"
+                  : "Move to trash"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

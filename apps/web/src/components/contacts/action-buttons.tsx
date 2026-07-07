@@ -86,7 +86,7 @@ export default function ActionButtons({ contact, onContactUpdate }: ActionButton
         // Ignore a corrupt recent-contacts payload.
       }
 
-      toast.success("Contact deleted successfully");
+      toast.success("Contact moved to trash");
       router.push("/contacts");
     } catch (_error) {
       toast.error("Failed to delete contact");
@@ -137,13 +137,14 @@ export default function ActionButtons({ contact, onContactUpdate }: ActionButton
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Move contact to trash?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete{" "}
+              This moves{" "}
               <span className="font-medium">
                 {contact.firstName} {contact.lastName}
               </span>{" "}
-              and remove all associated data. This action cannot be undone.
+              to trash. Analytics and sequences keep their data. You can restore
+              the contact later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -152,7 +153,7 @@ export default function ActionButtons({ contact, onContactUpdate }: ActionButton
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete Contact
+              Move to trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

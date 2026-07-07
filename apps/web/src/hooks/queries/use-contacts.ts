@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/http/api-client";
 import { qk } from "@/lib/query/keys";
-import type { ListParams } from "@coldjot/types";
+import type { BulkDeleteMode, ListParams } from "@coldjot/types";
 import type {
   CreateContactInput,
   UpdateContactInput,
@@ -82,6 +82,43 @@ export function useDeleteContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.delete<{ success: true }>(`/api/contacts/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.contacts.all }),
+  });
+}
+
+/**
+ * Bulk-delete contacts (soft by default, or hard/purge).
+ * - mode: "soft" (default) → move to trash (reversible via useRestoreContacts).
+ * - mode: "hard"           → PERMANENTLY DELETE the contacts + all their
+ *   analytics, events, tracking, threads, enrollments. Irreversible.
+ *
+ * On success, invalidates the contacts query cache so lists refresh.
+ */
+export function useBulkDeleteContacts() {
+  const qc = useQueryClient();
+  return useMutation({
+    // Default to soft at the call site too (defensive — the route also defaults).
+    mutationFn: (input: { contactIds: string[]; mode?: BulkDeleteMode }) =>
+      api.post<{ success: boolean; deleted: number; mode: BulkDeleteMode }>(
+        "/api/contacts/bulk-delete",
+        { contactIds: input.contactIds, mode: input.mode ?? "soft" }
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.contacts.all }),
+  });
+}
+
+/**
+ * Restore previously soft-deleted contacts (flip deletedAt → null).
+ * Only meaningful after a soft delete; hard-purged contacts are gone.
+ */
+export function useRestoreContacts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (contactIds: string[]) =>
+      api.post<{ success: boolean; restored: number }>(
+        "/api/contacts/restore",
+        { contactIds }
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.contacts.all }),
   });
 }

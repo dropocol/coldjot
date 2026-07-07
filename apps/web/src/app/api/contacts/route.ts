@@ -22,6 +22,7 @@ export async function GET(req: Request) {
     // Build where clause
     const where: Prisma.ContactWhereInput = {
       userId: session.user.id,
+      deletedAt: null,
       ...(query
         ? {
             OR: [

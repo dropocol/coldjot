@@ -73,6 +73,7 @@ model Contact {
     userId        String
     createdAt     DateTime          @default(now())
     updatedAt     DateTime          @updatedAt
+    deletedAt     DateTime?         // NEW — soft-delete tombstone; null = active
     contacts      SequenceContact[] @relation("ContactToSequence")
     stats         SequenceStats[]
     user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -82,12 +83,13 @@ model Contact {
     EmailThread   EmailThread[]
     EmailTracking EmailTracking[]
 
-    @@unique([userId, email])
+    @@unique([userId, email])           // unchanged — re-import restores, see README design decision
     @@index([userId])
     @@index([email])
     @@index([firstName])
     @@index([lastName])
     @@index([name])
+    @@index([userId, deletedAt])        // NEW — composite covers the per-user active-list query
 }
 
 model Template {
