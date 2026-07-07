@@ -166,6 +166,40 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
           }, `⚠️ Missing values for placeholders: ${missingPlaceholders.join(", ")}`);
       }
 
+      // Abort-on-empty safety net (plans/template-delete-guards/06-mailops.md).
+      // Catches: a step whose template was removed and whose own body is empty,
+      // a soft-deleted template with no step body, or any other path that
+      // resolves to no content. Sending a blank email is worse than skipping
+      // the send — the contact gets a useless message and the sender looks
+      // broken.
+      //
+      // We check the resolved `step.subject` (post template-resolution at
+      // :92-98) and `processedContent` (post `replacePlaceholders` at :154),
+      // NOT `subjectInfo.subject`: `determineEmailSubject` falls back to the
+      // literal "No Subject" when both step.subject and the template are empty,
+      // which would mask this exact hazard. The source-of-truth values are the
+      // step's own subject/content after the template block has run.
+      //
+      // Signature edge case: no signature/footer is appended in the processor
+      // or send service — `processedContent` is the raw resolved body, so a
+      // signature-only email is not possible here. (Tracking-link wrapping
+      // happens later, inside sendEmailService.send.) "both empty (AND)" only:
+      // an email with a subject but no body, or a body but no subject, is
+      // allowed through.
+      if (!(step.subject ?? "").trim() && !processedContent.trim()) {
+        logger.warn(
+          {
+            stepId: data.stepId,
+            sequenceId: data.sequenceId,
+            contactId: data.contactId,
+            jobId,
+            templateId: step.templateId ?? null,
+          },
+          "Skipping send: resolved subject and content are both empty (no template and no step body)"
+        );
+        return { success: true };
+      }
+
       // Create tracking metadata
       logger.info("📊 Creating tracking metadata");
       const trackingMetadata: EmailTrackingMetadata = {
