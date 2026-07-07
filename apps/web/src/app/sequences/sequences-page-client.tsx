@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Workflow, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalSearch } from "@coldjot/ui/components/local-search";
@@ -91,7 +91,6 @@ export function SequencesPageClient({
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <PageHeader
-            icon={Workflow}
             title="Sequences"
             description="Create and manage your email sequences"
           />

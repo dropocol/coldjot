@@ -1,16 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, SendHorizonal, ListPlus, Trash2, Contact as ContactIcon } from "lucide-react";
+import { Plus, SendHorizonal, ListPlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalSearch } from "@coldjot/ui/components/local-search";
 import { Button } from "@coldjot/ui/components/button";
 import { Label } from "@coldjot/ui/components/label";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@coldjot/ui/components/radio-group";
+import { RadioGroup, RadioGroupItem } from "@coldjot/ui/components/radio-group";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -27,10 +24,7 @@ import { Contact } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";
 import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal";
 import { AddToListDrawer } from "@/components/lists/add-to-list-drawer";
-import {
-  useBulkDeleteContacts,
-  useRestoreContacts,
-} from "@/hooks/queries/use-contacts";
+import { useBulkDeleteContacts, useRestoreContacts } from "@/hooks/queries/use-contacts";
 import type { BulkDeleteMode } from "@coldjot/types";
 
 export default function ContactsPage() {
@@ -40,9 +34,7 @@ export default function ContactsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
-  const [contactsToAddToSequence, setContactsToAddToSequence] = useState<
-    Contact[]
-  >([]);
+  const [contactsToAddToSequence, setContactsToAddToSequence] = useState<Contact[]>([]);
   const [showSequenceModal, setShowSequenceModal] = useState(false);
   const [showAddToListDrawer, setShowAddToListDrawer] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -110,26 +102,21 @@ export default function ContactsPage() {
       setSelectedContacts([]);
       setDeleteDialogOpen(false);
       if (deleteMode === "hard") {
-        toast.success(
-          `Permanently deleted ${res.deleted} contact${res.deleted === 1 ? "" : "s"}.`
-        );
+        toast.success(`Permanently deleted ${res.deleted} contact${res.deleted === 1 ? "" : "s"}.`);
       } else {
-        toast(
-          `Moved ${res.deleted} contact${res.deleted === 1 ? "" : "s"} to trash`,
-          {
-            action: {
-              label: "Undo",
-              onClick: async () => {
-                try {
-                  await restore.mutateAsync(idsToDelete);
-                  toast.success("Contacts restored");
-                } catch {
-                  toast.error("Failed to restore contacts");
-                }
-              },
+        toast(`Moved ${res.deleted} contact${res.deleted === 1 ? "" : "s"} to trash`, {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                await restore.mutateAsync(idsToDelete);
+                toast.success("Contacts restored");
+              } catch {
+                toast.error("Failed to restore contacts");
+              }
             },
-          }
-        );
+          },
+        });
       }
     } catch {
       toast.error("Failed to delete contacts");
@@ -145,11 +132,7 @@ export default function ContactsPage() {
     <div className="max-w-5xl mx-auto py-8 space-y-6">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <PageHeader
-            icon={ContactIcon}
-            title="Contacts"
-            description="Manage your contacts."
-          />
+          <PageHeader title="Contacts" description="Manage your contacts." />
           <div className="flex items-center gap-3">
             {selectedContacts.length > 0 ? (
               <>
@@ -204,10 +187,7 @@ export default function ContactsPage() {
       />
 
       {showAddModal && (
-        <AddContactModal
-          onClose={() => setShowAddModal(false)}
-          onAdd={handleAddContact}
-        />
+        <AddContactModal onClose={() => setShowAddModal(false)} onAdd={handleAddContact} />
       )}
 
       {/* Modal for adding contacts to sequence */}
@@ -237,9 +217,7 @@ export default function ContactsPage() {
               Delete {selectedContacts.length} contact
               {selectedContacts.length === 1 ? "" : "s"}?
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Choose how to delete these contacts.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Choose how to delete these contacts.</AlertDialogDescription>
           </AlertDialogHeader>
 
           <RadioGroup
@@ -252,30 +230,25 @@ export default function ContactsPage() {
               <Label htmlFor="del-soft" className="flex-col items-start gap-0.5 cursor-pointer">
                 <span className="font-medium">Move to trash</span>
                 <span className="block text-muted-foreground text-sm font-normal leading-snug">
-                  Contacts are hidden. Analytics, sequences, and threads keep
-                  their attribution. Restorable.
+                  Contacts are hidden. Analytics, sequences, and threads keep their attribution.
+                  Restorable.
                 </span>
               </Label>
             </div>
             <div className="flex items-start gap-2">
               <RadioGroupItem value="hard" id="del-hard" className="mt-0.5" />
               <Label htmlFor="del-hard" className="flex-col items-start gap-0.5 cursor-pointer">
-                <span className="font-medium text-destructive">
-                  Delete permanently
-                </span>
+                <span className="font-medium text-destructive">Delete permanently</span>
                 <span className="block text-muted-foreground text-sm font-normal leading-snug">
-                  Removes the contacts <strong>and all their data</strong>:
-                  analytics, events, tracking, threads, sequence enrollments.
-                  Cannot be undone.
+                  Removes the contacts <strong>and all their data</strong>: analytics, events,
+                  tracking, threads, sequence enrollments. Cannot be undone.
                 </span>
               </Label>
             </div>
           </RadioGroup>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={bulkDelete.isPending}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkDelete.isPending}>Cancel</AlertDialogCancel>
             <Button
               variant={deleteMode === "hard" ? "destructive" : "default"}
               onClick={handleBulkDelete}

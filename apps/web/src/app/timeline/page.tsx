@@ -1,6 +1,5 @@
 "use client";
 
-import { CalendarDays } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Separator } from "@coldjot/ui/components/separator";
 import { TimelineSection } from "@/components/sequences/timeline/timeline-section";
@@ -25,7 +24,6 @@ export default function TimelinePage() {
       <div className="relative">
         <div className="bg-background z-10">
           <PageHeader
-            icon={CalendarDays}
             title="Timeline"
             description="View and manage your email campaign timeline."
           />

@@ -21,10 +21,7 @@ import { Separator } from "@coldjot/ui/components/separator";
 import AddTemplateDrawer from "@/components/templates/add-template-drawer";
 import { Template } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";
-import {
-  isTemplateInUseError,
-  useBulkDeleteTemplates,
-} from "@/hooks/queries/use-templates";
+import { isTemplateInUseError, useBulkDeleteTemplates } from "@/hooks/queries/use-templates";
 
 export default function TemplatesPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,9 +66,7 @@ export default function TemplatesPage() {
         // Full success: everything moved to trash.
         setSelectedTemplates([]);
         setDeleteDialogOpen(false);
-        toast.success(
-          `Moved ${res.deleted} template${res.deleted === 1 ? "" : "s"} to trash.`
-        );
+        toast.success(`Moved ${res.deleted} template${res.deleted === 1 ? "" : "s"} to trash.`);
       }
     } catch (error) {
       // 409 = every id was blocked by active use. Surface the names and keep
@@ -90,10 +85,7 @@ export default function TemplatesPage() {
     <div className="max-w-5xl mx-auto py-8 space-y-6">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <PageHeader
-            title="Templates"
-            description="Manage your email templates."
-          />
+          <PageHeader title="Templates" description="Manage your email templates." />
           <div className="flex items-center gap-3">
             {selectedTemplates.length > 0 ? (
               <Button
@@ -155,8 +147,7 @@ export default function TemplatesPage() {
               {selectedTemplates.length === 1 ? "" : "s"} to Trash?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Sequences already using them will keep working until you detach
-              them.
+              Sequences already using them will keep working until you detach them.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
