@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@coldjot/ui/components/dropdown-menu";
+import { Checkbox } from "@coldjot/ui/components/checkbox";
 import { PaginationControls } from "@/components/pagination";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTemplates, useCreateTemplate } from "@/hooks/queries/use-templates";
@@ -34,6 +35,7 @@ interface TemplateListProps {
   onSearchEnd?: () => void;
   initialTemplates: Template[];
   onAddTemplate?: () => void;
+  onSelectedTemplatesChange?: (templateIds: string[]) => void;
   page: number;
   limit: number;
   onPageChange: (page: number) => void;
@@ -46,6 +48,7 @@ export default function TemplateList({
   onSearchEnd,
   initialTemplates,
   onAddTemplate,
+  onSelectedTemplatesChange,
   page,
   limit,
   onPageChange,
@@ -54,6 +57,7 @@ export default function TemplateList({
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(null);
+  const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set());
   const qc = useQueryClient();
 
   const { data, isLoading, isFetching } = useTemplates({
@@ -71,11 +75,34 @@ export default function TemplateList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFetching]);
 
+  // Notify parent component when selected templates change
+  useEffect(() => {
+    if (onSelectedTemplatesChange) {
+      const templateIds = Array.from(selectedTemplates);
+      onSelectedTemplatesChange(templateIds);
+    }
+    // Intentionally only re-runs when the selection changes; the parent callback
+    // is treated as stable to avoid notification loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplates]);
+
   const templates = data?.templates ?? initialTemplates;
   const total = data?.total ?? initialTemplates.length;
 
   const showLoading = isLoading;
   const showEmptyState = !showLoading && templates.length === 0;
+
+  const handleCheckboxChange = (templateId: string, checked: boolean) => {
+    setSelectedTemplates((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(templateId);
+      } else {
+        next.delete(templateId);
+      }
+      return next;
+    });
+  };
 
   const handleDuplicate = async (template: Template) => {
     try {
@@ -119,6 +146,18 @@ export default function TemplateList({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px] pl-3">
+                    <Checkbox
+                      checked={selectedTemplates.size === templates.length}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedTemplates(new Set(templates.map((t) => t.id)));
+                        } else {
+                          setSelectedTemplates(new Set());
+                        }
+                      }}
+                    />
+                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Subject</TableHead>
                   <TableHead>Updated</TableHead>
@@ -128,6 +167,14 @@ export default function TemplateList({
               <TableBody>
                 {templates.map((template) => (
                   <TableRow key={template.id} className="hover:bg-muted/50">
+                    <TableCell className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedTemplates.has(template.id)}
+                        onCheckedChange={(checked) =>
+                          handleCheckboxChange(template.id, checked as boolean)
+                        }
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground/70" />
@@ -213,7 +260,6 @@ export default function TemplateList({
           onDelete={() => {
             qc.invalidateQueries({ queryKey: qk.templates.all });
             setDeletingTemplate(null);
-            toast.success("Template deleted successfully");
           }}
         />
       )}

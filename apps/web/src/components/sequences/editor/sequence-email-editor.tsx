@@ -6,7 +6,7 @@ import { Button } from "@coldjot/ui/components/button";
 import { Input } from "@coldjot/ui/components/input";
 import { Label } from "@coldjot/ui/components/label";
 import { Checkbox } from "@coldjot/ui/components/checkbox";
-import { Loader2, Info } from "lucide-react";
+import { Loader2, Info, AlertCircle } from "lucide-react";
 import { RichTextEditor } from "@/components/editor-old/rich-text-editor";
 import { TemplateCommand } from "@/components/templates/template-command";
 import type { EmailData } from "@coldjot/types";
@@ -68,6 +68,13 @@ export function SequenceEmailEditor({
   );
   const [isTemplateUnlinked, setIsTemplateUnlinked] = useState(!initialData?.templateId);
   const [showUnlinkAlert, setShowUnlinkAlert] = useState(false);
+  // True when a linked step's template failed to load. We do NOT silently
+  // unlink in that case — for a linked step, initialData.subject/content are
+  // null (the template is the source of truth), so unlinking to the fallback
+  // would save an empty step and produce blank emails. Instead we surface a
+  // blocking error and force the user to pick a new template or write custom
+  // content. See plans/template-delete-guards/STATUS.md follow-ups.
+  const [templateLoadError, setTemplateLoadError] = useState(false);
 
   const isEditorDisabled = Boolean(currentTemplateId) && !isTemplateUnlinked;
 
@@ -94,13 +101,12 @@ export function SequenceEmailEditor({
         }
       } catch (_error) {
         if (isMounted) {
-          toast.error("Failed to load template content. Unlinking from template.");
-          setIsTemplateUnlinked(true);
-          setCurrentTemplateId(undefined);
-          if (initialData) {
-            setSubject(initialData.subject || "");
-            setContent(initialData.content || "");
-          }
+          // Don't silently unlink — for a linked step, the step's own
+          // subject/content are null, so unlinking would save an empty step
+          // and produce blank emails. Keep the step linked (the templateId is
+          // preserved) and surface a blocking error instead.
+          setTemplateLoadError(true);
+          toast.error("Failed to load template content. Pick a new template or switch to custom content.");
         }
       } finally {
         if (isMounted) {
@@ -145,6 +151,8 @@ export function SequenceEmailEditor({
       setIsTemplateUnlinked(false);
       setSubject(template.subject);
       setContent(template.content);
+      // Picking a new template clears any prior load error.
+      setTemplateLoadError(false);
     } catch (_error) {
       toast.error("Failed to apply template");
       setIsTemplateUnlinked(true);
@@ -187,21 +195,51 @@ export function SequenceEmailEditor({
       setSubject(template.subject);
       setContent(template.content);
     } catch (_error) {
-      toast.error("Failed to load template content. Unlinking from template.");
-      setIsTemplateUnlinked(true);
-      setCurrentTemplateId(undefined);
-      // Restore original content if available
-      if (initialData) {
-        setSubject(initialData.subject || "");
-        setContent(initialData.content || "");
-      }
+      // Don't silently unlink — for a linked step, the step's own
+      // subject/content are null, so unlinking would save an empty step
+      // and produce blank emails. Keep the step linked and surface a
+      // blocking error instead. See comment on `templateLoadError`.
+      setTemplateLoadError(true);
+      toast.error("Failed to load template content. Pick a new template or switch to custom content.");
     } finally {
       setIsLoadingTemplate(false);
     }
   };
 
+  // When the user starts writing custom content after a template-load error,
+  // clear the error so they can save. They've taken the recovery action we
+  // asked for. We also treat the step as unlinked at that point so the save
+  // sends the custom content (templateId: null) instead of a dangling pointer.
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
+    if (templateLoadError && newContent.trim()) {
+      setTemplateLoadError(false);
+      setIsTemplateUnlinked(true);
+      setCurrentTemplateId(undefined);
+    }
+  };
+
+  const handleSubjectChange = (value: string) => {
+    setSubject(value);
+    if (templateLoadError && value.trim()) {
+      setTemplateLoadError(false);
+      setIsTemplateUnlinked(true);
+      setCurrentTemplateId(undefined);
+    }
+  };
+
+  // Block saving while the template failed to load AND the step has no
+  // recoverable content (neither a working template pointer nor custom body).
+  // This is the guard that prevents a blank step from ever being written.
+  const hasRecoverableContent =
+    (Boolean(currentTemplateId) && !isTemplateUnlinked) ||
+    subject.trim().length > 0 ||
+    content.trim().length > 0;
+  const canSave = !templateLoadError || hasRecoverableContent;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canSave) return;
     onSave({
       subject,
       content,
@@ -264,12 +302,28 @@ export function SequenceEmailEditor({
                   <Input
                     id="subject"
                     value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
+                    onChange={(e) => handleSubjectChange(e.target.value)}
                     placeholder="Enter email subject"
                     disabled={isEditorDisabled || isLoadingTemplate}
                   />
                 </div>
               </div>
+
+              {templateLoadError && (
+                <div className="shrink-0 flex items-start gap-3 p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-sm">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-destructive">
+                      Couldn&apos;t load this step&apos;s template
+                    </p>
+                    <p className="text-muted-foreground">
+                      It may have been deleted or is unavailable. Pick a new
+                      template below, or write custom content to save this step
+                      without a template.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {currentTemplateId && (
                 <div className="flex-shrink-0 flex items-center gap-2">
@@ -313,7 +367,7 @@ export function SequenceEmailEditor({
                     <RichTextEditor
                       key={`editor-${isEditorDisabled}`}
                       initialContent={content}
-                      onChange={setContent}
+                      onChange={handleContentChange}
                       placeholder="Write your email content..."
                       className={cn(
                         "h-full overflow-hidden flex flex-col",
@@ -411,7 +465,9 @@ export function SequenceEmailEditor({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">Save</Button>
+              <Button type="submit" disabled={!canSave}>
+                Save
+              </Button>
             </div>
           </div>
         </form>

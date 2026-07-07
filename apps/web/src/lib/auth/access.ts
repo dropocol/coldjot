@@ -51,6 +51,50 @@ export async function findForeignContactIds(
 }
 
 /**
+ * Verify ALL of the given listIds belong to `userId`. Returns the set of
+ * ids that are missing or belong to another tenant (empty if all valid).
+ *
+ * Lists have no soft-delete column, so — like sequences — an id either exists
+ * and is owned, or it doesn't.
+ *
+ * Use this BEFORE any bulk list mutation to prevent IDOR (deleting /
+ * mutating another tenant's lists). Mirrors findForeignContactIds but for
+ * EmailList rows.
+ */
+export async function findForeignListIds(
+  userId: string,
+  listIds: string[]
+): Promise<Set<string>> {
+  if (listIds.length === 0) return new Set();
+  const owned = await prisma.emailList.findMany({
+    where: { id: { in: listIds }, userId },
+    select: { id: true },
+  });
+  const ownedSet = new Set(owned.map((l) => l.id));
+  return new Set(listIds.filter((id) => !ownedSet.has(id)));
+}
+
+/**
+ * Verify ALL of the given templateIds belong to `userId`. Returns the set of
+ * ids that are missing or belong to another tenant (empty if all valid).
+ *
+ * Use this BEFORE any bulk operation on template ids to prevent IDOR (operating
+ * on another tenant's templates).
+ */
+export async function findForeignTemplateIds(
+  userId: string,
+  templateIds: string[]
+): Promise<Set<string>> {
+  if (templateIds.length === 0) return new Set();
+  const owned = await prisma.template.findMany({
+    where: { id: { in: templateIds }, userId },
+    select: { id: true },
+  });
+  const ownedSet = new Set(owned.map((c) => c.id));
+  return new Set(templateIds.filter((id) => !ownedSet.has(id)));
+}
+
+/**
  * Verify a single contact belongs to `userId`. Returns the contact (with the
  * fields you select) or null. Doubles as ownership check + existence check.
  */
@@ -63,6 +107,29 @@ export async function findOwnedContact<T extends Prisma.ContactSelect>(
     where: { id: contactId, userId },
     select,
   });
+}
+
+/**
+ * Verify ALL of the given sequenceIds belong to `userId`. Returns the set of
+ * ids that are missing or belong to another tenant (empty if all valid).
+ *
+ * Sequences have no soft-delete column, so — unlike contacts — there is no
+ * deletedAt to worry about: an id either exists and is owned, or it doesn't.
+ *
+ * Use this BEFORE any bulk sequence mutation to prevent IDOR (deleting /
+ * mutating another tenant's sequences).
+ */
+export async function findForeignSequenceIds(
+  userId: string,
+  sequenceIds: string[]
+): Promise<Set<string>> {
+  if (sequenceIds.length === 0) return new Set();
+  const owned = await prisma.sequence.findMany({
+    where: { id: { in: sequenceIds }, userId },
+    select: { id: true },
+  });
+  const ownedSet = new Set(owned.map((s) => s.id));
+  return new Set(sequenceIds.filter((id) => !ownedSet.has(id)));
 }
 
 /** True if the error is Prisma's "record not found" (code P2025). */

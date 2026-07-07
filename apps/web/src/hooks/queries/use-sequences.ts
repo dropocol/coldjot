@@ -69,6 +69,18 @@ export function useDeleteSequence() {
   });
 }
 
+export function useBulkDeleteSequences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sequenceIds: string[]) =>
+      api.post<{ success: boolean; deleted: number }>(
+        "/api/sequences/bulk-delete",
+        { sequenceIds }
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.sequences.all }),
+  });
+}
+
 export function useDuplicateSequence(id: string) {
   const qc = useQueryClient();
   return useMutation({

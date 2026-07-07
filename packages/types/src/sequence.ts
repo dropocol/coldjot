@@ -311,6 +311,21 @@ export const createSequenceSchema = z.object({
 });
 export type CreateSequenceInput = z.infer<typeof createSequenceSchema>;
 
+// ─── Bulk delete ─────────────────────────────────────────────────────────────
+
+/**
+ * Bulk (hard-)delete a set of sequences.
+ *
+ * Sequences have no soft-delete column (only contacts do), so this is a
+ * hard-delete only — no `mode` field. The route deletes each sequence AND its
+ * children (sequenceContact, sequenceStep, businessHours, emailThread) in one
+ * transaction. `sequenceIds` is capped to keep the request bounded.
+ */
+export const bulkDeleteSequencesSchema = z.object({
+  sequenceIds: z.array(z.string().min(1)).min(1).max(1000),
+});
+export type BulkDeleteSequencesInput = z.infer<typeof bulkDeleteSequencesSchema>;
+
 // Allowlist + strict: rejects unknown keys to close the mass-assignment gap.
 export const updateSequenceStepSchema = z
   .object({

@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     // Build where clause
     const where: Prisma.TemplateWhereInput = {
       userId: session.user.id,
+      deletedAt: null, // hide soft-deleted templates
       ...(query
         ? {
             OR: [
