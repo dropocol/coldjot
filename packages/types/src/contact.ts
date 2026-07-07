@@ -12,6 +12,7 @@ export interface Contact {
   email: string;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null; // null = active; Date = soft-deleted (tombstone)
 }
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
@@ -32,6 +33,44 @@ export const batchCreateContactsSchema = z.object({
 });
 export type BatchCreateContactsInput = z.infer<typeof batchCreateContactsSchema>;
 
+// ─── Bulk delete / restore / purge ────────────────────────────────────────────
+
+/** How a bulk-delete should behave. */
+export const bulkDeleteModeSchema = z.enum(["soft", "hard"]);
+export type BulkDeleteMode = z.infer<typeof bulkDeleteModeSchema>;
+
+/**
+ * Bulk-delete (soft or hard) a set of contacts.
+ * - mode: "soft" (default) → set deletedAt = now() on each. Reversible via restore.
+ * - mode: "hard"           → PURGE: delete the contact AND all its children
+ *   (analytics, events, tracking, threads, sequence enrollments, drafts, list
+ *   memberships). Irreversible. Used for the "Delete permanently" UI option.
+ *
+ * `contactIds` is capped to keep the request bounded; the route processes them
+ * in a transaction (sub-plan 03).
+ */
+export const bulkDeleteContactsSchema = z.object({
+  contactIds: z.array(z.string().min(1)).min(1).max(1000),
+  mode: bulkDeleteModeSchema.default("soft"),
+});
+export type BulkDeleteContactsInput = z.infer<typeof bulkDeleteContactsSchema>;
+
+/** Restore previously soft-deleted contacts (flip deletedAt back to null). */
+export const restoreContactsSchema = z.object({
+  contactIds: z.array(z.string().min(1)).min(1).max(1000),
+});
+export type RestoreContactsInput = z.infer<typeof restoreContactsSchema>;
+
+/**
+ * Hard-purge a set of contacts. Identical shape to bulk-delete with mode:"hard",
+ * kept as a distinct schema so a dedicated purge endpoint/route can validate it
+ * independently and so the intent is explicit at the call site.
+ */
+export const purgeContactsSchema = z.object({
+  contactIds: z.array(z.string().min(1)).min(1).max(1000),
+});
+export type PurgeContactsInput = z.infer<typeof purgeContactsSchema>;
+
 // ─── Repository record shapes (mailops v2: lived in contact.repo.ts, now here) ──
 
 /**
@@ -48,4 +87,5 @@ export interface ContactRecord {
   name: string;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
 }

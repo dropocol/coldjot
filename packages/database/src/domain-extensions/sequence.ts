@@ -399,8 +399,15 @@ export const sequenceModels = {
       }>
     > {
       const ctx = Prisma.getExtensionContext(this);
+      // sub-plan 06: exclude soft-deleted contacts — this query feeds
+      // mailops sequence processing (an "act on" path), so trashed
+      // contacts must never be picked up for enrollment/scheduling.
       const rows = await ctx.findMany({
-        where: { sequenceId, status: { notIn: excludeStatuses } },
+        where: {
+          sequenceId,
+          status: { notIn: excludeStatuses },
+          contact: { deletedAt: null },
+        },
         include: { contact: true },
       });
       return rows as unknown as Array<{
@@ -414,6 +421,10 @@ export const sequenceModels = {
     /** Find due contacts (schedule tick) — the big graph query. */
     async findDueContacts(this: unknown, now: Date): Promise<DueContactGraph[]> {
       const ctx = Prisma.getExtensionContext(this);
+      // sub-plan 06: exclude soft-deleted contacts — this feeds the schedule
+      // tick (an "act on" path) that enqueues email sends. Filtering here
+      // avoids enqueueing a job for a trashed contact that the email
+      // processor would just skip at send time anyway.
       const rows = await ctx.findMany({
         where: {
           AND: [
@@ -423,6 +434,7 @@ export const sequenceModels = {
                 { completed: false },
                 { status: "in_progress" },
                 { sequence: { status: SequenceStatus.ACTIVE } },
+                { contact: { deletedAt: null } },
               ],
             },
           ],
@@ -500,8 +512,15 @@ export const sequenceModels = {
       batchSize: number
     ): Promise<NewContactGraph[]> {
       const ctx = Prisma.getExtensionContext(this);
+      // sub-plan 06: exclude soft-deleted contacts — this feeds the mailops
+      // contact processor (an "act on" path), so trashed contacts must never
+      // be picked up for initial enrollment.
       const rows = await ctx.findMany({
-        where: { status: "not_started", lastProcessedAt: null },
+        where: {
+          status: "not_started",
+          lastProcessedAt: null,
+          contact: { deletedAt: null },
+        },
         include: {
           sequence: {
             include: {
@@ -871,14 +890,33 @@ export const sequenceModels = {
   // ── contact ────────────────────────────────────────────────────────────
 
   contact: {
-    /** Fetch a contact by id (outgoing email). */
+    /** Reads a contact by id, INCLUDING soft-deleted rows. Use for
+     *  admin/diagnostic/purge paths (or anything that legitimately needs
+     *  to read trashed data). */
     async findById(
       this: unknown,
       id: string
     ): Promise<ContactRecord | null> {
       const ctx = Prisma.getExtensionContext(this);
-      // jobs/email/processor.ts:115
+      // jobs/email/processor.ts:115 (note: call sites that should NOT act on
+      // deleted contacts must switch to findActiveById — see sub-plan 06)
       const row = await ctx.findUnique({ where: { id } });
+      return row as unknown as ContactRecord | null;
+    },
+
+    /** Reads a contact by id ONLY if it is NOT soft-deleted
+     *  (deletedAt IS NULL). Use for every "should I act on this contact?"
+     *  path — sending email, enrolling in sequences, etc. Returns null for
+     *  trashed contacts. findFirst (not findUnique) because deletedAt is not
+     *  unique; id is a @id so at most one row matches. */
+    async findActiveById(
+      this: unknown,
+      id: string
+    ): Promise<ContactRecord | null> {
+      const ctx = Prisma.getExtensionContext(this);
+      const row = await ctx.findFirst({
+        where: { id, deletedAt: null },
+      });
       return row as unknown as ContactRecord | null;
     },
   },

@@ -102,12 +102,26 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
       }
 
       // Get contact info
-      // TODO : Check if the contact is available
+      // Use findActiveById (sub-plan 06): a contact soft-deleted in the
+      // window between scheduling and send must NOT receive this email.
+      // Returns null for both hard-deleted and soft-deleted rows.
       logger.info(`🔍 Fetching contact info ${data.contactId}`);
-      const contact = await this.db.contact.findById(data.contactId);
+      const contact = await this.db.contact.findActiveById(data.contactId);
 
       if (!contact) {
-        throw new Error(`Contact ${data.contactId} not found`);
+        // Contact was deleted (soft or hard) between scheduling and send, or
+        // never existed. Skip this send cleanly instead of failing the job
+        // (a retry wouldn't help). Warn so the skip is debuggable.
+        logger.warn(
+          {
+            contactId: data.contactId,
+            sequenceId: data.sequenceId,
+            stepId: data.stepId,
+            jobId,
+          },
+          "Skipping send: contact no longer active (deleted or not found)"
+        );
+        return { success: true };
       }
 
       logger.info(`🔍 Fetching mailbox info ${data.sequenceMailboxId}`);

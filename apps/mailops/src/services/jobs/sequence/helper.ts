@@ -197,6 +197,15 @@ interface ProcessContactOptions {
 
 /**
  * Shared function to process a contact across different processors
+ *
+ * Contract (sub-plan 06): the `contact` passed in `options` MUST be an active
+ * (non-soft-deleted) contact. Callers are responsible for filtering — today
+ * both callers (ContactProcessor via `sequenceContact.findNewContacts`, and
+ * SequenceProcessor via `getActiveSequenceContacts` → `listActiveWithContacts`)
+ * filter `contact.deletedAt = null` at the DB query, so a soft-deleted contact
+ * never reaches this function. This function does NOT re-validate with
+ * `findActiveById` because the hot enrollment path shouldn't pay for a second
+ * lookup; the caller's filter is the source of truth.
  */
 export const processContactShared = async (
   options: ProcessContactOptions,
