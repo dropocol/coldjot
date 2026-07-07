@@ -93,11 +93,12 @@ model Contact {
 }
 
 model Template {
-    id      String @id @default(cuid())
-    userId  String
-    name    String
-    subject String @default("")
-    content String @default("")
+    id        String   @id @default(cuid())
+    userId    String
+    name      String
+    subject   String   @default("")
+    content   String   @default("")
+    deletedAt DateTime? // NEW — soft-delete tombstone; null = active
 
     createdAt     DateTime        @default(now())
     updatedAt     DateTime        @updatedAt
@@ -107,6 +108,7 @@ model Template {
     EmailTracking EmailTracking[]
 
     @@index([userId])
+    @@index([userId, deletedAt]) // NEW — covers the per-user active-list query
 }
 
 model Draft {

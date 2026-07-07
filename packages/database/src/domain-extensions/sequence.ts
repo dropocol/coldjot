@@ -138,6 +138,66 @@ export const sequenceModels = {
           data: { status: "draft", testMode: false, disableSending: false },
         });
       },
+
+      /**
+       * For each templateId, find the ACTIVE/PAUSED sequences whose steps reference it.
+       * This is the engine of the template delete active-use guard (sub-plan 03).
+       *
+       * Returns a map templateId -> { blocked, sequences }. `blocked` is true if ANY
+       * referencing step belongs to a sequence with status ACTIVE or PAUSED.
+       *
+       * Note: this intentionally ignores trashed templates' own deletedAt — a soft-deleted
+       * template that is somehow STILL referenced by an active sequence (shouldn't happen
+       * post-guard, but defensively) still blocks. Template trashed-state does not gate sends.
+       */
+      async findActiveTemplateUsage(
+        this: unknown,
+        templateIds: string[]
+      ): Promise<
+        Record<
+          string,
+          {
+            blocked: boolean;
+            sequences: { id: string; name: string; status: string }[];
+          }
+        >
+      > {
+        if (templateIds.length === 0) return {};
+        const ctx = Prisma.getExtensionContext(this);
+
+        const rows = await ctx.sequenceStep.findMany({
+          where: {
+            templateId: { in: templateIds },
+            sequence: {
+              status: { in: [SequenceStatus.ACTIVE, SequenceStatus.PAUSED] },
+            },
+          },
+          select: {
+            templateId: true,
+            sequence: { select: { id: true, name: true, status: true } },
+          },
+        });
+
+        const result: Record<
+          string,
+          {
+            blocked: boolean;
+            sequences: { id: string; name: string; status: string }[];
+          }
+        > = {};
+        for (const id of templateIds) result[id] = { blocked: false, sequences: [] };
+
+        const seenSeq = new Set<string>(); // dedupe (one sequence may have multiple steps w/ same template)
+        for (const r of rows) {
+          if (!r.templateId) continue;
+          const key = `${r.templateId}:${r.sequence.id}`;
+          if (seenSeq.has(key)) continue;
+          seenSeq.add(key);
+          result[r.templateId].blocked = true;
+          result[r.templateId].sequences.push(r.sequence);
+        }
+        return result;
+      },
     },
 
   businessHours: {
