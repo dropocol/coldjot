@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, SquarePen, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalSearch } from "@coldjot/ui/components/local-search";
@@ -21,7 +21,10 @@ import { Separator } from "@coldjot/ui/components/separator";
 import AddTemplateDrawer from "@/components/templates/add-template-drawer";
 import { Template } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";
-import { useBulkDeleteTemplates } from "@/hooks/queries/use-templates";
+import {
+  isTemplateInUseError,
+  useBulkDeleteTemplates,
+} from "@/hooks/queries/use-templates";
 
 export default function TemplatesPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,14 +52,37 @@ export default function TemplatesPage() {
 
   const handleBulkDelete = async () => {
     try {
-      const res = await bulkDelete.mutateAsync(selectedTemplates);
-      setSelectedTemplates([]);
-      setDeleteDialogOpen(false);
-      toast.success(
-        `Deleted ${res.deleted} template${res.deleted === 1 ? "" : "s"}.`
-      );
-    } catch {
-      toast.error("Failed to delete templates");
+      const res = await bulkDelete.mutateAsync({
+        templateIds: selectedTemplates,
+      });
+      if (res.blocked > 0) {
+        // Partial success: some moved to trash, some blocked by active use.
+        // Keep the blocked ids selected so the user can act on them.
+        const blockedIds = new Set(res.blockedTemplates.map((b) => b.id));
+        setSelectedTemplates((prev) => prev.filter((id) => blockedIds.has(id)));
+        setDeleteDialogOpen(false);
+        const names = res.blockedTemplates.map((b) => b.name).join(", ");
+        toast.warning(
+          `Moved ${res.deleted} to trash. Blocked ${res.blocked} in active use: ${names}.`
+        );
+      } else {
+        // Full success: everything moved to trash.
+        setSelectedTemplates([]);
+        setDeleteDialogOpen(false);
+        toast.success(
+          `Moved ${res.deleted} template${res.deleted === 1 ? "" : "s"} to trash.`
+        );
+      }
+    } catch (error) {
+      // 409 = every id was blocked by active use. Surface the names and keep
+      // the full selection so the user can investigate.
+      if (isTemplateInUseError(error)) {
+        const names = error.blockedTemplates.map((b) => b.name).join(", ");
+        toast.error(`Cannot delete — all in active use: ${names}.`);
+        setDeleteDialogOpen(false);
+      } else {
+        toast.error("Failed to delete templates");
+      }
     }
   };
 
@@ -65,7 +91,6 @@ export default function TemplatesPage() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <PageHeader
-            icon={SquarePen}
             title="Templates"
             description="Manage your email templates."
           />
@@ -121,28 +146,27 @@ export default function TemplatesPage() {
         />
       )}
 
-      {/* Bulk delete confirm dialog (templates are hard-delete only) */}
+      {/* Bulk delete confirm dialog (soft-delete: hides from list, keeps send-path content) */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete {selectedTemplates.length} template
-              {selectedTemplates.length === 1 ? "" : "s"}?
+              Move {selectedTemplates.length} template
+              {selectedTemplates.length === 1 ? "" : "s"} to Trash?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This cannot be undone.
+              Sequences already using them will keep working until you detach
+              them.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={bulkDelete.isPending}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkDelete.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBulkDelete}
               disabled={bulkDelete.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {bulkDelete.isPending ? "Deleting..." : "Delete"}
+              {bulkDelete.isPending ? "Moving..." : "Move to trash"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

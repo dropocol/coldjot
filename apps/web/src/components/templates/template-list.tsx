@@ -260,7 +260,6 @@ export default function TemplateList({
           onDelete={() => {
             qc.invalidateQueries({ queryKey: qk.templates.all });
             setDeletingTemplate(null);
-            toast.success("Template deleted successfully");
           }}
         />
       )}
