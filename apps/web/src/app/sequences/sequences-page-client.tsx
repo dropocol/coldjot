@@ -81,6 +81,7 @@ export function SequencesPageClient({
       <SequenceTable
         sequences={sequences}
         showCreateModal={showCreateModal}
+        onOpenCreateModal={() => setShowCreateModal(true)}
         onCloseCreateModal={() => setShowCreateModal(false)}
         onAddSequence={handleAddSequence}
         isLoading={isLoading}
