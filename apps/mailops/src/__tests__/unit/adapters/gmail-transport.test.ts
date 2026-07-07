@@ -4,9 +4,7 @@
  * MailTransport domain shapes correctly.
  *
  * No live Gmail: these fixtures are hand-built from the gmail_v1 response
- * schema. When dev Gmail credentials are available, a one-time
- * `scripts/record-gmail-fixtures.ts` can capture real payloads into
- * `gmail-transport.fixture.json`; the assertion shapes stay the same.
+ * schema.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
