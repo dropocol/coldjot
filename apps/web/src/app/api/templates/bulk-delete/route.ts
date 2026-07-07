@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@coldjot/database";
 import { bulkDeleteTemplatesSchema } from "@coldjot/types/schemas";
+import type {
+  BulkDeleteTemplatesResult,
+  BlockedTemplate,
+  TemplateInUseError,
+} from "@coldjot/types";
 import {
   requireAuth,
   isAuthError,
@@ -10,21 +15,24 @@ import { parseBody } from "@/lib/http/validation";
 import { logger } from "@/lib/logger";
 
 /**
- * Bulk hard-delete templates.
+ * Bulk delete templates. Soft-delete by default (sets deletedAt); hard-purge
+ * only when `mode: "hard"`.
  *
- * Body: { templateIds: string[] (1..1000) }
+ * Body: { templateIds: string[] (1..1000), mode?: "soft" | "hard" }
  *
- * Templates have no soft-delete column (no `deletedAt`), so this is hard-delete
- * (purge) only — the rows are removed for real. No `mode` field.
+ * Active-use guard: a template referenced by a step in an ACTIVE or PAUSED
+ * sequence is NEVER deletable (409), regardless of mode. You cannot bypass the
+ * guard by switching to hard mode — it runs identically for both. Trashed
+ * templates still resolve at send time (trash state hides from the editor; it
+ * does not blank future sends). See plans/template-delete-guards/README.md.
  *
- * IDOR guard: refuses (403) if ANY id is not owned by the caller.
+ * IDOR guard: refuses (403) if ANY id is not owned by the caller. Note
+ * `findForeignTemplateIds` deliberately ignores trash state — a trashed
+ * template is still owned.
  *
- * FK reality: `Draft.templateId` is a `Restrict` FK — deleting a template that
- * is referenced by a Draft will make `deleteMany` throw at the DB level, which
- * surfaces as a 500 here. That is acceptable/intentional: the caller must
- * remove (or detach) the Draft first. `SequenceStep.templateId` and
- * `EmailRecord.templateId` are `SetNull`, so they auto-null out and never
- * block. Wrapped in a transaction so a Restrict failure rolls back cleanly.
+ * Partial success is allowed: if 3 of 5 ids are blocked, the 2 deletable ones
+ * are (soft|hard)-deleted and the response carries `blocked: 3` + the 3
+ * blocked entries. If EVERY id is blocked → 409 with the full list.
  */
 export async function POST(request: Request) {
   const authResult = await requireAuth();
@@ -33,7 +41,7 @@ export async function POST(request: Request) {
 
   const body = await parseBody(request, bulkDeleteTemplatesSchema);
   if (!body.ok) return body.response;
-  const { templateIds } = body.data;
+  const { templateIds, mode } = body.data;
 
   // IDOR guard — refuse if ANY id isn't owned by this user.
   const foreign = await findForeignTemplateIds(userId, templateIds);
@@ -44,14 +52,73 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    const result = await prisma.$transaction(async (tx) => {
-      return tx.template.deleteMany({
-        where: { id: { in: templateIds }, userId },
+  // Active-use guard — runs BEFORE the transaction, reads committed state.
+  // The transaction only wraps the write; holding it open across the separate
+  // read query is unnecessary. The gap between guard and write is acceptable
+  // (sequence status changes on the order of seconds/minutes).
+  const usage = await prisma.sequence.findActiveTemplateUsage(templateIds);
+  const blockedTemplates: BlockedTemplate[] = [];
+  const deletableIds: string[] = [];
+  for (const id of templateIds) {
+    if (usage[id]?.blocked) {
+      blockedTemplates.push({
+        id,
+        name: "", // hydrated below from one fetch
+        sequences: usage[id]!.sequences,
       });
+    } else {
+      deletableIds.push(id);
+    }
+  }
+
+  // Hydrate blocked template names (the guard returns sequence meta, not the
+  // template's own name).
+  if (blockedTemplates.length > 0) {
+    const names = await prisma.template.findMany({
+      where: { id: { in: blockedTemplates.map((b) => b.id) } },
+      select: { id: true, name: true },
+    });
+    const nameMap = new Map(names.map((n) => [n.id, n.name]));
+    for (const b of blockedTemplates) b.name = nameMap.get(b.id) ?? "";
+  }
+
+  // If EVERY requested id is blocked → 409 with the full list (nothing deleted).
+  if (deletableIds.length === 0) {
+    return NextResponse.json(
+      {
+        error: "All selected templates are in active use",
+        blocked: true,
+        blockedTemplates,
+      } satisfies TemplateInUseError,
+      { status: 409 }
+    );
+  }
+
+  try {
+    const deleted = await prisma.$transaction(async (tx) => {
+      if (mode === "hard") {
+        const r = await tx.template.deleteMany({
+          where: { id: { in: deletableIds }, userId },
+        });
+        return r.count;
+      }
+      // Soft mode (default). `deletedAt: null` prevents double-deletion —
+      // re-soft-deleting an already-trashed row is a no-op that wouldn't
+      // count toward `deleted`.
+      const r = await tx.template.updateMany({
+        where: { id: { in: deletableIds }, userId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      return r.count;
     });
 
-    return NextResponse.json({ success: true, deleted: result.count });
+    const result: BulkDeleteTemplatesResult = {
+      deleted,
+      mode,
+      blocked: blockedTemplates.length,
+      blockedTemplates,
+    };
+    return NextResponse.json(result);
   } catch (error) {
     logger.error("Error in bulk-delete templates:", error);
     return NextResponse.json(
