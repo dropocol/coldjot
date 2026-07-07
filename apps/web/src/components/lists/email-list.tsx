@@ -21,6 +21,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@coldjot/ui/components/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@coldjot/ui/components/alert-dialog";
 import { useRouter } from "next/navigation";
 import { PaginationControls } from "@/components/pagination";
 import { useLists, useCreateList, useDeleteList } from "@/hooks/queries/use-lists";
@@ -54,6 +64,7 @@ const EmailListsView = ({
 }: EmailListsViewProps) => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [deletingList, setDeletingList] = useState<EmailList | null>(null);
 
   const { data, isLoading, isFetching, refetch } = useLists({
     page,
@@ -141,9 +152,9 @@ const EmailListsView = ({
         </div>
       ) : (
         <div className="p-0">
-          <Table className="border-collapse">
+          <Table>
             <TableHeader>
-              <TableRow className="border-b hover:bg-transparent">
+              <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Contacts</TableHead>
                 {/* <TableHead>Tags</TableHead> */}
@@ -154,7 +165,7 @@ const EmailListsView = ({
               {lists.map((list) => (
                 <TableRow
                   key={list.id}
-                  className="hover:bg-muted/50 cursor-pointer border-b border-muted/20"
+                  className="hover:bg-muted/50 cursor-pointer"
                   onClick={() => router.push(`/lists/${list.id}`)}
                 >
                   <TableCell>
@@ -200,7 +211,7 @@ const EmailListsView = ({
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteList(list);
+                              setDeletingList(list);
                             }}
                             className="text-destructive"
                           >
@@ -234,6 +245,38 @@ const EmailListsView = ({
           onAddModalClose?.();
         }}
       />
+
+      <AlertDialog
+        open={!!deletingList}
+        onOpenChange={(open) => {
+          if (!open) setDeletingList(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete list?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the list and removes all contacts from
+              it. The contacts themselves are not deleted. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingList) {
+                  handleDeleteList(deletingList);
+                  setDeletingList(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete list
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
