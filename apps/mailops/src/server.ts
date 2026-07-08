@@ -69,17 +69,20 @@ initializeApp(mailopsApp)
     app.use("/admin/queues", requireServiceToken, mountBullBoard(bullBoardQueues));
     logger.info("📊 Bull-Board mounted at /admin/queues");
 
+    // Public/webhook routes — MUST be mounted before the /api token gate below.
+    // Express matches prefixes in registration order, so if /api were mounted
+    // first it would swallow /api/pubsub and run requireServiceToken on it
+    // (rejecting Google's JWT-bearing push with 401). Mount specific public
+    // paths first so they win. PubSub verifies Google's signed JWT itself.
+    const pubsubRouter = makePubsubRouter(mailopsApp.inboxSync);
+    app.use("/pubsub", pubsubRouter); // Keep the /pubsub route for Gmail notifications
+    app.use("/api/pubsub", pubsubRouter); // Also mounted under /api for consistency
+
     // Internal routes — require the shared service token. The web app must
     // send X-Service-Token on every call.
     app.use("/api", requireServiceToken, makeRouter(mailopsApp));
     app.use("/api/mailbox", requireServiceToken, makeMailboxRouter(mailopsApp.mailboxController));
     app.use("/api/lists", requireServiceToken, makeListsRouter(mailopsApp.listController));
-
-    // Public/webhook routes — no service token; they have their own protections.
-    // PubSub verifies Google's signed JWT inside the route handler.
-    const pubsubRouter = makePubsubRouter(mailopsApp.inboxSync);
-    app.use("/pubsub", pubsubRouter); // Keep the /pubsub route for Gmail notifications
-    app.use("/api/pubsub", pubsubRouter); // Also mounted under /api for consistency
   })
   .catch((error) => {
     logger.error({ err: error }, "Failed to initialize app");
