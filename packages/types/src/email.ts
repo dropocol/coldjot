@@ -84,6 +84,11 @@ export interface EmailTrackingRow {
   contact?: EmailContact | null;
   events: EmailEventRow[];
   links: TrackedLinkRow[];
+  // Denormalized context for table views. Populated by the timeline routes
+  // (sequence name via Prisma relation, step type/order via a batched lookup).
+  sequenceName?: string | null;
+  stepType?: string | null;
+  stepOrder?: number | null;
 }
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────

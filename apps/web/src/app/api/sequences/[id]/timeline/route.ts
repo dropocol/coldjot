@@ -1,7 +1,33 @@
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { updateEmailSubject } from "@/lib/google/gmail";
-import { transformEmailData } from "@/lib/email/transform";
+import {
+  transformEmailData,
+  buildTimelineOrderBy,
+  buildStepMap,
+  enrichWithStep,
+} from "@/lib/email/transform";
+
+// Shared include shape for both query sites (main + Gmail refetch).
+const timelineInclude = {
+  contact: {
+    select: {
+      name: true,
+      email: true,
+    },
+  },
+  events: {
+    orderBy: {
+      timestamp: "desc",
+    },
+  },
+  links: true,
+  sequence: {
+    select: {
+      name: true,
+    },
+  },
+} as const;
 
 export async function GET(
   req: Request,
@@ -13,8 +39,11 @@ export async function GET(
     const limit = parseInt(searchParams.get("limit") ?? "20");
     const status = searchParams.get("status");
     const date = searchParams.get("date");
+    const sort = searchParams.get("sort");
+    const order = searchParams.get("order");
 
     const skip = (page - 1) * limit;
+    const orderBy = buildTimelineOrderBy(sort, order);
     const { id } = await params;
 
     // Build where clause
@@ -41,28 +70,8 @@ export async function GET(
     const [rawEmails, total] = await Promise.all([
       prisma.emailTracking.findMany({
         where,
-        include: {
-          contact: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-          events: {
-            orderBy: {
-              timestamp: "desc",
-            },
-          },
-          links: true,
-        },
-        orderBy: [
-          {
-            sentAt: "desc",
-          },
-          {
-            createdAt: "desc",
-          },
-        ],
+        include: timelineInclude,
+        orderBy,
         skip,
         take: limit,
       }),
@@ -86,36 +95,14 @@ export async function GET(
             in: rawEmails.map((email) => email.id),
           },
         },
-        include: {
-          contact: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-          events: {
-            orderBy: {
-              timestamp: "desc",
-            },
-          },
-          links: true,
-        },
-        orderBy: [
-          {
-            sentAt: "desc",
-          },
-          {
-            createdAt: "desc",
-          },
-        ],
+        include: timelineInclude,
+        orderBy,
       });
 
-      // Transform and sort updated emails
-      const emails = updatedEmails.map(transformEmailData).sort((a, b) => {
-        const dateA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
-        const dateB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
-        return dateB - dateA;
-      });
+      // Transform rows, then enrich with SequenceStep context (batched).
+      const emails = updatedEmails.map(transformEmailData);
+      const stepMap = await buildStepMap(emails.map((e) => e.stepId));
+      enrichWithStep(emails, stepMap);
 
       return NextResponse.json({
         emails,
@@ -127,12 +114,10 @@ export async function GET(
       });
     }
 
-    // If no Gmail access, transform and sort the raw emails
-    const emails = rawEmails.map(transformEmailData).sort((a, b) => {
-      const dateA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
-      const dateB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
-      return dateB - dateA;
-    });
+    // If no Gmail access, transform the raw emails and enrich with step context.
+    const emails = rawEmails.map(transformEmailData);
+    const stepMap = await buildStepMap(emails.map((e) => e.stepId));
+    enrichWithStep(emails, stepMap);
 
     return NextResponse.json({
       emails,

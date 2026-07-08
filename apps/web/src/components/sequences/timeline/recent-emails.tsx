@@ -1,10 +1,17 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { TimelineItem } from "./timeline-item";
+import { TimelineRow } from "./timeline-row";
 import { EmailDetailsDrawer } from "./email-details-drawer";
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+} from "@coldjot/ui/components/table";
 import Link from "next/link";
 import type { EmailTrackingRow } from "@coldjot/types";
 import { useTimeline } from "@/hooks/queries/use-timeline";
@@ -59,13 +66,46 @@ export function RecentEmails({ userId }: RecentEmailsProps) {
           </Button>
         </div>
 
-        {emails.map((email) => (
-          <TimelineItem
-            key={email.id}
-            email={email}
-            onSelect={() => setSelectedEmail(email)}
-          />
-        ))}
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Status
+                </TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Subject
+                </TableHead>
+                <TableHead className="hidden sm:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Recipient
+                </TableHead>
+                <TableHead className="hidden lg:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Sequence
+                </TableHead>
+                <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Opens
+                </TableHead>
+                <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Clicks
+                </TableHead>
+                <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Sent
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {emails.map((email) => (
+                <TimelineRow
+                  key={email.id}
+                  email={email}
+                  variant="global"
+                  onSelect={() => setSelectedEmail(email)}
+                  contextLabel={email.sequenceName}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <EmailDetailsDrawer

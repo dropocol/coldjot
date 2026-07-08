@@ -1,6 +1,11 @@
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
-import { transformEmailData } from "@/lib/email/transform";
+import {
+  transformEmailData,
+  buildTimelineOrderBy,
+  buildStepMap,
+  enrichWithStep,
+} from "@/lib/email/transform";
 
 export async function GET(req: Request) {
   try {
@@ -10,6 +15,8 @@ export async function GET(req: Request) {
     const status = searchParams.get("status");
     const date = searchParams.get("date");
     const userId = searchParams.get("userId");
+    const sort = searchParams.get("sort");
+    const order = searchParams.get("order");
 
     if (!userId) {
       return NextResponse.json(
@@ -19,6 +26,7 @@ export async function GET(req: Request) {
     }
 
     const skip = (page - 1) * limit;
+    const orderBy = buildTimelineOrderBy(sort, order);
 
     // Build where clause
     const where = {
@@ -49,27 +57,23 @@ export async function GET(req: Request) {
             },
           },
           links: true,
+          sequence: {
+            select: {
+              name: true,
+            },
+          },
         },
-        orderBy: [
-          {
-            sentAt: "desc",
-          },
-          {
-            createdAt: "desc",
-          },
-        ],
+        orderBy,
         skip,
         take: limit,
       }),
       prisma.emailTracking.count({ where }),
     ]);
 
-    // Transform and sort emails
-    const emails = rawEmails.map(transformEmailData).sort((a, b) => {
-      const dateA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
-      const dateB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
-      return dateB - dateA;
-    });
+    // Transform rows, then enrich with SequenceStep context (batched).
+    const emails = rawEmails.map(transformEmailData);
+    const stepMap = await buildStepMap(emails.map((e) => e.stepId));
+    enrichWithStep(emails, stepMap);
 
     return NextResponse.json({
       emails,
