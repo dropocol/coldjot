@@ -1,11 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
-import { TimelineItem } from "./timeline-item";
+import { Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { TimelineRow } from "./timeline-row";
 import { EmailDetailsDrawer } from "./email-details-drawer";
 import { PaginationControls } from "@/components/pagination";
 import { useInView } from "react-intersection-observer";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+} from "@coldjot/ui/components/table";
+import { cn } from "@coldjot/ui/lib/utils";
 import type { EmailTrackingRow } from "@coldjot/types";
 import {
   useTimeline,
@@ -21,6 +30,19 @@ interface TimelineListProps {
   onPageSizeChange: (size: number) => void;
   isInfiniteScroll: boolean;
   onScrollModeToggle?: () => void;
+  /** "global" → 4th column shows sequence name; "sequence" → shows step label. */
+  variant?: "global" | "sequence";
+}
+
+/** Keys that the API can sort by server-side. */
+type SortKey = "sentAt" | "openCount" | "status";
+
+/** Step column shows just the step number, e.g. "#2". */
+function stepLabel(email: EmailTrackingRow): string {
+  if (typeof email.stepOrder === "number") {
+    return `#${email.stepOrder}`;
+  }
+  return "—";
 }
 
 export function TimelineList({
@@ -32,11 +54,19 @@ export function TimelineList({
   onPageSizeChange,
   isInfiniteScroll,
   onScrollModeToggle,
+  variant = "global",
 }: TimelineListProps) {
   const [selectedEmail, setSelectedEmail] = useState<EmailTrackingRow | null>(
     null
   );
   const { ref, inView } = useInView();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const activeSort = (searchParams.get("sort") as SortKey | null) ?? "sentAt";
+  const activeOrder =
+    (searchParams.get("order") as "asc" | "desc" | null) ?? "desc";
 
   // Regular pagination query
   const paginationQuery = useTimeline({
@@ -63,6 +93,15 @@ export function TimelineList({
     infiniteQuery.fetchNextPage();
   }
 
+  const toggleSort = (key: SortKey) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const nextOrder =
+      key === activeSort && activeOrder === "desc" ? "asc" : "desc";
+    params.set("sort", key);
+    params.set("order", nextOrder);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   if (
     (!isInfiniteScroll && paginationQuery.isLoading) ||
     (isInfiniteScroll && infiniteQuery.isLoading)
@@ -85,30 +124,83 @@ export function TimelineList({
     );
   }
 
+  const renderSortHead = (key: SortKey, label: string, align?: "right") => (
+    <TableHead className={cn(align === "right" && "text-right")}>
+      <button
+        type="button"
+        onClick={() => toggleSort(key)}
+        className={cn(
+          "inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors",
+          align === "right" && "flex-row-reverse",
+          activeSort === key && "text-foreground"
+        )}
+      >
+        {label}
+        {activeSort === key &&
+          (activeOrder === "asc" ? (
+            <ArrowUp className="h-3 w-3" />
+          ) : (
+            <ArrowDown className="h-3 w-3" />
+          ))}
+      </button>
+    </TableHead>
+  );
+
+  const renderTable = (emails: EmailTrackingRow[]) => {
+    if (emails.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          No emails found
+        </div>
+      );
+    }
+
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader className="sticky top-0 bg-background z-10">
+            <TableRow className="hover:bg-transparent">
+              {renderSortHead("status", "Status")}
+              <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Subject
+              </TableHead>
+              <TableHead className="hidden sm:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Recipient
+              </TableHead>
+              <TableHead className="hidden lg:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {variant === "sequence" ? "Step" : "Sequence"}
+              </TableHead>
+              {renderSortHead("openCount", "Opens")}
+              <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Clicks
+              </TableHead>
+              {renderSortHead("sentAt", "Sent", "right")}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {emails.map((email) => (
+              <TimelineRow
+                key={email.id}
+                email={email}
+                variant={variant}
+                onSelect={() => setSelectedEmail(email)}
+                contextLabel={
+                  variant === "sequence" ? stepLabel(email) : email.sequenceName
+                }
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
   const renderEmails = () => {
     if (isInfiniteScroll) {
       const emails =
         (infiniteQuery.data?.pages.flatMap((p) => p.emails) ??
           []) as unknown as EmailTrackingRow[];
-      if (emails.length === 0) {
-        return (
-          <div className="text-center py-8 text-muted-foreground">
-            No emails found
-          </div>
-        );
-      }
-
-      return (
-        <>
-          {emails.map((email) => (
-            <TimelineItem
-              key={email.id}
-              email={email}
-              onSelect={() => setSelectedEmail(email)}
-            />
-          ))}
-        </>
-      );
+      return renderTable(emails);
     }
 
     const data = paginationQuery.data;
@@ -120,22 +212,13 @@ export function TimelineList({
         </div>
       );
     }
-
-    return emails.map((email) => (
-      <TimelineItem
-        key={email.id}
-        email={email}
-        onSelect={() => setSelectedEmail(email)}
-      />
-    ));
+    return renderTable(emails);
   };
 
   return (
     <>
       <div className="h-full flex flex-col space-y-12">
-        <div className="flex-1 overflow-auto min-h-0">
-          <div className="space-y-4">{renderEmails()}</div>
-        </div>
+        <div className="flex-1 overflow-auto min-h-0">{renderEmails()}</div>
         <div className="flex-none">
           <PaginationControls
             currentPage={page}

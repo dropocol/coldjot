@@ -23,6 +23,7 @@ export function TimelinePageClient({ id }: TimelinePageClientProps) {
 
       <TimelineList
         sequenceId={id}
+        variant="sequence"
         page={pagination.page}
         limit={pagination.limit}
         onPageChange={pagination.onPageChange}

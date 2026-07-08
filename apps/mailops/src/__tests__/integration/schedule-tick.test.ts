@@ -28,8 +28,12 @@ let STEP_ID: string;
 const jobManager = new FakeJobManager();
 const rateLimit = new FakeRateLimitService();
 // Stub the generator — return a fixed near-future time so the tick always enqueues.
+// Tracks call count so tests can assert the generator is NOT consulted when
+// nextScheduledAt is already set on the contact (the honor-precomputed-time fix).
 const scheduleGen = {
+  callCount: 0,
   async calculateNextRun() {
+    this.callCount++;
     return new Date(Date.now() + 60_000);
   },
 };
@@ -56,19 +60,23 @@ beforeAll(async () => {
 beforeEach(async () => {
   jobManager.reset();
   rateLimit.reset();
+  scheduleGen.callCount = 0;
   await prisma.sequenceContact.deleteMany({ where: { sequenceId: SEQ_ID } });
 });
 
 describe("schedule tick (RunScheduleServiceImpl vs real DB)", () => {
   it("enqueues an email job for a due contact + marks it SCHEDULED + bumps counters", async () => {
     // A due contact: status in_progress, nextScheduledAt in the past, currentStep 1.
+    // The precomputed send time is what the tick must honor — it must NOT
+    // recompute via calculateNextRun (which would re-apply the step's delay).
+    const dueAt = new Date(Date.now() - 60_000);
     await prisma.sequenceContact.create({
       data: {
         sequenceId: SEQ_ID,
         contactId: CONTACT_ID,
         status: "in_progress",
         currentStep: 1,
-        nextScheduledAt: new Date(Date.now() - 60_000),
+        nextScheduledAt: dueAt,
       },
     });
 
@@ -83,7 +91,11 @@ describe("schedule tick (RunScheduleServiceImpl vs real DB)", () => {
     expect(ourJob).toBeTruthy();
     expect(ourJob!.stepId).toBe(STEP_ID);
     expect(ourJob!.to).toBe(`${CONTACT_ID}@example.com`);
-    expect(ourJob!.scheduledTime).toBeTruthy();
+    // The scheduled time must be exactly the precomputed nextScheduledAt —
+    // not recomputed by the generator.
+    expect(new Date(ourJob!.scheduledTime!).toISOString()).toBe(dueAt.toISOString());
+    // The generator must NOT have been consulted (nextScheduledAt was present).
+    expect(scheduleGen.callCount).toBe(0);
 
     // The contact was advanced to SCHEDULED.
     const after = await prisma.sequenceContact.findFirst({
@@ -159,39 +171,11 @@ describe("schedule tick (RunScheduleServiceImpl vs real DB)", () => {
     ).toBe(false);
   });
 
-  it("bumps failureCount + schedules a retry when calculateNextRun returns null", async () => {
-    // Seed a due contact at step 1.
-    await prisma.sequenceContact.create({
-      data: {
-        sequenceId: SEQ_ID,
-        contactId: CONTACT_ID,
-        status: "in_progress",
-        currentStep: 1,
-        nextScheduledAt: new Date(Date.now() - 60_000),
-      },
-    });
-    // Override the schedule generator to return null (force the retry path).
-    const failingGen = { calculateNextRun: async () => null };
-    const failingService = new RunScheduleServiceImpl(
-      prisma,
-      jobManager as any,
-      rateLimit,
-      failingGen as any
-    );
-    const out = await failingService.tick();
-    expect(out.enqueued).toBe(0);
-    // The contact row now has a bumped failureCount + a nextScheduledAt set to
-    // a future retry time + a lastError mentioning "next send time".
-    const row = await prisma.sequenceContact.findFirst({
-      where: { sequenceId: SEQ_ID, contactId: CONTACT_ID },
-    });
-    expect(row?.failureCount).toBeGreaterThanOrEqual(1);
-    expect(row?.nextScheduledAt).not.toBeNull();
-    expect(row?.nextScheduledAt!.getTime()).toBeGreaterThan(Date.now());
-    expect(row?.lastError).toMatch(/next send time/i);
-    // Clean up so later suites don't see this row.
-    await prisma.sequenceContact.deleteMany({
-      where: { sequenceId: SEQ_ID, contactId: CONTACT_ID },
-    });
-  });
+  // NOTE: there used to be a "calculateNextRun returns null → retry" test here.
+  // That path is now unreachable via tick(): findDueContacts filters
+  // `nextScheduledAt IS NOT NULL`, so processEmail always has a precomputed
+  // send time and never consults the generator (asserted by `scheduleGen.callCount`
+  // in the first test). The `?? calculateNextRun(...)` fallback remains in
+  // processEmail as defense-in-depth for the type-level null case, but cannot
+  // be triggered through the public tick() API.
 });

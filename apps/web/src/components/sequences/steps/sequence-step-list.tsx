@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GripVertical } from "lucide-react";
 import { DragDropContext, Draggable, Droppable, DropResult } from "@hello-pangea/dnd";
 import { Mail, MoreHorizontal } from "lucide-react";
@@ -43,6 +43,14 @@ export function SequenceStepList({
 }: Props) {
   const [orderedSteps, setOrderedSteps] = useState(steps);
   const [_isDragging, setIsDragging] = useState(false);
+
+  // Keep local order in sync with the query-backed prop. The prop starts empty
+  // on a hard reload (the query has no initialData yet) and fills in once the
+  // background fetch resolves; without this, the snapshot from useState would
+  // stay stuck at [] and the list would never render until a remount.
+  useEffect(() => {
+    setOrderedSteps(steps);
+  }, [steps]);
 
   const handleDragEnd = async (result: DropResult) => {
     setIsDragging(false);

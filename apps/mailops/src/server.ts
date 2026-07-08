@@ -7,6 +7,7 @@ import { makeRouter } from "./routes";
 import { makeMailboxRouter } from "./routes/mailbox";
 import { makeListsRouter } from "./routes/lists";
 import { makePubsubRouter } from "./routes/pubsub";
+import trackingRoutes from "./routes/tracking";
 import { requireServiceToken } from "@/lib/auth/service-auth";
 import { env } from "@/config";
 import { mountBullBoard } from "@/lib/bull-board";
@@ -77,6 +78,13 @@ initializeApp(mailopsApp)
     const pubsubRouter = makePubsubRouter(mailopsApp.inboxSync);
     app.use("/pubsub", pubsubRouter); // Keep the /pubsub route for Gmail notifications
     app.use("/api/pubsub", pubsubRouter); // Also mounted under /api for consistency
+
+    // Tracking — emailed into arbitrary inboxes and fetched by mail clients
+    // with no service token. MUST be mounted before the /api gate below, same
+    // reason as pubsub: Express matches prefixes in registration order, so a
+    // later `app.use("/api", requireServiceToken, ...)` would otherwise run the
+    // token gate on these public requests and reject them with 401.
+    app.use("/api/track", trackingRoutes);
 
     // Internal routes — require the shared service token. The web app must
     // send X-Service-Token on every call.

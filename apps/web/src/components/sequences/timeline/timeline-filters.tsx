@@ -60,10 +60,16 @@ export function TimelineFilters() {
 
   const clearFilters = () => {
     setDate(undefined);
-    router.push(pathname);
+    // Only strip the filter params; leave pagination/mode/sort untouched.
+    const qs = createQueryString({ status: null, date: null });
+    router.push(qs ? `${pathname}?${qs}` : pathname);
   };
 
-  const hasFilters = searchParams.toString().length > 0;
+  // "Clear filters" only applies to actual filters (status/date), not to
+  // unrelated params like page/mode/sort/order that may also be in the URL.
+  const hasFilters = Boolean(
+    searchParams.get("status") || searchParams.get("date")
+  );
 
   // TODO: Confirm if these filters are working
   return (

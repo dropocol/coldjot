@@ -21,6 +21,18 @@ export type TimelineEmail = Awaited<
     clickCount: number | null;
   }>;
   contact?: { name: string | null; email: string } | null;
+  // Joined by the timeline routes (not part of the Prisma default include).
+  sequence?: { name: string } | null;
+};
+
+/**
+ * Minimal shape we need from a SequenceStep row to label the "Step" column.
+ * `EmailTracking.stepId` has no Prisma relation, so the routes resolve these
+ * in a single batched query and pass them here.
+ */
+export type StepContext = {
+  stepType: string;
+  order: number;
 };
 
 /**
@@ -93,5 +105,86 @@ export function transformEmailData(email: TimelineEmail): EmailTrackingRow {
       originalUrl: link.originalUrl,
       clickCount: link.clickCount ?? 0,
     })),
+    // Joined context — present when the route includes the relation.
+    sequenceName: email.sequence?.name ?? null,
+    stepType: null,
+    stepOrder: null,
   };
+}
+
+/**
+ * Attach SequenceStep context (stepType/order) onto transformed rows using a
+ * pre-built `stepId -> StepContext` map. Mutates the rows in place.
+ *
+ * `EmailTracking.stepId` has no Prisma relation, so callers resolve the steps
+ * in one batched query and hand the map here.
+ */
+export function enrichWithStep(
+  emails: EmailTrackingRow[],
+  stepMap: Map<string, StepContext>
+): EmailTrackingRow[] {
+  for (const email of emails) {
+    const step = email.stepId ? stepMap.get(email.stepId) : undefined;
+    if (step) {
+      email.stepType = step.stepType;
+      email.stepOrder = step.order;
+    }
+  }
+  return emails;
+}
+
+/**
+ * Keys the timeline endpoints sort by. All map to real EmailTracking columns
+ * so the DB can do the ordering (clicks are aggregated from `links` and
+ * therefore client-side only — not sortable server-side).
+ */
+export type TimelineSortKey = "sentAt" | "openCount" | "status";
+
+/**
+ * Build the Prisma `orderBy` array for timeline queries from the `sort` and
+ * `order` query params. Unknown or absent params fall back to newest-first.
+ */
+export function buildTimelineOrderBy(
+  sort: string | null | undefined,
+  order: string | null | undefined
+): Record<string, "asc" | "desc">[] {
+  const direction: "asc" | "desc" = order === "asc" ? "asc" : "desc";
+  switch (sort as TimelineSortKey) {
+    case "openCount":
+      return [
+        { openCount: direction },
+        { sentAt: direction },
+        { createdAt: direction },
+      ];
+    case "status":
+      return [
+        { status: direction },
+        { sentAt: direction },
+        { createdAt: direction },
+      ];
+    case "sentAt":
+      return [{ sentAt: direction }, { createdAt: direction }];
+    default:
+      return [{ sentAt: "desc" }, { createdAt: "desc" }];
+  }
+}
+
+/**
+ * Fetch SequenceStep context for a set of stepIds in a single query and return
+ * a map keyed by step id. Skips the query when there are no ids to look up.
+ */
+export async function buildStepMap(
+  stepIds: string[]
+): Promise<Map<string, StepContext>> {
+  const map = new Map<string, StepContext>();
+  const unique = stepIds.filter((id, i, arr) => Boolean(id) && arr.indexOf(id) === i);
+  if (unique.length === 0) return map;
+  const steps = await prisma.sequenceStep.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, stepType: true, order: true },
+  });
+  for (const step of steps) {
+    map.set(step.id, { stepType: step.stepType, order: step.order });
+  }
+  return map;
 }

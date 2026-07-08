@@ -101,7 +101,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
     step: SequenceStep,
     businessHours: BusinessHours = this.defaultBusinessHours,
     rateLimits: RateLimits = this.defaultRateLimits,
-    isDemoMode: boolean = false
+    isDemoMode: boolean = isDevelopment
   ): Promise<Date> {
     try {
       this.clearLogFile();
@@ -161,7 +161,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
       - New Time: ${targetTime.toISO()}
     `);
 
-    if (!isValidBusinessTime(targetTime, businessHours)) {
+    if (!isValidBusinessTime(targetTime, businessHours, BYPASS_BUSINESS_HOURS)) {
       logDebugAndSave(`
         ⚠️ Time after base distribution is outside business hours:
         - Time: ${targetTime.toISO()}
@@ -194,7 +194,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
       ---`
     );
 
-    if (!isValidBusinessTime(targetTime, businessHours)) {
+    if (!isValidBusinessTime(targetTime, businessHours, BYPASS_BUSINESS_HOURS)) {
       const adjustedTime = this.adjustToBusinessHours(
         targetTime,
         businessHours
@@ -234,7 +234,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
         finalTime = finalTime.plus({ hours: 1 });
       }
 
-      if (!isValidBusinessTime(finalTime, businessHours)) {
+      if (!isValidBusinessTime(finalTime, businessHours, BYPASS_BUSINESS_HOURS)) {
         finalTime = this.adjustToBusinessHours(finalTime, businessHours);
       }
     }
@@ -262,7 +262,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
     let result: DateTime<boolean> = date.setZone(timezone);
 
     // First check if the current time is already valid
-    if (isValidBusinessTime(result, businessHours)) {
+    if (isValidBusinessTime(result, businessHours, BYPASS_BUSINESS_HOURS)) {
       logDebugAndSave(`
         ✅ Time is already within business hours:
         - Time: ${result.toISO()}
@@ -276,7 +276,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
     const maxIterations = 14;
 
     while (
-      !isValidBusinessTime(result, businessHours) &&
+      !isValidBusinessTime(result, businessHours, BYPASS_BUSINESS_HOURS) &&
       iteration < maxIterations
     ) {
       iteration++;
@@ -319,7 +319,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
     `);
 
     // Fallback if distribution pushes outside business hours
-    if (!isValidBusinessTime(result, businessHours)) {
+    if (!isValidBusinessTime(result, businessHours, BYPASS_BUSINESS_HOURS)) {
       logDebugAndSave(`
         ⚠️ Distribution pushed time outside business hours:
         - Invalid Time: ${result.toISO()}
@@ -398,7 +398,7 @@ export class ScheduleGenerator implements ScheduleGenerator {
     }
 
     // If time is not a valid business time for other reasons (holiday, non-workday)
-    if (!isValidBusinessTime(time, businessHours)) {
+    if (!isValidBusinessTime(time, businessHours, BYPASS_BUSINESS_HOURS)) {
       logDebugAndSave(`
         📅 Invalid business day:
         - Current: ${time.toISO()}

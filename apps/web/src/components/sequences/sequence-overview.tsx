@@ -80,7 +80,9 @@ interface StepEditorData {
 export function SequenceOverview({ sequence, stats }: SequenceOverviewProps) {
   // Steps are owned by react-query; seeded from the prop via initialData so
   // first paint is SSR-accurate, then kept fresh by the mutations below.
-  const { data: steps = [] } = useSequenceSteps(sequence.id);
+  const { data: steps = [] } = useSequenceSteps(sequence.id, {
+    initialData: sequence.steps,
+  });
   const reorder = useReorderSteps(sequence.id);
   const updateStep = useUpdateStep(sequence.id);
   const createStep = useCreateStep(sequence.id);

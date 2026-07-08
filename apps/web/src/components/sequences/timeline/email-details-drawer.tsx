@@ -5,14 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@coldjot/ui/compon
 import { ScrollArea } from "@coldjot/ui/components/scroll-area";
 import { Separator } from "@coldjot/ui/components/separator";
 import { Badge } from "@coldjot/ui/components/badge";
-import {
-  Eye,
-  MousePointerClick,
-  Mail,
-  AlertCircle,
-  Send,
-  ExternalLink,
-} from "lucide-react";
+import { Eye, MousePointerClick, Mail, AlertCircle, Send, ExternalLink } from "lucide-react";
 import type { EmailTrackingRow } from "@coldjot/types";
 
 import { Button } from "@coldjot/ui/components/button";
@@ -23,11 +16,7 @@ interface EmailDetailsDrawerProps {
   onClose: () => void;
 }
 
-export function EmailDetailsDrawer({
-  email,
-  isOpen,
-  onClose,
-}: EmailDetailsDrawerProps) {
+export function EmailDetailsDrawer({ email, isOpen, onClose }: EmailDetailsDrawerProps) {
   if (!email) return null;
 
   const openEvents = email.events.filter((e) => e.type === "opened");
@@ -35,20 +24,17 @@ export function EmailDetailsDrawer({
   const bounceEvents = email.events.filter((e) => e.type === "bounced");
   const replyEvents = email.events.filter((e) => e.type === "replied");
 
-  const totalClicks = email.links.reduce(
-    (acc, link) => acc + link.clickCount,
-    0
-  );
+  const totalClicks = email.links.reduce((acc, link) => acc + link.clickCount, 0);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="data-[side=right]:w-full data-[side=right]:sm:max-w-[800px]">
-        <SheetHeader>
+        <SheetHeader className="border-b">
           <SheetTitle className="text-xl">{email.subject}</SheetTitle>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
-          <div className="space-y-6 py-6">
+        <ScrollArea className="h-[calc(100vh-8rem)]">
+          <div className="space-y-6 px-6 py-6 pt-0">
             {/* Email Info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 flex items-center gap-2">
@@ -66,9 +52,7 @@ export function EmailDetailsDrawer({
                 )}
               </div>
               <div className="space-y-1">
-                <h3 className="text-xs font-medium text-muted-foreground">
-                  Recipient
-                </h3>
+                <h3 className="text-xs font-medium text-muted-foreground">Recipient</h3>
                 <p className="text-sm">
                   {email.contact ? (
                     <span>
@@ -80,17 +64,11 @@ export function EmailDetailsDrawer({
                 </p>
               </div>
               <div className="space-y-1">
-                <h3 className="text-xs font-medium text-muted-foreground">
-                  Sent At
-                </h3>
-                <p className="text-sm">
-                  {format(new Date(email.sentAt!), "PPpp")}
-                </p>
+                <h3 className="text-xs font-medium text-muted-foreground">Sent At</h3>
+                <p className="text-sm">{format(new Date(email.sentAt!), "PPpp")}</p>
               </div>
               <div className="col-span-2 space-y-1">
-                <h3 className="text-xs font-medium text-muted-foreground">
-                  Message ID
-                </h3>
+                <h3 className="text-xs font-medium text-muted-foreground">Message ID</h3>
                 <p className="text-sm font-mono break-all">{email.messageId}</p>
               </div>
             </div>
@@ -125,9 +103,7 @@ export function EmailDetailsDrawer({
                       <p className="text-xs text-muted-foreground">
                         First:{" "}
                         {formatDistanceToNow(
-                          new Date(
-                            clickEvents[clickEvents.length - 1].timestamp
-                          ),
+                          new Date(clickEvents[clickEvents.length - 1].timestamp),
                           { addSuffix: true }
                         )}
                       </p>
@@ -144,16 +120,9 @@ export function EmailDetailsDrawer({
               <h3 className="text-sm font-medium">Activity Timeline</h3>
               <div className="space-y-4">
                 {email.events
-                  .sort(
-                    (a, b) =>
-                      new Date(b.timestamp).getTime() -
-                      new Date(a.timestamp).getTime()
-                  )
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                   .map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-start gap-4 text-sm"
-                    >
+                    <div key={event.id} className="flex items-start gap-4 text-sm">
                       <div className="mt-0.5">
                         {event.type === "sent" && (
                           <Send className="h-4 w-4 text-muted-foreground" />
@@ -176,9 +145,7 @@ export function EmailDetailsDrawer({
                           {event.type === "sent" && "Email sent"}
                           {event.type === "opened" && "Email opened"}
                           {event.type === "clicked" &&
-                            `Link clicked: ${
-                              event.metadata.originalUrl || "Unknown URL"
-                            }`}
+                            `Link clicked: ${event.metadata.originalUrl || "Unknown URL"}`}
                           {event.type === "bounced" && "Email bounced"}
                           {event.type === "replied" && "Email replied"}
                         </p>
@@ -199,14 +166,9 @@ export function EmailDetailsDrawer({
                   <h3 className="text-sm font-medium">Tracked Links</h3>
                   <div className="space-y-4">
                     {email.links.map((link) => (
-                      <div
-                        key={link.id}
-                        className="flex items-center justify-between gap-4"
-                      >
+                      <div key={link.id} className="flex items-center justify-between gap-4">
                         <div className="flex-1 space-y-1">
-                          <p className="text-sm font-medium break-all">
-                            {link.originalUrl}
-                          </p>
+                          <p className="text-sm font-medium break-all">{link.originalUrl}</p>
                           <p className="text-xs text-muted-foreground">
                             Clicked {link.clickCount} times
                           </p>
@@ -217,11 +179,7 @@ export function EmailDetailsDrawer({
                           className="shrink-0"
                           nativeButton={false}
                           render={
-                            <a
-                              href={link.originalUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
+                            <a href={link.originalUrl} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4" />
                             </a>
                           }
