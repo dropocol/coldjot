@@ -141,6 +141,14 @@ export class PubSubService {
       logger.info("PubSub service disabled — skipping initialization");
       return;
     }
+
+    if (!PUBSUB_CONFIG.PUBSUB_AUDIENCE) {
+      throw new Error(
+        "PUBSUB_AUDIENCE is required when MAILOPS_PUBSUB_ENABLED=true " +
+          "(set it to your public push endpoint URL)"
+      );
+    }
+
     try {
       logger.info("Initializing PubSub service...");
 
@@ -180,10 +188,12 @@ export class PubSubService {
   }
 
   private getConfig() {
+    // PUBSUB_AUDIENCE is verified non-empty at the top of initialize(); the `!`
+    // reflects that guard. No hardcoded fallback (see config/pubsub/constants.ts).
     return {
       topicName: PUBSUB_CONFIG.TOPIC_NAME,
       subscriptionName: PUBSUB_CONFIG.SUBSCRIPTION_NAME,
-      pushEndpoint: PUBSUB_CONFIG.PUBSUB_AUDIENCE,
+      pushEndpoint: PUBSUB_CONFIG.PUBSUB_AUDIENCE!,
     };
   }
 
@@ -193,12 +203,7 @@ export class PubSubService {
     pushEndpoint: string
   ): Promise<void> {
     const subscriptionOptions: CreateSubscriptionOptions = {
-      pushConfig: {
-        pushEndpoint,
-        oidcToken: {
-          serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        },
-      },
+      pushConfig: this.buildPushConfig(pushEndpoint),
       ackDeadlineSeconds: PUBSUB_CONFIG.ACK_DEADLINE_SECONDS,
     };
 
@@ -214,9 +219,62 @@ export class PubSubService {
         subscriptionName,
         subscriptionOptions
       );
-    } else {
-      logger.info({ subscriptionName }, "Push subscription already exists");
+      return;
     }
+
+    // Subscription exists — reconcile its push endpoint so the env var is
+    // authoritative. Without this, changing PUBSUB_AUDIENCE silently leaves
+    // Google pushing to the stale URL (the subscription "already exists" branch
+    // used to no-op).
+    await this.reconcilePushEndpoint(this.subscription, pushEndpoint);
+  }
+
+  /**
+   * Shared push-config shape for both create + modify. Pub/Sub *replaces* the
+   * whole pushConfig on modifyPushConfig (not a merge), so create and reconcile
+   * must send identical config — extract it once to prevent drift.
+   */
+  private buildPushConfig(pushEndpoint: string) {
+    return {
+      pushEndpoint,
+      oidcToken: {
+        serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      },
+    };
+  }
+
+  /**
+   * Compare the subscription's live push endpoint to the configured one and
+   * update Google if they drifted. Makes PUBSUB_AUDIENCE the source of truth:
+   * change it in env, reboot mailops, and the subscription updates itself —
+   * no manual GCP Console edit.
+   */
+  private async reconcilePushEndpoint(
+    subscription: Subscription,
+    desiredEndpoint: string
+  ): Promise<void> {
+    const [metadata] = await subscription.getMetadata();
+    const currentEndpoint = metadata.pushConfig?.pushEndpoint;
+
+    if (currentEndpoint === desiredEndpoint) {
+      logger.info(
+        { subscriptionName: metadata.name, pushEndpoint: currentEndpoint },
+        "Push subscription already up to date"
+      );
+      return;
+    }
+
+    logger.info(
+      { from: currentEndpoint, to: desiredEndpoint },
+      "Push endpoint changed — updating subscription"
+    );
+    await subscription.modifyPushConfig({
+      pushEndpoint: desiredEndpoint,
+      oidcToken: {
+        serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      },
+    });
+    logger.info({ pushEndpoint: desiredEndpoint }, "Push endpoint updated");
   }
 
   // These methods are kept for potential future use with pull subscriptions
