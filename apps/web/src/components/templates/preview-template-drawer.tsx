@@ -102,7 +102,7 @@ export default function PreviewTemplateDrawer({
     <Sheet open onOpenChange={onClose} modal={false}>
       <SheetContent
         side="right"
-        className="w-[600px] sm:max-w-[600px] h-full p-0"
+        className="data-[side=right]:w-[600px] data-[side=right]:sm:max-w-[600px] h-full p-0"
       >
         <div className="h-full flex flex-col">
           <SheetHeader className="p-6">
