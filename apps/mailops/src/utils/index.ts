@@ -26,12 +26,13 @@ export const getBaseUrl = (type: AppUrlType = AppUrlEnum.API) => {
     return mailopsUrl;
   }
 
-  // TRACKING URL
+  // TRACKING URL — public base baked into every outgoing email (pixel + click
+  // links). Required: emitting tracking links to an uncontrolled host is worse
+  // than failing the send. Dev: Cloudflare Tunnel host; prod: tracking.coldjot.com.
   if (type === AppUrlEnum.TRACKING) {
     const trackingUrl = process.env.TRACK_API_URL;
     if (!trackingUrl) {
-      logger.warn({ type: "TRACKING" }, "TRACK_API_URL not set — falling back to loca.lt");
-      return "https://coldjot.loca.lt";
+      throw new Error("TRACK_API_URL is required (set it to your public tunnel host)");
     }
     return trackingUrl;
   }

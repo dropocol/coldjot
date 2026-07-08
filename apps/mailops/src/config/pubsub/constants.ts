@@ -8,10 +8,10 @@ export const PUBSUB_CONFIG = {
   // PubSub topic name
   TOPIC_NAME: process.env.PUBSUB_TOPIC_NAME || "coldjot-gmail-notification",
 
-  // Push endpoint
-  PUBSUB_AUDIENCE:
-    process.env.PUBSUB_AUDIENCE ||
-    "https://cobra-electric-thoroughly.ngrok-free.app/api/pubsub",
+  // Push endpoint. Required when MAILOPS_PUBSUB_ENABLED=true (verified in
+  // PubSubService.initialize). No hardcoded fallback — the public hostname
+  // is environment-specific (dev: Cloudflare Tunnel; prod: tracking.coldjot.com).
+  PUBSUB_AUDIENCE: process.env.PUBSUB_AUDIENCE,
 
   // Maximum retries for failed message processing. Aligned to the shared
   // job-resilience policy (plan 10 / `config/queue/policy.ts`) so every retry
