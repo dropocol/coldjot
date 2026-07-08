@@ -197,21 +197,22 @@ export class RunScheduleServiceImpl implements RunScheduleService {
         "📋 Current step details"
       );
 
-      // 3. Calculate next send time using scheduling service.
-      logger.debug(
-        {
-          currentTime: new Date().toISOString(),
-          hasBusinessHours: !!sequence.businessHours,
-          businessHours: sequence.businessHours,
-        },
-        "🕒 Calculating next send time"
-      );
-
-      const nextSendTime = await this.scheduleGen.calculateNextRun(
-        new Date(),
-        currentStep,
-        sequence.businessHours
-      );
+      // 3. Resolve the send time. `nextScheduledAt` is already computed at the
+      // point this contact was made due — either by Send Now (= now; manual
+      // override that must send immediately, no jitter) or by the previous
+      // step's handleSuccessfulEmail (delay + business-hours already applied).
+      // Recomputing it here would re-apply the step's delay distribution a
+      // second time (e.g. a 5-min-delay step landing 10 min late), and would
+      // also add the immediate-timing jitter to a Send Now override.
+      // `findDueContacts` already filters `nextScheduledAt IS NOT NULL`, so the
+      // `?? calculateNextRun(...)` fallback only guards against unexpected null.
+      const nextSendTime = email.nextScheduledAt
+        ? new Date(email.nextScheduledAt)
+        : await this.scheduleGen.calculateNextRun(
+            new Date(),
+            currentStep,
+            sequence.businessHours
+          );
 
       if (!nextSendTime) {
         logger.error(

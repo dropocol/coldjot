@@ -160,6 +160,19 @@ export const calculateDistribution = (
 
   // For immediate timing, add a small base distribution
   if (isImmediate) {
+    // In development, skip the randomized distribution so test/immediate
+    // emails fire ~now instead of `now + random(0..30) min`. Production
+    // keeps the jitter to make bulk sends look natural.
+    if (isDevelopment) {
+      logDebugAndSave(`
+        ⚡ Dev mode: skipping immediate-timing distribution
+        - Base Minutes: 0
+        - Seconds: 0
+        - Milliseconds: 0
+      `);
+      return { minutes: 0, seconds: 0, milliseconds: 0 };
+    }
+
     const minutes = Math.floor(Math.random() * 31); // 0-30 minutes
     const seconds = Math.floor(Math.random() * 60);
     const milliseconds = Math.floor(Math.random() * 1000);
