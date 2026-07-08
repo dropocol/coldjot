@@ -132,6 +132,33 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         return { success: true };
       }
 
+      // Verify the enrollment is still active. Removal from the sequence (or
+      // auto-remove via list exit) sets a removedAt tombstone after this job
+      // was scheduled; such a contact must not receive this email. Skip cleanly
+      // (a retry wouldn't help) and log so the skip is debuggable.
+      const enrollment = await this.db.sequenceContact.findFirst({
+        where: {
+          sequenceId: data.sequenceId,
+          contactId: data.contactId,
+        },
+        select: { removedAt: true },
+      });
+      if (!enrollment || enrollment.removedAt) {
+        logger.warn(
+          {
+            contactId: data.contactId,
+            sequenceId: data.sequenceId,
+            stepId: data.stepId,
+            jobId,
+            result: "skipped",
+            reason: "enrollment_removed",
+            removedAt: enrollment?.removedAt ?? null,
+          },
+          "Skipping send: contact removed from sequence after scheduling"
+        );
+        return { success: true };
+      }
+
       logger.info(`🔍 Fetching mailbox info ${data.sequenceMailboxId}`);
 
       const mailbox = await getSequenceMailboxWithId(data.sequenceMailboxId);

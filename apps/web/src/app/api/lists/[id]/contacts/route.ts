@@ -7,7 +7,10 @@ import {
   notFound,
 } from "@/lib/auth/access";
 import { parseBody } from "@/lib/http/validation";
-import { triggerListSync } from "@/lib/list-sync";
+import {
+  triggerListSync,
+  autoRemoveContactsFromSequences,
+} from "@/lib/list-sync";
 import {
   addContactToListSchema,
   setListContactsSchema,
@@ -368,9 +371,25 @@ export async function DELETE(
       },
     });
 
+    // Cascade: tombstone these contacts' list-sourced enrollments in every
+    // sequence this list is attached to. Direct/other-list enrollments are
+    // untouched (matched on sourceListId). Best-effort — the list-membership
+    // update above already succeeded; a cascade failure must not fail the
+    // request. See autoRemoveContactsFromSequences in @/lib/list-sync.
+    let autoRemovedFromSequences = 0;
+    try {
+      autoRemovedFromSequences = await autoRemoveContactsFromSequences(
+        id,
+        contactIds
+      );
+    } catch (err) {
+      console.error("Failed to auto-remove contacts from sequences:", err);
+    }
+
     return NextResponse.json({
       success: true,
       removed: contactIds.length,
+      autoRemovedFromSequences,
     });
   } catch (error) {
     console.error("Failed to remove contacts from list:", error);

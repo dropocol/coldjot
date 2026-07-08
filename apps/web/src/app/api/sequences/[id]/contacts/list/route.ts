@@ -102,13 +102,15 @@ export async function POST(
     // Get contact IDs from the list
     const contactIds = list.contacts.map((contact) => contact.id);
 
-    // Check which contacts are already in the sequence
+    // Check which contacts are already in the sequence (respect the removal
+    // tombstone so a removed contact still "counts" as present).
     const existingContacts = await prisma.sequenceContact.findMany({
       where: {
         sequenceId,
         contactId: {
           in: contactIds,
         },
+        removedAt: null,
       },
       select: {
         contactId: true,
@@ -139,13 +141,15 @@ export async function POST(
 
     // Add contacts to the sequence in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create sequence contacts
+      // Create sequence contacts (stamped as list-sourced)
       await tx.sequenceContact.createMany({
         data: newContactIds.map((contactId) => ({
           sequenceId,
           contactId,
           status: SequenceContactStatusEnum.NOT_STARTED,
           currentStep: 0,
+          source: "list",
+          sourceListId: listId,
         })),
       });
 

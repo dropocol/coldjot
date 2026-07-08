@@ -65,6 +65,7 @@ export async function POST(
     const existingContacts = await prisma.sequenceContact.findMany({
       where: {
         sequenceId: id,
+        removedAt: null,
       },
       select: {
         contactId: true,
@@ -88,13 +89,15 @@ export async function POST(
       });
     }
 
-    // Add new contacts to the sequence
+    // Add new contacts to the sequence (stamped as list-sourced)
     await prisma.sequenceContact.createMany({
       data: newContacts.map((contact) => ({
         sequenceId: id,
         contactId: contact.id,
         status: "not_sent",
         currentStep: 0,
+        source: "list",
+        sourceListId: listId,
       })),
       skipDuplicates: true,
     });

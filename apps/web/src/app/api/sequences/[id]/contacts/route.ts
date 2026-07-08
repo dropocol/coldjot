@@ -41,25 +41,28 @@ export async function GET(
 
     const _totalSteps = sequence.steps.length;
 
-    // Get total count (exclude soft-deleted contacts so totals match the list)
+    // Get total count (exclude soft-deleted contacts + removed enrollments so
+    // totals match the list)
     const total = await prisma.sequenceContact.count({
       where: {
         sequenceId: id,
         sequence: {
           userId: session.user.id,
         },
+        removedAt: null,
         contact: { deletedAt: null },
       },
     });
 
     // Get sequence contacts with their latest status and events with pagination.
-    // Exclude soft-deleted contacts — they cannot send and should not be shown.
+    // Exclude soft-deleted contacts and removed enrollments — neither can send.
     const sequenceContacts = await prisma.sequenceContact.findMany({
       where: {
         sequenceId: id,
         sequence: {
           userId: session.user.id,
         },
+        removedAt: null,
         contact: { deletedAt: null },
       },
       include: {
@@ -156,11 +159,13 @@ export async function POST(
       return notFound("Contact not found");
     }
 
-    // check contact is already in the sequence
+    // Only an ACTIVE enrollment counts as "already in sequence" — a removed
+    // (tombstoned) row should not block a manual re-add.
     const existingContact = await prisma.sequenceContact.findFirst({
       where: {
         sequenceId: id,
         contactId,
+        removedAt: null,
       },
     });
 
@@ -171,12 +176,36 @@ export async function POST(
       );
     }
 
-    const sequenceContact = await prisma.sequenceContact.create({
-      data: {
+    // Upsert so a previously-removed contact can be re-added manually. The
+    // tombstone row already occupies the (sequenceId, contactId) unique key, so
+    // a plain create would throw P2025. source = "direct" (sub-plan 04 covers
+    // list-sourced re-add).
+    const sequenceContact = await prisma.sequenceContact.upsert({
+      where: {
+        sequenceId_contactId: {
+          sequenceId: id,
+          contactId,
+        },
+      },
+      create: {
         sequenceId: id,
         contactId,
         status: SequenceContactStatusEnum.NOT_STARTED,
         currentStep: 0,
+        source: "direct",
+        sourceListId: null,
+      },
+      update: {
+        // resurrect a tombstone: clear removal + reset send-state
+        removedAt: null,
+        status: SequenceContactStatusEnum.NOT_STARTED,
+        currentStep: 0,
+        completed: false,
+        nextScheduledAt: null,
+        failureCount: 0,
+        lastError: null,
+        source: "direct",
+        sourceListId: null,
       },
       include: {
         contact: {},

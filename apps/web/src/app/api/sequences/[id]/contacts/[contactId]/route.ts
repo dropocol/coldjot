@@ -24,14 +24,26 @@ export async function DELETE(
       return new NextResponse("Not found", { status: 404 });
     }
 
-    await prisma.sequenceContact.delete({
+    // Soft-remove: keep the row as a tombstone so list-sync can see and respect
+    // the removal (it dedups against active rows only). Also clear any pending
+    // schedule + mark completed so mailops never dispatches this contact again.
+    // Only act on an active row (removedAt: null) — idempotent; 404 if absent.
+    const result = await prisma.sequenceContact.updateMany({
       where: {
-        sequenceId_contactId: {
-          sequenceId: id,
-          contactId,
-        },
+        sequenceId: id,
+        contactId,
+        removedAt: null,
+      },
+      data: {
+        removedAt: new Date(),
+        nextScheduledAt: null,
+        completed: true,
       },
     });
+
+    if (result.count === 0) {
+      return new NextResponse("Not found", { status: 404 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
