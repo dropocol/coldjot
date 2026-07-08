@@ -44,10 +44,17 @@ export function useCreateStep(sequenceId: string) {
 export function useUpdateStep(sequenceId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ stepId, patch }: { stepId: string; patch: Partial<SequenceStep> }) =>
-      api
-        .put<SequenceStep>(`/api/sequences/${sequenceId}/steps/${stepId}`, patch)
-        .then((step) => ({ stepId, step })),
+    mutationFn: ({ stepId, patch }: { stepId: string; patch: Partial<SequenceStep> }) => {
+      // Callers build the patch by spreading the whole step object, which drags
+      // in id/sequenceId/createdAt/updatedAt. The server's update schema is
+      // strict (mass-assignment guard) and rejects those keys with a 400, so
+      // strip the non-updatable metadata before sending.
+      const { id: _id, sequenceId: _seq, createdAt: _c, updatedAt: _u, ...rest } =
+        patch;
+      return api
+        .put<SequenceStep>(`/api/sequences/${sequenceId}/steps/${stepId}`, rest)
+        .then((step) => ({ stepId, step }));
+    },
     onSuccess: () => invalidateSteps(qc, sequenceId),
   });
 }
