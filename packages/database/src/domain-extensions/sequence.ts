@@ -69,7 +69,10 @@ export const sequenceModels = {
             businessHours: true,
             steps: { orderBy: { order: "asc" } },
             contacts: {
-              where: { status: { notIn: excludeStatuses } },
+              where: {
+                status: { notIn: excludeStatuses },
+                contact: { deletedAt: null },
+              },
               include: { contact: true },
             },
           },
@@ -712,14 +715,23 @@ export const sequenceModels = {
   // ── emailList (list sync) ───────────────────────────────────────────────
 
   emailList: {
-    /** Contact count for a list (used by the list-sync processor to sort). */
+    /**
+     * Active (non-soft-deleted) contact count for a list.
+     * Used by the list-sync processor to sort + paginate. Trashed members
+     * must NOT be counted here, otherwise the sync loop in
+     * jobs/list/helper.ts over-paginates and reads past the end.
+     */
     async contactCount(this: unknown, listId: string): Promise<number> {
       const ctx = Prisma.getExtensionContext(this);
       // jobs/list/processor.ts reads this via listSyncRecord.include.list._count.
       // The repository exposes it directly so the call site can migrate.
       const row = await ctx.findUnique({
         where: { id: listId },
-        select: { _count: { select: { contacts: true } } },
+        select: {
+          _count: {
+            select: { contacts: { where: { deletedAt: null } } },
+          },
+        },
       });
       return row?._count?.contacts ?? 0;
     },
@@ -740,7 +752,11 @@ export const sequenceModels = {
       return row as unknown as ListWithSequences | null;
     },
 
-    /** Fetch a page of contacts on a list (sync batches contacts in chunks). */
+    /**
+     * Fetch a page of ACTIVE contacts on a list (sync batches contacts in chunks).
+     * Filters out soft-deleted members so a trashed contact can never be
+     * enrolled into a sequence via a list sync.
+     */
     async findContactsPage(
       this: unknown,
       listId: string,
@@ -752,7 +768,7 @@ export const sequenceModels = {
       const row = await ctx.findUnique({
         where: { id: listId },
         include: {
-          contacts: { take, skip },
+          contacts: { where: { deletedAt: null }, take, skip },
         },
       });
       return (row?.contacts ?? []) as unknown as ListContactRow[];

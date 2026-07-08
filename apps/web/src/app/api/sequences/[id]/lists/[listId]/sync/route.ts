@@ -34,7 +34,8 @@ export async function POST(
         userId: session.user.id,
       },
       include: {
-        contacts: true,
+        // Only active contacts — soft-deleted members must never be enrolled.
+        contacts: { where: { deletedAt: null } },
       },
     });
 

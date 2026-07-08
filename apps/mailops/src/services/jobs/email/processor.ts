@@ -112,12 +112,20 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         // Contact was deleted (soft or hard) between scheduling and send, or
         // never existed. Skip this send cleanly instead of failing the job
         // (a retry wouldn't help). Warn so the skip is debuggable.
+        //
+        // NOTE: with the list-sync filters in place (deletedAt: null on
+        // enrollment reads), a soft-deleted contact should now never be
+        // scheduled in the first place — so reaching here for a soft-deleted
+        // contact indicates a race (deleted between schedule and send).
+        // `result: "skipped"` lets these be aggregated in logs.
         logger.warn(
           {
             contactId: data.contactId,
             sequenceId: data.sequenceId,
             stepId: data.stepId,
             jobId,
+            result: "skipped",
+            reason: "contact_inactive",
           },
           "Skipping send: contact no longer active (deleted or not found)"
         );

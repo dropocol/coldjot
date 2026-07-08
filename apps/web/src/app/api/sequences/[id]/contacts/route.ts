@@ -41,23 +41,26 @@ export async function GET(
 
     const _totalSteps = sequence.steps.length;
 
-    // Get total count
+    // Get total count (exclude soft-deleted contacts so totals match the list)
     const total = await prisma.sequenceContact.count({
       where: {
         sequenceId: id,
         sequence: {
           userId: session.user.id,
         },
+        contact: { deletedAt: null },
       },
     });
 
-    // Get sequence contacts with their latest status and events with pagination
+    // Get sequence contacts with their latest status and events with pagination.
+    // Exclude soft-deleted contacts — they cannot send and should not be shown.
     const sequenceContacts = await prisma.sequenceContact.findMany({
       where: {
         sequenceId: id,
         sequence: {
           userId: session.user.id,
         },
+        contact: { deletedAt: null },
       },
       include: {
         contact: {},

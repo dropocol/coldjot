@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { triggerListSync } from "@/lib/list-sync";
 
 // Get lists attached to a sequence
 export async function GET(
@@ -161,7 +162,13 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ success: true });
+    // Immediately sync the list's active contacts into the sequence — without
+    // this, a freshly-connected list contributes zero sendable contacts and
+    // launch() would throw SequenceHasNoContactsError. The sync itself is
+    // async (mailops ListSyncProcessor); we just fan out the trigger here.
+    const syncResult = await triggerListSync(listId);
+
+    return NextResponse.json({ success: true, syncStatus: syncResult ? "syncing" : "failed" });
   } catch (error) {
     console.error("[SEQUENCE_LISTS_POST]", error);
     return new NextResponse("Internal Error", { status: 500 });

@@ -77,16 +77,17 @@ export function SequenceLists() {
   const removeMutation = useRemoveListFromSequence(sequence.id);
   const syncMutation = useSyncListInSequence(sequence.id);
 
-  // Add list to sequence (connect + sync). Both mutations invalidate the
-  // lists query; refreshSequence keeps the parent sequence detail in sync.
+  // Add list to sequence (connect + sync). The connect endpoint also fans out
+  // a sync to mailops; the client-side syncMutation materializes contacts
+  // immediately (mailops polls every 30s), so we keep it for instant feedback.
   const handleAddList = async (listId: string) => {
     try {
       setIsAddingList(true);
       await addMutation.mutateAsync(listId);
-      // Sync is best-effort: a delay here doesn't fail the add.
+      // Sync is best-effort: a failure here doesn't fail the add.
       await syncMutation.mutateAsync(listId).catch(() => undefined);
       refreshSequence();
-      toast.success("List added to sequence");
+      toast.success("List added — syncing contacts to sequence");
     } catch (_error) {
       toast.error("Failed to add list");
     } finally {
@@ -122,7 +123,7 @@ export function SequenceLists() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Sequence Lists</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Sequence Lists</h2>
         <div className="flex items-center gap-2">
           <SequenceListSelector
             onSelect={handleAddList}
@@ -147,11 +148,13 @@ export function SequenceLists() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : lists.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center">
-            <ListPlus className="h-12 w-12 text-muted-foreground mb-4" />
+          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+              <ListPlus className="h-6 w-6 text-muted-foreground" />
+            </div>
             <h3 className="text-lg font-medium">No lists added</h3>
-            <p className="text-muted-foreground mb-4">
-              Add lists to automatically sync contacts to this sequence
+            <p className="text-sm text-muted-foreground mb-4">
+              Connect a list to sync its contacts into this sequence
             </p>
             <SequenceListSelector
               onSelect={handleAddList}
