@@ -8,7 +8,7 @@ To receive real-time notifications when users reply to emails sent through ColdJ
 
 - [1. Create a Google Cloud Service Account](#1-create-a-google-cloud-service-account)
 - [2. Configure PubSub Topic and Subscription](#2-configure-pubsub-topic-and-subscription)
-- [3. Set Up Tunneling with ngrok](#3-set-up-tunneling-with-ngrok)
+- [3. Set Up a Stable Dev Tunnel](#3-set-up-a-stable-dev-tunnel)
 - [4. Configure Gmail API to Use Your PubSub Topic](#4-configure-gmail-api-to-use-your-pubsub-topic)
 - [5. Update Environment Variables](#5-update-environment-variables)
 - [6. Restart Your Development Server](#6-restart-your-development-server)
@@ -44,36 +44,20 @@ To receive real-time notifications when users reply to emails sent through ColdJ
 10. Choose the service account you created earlier
 11. Click "Create"
 
-## 3. Set Up Tunneling with ngrok
+## 3. Set Up a Stable Dev Tunnel
 
-Since your development environment runs locally, you need a way to receive webhook notifications from Google Cloud. [ngrok](https://ngrok.com/our-product/secure-tunnels) provides a secure tunnel to your localhost.
+Google Pub/Sub needs a public HTTPS URL to push notifications to, pointing at your local mailops. Set up a **Cloudflare Tunnel** once and reuse the same URL forever (across reboots, network changes, IP changes) — see [Setting Up a Stable Dev Tunnel](./dev-tunnel.md) for the full steps.
 
-1. Sign up for a free ngrok account at [ngrok.com](https://ngrok.com)
-2. Download and install ngrok
-3. Authenticate ngrok with your auth token:
+Once your tunnel is running, your stable push endpoint is:
 
-   ```bash
-   ngrok config add-authtoken YOUR_AUTH_TOKEN
-   ```
+```
+https://dev.<your-domain>/api/pubsub
+```
 
-4. Start ngrok to create a tunnel to your mailops service:
+Use that URL when creating the Pub/Sub subscription in step 2, and as `PUBSUB_AUDIENCE` in your env. The path is `/api/pubsub` (also mounted at `/pubsub`).
 
-   ```bash
-   ngrok http 3001
-   ```
-
-5. ngrok will provide you with a public URL (e.g., `https://abc123.ngrok.io`)
-6. Copy this URL and update your PubSub subscription endpoint URL to:
-
-   ```
-   https://YOUR_NGROK_URL/api/webhooks/pubsub
-   ```
-
-7. Also update your `.env` file with this URL:
-
-   ```
-   PUBSUB_AUDIENCE=https://YOUR_NGROK_URL/api/webhooks/pubsub
-   ```
+> [!NOTE]
+> The push endpoint you register in Google and the `PUBSUB_AUDIENCE` env value must be **identical** — mailops verifies the incoming Google JWT's `aud` claim against `PUBSUB_AUDIENCE`. On first boot after a URL change, mailops reconciles the subscription's push endpoint automatically via `modifyPushConfig` (no manual GCP Console edit).
 
 ## 4. Configure Gmail API to Use Your PubSub Topic
 
@@ -93,7 +77,7 @@ Open your `apps/mailops/env/.env.development` file and add the following variabl
 GOOGLE_CLOUD_PROJECT=your-project-id           # Your Google Cloud Project ID
 PUBSUB_SUBSCRIPTION_NAME=coldjot-email-replies-sub  # Your subscription name
 PUBSUB_TOPIC_NAME=coldjot-email-replies        # Your topic name
-PUBSUB_AUDIENCE=https://YOUR_NGROK_URL/api/webhooks/pubsub  # Your ngrok URL + path
+PUBSUB_AUDIENCE=https://dev.<your-domain>/api/pubsub  # Your Cloudflare Tunnel host + path (see docs/dev-tunnel.md)
 
 # Google Service Account (from the downloaded JSON key file)
 GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
@@ -117,10 +101,11 @@ npm run dev
 
 ## Troubleshooting
 
-- **Webhook Verification Errors**: Ensure your ngrok URL is correctly set in both the PubSub subscription and your environment variables.
+- **Webhook Verification Errors (401)**: `PUBSUB_AUDIENCE` must exactly match the push endpoint registered in Google. Run `cloudflared tunnel run` (or confirm the launchd service is up) and check mailops logs for "Push endpoint updated" on boot.
 - **Authentication Issues**: Verify that your service account has the correct permissions and that the key is properly formatted in your `.env` file.
 - **No Notifications**: Check that the Gmail API is properly configured to use your PubSub topic and that the `gmail-api-push@system.gserviceaccount.com` account has publisher permissions.
-- **ngrok Connection Issues**: Make sure ngrok is running and that you're using the current URL (ngrok URLs change each time you restart unless you have a paid plan).
+- **Push endpoint not updating**: mailops reconciles the endpoint on boot — restart mailops after changing `PUBSUB_AUDIENCE`. If it still doesn't update, confirm the service account has the Pub/Sub Editor IAM role (`modifyPushConfig` requires it).
+- **Tunnel not reachable**: `dig +short dev.<your-domain>` must return Cloudflare IPs and `cloudflared tunnel run` must be connected. The hostname is stable across reboots by design — see [dev-tunnel.md](./dev-tunnel.md).
 
 ---
 

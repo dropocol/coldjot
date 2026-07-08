@@ -125,7 +125,7 @@ BYPASS_BUSINESS_HOURS=false            # Bypass business hours check in code
 # URLs
 WEB_APP_URL=http://localhost:3000      # URL for the web app
 MAILOPS_API_URL=http://localhost:3001  # URL for the mailops api
-TRACK_API_URL=https://coldjot.loca.lt  # URL for the tracking in the email
+TRACK_API_URL=                          # Public base URL for tracking (pixel + click links). Dev: your Cloudflare Tunnel host (see docs/dev-tunnel.md). Required.
 
 # Database
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/coldjot_dev
@@ -147,7 +147,7 @@ GOOGLE_REDIRECT_URI_EMAIL=http://localhost:3000/api/mailboxes/gmail/callback
 GOOGLE_CLOUD_PROJECT=                  # Google Cloud Project ID
 PUBSUB_SUBSCRIPTION_NAME=              # PubSub subscription name
 PUBSUB_TOPIC_NAME=                    # PubSub topic name
-PUBSUB_AUDIENCE=                      # PubSub audience URL for webhooks
+PUBSUB_AUDIENCE=                      # Pub/Sub push endpoint + JWT aud. Dev: https://<tunnel-host>/api/pubsub (see docs/gmail-notifications-setup.md)
 
 # Optional: Google Service Account (for PubSub)
 GOOGLE_SERVICE_ACCOUNT_EMAIL=         # Google service account email

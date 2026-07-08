@@ -8,6 +8,7 @@
     },
     "scripts": {
         "dev": "NODE_OPTIONS='--max-old-space-size=4096' tsx watch src/server.ts",
+        "tunnel": "cloudflared tunnel run coldjot-dev",
         "build": "NODE_OPTIONS='--max-old-space-size=4096' tsup",
         "start": "node --expose-gc dist/server.js",
         "build:prod": "tsup",
