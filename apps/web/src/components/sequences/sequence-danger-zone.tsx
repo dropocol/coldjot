@@ -29,6 +29,7 @@ export function SequenceDangerZone({ sequenceId, onStatusChange }: SequenceDange
   const router = useRouter();
   const reset = useResetSequence(sequenceId);
   const deleteSequence = useDeleteSequence();
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const isLoading = reset.isPending || deleteSequence.isPending;
 
@@ -40,9 +41,11 @@ export function SequenceDangerZone({ sequenceId, onStatusChange }: SequenceDange
 
       toast.success("Success", { description: "Sequence has been reset successfully" });
 
+      setIsResetDialogOpen(false);
       router.refresh();
     } catch (_error) {
       toast.error("Error", { description: "Failed to reset sequence" });
+      setIsResetDialogOpen(false);
     }
   };
 
@@ -77,14 +80,47 @@ export function SequenceDangerZone({ sequenceId, onStatusChange }: SequenceDange
               launch the sequence again.
             </p>
           </div>
-          <Button
-            variant="outline"
-            className="text-destructive min-w-40 border-destructive hover:text-destructive/90 hover:bg-destructive/10"
-            onClick={handleReset}
-            disabled={isLoading}
-          >
-            Reset Sequence
-          </Button>
+          <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="outline"
+                  className="text-destructive min-w-40 border-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                  disabled={isLoading}
+                />
+              }
+            >
+              Reset Sequence
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will reset the sequence to its initial state. The sequence returns to draft,
+                  all contacts are rewound to the beginning, and all send history is wiped. This
+                  action cannot be undone. You will lose:
+                </AlertDialogDescription>
+                <div className="mt-4">
+                  <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                    <li>All open, click, and reply tracking for this sequence</li>
+                    <li>All email events and sequence analytics</li>
+                    <li>All contact progress (contacts restart from step 0)</li>
+                    <li>Sequence stats and health metrics</li>
+                  </ul>
+                </div>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleReset}
+                  disabled={isLoading}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  {isLoading ? "Resetting..." : "Yes, reset sequence"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <div className="flex items-center justify-between gap-4">
