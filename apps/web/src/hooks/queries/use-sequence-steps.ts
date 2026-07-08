@@ -10,11 +10,15 @@ import type { SequenceStep } from "@coldjot/types";
  * Creating / updating / deleting / reordering a step all invalidate the steps
  * list AND the parent sequence detail (step count feeds the readiness flags).
  */
-export function useSequenceSteps(sequenceId: string) {
+export function useSequenceSteps(
+  sequenceId: string,
+  options?: { initialData?: SequenceStep[] }
+) {
   return useQuery({
     queryKey: qk.sequences.steps(sequenceId),
     queryFn: () => api.get<SequenceStep[]>(`/api/sequences/${sequenceId}/steps`),
     enabled: !!sequenceId,
+    initialData: options?.initialData,
   });
 }
 
