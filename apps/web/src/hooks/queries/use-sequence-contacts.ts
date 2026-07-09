@@ -12,9 +12,13 @@ function invalidateContacts(
   qc: ReturnType<typeof useQueryClient>,
   sequenceId: string
 ) {
-  // Broad: refresh every page of this sequence's contacts + the detail's
+  // Broad: refresh every page of this sequence's active contacts, its removed
+  // contacts (a remove/restore crosses both views), and the detail's
   // contact-count readiness.
   qc.invalidateQueries({ queryKey: ["sequences", sequenceId, "contacts"] });
+  qc.invalidateQueries({
+    queryKey: ["sequences", sequenceId, "removed-contacts"],
+  });
   qc.invalidateQueries({ queryKey: qk.sequences.detail(sequenceId) });
 }
 
@@ -43,6 +47,27 @@ export function useSequenceContacts(
   });
 }
 
+/** List removed (tombstoned) enrollments for a sequence (?view=removed). */
+export function useRemovedSequenceContacts(
+  sequenceId: string,
+  params?: { page: number; limit: number }
+) {
+  return useQuery({
+    queryKey: qk.sequences.removedContacts(sequenceId, params),
+    queryFn: () => {
+      const qs = new URLSearchParams({ view: "removed" });
+      if (params) {
+        qs.set("page", String(params.page));
+        qs.set("limit", String(params.limit));
+      }
+      return api.get<SequenceContactsResponse>(
+        `/api/sequences/${sequenceId}/contacts?${qs.toString()}`
+      );
+    },
+    enabled: !!sequenceId,
+  });
+}
+
 /** Add a single contact to a sequence (POST returns the enriched contact). */
 export function useAddContactToSequence(sequenceId: string) {
   const qc = useQueryClient();
@@ -62,6 +87,22 @@ export function useRemoveContactFromSequence(sequenceId: string) {
     mutationFn: (contactId: string) =>
       api.delete<{ success: true }>(
         `/api/sequences/${sequenceId}/contacts/${contactId}`
+      ),
+    onSuccess: () => invalidateContacts(qc, sequenceId),
+  });
+}
+
+/**
+ * Restore previously-removed contacts to a sequence (clears the removedAt
+ * tombstone + resets send-state). Returns { success, restored }.
+ */
+export function useRestoreSequenceContacts(sequenceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (contactIds: string[]) =>
+      api.post<{ success: true; restored: number }>(
+        `/api/sequences/${sequenceId}/contacts/restore`,
+        { contactIds }
       ),
     onSuccess: () => invalidateContacts(qc, sequenceId),
   });

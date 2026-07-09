@@ -22,6 +22,9 @@ export async function GET(
     const page = parseInt(searchParams.get("page") ?? "1");
     const limit = parseInt(searchParams.get("limit") ?? "20");
     const skip = (page - 1) * limit;
+    // ?view=removed → list tombstoned enrollments (the "Removed" tab).
+    // Default → active enrollments only.
+    const isRemovedView = searchParams.get("view") === "removed";
 
     // Get the sequence with its steps
     const sequence = await prisma.sequence.findUnique({
@@ -41,35 +44,37 @@ export async function GET(
 
     const _totalSteps = sequence.steps.length;
 
-    // Get total count (exclude soft-deleted contacts + removed enrollments so
-    // totals match the list)
+    // removedAt filter flips with the view; deletedAt filter always applies
+    // (a hard-deleted contact shouldn't appear in either view).
+    const removedAtFilter = isRemovedView ? { not: null } : null;
+
+    // Get total count (view-scoped so totals match the list)
     const total = await prisma.sequenceContact.count({
       where: {
         sequenceId: id,
         sequence: {
           userId: session.user.id,
         },
-        removedAt: null,
+        removedAt: removedAtFilter,
         contact: { deletedAt: null },
       },
     });
 
-    // Get sequence contacts with their latest status and events with pagination.
-    // Exclude soft-deleted contacts and removed enrollments — neither can send.
+    // Get sequence contacts with pagination.
     const sequenceContacts = await prisma.sequenceContact.findMany({
       where: {
         sequenceId: id,
         sequence: {
           userId: session.user.id,
         },
-        removedAt: null,
+        removedAt: removedAtFilter,
         contact: { deletedAt: null },
       },
       include: {
         contact: {},
       },
       orderBy: {
-        createdAt: "desc",
+        [isRemovedView ? "removedAt" : "createdAt"]: "desc",
       },
       skip,
       take: limit,

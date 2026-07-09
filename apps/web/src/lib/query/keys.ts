@@ -46,6 +46,10 @@ export const qk = {
       params
         ? (["sequences", id, "contacts", searchParam(params)] as const)
         : (["sequences", id, "contacts"] as const),
+    removedContacts: (id: string, params?: ListParams) =>
+      params
+        ? (["sequences", id, "removed-contacts", searchParam(params)] as const)
+        : (["sequences", id, "removed-contacts"] as const),
     lists: (id: string, params?: ListParams) =>
       params
         ? (["sequences", id, "lists", searchParam(params)] as const)
