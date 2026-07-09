@@ -29,6 +29,7 @@ import {
   MessageSquare,
   RotateCcw,
   Trash2,
+  ArrowLeft,
 } from "lucide-react";
 import { ListSelector } from "@/components/lists/list-selector";
 import { formatDistanceToNow, format } from "date-fns";
@@ -287,25 +288,6 @@ export function SequenceContacts({
 
   return (
     <div className="space-y-4">
-      {/* Active / Removed toggle */}
-      <div className="flex items-center gap-1 p-1 bg-muted rounded-lg w-fit">
-        <Button
-          variant={isRemovedView ? "ghost" : "secondary"}
-          size="sm"
-          onClick={() => setView("active")}
-        >
-          Active
-        </Button>
-        <Button
-          variant={isRemovedView ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setView("removed")}
-        >
-          <Trash2 className="h-4 w-4 mr-1.5" />
-          Removed
-        </Button>
-      </div>
-
       {isRemovedView ? (
         <RemovedContactsView
           contacts={removedContacts}
@@ -316,6 +298,7 @@ export function SequenceContacts({
           onToggleAll={toggleAllRemoved}
           onToggleOne={toggleOneRemoved}
           onRestore={handleRestore}
+          onBack={() => setView("active")}
           currentPage={page}
           pageSize={limit}
           totalItems={removedTotal}
@@ -334,6 +317,7 @@ export function SequenceContacts({
           totalSteps={totalSteps}
           isActive={isActive}
           getStatusDetails={getStatusDetails}
+          onViewRemoved={() => setView("removed")}
           handleSendNow={handleSendNow}
           handleStatusUpdate={handleStatusUpdate}
           handleRemoveContact={handleRemoveContact}
@@ -359,6 +343,7 @@ interface RemovedContactsViewProps {
   onToggleAll: () => void;
   onToggleOne: (contactId: string) => void;
   onRestore: (contactIds: string[]) => void;
+  onBack: () => void;
   currentPage: number;
   pageSize: number;
   totalItems: number;
@@ -375,6 +360,7 @@ function RemovedContactsView({
   onToggleAll,
   onToggleOne,
   onRestore,
+  onBack,
   currentPage,
   pageSize,
   totalItems,
@@ -384,11 +370,10 @@ function RemovedContactsView({
   return (
     <>
       <div className="flex items-center justify-between gap-4">
-        <div className="text-sm text-muted-foreground">
-          {selected.length > 0
-            ? `${selected.length} selected`
-            : "Removed contacts can be restored to the sequence."}
-        </div>
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4 mr-1.5" />
+          Back to Active
+        </Button>
         {selected.length > 0 && (
           <Button
             variant="outline"
@@ -400,6 +385,12 @@ function RemovedContactsView({
             Restore {selected.length}
           </Button>
         )}
+      </div>
+
+      <div className="text-sm text-muted-foreground">
+        {selected.length > 0
+          ? `${selected.length} selected`
+          : "Removed contacts can be restored to the sequence."}
       </div>
 
       {totalItems === 0 && !isLoading ? (
@@ -501,6 +492,7 @@ interface ActiveContactsViewProps {
   totalSteps: number;
   isActive: boolean;
   getStatusDetails: (c: ExtendedSequenceContact) => React.ReactNode;
+  onViewRemoved: () => void;
   handleSendNow: (id: string) => void;
   handleStatusUpdate: (id: string, status: SequenceContactStatusType) => void;
   handleRemoveContact: (id: string) => void;
@@ -522,6 +514,7 @@ function ActiveContactsView({
   totalSteps,
   isActive,
   getStatusDetails,
+  onViewRemoved,
   handleSendNow,
   handleStatusUpdate,
   handleRemoveContact,
@@ -534,7 +527,7 @@ function ActiveContactsView({
   return (
     <>
       <div className="flex items-center gap-4">
-        <div className="flex-1">
+        <div className="w-[320px]">
           <ContactSearch selectedContact={selectedContact} onSelect={setSelectedContact} />
         </div>
         <Button
@@ -551,6 +544,10 @@ function ActiveContactsView({
         {/* ListSelector adds contacts via its own flow; mutations invalidate
             this query, so no explicit callback is needed. */}
         <ListSelector sequenceId={sequenceId} onListSelected={() => undefined} />
+        <Button variant="outline" onClick={onViewRemoved}>
+          <Trash2 className="h-4 w-4 mr-2" />
+          Removed
+        </Button>
       </div>
 
       <div className="p-0">
