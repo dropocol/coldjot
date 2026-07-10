@@ -522,7 +522,7 @@ function ActiveContactsView({
     <>
       <div className="flex justify-between items-center gap-4">
         <h2 className="text-lg font-semibold tracking-tight">Contacts</h2>
-        <div>
+        <div className="flex gap-2">
           <div className="w-[320px]">
             <ContactSearch selectedContact={selectedContact} onSelect={setSelectedContact} />
           </div>
@@ -541,8 +541,8 @@ function ActiveContactsView({
             this query, so no explicit callback is needed. */}
           <ListSelector sequenceId={sequenceId} onListSelected={() => undefined} />
           <Button variant="outline" onClick={onViewRemoved}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Removed
+            <Trash2 className="h-4 w-4" />
+            Trash
           </Button>
         </div>
       </div>
