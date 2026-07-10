@@ -129,10 +129,11 @@ export function SequenceContacts({
   const total = data?.total ?? 0;
 
   // Removed contacts (only fetched in the removed view).
-  const { data: removedData, isLoading: removedLoading } =
-    useRemovedSequenceContacts(sequenceId, { page, limit });
-  const removedContacts =
-    (removedData?.contacts as ExtendedSequenceContact[] | undefined) ?? [];
+  const { data: removedData, isLoading: removedLoading } = useRemovedSequenceContacts(sequenceId, {
+    page,
+    limit,
+  });
+  const removedContacts = (removedData?.contacts as ExtendedSequenceContact[] | undefined) ?? [];
   const removedTotal = removedData?.total ?? 0;
 
   const addMutation = useAddContactToSequence(sequenceId);
@@ -190,12 +191,8 @@ export function SequenceContacts({
     if (contactIds.length === 0) return;
     try {
       const res = await restoreMutation.mutateAsync(contactIds);
-      setRemovedSelected((prev) =>
-        prev.filter((id) => !contactIds.includes(id))
-      );
-      toast.success(
-        `Restored ${res.restored} contact${res.restored === 1 ? "" : "s"}`
-      );
+      setRemovedSelected((prev) => prev.filter((id) => !contactIds.includes(id)));
+      toast.success(`Restored ${res.restored} contact${res.restored === 1 ? "" : "s"}`);
     } catch (_error) {
       toast.error("Failed to restore contact(s)");
     }
@@ -219,9 +216,7 @@ export function SequenceContacts({
 
   const toggleOneRemoved = (contactId: string) => {
     setRemovedSelected((prev) =>
-      prev.includes(contactId)
-        ? prev.filter((x) => x !== contactId)
-        : [...prev, contactId]
+      prev.includes(contactId) ? prev.filter((x) => x !== contactId) : [...prev, contactId]
     );
   };
 
@@ -288,12 +283,6 @@ export function SequenceContacts({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold tracking-tight">
-          {isRemovedView ? "Removed Contacts" : "Contacts"}
-        </h2>
-      </div>
-
       {isRemovedView ? (
         <RemovedContactsView
           contacts={removedContacts}
@@ -376,10 +365,13 @@ function RemovedContactsView({
   return (
     <>
       <div className="flex items-center justify-between gap-4">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-1.5" />
-          Back to Active
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            Back to Active
+          </Button>
+          <h2 className="text-lg font-semibold tracking-tight">Removed Contacts</h2>
+        </div>
         {selected.length > 0 && (
           <Button
             variant="outline"
@@ -445,14 +437,10 @@ function RemovedContactsView({
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{c.contact.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {c.contact.email}
-                      </div>
+                      <div className="text-sm text-muted-foreground">{c.contact.email}</div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {c.removedAt
-                        ? format(new Date(c.removedAt), "MMM d, yyyy")
-                        : "—"}
+                      {c.removedAt ? format(new Date(c.removedAt), "MMM d, yyyy") : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -532,28 +520,31 @@ function ActiveContactsView({
 }: ActiveContactsViewProps) {
   return (
     <>
-      <div className="flex items-center gap-4">
-        <div className="w-[320px]">
-          <ContactSearch selectedContact={selectedContact} onSelect={setSelectedContact} />
-        </div>
-        <Button
-          onClick={() => selectedContact && handleAddContact(selectedContact)}
-          disabled={!selectedContact || isMutating}
-        >
-          {isMutating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <UserPlus className="h-4 w-4 mr-2" />
-          )}
-          Add Contact
-        </Button>
-        {/* ListSelector adds contacts via its own flow; mutations invalidate
+      <div className="flex justify-between items-center gap-4">
+        <h2 className="text-lg font-semibold tracking-tight">Contacts</h2>
+        <div>
+          <div className="w-[320px]">
+            <ContactSearch selectedContact={selectedContact} onSelect={setSelectedContact} />
+          </div>
+          <Button
+            onClick={() => selectedContact && handleAddContact(selectedContact)}
+            disabled={!selectedContact || isMutating}
+          >
+            {isMutating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <UserPlus className="h-4 w-4 mr-2" />
+            )}
+            Add Contact
+          </Button>
+          {/* ListSelector adds contacts via its own flow; mutations invalidate
             this query, so no explicit callback is needed. */}
-        <ListSelector sequenceId={sequenceId} onListSelected={() => undefined} />
-        <Button variant="outline" onClick={onViewRemoved}>
-          <Trash2 className="h-4 w-4 mr-2" />
-          Removed
-        </Button>
+          <ListSelector sequenceId={sequenceId} onListSelected={() => undefined} />
+          <Button variant="outline" onClick={onViewRemoved}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Removed
+          </Button>
+        </div>
       </div>
 
       <div className="p-0">
