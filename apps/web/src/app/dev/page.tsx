@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { Separator } from "@coldjot/ui/components/separator";
 import TestDataManager from "./test-data-manager";
 
 export default async function DevPage() {
@@ -21,7 +20,6 @@ export default async function DevPage() {
         title="Development Tools"
         description="Manage test data for development purposes."
       />
-      <Separator />
       <TestDataManager userId={session.user.id} />
     </div>
   );

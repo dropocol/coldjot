@@ -216,7 +216,7 @@ export function ContactList({
         </div>
       ) : (
         <>
-          <div className="p-0">
+          <div className="rounded-xl border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -241,7 +241,7 @@ export function ContactList({
                 {contacts.map((contact) => (
                   <TableRow
                     key={contact.id}
-                    className="hover:bg-muted/50 cursor-pointer"
+                    className="cursor-pointer"
                     onClick={(e) => {
                       if (!(e.target as HTMLElement).closest(".checkbox-cell")) {
                         setSelectedContactForDetails(contact);
@@ -358,8 +358,8 @@ export function ContactList({
           <AlertDialogHeader>
             <AlertDialogTitle>Move contact to trash?</AlertDialogTitle>
             <AlertDialogDescription>
-              This moves the contact to trash. Analytics and sequences keep their
-              data. You can restore it later.
+              This moves the contact to trash. Analytics and sequences keep their data. You can
+              restore it later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

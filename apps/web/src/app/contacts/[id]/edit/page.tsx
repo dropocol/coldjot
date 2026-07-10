@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
 import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { Separator } from "@coldjot/ui/components/separator";
 import EditContactForm from "@/components/contacts/edit-contact-form";
 
 export default async function EditContactPage({
@@ -35,7 +34,6 @@ export default async function EditContactPage({
           title="Edit Contact"
           description="Update contact information and company association."
         />
-        <Separator />
         <div className="max-w-3xl w-full">
           <EditContactForm contact={contact} />
         </div>

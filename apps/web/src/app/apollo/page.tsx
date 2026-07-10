@@ -1,5 +1,4 @@
 import { auth } from "@/auth";
-import { Separator } from "@coldjot/ui/components/separator";
 import { PageHeader } from "@/components/layout/page-header";
 import ApolloSearch from "@/components/search/apollo/apollo-search-component";
 import { redirect } from "next/navigation";
@@ -20,7 +19,6 @@ export default async function ApolloPage() {
           title="Apollo Search"
           description="Search for decision makers by company domain and enrich their contact information."
         />
-        <Separator />
       </div>
       <ApolloSearch userId={session.user.id} />
     </div>

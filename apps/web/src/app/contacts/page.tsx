@@ -19,7 +19,6 @@ import {
   AlertDialogTitle,
 } from "@coldjot/ui/components/alert-dialog";
 import { ContactList } from "../../components/contacts/contact-list";
-import { Separator } from "@coldjot/ui/components/separator";
 import AddContactModal from "@/components/contacts/add-contact-drawer";
 import { Contact } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";
@@ -175,7 +174,6 @@ export default function ContactsPage() {
             )}
           </div>
         </div>
-        <Separator />
       </div>
 
       <ContactList

@@ -3,28 +3,23 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { Separator } from "@coldjot/ui/components/separator";
 import type { SearchResult, SearchResultType } from "@coldjot/types";
 import { Input } from "@coldjot/ui/components/input";
 import { Button } from "@coldjot/ui/components/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@coldjot/ui/components/tabs";
 
+import { User, Building2, Loader2, Search, Mail, Edit2, Trash2 } from "lucide-react";
 import {
-  User,
-  Building2,
-  Loader2,
-  Search,
-  Mail,
-  Edit2,
-  Trash2,
-} from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
 import Link from "next/link";
 import { toast } from "sonner";
-import {
-  useContactSearch,
-  useDeleteContact,
-} from "@/hooks/queries/use-contacts";
+import { useContactSearch, useDeleteContact } from "@/hooks/queries/use-contacts";
 
 function SearchContent() {
   const router = useRouter();
@@ -51,18 +46,13 @@ function SearchContent() {
   };
 
   const filteredResults =
-    activeTab === "all"
-      ? results
-      : results.filter((result) => result.type === activeTab);
+    activeTab === "all" ? results : results.filter((result) => result.type === activeTab);
 
   return (
     <div className="max-w-5xl mx-auto py-8 space-y-6">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <PageHeader
-            title="Search"
-            description="Search across all your contacts and templates."
-          />
+          <PageHeader title="Search" description="Search across all your contacts and templates." />
           <form onSubmit={handleSearch} className="flex gap-2">
             <Input
               type="search"
@@ -80,21 +70,16 @@ function SearchContent() {
             </Button>
           </form>
         </div>
-        <Separator />
       </div>
 
       <div className="space-y-6">
         <Tabs
           value={activeTab}
-          onValueChange={(value) =>
-            setActiveTab(value as SearchResultType | "all")
-          }
+          onValueChange={(value) => setActiveTab(value as SearchResultType | "all")}
         >
           <div className="flex items-center justify-between">
             <TabsList>
-              <TabsTrigger value="all">
-                All Results ({results.length})
-              </TabsTrigger>
+              <TabsTrigger value="all">All Results ({results.length})</TabsTrigger>
               <TabsTrigger value="contact">
                 Contacts ({results.filter((r) => r.type === "contact").length})
               </TabsTrigger>
@@ -109,9 +94,7 @@ function SearchContent() {
             ) : !query ? (
               <div className="flex flex-col items-center justify-center py-8 gap-2">
                 <Search className="h-8 w-8 text-muted-foreground/30" />
-                <p className="text-muted-foreground">
-                  Enter a search term to begin
-                </p>
+                <p className="text-muted-foreground">Enter a search term to begin</p>
               </div>
             ) : filteredResults.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 gap-2">
@@ -119,7 +102,7 @@ function SearchContent() {
                 <p className="text-muted-foreground">No results found</p>
               </div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-xl border overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -131,7 +114,7 @@ function SearchContent() {
                   </TableHeader>
                   <TableBody>
                     {filteredResults.map((result) => (
-                      <TableRow key={result.id} className="hover:bg-muted/50">
+                      <TableRow key={result.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {result.type === "contact" ? (
@@ -139,10 +122,7 @@ function SearchContent() {
                             ) : (
                               <Building2 className="h-4 w-4 text-muted-foreground/70" />
                             )}
-                            <Link
-                              href={result.url!}
-                              className="font-medium hover:underline"
-                            >
+                            <Link href={result.url!} className="font-medium hover:underline">
                               {result.title}
                             </Link>
                           </div>
@@ -152,9 +132,7 @@ function SearchContent() {
                             {result.type}
                           </span>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {result.subtitle}
-                        </TableCell>
+                        <TableCell className="text-muted-foreground">{result.subtitle}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {result.type === "contact" && (
@@ -186,12 +164,8 @@ function SearchContent() {
                                   size="icon"
                                   onClick={async () => {
                                     try {
-                                      await deleteContact.mutateAsync(
-                                        result.id
-                                      );
-                                      toast.success(
-                                        "Contact deleted successfully"
-                                      );
+                                      await deleteContact.mutateAsync(result.id);
+                                      toast.success("Contact deleted successfully");
                                     } catch (_error) {
                                       toast.error("Failed to delete contact");
                                     }

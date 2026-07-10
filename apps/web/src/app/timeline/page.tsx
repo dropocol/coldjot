@@ -1,8 +1,8 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Separator } from "@coldjot/ui/components/separator";
 import { TimelineSection } from "@/components/sequences/timeline/timeline-section";
+import { TimelineFilters } from "@/components/sequences/timeline/timeline-filters";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import { usePagination } from "@/hooks/use-pagination";
@@ -20,26 +20,26 @@ export default function TimelinePage() {
   }
 
   return (
-    <main className="max-w-5xl mx-auto overflow-hidden py-8">
-      <div className="relative">
-        <div className="bg-background z-10">
+    <div className="max-w-5xl mx-auto py-8 space-y-6">
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
           <PageHeader
             title="Timeline"
             description="View and manage your email campaign timeline."
           />
-          <Separator className="mt-6" />
+          <TimelineFilters />
         </div>
-
-        <TimelineSection
-          userId={session.user.id}
-          page={pagination.page}
-          limit={pagination.limit}
-          onPageChange={pagination.onPageChange}
-          onPageSizeChange={pagination.onPageSizeChange}
-          isInfiniteScroll={pagination.isInfiniteScroll}
-          onScrollModeToggle={pagination.onScrollModeToggle}
-        />
       </div>
-    </main>
+
+      <TimelineSection
+        userId={session.user.id}
+        page={pagination.page}
+        limit={pagination.limit}
+        onPageChange={pagination.onPageChange}
+        onPageSizeChange={pagination.onPageSizeChange}
+        isInfiniteScroll={pagination.isInfiniteScroll}
+        onScrollModeToggle={pagination.onScrollModeToggle}
+      />
+    </div>
   );
 }

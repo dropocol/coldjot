@@ -3,19 +3,25 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@coldjot/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@coldjot/ui/components/card";
 import { Button } from "@coldjot/ui/components/button";
 import { Input } from "@coldjot/ui/components/input";
 import { Label } from "@coldjot/ui/components/label";
+import { Loader2, Search, Mail, Building2, UserPlus, CheckCircle } from "lucide-react";
 import {
-  Loader2,
-  Search,
-  Mail,
-  Building2,
-  UserPlus,
-  CheckCircle,
-} from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
 import { Badge } from "@coldjot/ui/components/badge";
 import { api } from "@/lib/http/api-client";
 import { useCreateContact } from "@/hooks/queries/use-contacts";
@@ -91,8 +97,7 @@ export default function ApolloSearchComponent({ userId: _userId }: Props) {
           domain:
             contact.organization?.primary_domain ||
             contact.account?.domain ||
-            contact.organization_name.toLowerCase().replace(/[^a-z0-9]/g, "") +
-              ".com",
+            contact.organization_name.toLowerCase().replace(/[^a-z0-9]/g, "") + ".com",
           firstName: contact.first_name,
           lastName: contact.last_name,
         }
@@ -100,11 +105,7 @@ export default function ApolloSearchComponent({ userId: _userId }: Props) {
       const enrichedContact = enrichedData.person || (enrichedData as unknown as ApolloEnriched);
 
       // Save to database
-      const email =
-        enrichedContact.email ||
-        enrichedContact.personal_email ||
-        contact.email ||
-        "";
+      const email = enrichedContact.email || enrichedContact.personal_email || contact.email || "";
       await createContact.mutateAsync({
         firstName: contact.first_name,
         lastName: contact.last_name,
@@ -117,10 +118,7 @@ export default function ApolloSearchComponent({ userId: _userId }: Props) {
           c.id === contact.id
             ? {
                 ...c,
-                email:
-                  enrichedContact.email ||
-                  enrichedContact.personal_email ||
-                  c.email,
+                email: enrichedContact.email || enrichedContact.personal_email || c.email,
                 enriched: true,
               }
             : c
@@ -140,9 +138,7 @@ export default function ApolloSearchComponent({ userId: _userId }: Props) {
       <Card className="shadow-none">
         <CardHeader>
           <CardTitle>Search Company</CardTitle>
-          <CardDescription>
-            Enter a company domain to find decision makers
-          </CardDescription>
+          <CardDescription>Enter a company domain to find decision makers</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -172,87 +168,85 @@ export default function ApolloSearchComponent({ userId: _userId }: Props) {
         <Card>
           <CardHeader>
             <CardTitle>Search Results</CardTitle>
-            <CardDescription>
-              Found {searchResults.length} decision makers
-            </CardDescription>
+            <CardDescription>Found {searchResults.length} decision makers</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {searchResults.map((contact) => (
-                  <TableRow key={contact.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {contact.first_name} {contact.last_name}
-                        </div>
-                        {contact.linkedin_url && (
-                          <a
-                            href={contact.linkedin_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-muted-foreground hover:underline"
-                          >
-                            LinkedIn Profile
-                          </a>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="text-xs font-normal" variant="outline">
-                        {contact.title}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        {contact.organization_name}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {contact.email ? (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          {contact.email}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          Not enriched
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {contact.enriched ? (
-                        <Button variant="ghost" disabled>
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          onClick={() => enrichContact(contact)}
-                          disabled={isEnriching[contact.id]}
-                        >
-                          {isEnriching[contact.id] ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <UserPlus className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
-                    </TableCell>
+            <div className="rounded-xl border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {searchResults.map((contact) => (
+                    <TableRow key={contact.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {contact.first_name} {contact.last_name}
+                          </div>
+                          {contact.linkedin_url && (
+                            <a
+                              href={contact.linkedin_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-muted-foreground hover:underline"
+                            >
+                              LinkedIn Profile
+                            </a>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="text-xs font-normal" variant="outline">
+                          {contact.title}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          {contact.organization_name}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {contact.email ? (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            {contact.email}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Not enriched</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {contact.enriched ? (
+                          <Button variant="ghost" disabled>
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            onClick={() => enrichContact(contact)}
+                            disabled={isEnriching[contact.id]}
+                          >
+                            {isEnriching[contact.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <UserPlus className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

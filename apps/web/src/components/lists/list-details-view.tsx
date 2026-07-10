@@ -269,7 +269,7 @@ export const ListDetailsView = memo(
         )}
 
         <div className="space-y-4">
-          <div className="p-0">
+          <div className="rounded-xl border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -304,7 +304,7 @@ export const ListDetailsView = memo(
                   listData.contacts.map((contact) => (
                     <TableRow
                       key={contact.id}
-                      className="hover:bg-muted/50 cursor-pointer"
+                      className="cursor-pointer"
                       onClick={(e) => {
                         if (!(e.target as HTMLElement).closest(".checkbox-cell, .action-cell, a")) {
                           setSelectedContactForDetails(contact);

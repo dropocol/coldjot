@@ -5,13 +5,7 @@ import { TimelineRow } from "./timeline-row";
 import { EmailDetailsDrawer } from "./email-details-drawer";
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-} from "@coldjot/ui/components/table";
+import { Table, TableHeader, TableBody, TableHead, TableRow } from "@coldjot/ui/components/table";
 import Link from "next/link";
 import type { EmailTrackingRow } from "@coldjot/types";
 import { useTimeline } from "@/hooks/queries/use-timeline";
@@ -21,9 +15,7 @@ interface RecentEmailsProps {
 }
 
 export function RecentEmails({ userId }: RecentEmailsProps) {
-  const [selectedEmail, setSelectedEmail] = useState<EmailTrackingRow | null>(
-    null
-  );
+  const [selectedEmail, setSelectedEmail] = useState<EmailTrackingRow | null>(null);
 
   const { data, isLoading, isError } = useTimeline({
     page: 1,
@@ -42,18 +34,12 @@ export function RecentEmails({ userId }: RecentEmailsProps) {
 
   if (isError) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        Failed to load recent emails
-      </div>
+      <div className="text-center py-8 text-muted-foreground">Failed to load recent emails</div>
     );
   }
 
   if (emails.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        No recent emails found
-      </div>
-    );
+    return <div className="text-center py-8 text-muted-foreground">No recent emails found</div>;
   }
 
   return (
@@ -66,31 +52,17 @@ export function RecentEmails({ userId }: RecentEmailsProps) {
           </Button>
         </div>
 
-        <div className="border rounded-lg overflow-hidden">
+        <div className="rounded-xl border overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Status
-                </TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Subject
-                </TableHead>
-                <TableHead className="hidden sm:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Recipient
-                </TableHead>
-                <TableHead className="hidden lg:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Sequence
-                </TableHead>
-                <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Opens
-                </TableHead>
-                <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Clicks
-                </TableHead>
-                <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Sent
-                </TableHead>
+              <TableRow>
+                <TableHead>Status</TableHead>
+                <TableHead>Subject</TableHead>
+                <TableHead className="hidden sm:table-cell">Recipient</TableHead>
+                <TableHead className="hidden lg:table-cell">Sequence</TableHead>
+                <TableHead className="hidden md:table-cell">Opens</TableHead>
+                <TableHead className="hidden md:table-cell">Clicks</TableHead>
+                <TableHead className="text-right">Sent</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

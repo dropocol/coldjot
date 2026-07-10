@@ -7,7 +7,6 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalSearch } from "@coldjot/ui/components/local-search";
 import { Button } from "@coldjot/ui/components/button";
-import { Separator } from "@coldjot/ui/components/separator";
 import { Checkbox } from "@coldjot/ui/components/checkbox";
 import {
   Table,
@@ -56,26 +55,18 @@ export default function ContactsTrashPage() {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pagination.limit));
 
-  const allOnPageSelected =
-    contacts.length > 0 &&
-    contacts.every((c) => selected.includes(c.id));
+  const allOnPageSelected = contacts.length > 0 && contacts.every((c) => selected.includes(c.id));
 
   const toggleAll = () => {
     if (allOnPageSelected) {
-      setSelected((prev) =>
-        prev.filter((id) => !contacts.some((c) => c.id === id))
-      );
+      setSelected((prev) => prev.filter((id) => !contacts.some((c) => c.id === id)));
     } else {
-      setSelected((prev) =>
-        Array.from(new Set([...prev, ...contacts.map((c) => c.id)]))
-      );
+      setSelected((prev) => Array.from(new Set([...prev, ...contacts.map((c) => c.id)])));
     }
   };
 
   const toggleOne = (id: string) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const handleSearch = (value: string) => {
@@ -88,9 +79,7 @@ export default function ContactsTrashPage() {
     try {
       const res = await restore.mutateAsync(ids);
       setSelected((prev) => prev.filter((id) => !ids.includes(id)));
-      toast.success(
-        `Restored ${res.restored} contact${res.restored === 1 ? "" : "s"}`
-      );
+      toast.success(`Restored ${res.restored} contact${res.restored === 1 ? "" : "s"}`);
     } catch {
       toast.error("Failed to restore contact(s)");
     }
@@ -104,12 +93,8 @@ export default function ContactsTrashPage() {
         contactIds: purgeTarget,
         mode: "hard",
       });
-      setSelected((prev) =>
-        prev.filter((id) => !purgeTarget.includes(id))
-      );
-      toast.success(
-        `Permanently deleted ${res.deleted} contact${res.deleted === 1 ? "" : "s"}`
-      );
+      setSelected((prev) => prev.filter((id) => !purgeTarget.includes(id)));
+      toast.success(`Permanently deleted ${res.deleted} contact${res.deleted === 1 ? "" : "s"}`);
     } catch {
       toast.error("Failed to delete contact(s)");
     } finally {
@@ -128,10 +113,7 @@ export default function ContactsTrashPage() {
       </Link>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <PageHeader
-            title="Trash"
-            description="Restore contacts or permanently delete them."
-          />
+          <PageHeader title="Trash" description="Restore contacts or permanently delete them." />
           <div className="flex items-center gap-3">
             {selected.length > 0 ? (
               <>
@@ -162,7 +144,6 @@ export default function ContactsTrashPage() {
             )}
           </div>
         </div>
-        <Separator />
       </div>
 
       {total === 0 && !isLoading ? (
@@ -176,7 +157,7 @@ export default function ContactsTrashPage() {
           </p>
         </div>
       ) : (
-        <div className="border rounded-md">
+        <div className="rounded-xl border overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -216,13 +197,9 @@ export default function ContactsTrashPage() {
                         {c.name || `${c.firstName} ${c.lastName}`.trim() || "—"}
                       </div>
                     </TableCell>
+                    <TableCell className="text-muted-foreground">{c.email}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {c.email}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {c.deletedAt
-                        ? format(new Date(c.deletedAt), "MMM d, yyyy")
-                        : "—"}
+                      {c.deletedAt ? format(new Date(c.deletedAt), "MMM d, yyyy") : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -279,20 +256,13 @@ export default function ContactsTrashPage() {
               {purgeTarget?.length === 1 ? "" : "s"} permanently?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the contacts <strong>and all their data</strong>
-              {" "}— analytics, events, tracking, threads, and sequence
-              enrollments. This cannot be undone.
+              This removes the contacts <strong>and all their data</strong> — analytics, events,
+              tracking, threads, and sequence enrollments. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={purge.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={confirmPurge}
-              disabled={purge.isPending}
-            >
+            <AlertDialogCancel disabled={purge.isPending}>Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={confirmPurge} disabled={purge.isPending}>
               {purge.isPending ? "Deleting..." : "Delete permanently"}
             </Button>
           </AlertDialogFooter>

@@ -142,7 +142,7 @@ export default function TemplateList({
         </div>
       ) : (
         <>
-          <div className="p-0">
+          <div className="rounded-xl border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -166,7 +166,7 @@ export default function TemplateList({
               </TableHeader>
               <TableBody>
                 {templates.map((template) => (
-                  <TableRow key={template.id} className="hover:bg-muted/50">
+                  <TableRow key={template.id}>
                     <TableCell className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedTemplates.has(template.id)}
