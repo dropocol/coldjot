@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
-import { Separator } from "@coldjot/ui/components/separator";
+
 import { SettingsMessageHandler } from "@/components/settings/settings-message-handler";
 import { SettingsLayout } from "@/components/settings/settings-layout";
 import ProfileSettings from "@/components/settings/profile-settings";
@@ -39,15 +39,9 @@ export default async function ProfileSettingsPage() {
             Manage your profile settings and preferences.
           </p>
         </div>
-        <Separator />
 
         <div className="space-y-10">
           <ProfileSettings user={session.user} />
-          <Separator />
-
-          {/* <EmailSettings /> */}
-          {/* <Separator /> */}
-
           <GoogleIntegration account={plainAccount} />
         </div>
       </div>

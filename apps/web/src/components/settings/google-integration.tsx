@@ -12,18 +12,12 @@ type GoogleAccount = {
   providerAccountId: string;
 } | null;
 
-export default function GoogleIntegration({
-  account,
-}: {
-  account: GoogleAccount;
-}) {
+export default function GoogleIntegration({ account }: { account: GoogleAccount }) {
   const isConnected = !!account?.access_token;
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold tracking-tight">
-        Google Integration
-      </h2>
+      <h2 className="text-lg font-medium tracking-tight">Google Integration</h2>
 
       <Card>
         <CardHeader>
@@ -49,9 +43,7 @@ export default function GoogleIntegration({
               Disconnect Gmail
             </Button>
           ) : (
-            <Button onClick={() => signIn("google")}>
-              Connect Gmail Account
-            </Button>
+            <Button onClick={() => signIn("google")}>Connect Gmail Account</Button>
           )}
         </CardContent>
       </Card>

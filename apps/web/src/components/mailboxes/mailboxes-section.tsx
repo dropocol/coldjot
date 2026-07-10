@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
 import { Plus } from "lucide-react";
-import { Separator } from "@coldjot/ui/components/separator";
 import { MailboxList, type MailboxWithAliases } from "./mailbox-list";
 import { AddMailbox } from "./add-mailbox";
 import type { Mailbox } from "@coldjot/database";
@@ -17,22 +16,14 @@ interface MailboxesSectionProps {
 }
 
 export function MailboxesSection({ initialAccounts }: MailboxesSectionProps) {
-  const [isAddingAccount, setIsAddingAccount] = useState(
-    initialAccounts.length === 0
-  );
-  const [accounts, setAccounts] =
-    useState<MailboxWithAliases[]>(initialAccounts);
+  const [isAddingAccount, setIsAddingAccount] = useState(initialAccounts.length === 0);
+  const [accounts, setAccounts] = useState<MailboxWithAliases[]>(initialAccounts);
   const qc = useQueryClient();
 
   // Per-call mutations (id is passed per-call, not baked into the hook).
   const updateMailbox = useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: Partial<Mailbox>;
-    }) => api.patch<MailboxWithAliases>(`/api/mailboxes/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Mailbox> }) =>
+      api.patch<MailboxWithAliases>(`/api/mailboxes/${id}`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.mailboxes.all }),
   });
   const deleteMailbox = useMutation({
@@ -45,19 +36,14 @@ export function MailboxesSection({ initialAccounts }: MailboxesSectionProps) {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.mailboxes.all }),
   });
 
-  const handleAccountUpdate = async (
-    accountId: string,
-    data: Partial<Mailbox>
-  ) => {
+  const handleAccountUpdate = async (accountId: string, data: Partial<Mailbox>) => {
     const updatedAccount = await updateMailbox.mutateAsync({
       id: accountId,
       data,
     });
     setAccounts((prev) =>
       prev.map((account) =>
-        account.id === accountId
-          ? (updatedAccount as MailboxWithAliases)
-          : account
+        account.id === accountId ? (updatedAccount as MailboxWithAliases) : account
       )
     );
   };
@@ -76,9 +62,7 @@ export function MailboxesSection({ initialAccounts }: MailboxesSectionProps) {
     const updatedAccount = await refreshAliases.mutateAsync(accountId);
     setAccounts((prev) =>
       prev.map((account) =>
-        account.id === accountId
-          ? (updatedAccount as MailboxWithAliases)
-          : account
+        account.id === accountId ? (updatedAccount as MailboxWithAliases) : account
       )
     );
   };
@@ -107,17 +91,14 @@ export function MailboxesSection({ initialAccounts }: MailboxesSectionProps) {
           </p>
         </div>
         {accounts.length > 0 && (
-          <Button
-            onClick={() => setIsAddingAccount(true)}
-            disabled={isAddingAccount}
-          >
+          <Button onClick={() => setIsAddingAccount(true)} disabled={isAddingAccount}>
             <Plus className="h-4 w-4 mr-2" />
             Add Account
           </Button>
         )}
       </div>
 
-      {accounts.length > 0 && <Separator />}
+      {/* {accounts.length > 0 && <Separator />} */}
 
       <div className="space-y-4">
         {isAddingAccount && (

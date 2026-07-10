@@ -55,18 +55,14 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
       <div className="rounded-lg border bg-background p-2 shadow-none">
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Date
-            </span>
+            <span className="text-[0.70rem] uppercase text-muted-foreground">Date</span>
             <span className="font-bold text-muted-foreground">
               {format(new Date(label ?? ""), "MMM d, yyyy")}
             </span>
           </div>
           {payload.map((entry) => (
             <div key={entry.name} className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {entry.name}
-              </span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{entry.name}</span>
               <span className="font-bold" style={{ color: entry.color }}>
                 {entry.value.toLocaleString()}
               </span>
@@ -83,7 +79,7 @@ export function StatsChart({ data }: StatsChartProps) {
   return (
     <Card className="pb-6 shadow-none">
       <div className="space-y-4">
-        <div className="p-6">
+        <div className="p-6 pt-0">
           <h2 className="text-lg font-semibold">Email Activity</h2>
           <p className="text-sm text-muted-foreground">
             Overview of email campaign performance over time
@@ -91,46 +87,19 @@ export function StatsChart({ data }: StatsChartProps) {
         </div>
         <div className="h-[300px] w-full pr-8">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={data}
-              margin={{ top: 10, right: 0, left: 0, bottom: 0 }}
-            >
+            <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="sent" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="0%"
-                    stopColor={COLORS.sent.fill}
-                    stopOpacity={0.15}
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor={COLORS.sent.fill}
-                    stopOpacity={0}
-                  />
+                  <stop offset="0%" stopColor={COLORS.sent.fill} stopOpacity={0.15} />
+                  <stop offset="100%" stopColor={COLORS.sent.fill} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="opened" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="0%"
-                    stopColor={COLORS.opened.fill}
-                    stopOpacity={0.15}
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor={COLORS.opened.fill}
-                    stopOpacity={0}
-                  />
+                  <stop offset="0%" stopColor={COLORS.opened.fill} stopOpacity={0.15} />
+                  <stop offset="100%" stopColor={COLORS.opened.fill} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="replied" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="0%"
-                    stopColor={COLORS.replied.fill}
-                    stopOpacity={0.15}
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor={COLORS.replied.fill}
-                    stopOpacity={0}
-                  />
+                  <stop offset="0%" stopColor={COLORS.replied.fill} stopOpacity={0.15} />
+                  <stop offset="100%" stopColor={COLORS.replied.fill} stopOpacity={0} />
                 </linearGradient>
                 {/* <linearGradient id="uniqueOpens" x1="0" y1="0" x2="0" y2="1">
                   <stop
@@ -210,17 +179,11 @@ export function StatsChart({ data }: StatsChartProps) {
         </div>
         <div className="flex items-center justify-center gap-4 py-2">
           <div className="flex items-center gap-2">
-            <div
-              className="h-3 w-3 rounded-full"
-              style={{ backgroundColor: COLORS.sent.fill }}
-            />
+            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.sent.fill }} />
             <span className="text-sm text-muted-foreground">Sent</span>
           </div>
           <div className="flex items-center gap-2">
-            <div
-              className="h-3 w-3 rounded-full"
-              style={{ backgroundColor: COLORS.opened.fill }}
-            />
+            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.opened.fill }} />
             <span className="text-sm text-muted-foreground">Opened</span>
           </div>
           <div className="flex items-center gap-2">

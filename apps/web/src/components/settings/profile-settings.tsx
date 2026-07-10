@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@coldjot/ui/components/avat
 export default function ProfileSettings({ user }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold tracking-tight">Profile</h2>
+      <h2 className="text-lg font-medium tracking-tight">Profile</h2>
 
       <Card>
         <CardHeader>
