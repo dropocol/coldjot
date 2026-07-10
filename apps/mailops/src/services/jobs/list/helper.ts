@@ -55,7 +55,8 @@ export async function syncListToSequences(listId: string) {
 
           const added = await syncContactsToSequence(
             sequence.id,
-            contacts
+            contacts,
+            listId
           );
 
           totalAdded += added;
@@ -139,7 +140,8 @@ async function updateSyncRecordStatus(
  */
 async function syncContactsToSequence(
   sequenceId: string,
-  contacts: any[]
+  contacts: any[],
+  listId: string
 ): Promise<number> {
   try {
     // Get existing sequence contacts efficiently using a Set
@@ -163,7 +165,8 @@ async function syncContactsToSequence(
       const chunk = newContacts.slice(i, i + chunkSize);
       await prisma.sequenceContact.addContactsToSequence(
         sequenceId,
-        chunk.map((c) => c.id)
+        chunk.map((c) => c.id),
+        { source: "list", sourceListId: listId }
       );
     }
 

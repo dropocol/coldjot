@@ -45,7 +45,7 @@ export function PreviewPane({
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent
         side="right"
-        className="w-[600px] sm:max-w-[600px] h-[100dvh] p-0"
+        className="data-[side=right]:w-[600px] data-[side=right]:sm:max-w-[600px] h-[100dvh] p-0"
       >
         <div className="h-full flex flex-col">
           <SheetHeader className="px-6 py-4 border-b">

@@ -8,60 +8,13 @@ import {
 } from "@/lib/auth/access";
 import { parseBody } from "@/lib/http/validation";
 import {
+  triggerListSync,
+  autoRemoveContactsFromSequences,
+} from "@/lib/list-sync";
+import {
   addContactToListSchema,
   setListContactsSchema,
 } from "@coldjot/types/schemas";
-
-// Helper function to trigger list sync via mailops
-async function triggerListSync(listId: string) {
-  try {
-    // Find all sequences that have this list
-    const sequences = await prisma.sequence.findMany({
-      where: {
-        lists: {
-          some: {
-            id: listId,
-          },
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    // Call mailops sync endpoint for each sequence
-    await Promise.all(
-      sequences.map(async (sequence) => {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_MAILOPS_API_URL}/lists/${listId}/sync`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Service-Token": process.env.MAILOPS_SERVICE_TOKEN || "",
-            },
-            body: JSON.stringify({
-              sequenceId: sequence.id,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to sync list ${listId} with sequence ${sequence.id}`
-          );
-        }
-
-        return response.json();
-      })
-    );
-
-    return true;
-  } catch (error) {
-    console.error("Failed to trigger list sync:", error);
-    return false;
-  }
-}
 
 export async function POST(
   request: Request,
@@ -121,6 +74,16 @@ export async function POST(
     // IDOR guard: verify the contact belongs to the caller before connecting.
     const foreign = await findForeignContactIds(session.user.id, [contactId]);
     if (foreign.size > 0) {
+      return notFound("Contact not found");
+    }
+
+    // A soft-deleted contact must not be connectable to a list — it would
+    // later leak into a sequence sync and silently fail to send.
+    const activeContact = await prisma.contact.findFirst({
+      where: { id: contactId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!activeContact) {
       return notFound("Contact not found");
     }
 
@@ -189,9 +152,12 @@ export async function GET(
       return NextResponse.json({ error: "List not found" }, { status: 404 });
     }
 
-    // Get all contacts for this list (without pagination)
+    // Get all ACTIVE contacts for this list (without pagination).
+    // Soft-deleted members stay in the join table by design but must not
+    // be shown or counted.
     const contacts = await prisma.contact.findMany({
       where: {
+        deletedAt: null,
         emailLists: {
           some: {
             id: id,
@@ -243,6 +209,28 @@ export async function PUT(
       return forbidden("Some contacts do not belong to this account");
     }
 
+    // Drop any soft-deleted contacts from the batch — they must not be
+    // connectable to a list (would later leak into a sequence sync).
+    const activeContacts = await prisma.contact.findMany({
+      where: { id: { in: contactIds }, deletedAt: null },
+      select: { id: true },
+    });
+    const activeContactIds = new Set(activeContacts.map((c) => c.id));
+    const eligibleContactIds = contactIds.filter((id) =>
+      activeContactIds.has(id)
+    );
+
+    if (eligibleContactIds.length === 0) {
+      return NextResponse.json(
+        {
+          message: "No active contacts to add",
+          added: 0,
+          skipped: contactIds.length,
+        },
+        { status: 400 }
+      );
+    }
+
     // Verify list ownership
     const list = await prisma.emailList.findUnique({
       where: {
@@ -252,7 +240,7 @@ export async function PUT(
       include: {
         contacts: {
           where: {
-            id: { in: contactIds },
+            id: { in: eligibleContactIds },
           },
           select: {
             id: true,
@@ -269,7 +257,7 @@ export async function PUT(
     const existingContactIds = list.contacts.map((contact) => contact.id);
 
     // Filter out contacts that are already in the list
-    const contactsToAdd = contactIds.filter(
+    const contactsToAdd = eligibleContactIds.filter(
       (id) => !existingContactIds.includes(id)
     );
 
@@ -278,7 +266,7 @@ export async function PUT(
         {
           message: "All contacts are already in the list",
           added: 0,
-          skipped: contactIds.length,
+          skipped: eligibleContactIds.length,
           total: existingContactIds.length,
           list: {
             id: list.id,
@@ -383,9 +371,25 @@ export async function DELETE(
       },
     });
 
+    // Cascade: tombstone these contacts' list-sourced enrollments in every
+    // sequence this list is attached to. Direct/other-list enrollments are
+    // untouched (matched on sourceListId). Best-effort — the list-membership
+    // update above already succeeded; a cascade failure must not fail the
+    // request. See autoRemoveContactsFromSequences in @/lib/list-sync.
+    let autoRemovedFromSequences = 0;
+    try {
+      autoRemovedFromSequences = await autoRemoveContactsFromSequences(
+        id,
+        contactIds
+      );
+    } catch (err) {
+      console.error("Failed to auto-remove contacts from sequences:", err);
+    }
+
     return NextResponse.json({
       success: true,
       removed: contactIds.length,
+      autoRemovedFromSequences,
     });
   } catch (error) {
     console.error("Failed to remove contacts from list:", error);

@@ -112,14 +112,49 @@ export class EmailProcessor extends BaseProcessor<EmailJob> {
         // Contact was deleted (soft or hard) between scheduling and send, or
         // never existed. Skip this send cleanly instead of failing the job
         // (a retry wouldn't help). Warn so the skip is debuggable.
+        //
+        // NOTE: with the list-sync filters in place (deletedAt: null on
+        // enrollment reads), a soft-deleted contact should now never be
+        // scheduled in the first place — so reaching here for a soft-deleted
+        // contact indicates a race (deleted between schedule and send).
+        // `result: "skipped"` lets these be aggregated in logs.
         logger.warn(
           {
             contactId: data.contactId,
             sequenceId: data.sequenceId,
             stepId: data.stepId,
             jobId,
+            result: "skipped",
+            reason: "contact_inactive",
           },
           "Skipping send: contact no longer active (deleted or not found)"
+        );
+        return { success: true };
+      }
+
+      // Verify the enrollment is still active. Removal from the sequence (or
+      // auto-remove via list exit) sets a removedAt tombstone after this job
+      // was scheduled; such a contact must not receive this email. Skip cleanly
+      // (a retry wouldn't help) and log so the skip is debuggable.
+      const enrollment = await this.db.sequenceContact.findFirst({
+        where: {
+          sequenceId: data.sequenceId,
+          contactId: data.contactId,
+        },
+        select: { removedAt: true },
+      });
+      if (!enrollment || enrollment.removedAt) {
+        logger.warn(
+          {
+            contactId: data.contactId,
+            sequenceId: data.sequenceId,
+            stepId: data.stepId,
+            jobId,
+            result: "skipped",
+            reason: "enrollment_removed",
+            removedAt: enrollment?.removedAt ?? null,
+          },
+          "Skipping send: contact removed from sequence after scheduling"
         );
         return { success: true };
       }

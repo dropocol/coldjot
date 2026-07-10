@@ -25,6 +25,8 @@ export const qk = {
     all: ["contacts"] as const,
     list: (params: ListParams) =>
       ["contacts", "list", searchParam(params)] as const,
+    trash: (params: ListParams) =>
+      ["contacts", "trash", searchParam(params)] as const,
     detail: (id: string) => ["contacts", "detail", id] as const,
     search: (q: string) => ["contacts", "search", q] as const,
   },
@@ -44,6 +46,10 @@ export const qk = {
       params
         ? (["sequences", id, "contacts", searchParam(params)] as const)
         : (["sequences", id, "contacts"] as const),
+    removedContacts: (id: string, params?: ListParams) =>
+      params
+        ? (["sequences", id, "removed-contacts", searchParam(params)] as const)
+        : (["sequences", id, "removed-contacts"] as const),
     lists: (id: string, params?: ListParams) =>
       params
         ? (["sequences", id, "lists", searchParam(params)] as const)

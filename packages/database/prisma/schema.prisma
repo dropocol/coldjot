@@ -226,12 +226,22 @@ model SequenceContact {
     failureCount Int     @default(0)
     lastError    String?
 
+    // Soft-remove tombstone + enrollment source attribution.
+    // removedAt:   null = active; set = removed (list-sync respects it, won't re-add).
+    // source:      'direct' (manual add) | 'list' (enrolled via a connected list).
+    // sourceListId: set only when source = 'list' — the precise key for auto-remove
+    //               on list exit. No FK: list deletion must not cascade to enrollments.
+    removedAt    DateTime?
+    source       String    @default("direct")
+    sourceListId String?
+
     sequence Sequence @relation("SequenceToContact", fields: [sequenceId], references: [id], onDelete: Restrict)
     contact  Contact  @relation("ContactToSequence", fields: [contactId], references: [id], onDelete: Restrict)
 
     @@unique([sequenceId, contactId])
     @@index([sequenceId])
     @@index([contactId])
+    @@index([sequenceId, removedAt])
 }
 
 model SequenceStats {

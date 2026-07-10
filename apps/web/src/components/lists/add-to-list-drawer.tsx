@@ -130,7 +130,7 @@ export function AddToListDrawer({
     >
       <SheetContent
         side="right"
-        className="w-[600px] sm:max-w-[600px] flex flex-col gap-0"
+        className="data-[side=right]:w-[600px] data-[side=right]:sm:max-w-[600px] flex flex-col gap-0"
       >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">

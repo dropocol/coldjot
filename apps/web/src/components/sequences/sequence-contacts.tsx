@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Button } from "@coldjot/ui/components/button";
+import { Checkbox } from "@coldjot/ui/components/checkbox";
 import { ContactSearch } from "@/components/search/contact-search-dropdown";
 import {
   Table,
@@ -25,6 +27,9 @@ import {
   Trash,
   CheckCheck,
   MessageSquare,
+  RotateCcw,
+  Trash2,
+  ArrowLeft,
 } from "lucide-react";
 import { ListSelector } from "@/components/lists/list-selector";
 import { formatDistanceToNow, format } from "date-fns";
@@ -47,8 +52,10 @@ import { PaginationControls } from "@/components/pagination";
 import { useSequence } from "@/lib/sequence-context";
 import {
   useSequenceContacts,
+  useRemovedSequenceContacts,
   useAddContactToSequence,
   useRemoveContactFromSequence,
+  useRestoreSequenceContacts,
   useSendContactStepNow,
   useUpdateContactStatus,
 } from "@/hooks/queries/use-sequence-contacts";
@@ -69,6 +76,7 @@ interface ExtendedSequenceContact {
   threadId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  removedAt: Date | null;
 }
 
 interface SequenceContactsProps {
@@ -89,7 +97,26 @@ export function SequenceContacts({
   onPageSizeChange,
 }: SequenceContactsProps) {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [removedSelected, setRemovedSelected] = useState<string[]>([]);
   const { updateReadinessField } = useSequence();
+
+  // "active" (default) vs "removed" view, driven by ?view=removed in the URL.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const isRemovedView = searchParams.get("view") === "removed";
+
+  const setView = (view: "active" | "removed") => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (view === "removed") {
+      params.set("view", "removed");
+    } else {
+      params.delete("view");
+    }
+    // reset to page 1 when switching views
+    params.delete("page");
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   // Poll for updates while the sequence is active; otherwise just fetch once.
   const { data, isLoading } = useSequenceContacts(
@@ -101,8 +128,17 @@ export function SequenceContacts({
   const totalSteps = data?.totalSteps ?? 0;
   const total = data?.total ?? 0;
 
+  // Removed contacts (only fetched in the removed view).
+  const { data: removedData, isLoading: removedLoading } = useRemovedSequenceContacts(sequenceId, {
+    page,
+    limit,
+  });
+  const removedContacts = (removedData?.contacts as ExtendedSequenceContact[] | undefined) ?? [];
+  const removedTotal = removedData?.total ?? 0;
+
   const addMutation = useAddContactToSequence(sequenceId);
   const removeMutation = useRemoveContactFromSequence(sequenceId);
+  const restoreMutation = useRestoreSequenceContacts(sequenceId);
   const sendNowMutation = useSendContactStepNow(sequenceId);
   const statusMutation = useUpdateContactStatus(sequenceId);
   // Any contact mutation counts as "loading" for the button/spinner gates.
@@ -148,6 +184,40 @@ export function SequenceContacts({
     } catch (_error) {
       toast.error("Failed to update contact status");
     }
+  };
+
+  // Restore supports a single id or the whole selection.
+  const handleRestore = async (contactIds: string[]) => {
+    if (contactIds.length === 0) return;
+    try {
+      const res = await restoreMutation.mutateAsync(contactIds);
+      setRemovedSelected((prev) => prev.filter((id) => !contactIds.includes(id)));
+      toast.success(`Restored ${res.restored} contact${res.restored === 1 ? "" : "s"}`);
+    } catch (_error) {
+      toast.error("Failed to restore contact(s)");
+    }
+  };
+
+  const allRemovedSelected =
+    removedContacts.length > 0 &&
+    removedContacts.every((c) => removedSelected.includes(c.contactId));
+
+  const toggleAllRemoved = () => {
+    if (allRemovedSelected) {
+      setRemovedSelected((prev) =>
+        prev.filter((id) => !removedContacts.some((c) => c.contactId === id))
+      );
+    } else {
+      setRemovedSelected((prev) =>
+        Array.from(new Set([...prev, ...removedContacts.map((c) => c.contactId)]))
+      );
+    }
+  };
+
+  const toggleOneRemoved = (contactId: string) => {
+    setRemovedSelected((prev) =>
+      prev.includes(contactId) ? prev.filter((x) => x !== contactId) : [...prev, contactId]
+    );
   };
 
   const getStatusDetails = (contact: ExtendedSequenceContact) => {
@@ -213,24 +283,268 @@ export function SequenceContacts({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <ContactSearch selectedContact={selectedContact} onSelect={setSelectedContact} />
+      {isRemovedView ? (
+        <RemovedContactsView
+          contacts={removedContacts}
+          isLoading={removedLoading}
+          isRestoring={restoreMutation.isPending}
+          selected={removedSelected}
+          allSelected={allRemovedSelected}
+          onToggleAll={toggleAllRemoved}
+          onToggleOne={toggleOneRemoved}
+          onRestore={handleRestore}
+          onBack={() => setView("active")}
+          currentPage={page}
+          pageSize={limit}
+          totalItems={removedTotal}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
+      ) : (
+        <ActiveContactsView
+          selectedContact={selectedContact}
+          setSelectedContact={setSelectedContact}
+          handleAddContact={handleAddContact}
+          isMutating={isMutating}
+          sequenceId={sequenceId}
+          isLoading={isLoading}
+          contacts={contacts}
+          totalSteps={totalSteps}
+          isActive={isActive}
+          getStatusDetails={getStatusDetails}
+          onViewRemoved={() => setView("removed")}
+          handleSendNow={handleSendNow}
+          handleStatusUpdate={handleStatusUpdate}
+          handleRemoveContact={handleRemoveContact}
+          currentPage={page}
+          pageSize={limit}
+          totalItems={total}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Removed contacts view ───────────────────────────────────────────────────
+
+interface RemovedContactsViewProps {
+  contacts: ExtendedSequenceContact[];
+  isLoading: boolean;
+  isRestoring: boolean;
+  selected: string[];
+  allSelected: boolean;
+  onToggleAll: () => void;
+  onToggleOne: (contactId: string) => void;
+  onRestore: (contactIds: string[]) => void;
+  onBack: () => void;
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}
+
+function RemovedContactsView({
+  contacts,
+  isLoading,
+  isRestoring,
+  selected,
+  allSelected,
+  onToggleAll,
+  onToggleOne,
+  onRestore,
+  onBack,
+  currentPage,
+  pageSize,
+  totalItems,
+  onPageChange,
+  onPageSizeChange,
+}: RemovedContactsViewProps) {
+  return (
+    <>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            Back to Active
+          </Button>
+          <h2 className="text-lg font-semibold tracking-tight">Removed Contacts</h2>
         </div>
-        <Button
-          onClick={() => selectedContact && handleAddContact(selectedContact)}
-          disabled={!selectedContact || isMutating}
-        >
-          {isMutating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <UserPlus className="h-4 w-4 mr-2" />
-          )}
-          Add Contact
-        </Button>
-        {/* ListSelector adds contacts via its own flow; mutations invalidate
+        {selected.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onRestore(selected)}
+            disabled={isRestoring}
+          >
+            <RotateCcw className="h-4 w-4 mr-1.5" />
+            Restore {selected.length}
+          </Button>
+        )}
+      </div>
+
+      <div className="text-sm text-muted-foreground">
+        {selected.length > 0
+          ? `${selected.length} selected`
+          : "Removed contacts can be restored to the sequence."}
+      </div>
+
+      {totalItems === 0 && !isLoading ? (
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center border rounded-md">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+            <Trash2 className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium">No removed contacts</h3>
+          <p className="text-sm text-muted-foreground">
+            Contacts you remove from this sequence will appear here.
+          </p>
+        </div>
+      ) : (
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={onToggleAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Removed</TableHead>
+                <TableHead className="w-[120px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mx-auto" />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                contacts.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selected.includes(c.contactId)}
+                        onCheckedChange={() => onToggleOne(c.contactId)}
+                        aria-label={`Select ${c.contact.email}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{c.contact.name}</div>
+                      <div className="text-sm text-muted-foreground">{c.contact.email}</div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {c.removedAt ? format(new Date(c.removedAt), "MMM d, yyyy") : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRestore([c.contactId])}
+                        disabled={isRestoring}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1.5" />
+                        Restore
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={Math.ceil(totalItems / pageSize)}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
+    </>
+  );
+}
+
+// ── Active contacts view (the original UI, extracted) ───────────────────────
+
+interface ActiveContactsViewProps {
+  selectedContact: Contact | null;
+  setSelectedContact: (c: Contact | null) => void;
+  handleAddContact: (c: Contact) => void;
+  isMutating: boolean;
+  sequenceId: string;
+  isLoading: boolean;
+  contacts: ExtendedSequenceContact[];
+  totalSteps: number;
+  isActive: boolean;
+  getStatusDetails: (c: ExtendedSequenceContact) => React.ReactNode;
+  onViewRemoved: () => void;
+  handleSendNow: (id: string) => void;
+  handleStatusUpdate: (id: string, status: SequenceContactStatusType) => void;
+  handleRemoveContact: (id: string) => void;
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}
+
+function ActiveContactsView({
+  selectedContact,
+  setSelectedContact,
+  handleAddContact,
+  isMutating,
+  sequenceId,
+  isLoading,
+  contacts,
+  totalSteps,
+  isActive,
+  getStatusDetails,
+  onViewRemoved,
+  handleSendNow,
+  handleStatusUpdate,
+  handleRemoveContact,
+  currentPage,
+  pageSize,
+  totalItems,
+  onPageChange,
+  onPageSizeChange,
+}: ActiveContactsViewProps) {
+  return (
+    <>
+      <div className="flex justify-between items-center gap-4">
+        <h2 className="text-lg font-semibold tracking-tight">Contacts</h2>
+        <div className="flex gap-2">
+          <div className="w-[320px]">
+            <ContactSearch selectedContact={selectedContact} onSelect={setSelectedContact} />
+          </div>
+          <Button
+            onClick={() => selectedContact && handleAddContact(selectedContact)}
+            disabled={!selectedContact || isMutating}
+          >
+            {isMutating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <UserPlus className="h-4 w-4 mr-2" />
+            )}
+            Add Contact
+          </Button>
+          {/* ListSelector adds contacts via its own flow; mutations invalidate
             this query, so no explicit callback is needed. */}
-        <ListSelector sequenceId={sequenceId} onListSelected={() => undefined} />
+          <ListSelector sequenceId={sequenceId} onListSelected={() => undefined} />
+          <Button variant="outline" onClick={onViewRemoved}>
+            <Trash2 className="h-4 w-4" />
+            Trash
+          </Button>
+        </div>
       </div>
 
       <div className="p-0">
@@ -410,13 +724,13 @@ export function SequenceContacts({
       </div>
 
       <PaginationControls
-        currentPage={page}
-        totalPages={Math.ceil(total / limit)}
-        pageSize={limit}
-        totalItems={total}
+        currentPage={currentPage}
+        totalPages={Math.ceil(totalItems / pageSize)}
+        pageSize={pageSize}
+        totalItems={totalItems}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
       />
-    </div>
+    </>
   );
 }

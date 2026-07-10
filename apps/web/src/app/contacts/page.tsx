@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { Plus, SendHorizonal, ListPlus, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalSearch } from "@coldjot/ui/components/local-search";
-import { Button } from "@coldjot/ui/components/button";
+import { Button, buttonVariants } from "@coldjot/ui/components/button";
 import { Label } from "@coldjot/ui/components/label";
 import { RadioGroup, RadioGroupItem } from "@coldjot/ui/components/radio-group";
 import {
@@ -166,6 +167,10 @@ export default function ContactsPage() {
                   <Plus className="h-4 w-4 mr-2" />
                   Add Contact
                 </Button>
+                <Link href="/contacts/trash" className={buttonVariants({ variant: "outline" })}>
+                  <Trash2 className="h-4 w-4" />
+                  Trash
+                </Link>
               </>
             )}
           </div>

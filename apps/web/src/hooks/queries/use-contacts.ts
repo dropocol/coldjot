@@ -34,6 +34,18 @@ export function useContacts(params: ListParams) {
   });
 }
 
+/** List soft-deleted (trashed) contacts. Restore/purge mutate qk.contacts.all,
+ *  which invalidates this query too (prefix match on ["contacts"]). */
+export function useTrashedContacts(params: ListParams) {
+  return useQuery({
+    queryKey: qk.contacts.trash(params),
+    queryFn: () =>
+      api.get<ContactsListResponse>(
+        `/api/contacts/trash?${contactsQueryString(params)}`
+      ),
+  });
+}
+
 export function useContact(id: string) {
   return useQuery({
     // GET /api/contacts/[id] returns the bare contact object.

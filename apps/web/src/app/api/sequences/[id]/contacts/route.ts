@@ -22,6 +22,9 @@ export async function GET(
     const page = parseInt(searchParams.get("page") ?? "1");
     const limit = parseInt(searchParams.get("limit") ?? "20");
     const skip = (page - 1) * limit;
+    // ?view=removed → list tombstoned enrollments (the "Removed" tab).
+    // Default → active enrollments only.
+    const isRemovedView = searchParams.get("view") === "removed";
 
     // Get the sequence with its steps
     const sequence = await prisma.sequence.findUnique({
@@ -41,29 +44,37 @@ export async function GET(
 
     const _totalSteps = sequence.steps.length;
 
-    // Get total count
+    // removedAt filter flips with the view; deletedAt filter always applies
+    // (a hard-deleted contact shouldn't appear in either view).
+    const removedAtFilter = isRemovedView ? { not: null } : null;
+
+    // Get total count (view-scoped so totals match the list)
     const total = await prisma.sequenceContact.count({
       where: {
         sequenceId: id,
         sequence: {
           userId: session.user.id,
         },
+        removedAt: removedAtFilter,
+        contact: { deletedAt: null },
       },
     });
 
-    // Get sequence contacts with their latest status and events with pagination
+    // Get sequence contacts with pagination.
     const sequenceContacts = await prisma.sequenceContact.findMany({
       where: {
         sequenceId: id,
         sequence: {
           userId: session.user.id,
         },
+        removedAt: removedAtFilter,
+        contact: { deletedAt: null },
       },
       include: {
         contact: {},
       },
       orderBy: {
-        createdAt: "desc",
+        [isRemovedView ? "removedAt" : "createdAt"]: "desc",
       },
       skip,
       take: limit,
@@ -153,11 +164,13 @@ export async function POST(
       return notFound("Contact not found");
     }
 
-    // check contact is already in the sequence
+    // Only an ACTIVE enrollment counts as "already in sequence" — a removed
+    // (tombstoned) row should not block a manual re-add.
     const existingContact = await prisma.sequenceContact.findFirst({
       where: {
         sequenceId: id,
         contactId,
+        removedAt: null,
       },
     });
 
@@ -168,12 +181,36 @@ export async function POST(
       );
     }
 
-    const sequenceContact = await prisma.sequenceContact.create({
-      data: {
+    // Upsert so a previously-removed contact can be re-added manually. The
+    // tombstone row already occupies the (sequenceId, contactId) unique key, so
+    // a plain create would throw P2025. source = "direct" (sub-plan 04 covers
+    // list-sourced re-add).
+    const sequenceContact = await prisma.sequenceContact.upsert({
+      where: {
+        sequenceId_contactId: {
+          sequenceId: id,
+          contactId,
+        },
+      },
+      create: {
         sequenceId: id,
         contactId,
         status: SequenceContactStatusEnum.NOT_STARTED,
         currentStep: 0,
+        source: "direct",
+        sourceListId: null,
+      },
+      update: {
+        // resurrect a tombstone: clear removal + reset send-state
+        removedAt: null,
+        status: SequenceContactStatusEnum.NOT_STARTED,
+        currentStep: 0,
+        completed: false,
+        nextScheduledAt: null,
+        failureCount: 0,
+        lastError: null,
+        source: "direct",
+        sourceListId: null,
       },
       include: {
         contact: {},

@@ -69,7 +69,11 @@ export const sequenceModels = {
             businessHours: true,
             steps: { orderBy: { order: "asc" } },
             contacts: {
-              where: { status: { notIn: excludeStatuses } },
+              where: {
+                status: { notIn: excludeStatuses },
+                removedAt: null,
+                contact: { deletedAt: null },
+              },
               include: { contact: true },
             },
           },
@@ -417,16 +421,21 @@ export const sequenceModels = {
     async addContactsToSequence(
       this: unknown,
       sequenceId: string,
-      contactIds: string[]
+      contactIds: string[],
+      options?: { source?: string; sourceListId?: string | null }
     ): Promise<void> {
       if (contactIds.length === 0) return;
       const ctx = Prisma.getExtensionContext(this);
+      const source = options?.source ?? "direct";
+      const sourceListId = options?.sourceListId ?? null;
       await ctx.createMany({
         data: contactIds.map((contactId) => ({
           sequenceId,
           contactId,
           status: "not_sent",
           currentStep: 0,
+          source,
+          sourceListId,
         })),
         skipDuplicates: true,
       });
@@ -438,8 +447,10 @@ export const sequenceModels = {
       sequenceId: string
     ): Promise<string[]> {
       const ctx = Prisma.getExtensionContext(this);
+      // removedAt: null — a removed contact still "counts" as present so list-sync
+      // never re-enrolls a contact the user explicitly removed from the sequence.
       const rows = await ctx.findMany({
-        where: { sequenceId },
+        where: { sequenceId, removedAt: null },
         select: { contactId: true },
       });
       return rows.map((r) => r.contactId);
@@ -466,6 +477,7 @@ export const sequenceModels = {
         where: {
           sequenceId,
           status: { notIn: excludeStatuses },
+          removedAt: null,
           contact: { deletedAt: null },
         },
         include: { contact: true },
@@ -493,6 +505,7 @@ export const sequenceModels = {
               AND: [
                 { completed: false },
                 { status: "in_progress" },
+                { removedAt: null },
                 { sequence: { status: SequenceStatus.ACTIVE } },
                 { contact: { deletedAt: null } },
               ],
@@ -579,6 +592,7 @@ export const sequenceModels = {
         where: {
           status: "not_started",
           lastProcessedAt: null,
+          removedAt: null,
           contact: { deletedAt: null },
         },
         include: {
@@ -607,7 +621,7 @@ export const sequenceModels = {
     } | null> {
       const ctx = Prisma.getExtensionContext(this);
       const row = await ctx.findFirst({
-        where: { completed: false, nextScheduledAt: { not: null } },
+        where: { completed: false, removedAt: null, nextScheduledAt: { not: null } },
         orderBy: { nextScheduledAt: "asc" },
         select: {
           id: true,
@@ -633,7 +647,7 @@ export const sequenceModels = {
     ): Promise<number> {
       const ctx = Prisma.getExtensionContext(this);
       return ctx.count({
-        where: { nextScheduledAt: { gte: start, lt: end } },
+        where: { removedAt: null, nextScheduledAt: { gte: start, lt: end } },
       });
     },
 
@@ -712,14 +726,23 @@ export const sequenceModels = {
   // ── emailList (list sync) ───────────────────────────────────────────────
 
   emailList: {
-    /** Contact count for a list (used by the list-sync processor to sort). */
+    /**
+     * Active (non-soft-deleted) contact count for a list.
+     * Used by the list-sync processor to sort + paginate. Trashed members
+     * must NOT be counted here, otherwise the sync loop in
+     * jobs/list/helper.ts over-paginates and reads past the end.
+     */
     async contactCount(this: unknown, listId: string): Promise<number> {
       const ctx = Prisma.getExtensionContext(this);
       // jobs/list/processor.ts reads this via listSyncRecord.include.list._count.
       // The repository exposes it directly so the call site can migrate.
       const row = await ctx.findUnique({
         where: { id: listId },
-        select: { _count: { select: { contacts: true } } },
+        select: {
+          _count: {
+            select: { contacts: { where: { deletedAt: null } } },
+          },
+        },
       });
       return row?._count?.contacts ?? 0;
     },
@@ -740,7 +763,11 @@ export const sequenceModels = {
       return row as unknown as ListWithSequences | null;
     },
 
-    /** Fetch a page of contacts on a list (sync batches contacts in chunks). */
+    /**
+     * Fetch a page of ACTIVE contacts on a list (sync batches contacts in chunks).
+     * Filters out soft-deleted members so a trashed contact can never be
+     * enrolled into a sequence via a list sync.
+     */
     async findContactsPage(
       this: unknown,
       listId: string,
@@ -752,7 +779,7 @@ export const sequenceModels = {
       const row = await ctx.findUnique({
         where: { id: listId },
         include: {
-          contacts: { take, skip },
+          contacts: { where: { deletedAt: null }, take, skip },
         },
       });
       return (row?.contacts ?? []) as unknown as ListContactRow[];

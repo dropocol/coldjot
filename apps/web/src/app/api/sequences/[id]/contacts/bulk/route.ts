@@ -81,13 +81,15 @@ export async function POST(
 
     // Add contacts to the sequence in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create sequence contacts
+      // Create sequence contacts (stamped as direct/manual)
       await tx.sequenceContact.createMany({
         data: newContactIds.map((contactId) => ({
           sequenceId,
           contactId,
           status: SequenceContactStatusEnum.NOT_STARTED,
           currentStep: 0,
+          source: "direct",
+          sourceListId: null,
         })),
       });
 

@@ -24,6 +24,7 @@
     "@hookform/resolvers": "^5.4.0",
     "@lexical/clipboard": "^0.46.0",
     "@lexical/code": "^0.46.0",
+    "@lexical/code-prism": "^0.46.0",
     "@lexical/history": "^0.46.0",
     "@lexical/link": "^0.46.0",
     "@lexical/list": "^0.46.0",
