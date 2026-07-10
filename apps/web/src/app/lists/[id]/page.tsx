@@ -7,7 +7,6 @@ import { ListDetailsView } from "@/components/lists/list-details-view";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@coldjot/ui/components/button";
 import { SendHorizonal, Trash2 } from "lucide-react";
-import { Separator } from "@coldjot/ui/components/separator";
 import { AddToSequenceModal } from "@/components/contacts/add-to-sequence-modal";
 import { Contact } from "@prisma/client";
 import { toast } from "sonner";
@@ -139,7 +138,6 @@ export default function ListDetailsPage() {
             </div>
           }
         />
-        <Separator />
       </div>
 
       <ListDetailsView

@@ -392,7 +392,7 @@ function RemovedContactsView({
       </div>
 
       {totalItems === 0 && !isLoading ? (
-        <div className="flex flex-col items-center justify-center py-12 px-6 text-center border rounded-md">
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center rounded-md border">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
             <Trash2 className="h-6 w-6 text-muted-foreground" />
           </div>
@@ -402,7 +402,7 @@ function RemovedContactsView({
           </p>
         </div>
       ) : (
-        <div className="border rounded-md">
+        <div className="rounded-xl border overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -547,7 +547,7 @@ function ActiveContactsView({
         </div>
       </div>
 
-      <div className="p-0">
+      <div className="rounded-xl border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>

@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalSearch } from "@coldjot/ui/components/local-search";
 import { Button } from "@coldjot/ui/components/button";
-import { Separator } from "@coldjot/ui/components/separator";
 import EmailListsView from "@/components/lists/email-list";
 import { usePagination } from "@/hooks/use-pagination";
 import {
@@ -96,7 +95,6 @@ export default function ListsPage() {
             )}
           </div>
         </div>
-        <Separator />
       </div>
       <EmailListsView
         searchQuery={activeSearch}

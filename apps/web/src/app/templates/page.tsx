@@ -17,7 +17,6 @@ import {
   AlertDialogTitle,
 } from "@coldjot/ui/components/alert-dialog";
 import TemplateList from "@/components/templates/template-list";
-import { Separator } from "@coldjot/ui/components/separator";
 import AddTemplateDrawer from "@/components/templates/add-template-drawer";
 import { Template } from "@prisma/client";
 import { usePagination } from "@/hooks/use-pagination";
@@ -113,7 +112,6 @@ export default function TemplatesPage() {
             )}
           </div>
         </div>
-        <Separator />
       </div>
 
       <TemplateList

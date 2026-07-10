@@ -178,7 +178,7 @@ const EmailListsView = ({
           </Button>
         </div>
       ) : (
-        <div className="p-0">
+        <div className="rounded-xl border overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -307,9 +307,8 @@ const EmailListsView = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete list?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently deletes the list and removes all contacts from
-              it. The contacts themselves are not deleted. This action cannot be
-              undone.
+              This permanently deletes the list and removes all contacts from it. The contacts
+              themselves are not deleted. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

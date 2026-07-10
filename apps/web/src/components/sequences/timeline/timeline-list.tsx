@@ -7,19 +7,10 @@ import { TimelineRow } from "./timeline-row";
 import { EmailDetailsDrawer } from "./email-details-drawer";
 import { PaginationControls } from "@/components/pagination";
 import { useInView } from "react-intersection-observer";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-} from "@coldjot/ui/components/table";
+import { Table, TableHeader, TableBody, TableHead, TableRow } from "@coldjot/ui/components/table";
 import { cn } from "@coldjot/ui/lib/utils";
 import type { EmailTrackingRow } from "@coldjot/types";
-import {
-  useTimeline,
-  useInfiniteTimeline,
-} from "@/hooks/queries/use-timeline";
+import { useTimeline, useInfiniteTimeline } from "@/hooks/queries/use-timeline";
 
 interface TimelineListProps {
   sequenceId?: string;
@@ -56,17 +47,14 @@ export function TimelineList({
   onScrollModeToggle,
   variant = "global",
 }: TimelineListProps) {
-  const [selectedEmail, setSelectedEmail] = useState<EmailTrackingRow | null>(
-    null
-  );
+  const [selectedEmail, setSelectedEmail] = useState<EmailTrackingRow | null>(null);
   const { ref, inView } = useInView();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const activeSort = (searchParams.get("sort") as SortKey | null) ?? "sentAt";
-  const activeOrder =
-    (searchParams.get("order") as "asc" | "desc" | null) ?? "desc";
+  const activeOrder = (searchParams.get("order") as "asc" | "desc" | null) ?? "desc";
 
   // Regular pagination query
   const paginationQuery = useTimeline({
@@ -95,8 +83,7 @@ export function TimelineList({
 
   const toggleSort = (key: SortKey) => {
     const params = new URLSearchParams(searchParams.toString());
-    const nextOrder =
-      key === activeSort && activeOrder === "desc" ? "asc" : "desc";
+    const nextOrder = key === activeSort && activeOrder === "desc" ? "asc" : "desc";
     params.set("sort", key);
     params.set("order", nextOrder);
     router.push(`${pathname}?${params.toString()}`);
@@ -118,9 +105,7 @@ export function TimelineList({
     (isInfiniteScroll && infiniteQuery.isError)
   ) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        Failed to load timeline data
-      </div>
+      <div className="text-center py-8 text-muted-foreground">Failed to load timeline data</div>
     );
   }
 
@@ -130,9 +115,8 @@ export function TimelineList({
         type="button"
         onClick={() => toggleSort(key)}
         className={cn(
-          "inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors",
-          align === "right" && "flex-row-reverse",
-          activeSort === key && "text-foreground"
+          "inline-flex items-center gap-1 hover:text-muted-foreground transition-colors",
+          align === "right" && "flex-row-reverse"
         )}
       >
         {label}
@@ -148,32 +132,22 @@ export function TimelineList({
 
   const renderTable = (emails: EmailTrackingRow[]) => {
     if (emails.length === 0) {
-      return (
-        <div className="text-center py-8 text-muted-foreground">
-          No emails found
-        </div>
-      );
+      return <div className="text-center py-8 text-muted-foreground">No emails found</div>;
     }
 
     return (
-      <div className="border rounded-lg overflow-hidden">
+      <div className="rounded-xl border overflow-hidden">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
-            <TableRow className="hover:bg-transparent">
+            <TableRow>
               {renderSortHead("status", "Status")}
-              <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Subject
-              </TableHead>
-              <TableHead className="hidden sm:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Recipient
-              </TableHead>
-              <TableHead className="hidden lg:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead>Subject</TableHead>
+              <TableHead className="hidden sm:table-cell">Recipient</TableHead>
+              <TableHead className="hidden lg:table-cell">
                 {variant === "sequence" ? "Step" : "Sequence"}
               </TableHead>
               {renderSortHead("openCount", "Opens")}
-              <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Clicks
-              </TableHead>
+              <TableHead>Clicks</TableHead>
               {renderSortHead("sentAt", "Sent", "right")}
             </TableRow>
           </TableHeader>
@@ -184,9 +158,7 @@ export function TimelineList({
                 email={email}
                 variant={variant}
                 onSelect={() => setSelectedEmail(email)}
-                contextLabel={
-                  variant === "sequence" ? stepLabel(email) : email.sequenceName
-                }
+                contextLabel={variant === "sequence" ? stepLabel(email) : email.sequenceName}
               />
             ))}
           </TableBody>
@@ -197,55 +169,49 @@ export function TimelineList({
 
   const renderEmails = () => {
     if (isInfiniteScroll) {
-      const emails =
-        (infiniteQuery.data?.pages.flatMap((p) => p.emails) ??
-          []) as unknown as EmailTrackingRow[];
+      const emails = (infiniteQuery.data?.pages.flatMap((p) => p.emails) ??
+        []) as unknown as EmailTrackingRow[];
       return renderTable(emails);
     }
 
     const data = paginationQuery.data;
     const emails = (data?.emails ?? []) as unknown as EmailTrackingRow[];
     if (!data || emails.length === 0) {
-      return (
-        <div className="text-center py-8 text-muted-foreground">
-          No emails found
-        </div>
-      );
+      return <div className="text-center py-8 text-muted-foreground">No emails found</div>;
     }
     return renderTable(emails);
   };
 
   return (
     <>
-      <div className="h-full flex flex-col space-y-12">
-        <div className="flex-1 overflow-auto min-h-0">{renderEmails()}</div>
-        <div className="flex-none">
-          <PaginationControls
-            currentPage={page}
-            totalPages={Math.ceil(
-              (isInfiniteScroll
-                ? infiniteQuery.data?.pages[0]?.total
-                : paginationQuery.data?.total) ?? 0 / limit
-            )}
-            pageSize={limit}
-            totalItems={
-              isInfiniteScroll
-                ? (infiniteQuery.data?.pages[0]?.total ?? 0)
-                : (paginationQuery.data?.total ?? 0)
-            }
-            onPageChange={onPageChange}
-            onPageSizeChange={onPageSizeChange}
-            isInfiniteScroll={isInfiniteScroll}
-            onScrollModeToggle={onScrollModeToggle}
-            isLoading={
-              (!isInfiniteScroll && paginationQuery.isLoading) ||
-              (isInfiniteScroll && infiniteQuery.isLoading)
-            }
-            hasNextPage={infiniteQuery.hasNextPage}
-            isFetchingNextPage={infiniteQuery.isFetchingNextPage}
-            infiniteScrollRef={isInfiniteScroll ? ref : undefined}
-          />
-        </div>
+      <div className="space-y-4">
+        {renderEmails()}
+
+        <PaginationControls
+          currentPage={page}
+          totalPages={Math.ceil(
+            (isInfiniteScroll
+              ? infiniteQuery.data?.pages[0]?.total
+              : paginationQuery.data?.total) ?? 0 / limit
+          )}
+          pageSize={limit}
+          totalItems={
+            isInfiniteScroll
+              ? (infiniteQuery.data?.pages[0]?.total ?? 0)
+              : (paginationQuery.data?.total ?? 0)
+          }
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          isInfiniteScroll={isInfiniteScroll}
+          onScrollModeToggle={onScrollModeToggle}
+          isLoading={
+            (!isInfiniteScroll && paginationQuery.isLoading) ||
+            (isInfiniteScroll && infiniteQuery.isLoading)
+          }
+          hasNextPage={infiniteQuery.hasNextPage}
+          isFetchingNextPage={infiniteQuery.isFetchingNextPage}
+          infiniteScrollRef={isInfiniteScroll ? ref : undefined}
+        />
       </div>
 
       <EmailDetailsDrawer

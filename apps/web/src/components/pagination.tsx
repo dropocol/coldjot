@@ -105,7 +105,7 @@ export function PaginationControls({
 
   if (isInfiniteScroll) {
     return (
-      <div className="flex flex-row justify-between gap-4 border-t pt-4">
+      <div className="flex flex-row justify-between gap-4 pt-4">
         <div ref={infiniteScrollRef} className="h-8 flex items-center justify-center">
           {isFetchingNextPage ? (
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -149,7 +149,7 @@ export function PaginationControls({
   // Don't show pagination if there's only one page or no items
   if (actualTotalPages <= 1) {
     return (
-      <div className="flex items-center justify-between border-t pt-4">
+      <div className="flex items-center justify-between pt-4">
         <div className="flex items-center gap-4">
           <div className="text-sm text-muted-foreground whitespace-nowrap">
             {totalItems === 0
@@ -205,7 +205,7 @@ export function PaginationControls({
   }
 
   return (
-    <div className="flex items-center justify-between border-t pt-4">
+    <div className="flex items-center justify-between pt-4">
       <div className="flex items-center gap-4">
         <div className="text-sm text-muted-foreground whitespace-nowrap">
           Showing {startItem}-{endItem} of {totalItems} items

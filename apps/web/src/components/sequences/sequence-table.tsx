@@ -212,147 +212,152 @@ export function SequenceTable({
 
   return (
     <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[40px] pl-3">
-              <Checkbox
-                checked={selectedSequences.size === sequences.length}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    setSelectedSequences(new Set(sequences.map((s) => s.id)));
-                  } else {
-                    setSelectedSequences(new Set());
-                  }
-                }}
-              />
-            </TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Schedule</TableHead>
-            <TableHead>Steps</TableHead>
-            <TableHead>Contacts</TableHead>
-            <TableHead className="w-[100px]">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sequences.map((sequence) => (
-            <TableRow key={sequence.id} className="hover:bg-muted/50">
-              <TableCell className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
+      <div className="rounded-xl border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[40px] pl-3">
                 <Checkbox
-                  checked={selectedSequences.has(sequence.id)}
-                  onCheckedChange={(checked) =>
-                    handleCheckboxChange(sequence.id, checked as boolean)
-                  }
+                  checked={selectedSequences.size === sequences.length}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedSequences(new Set(sequences.map((s) => s.id)));
+                    } else {
+                      setSelectedSequences(new Set());
+                    }
+                  }}
                 />
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground/70" />
-                  <Link href={`/sequences/${sequence.id}`} className="font-medium hover:underline">
-                    {sequence.name}
-                  </Link>
-                </div>
-              </TableCell>
-              <TableCell>
-                <SequenceStatusBadge status={sequence.status} />
-              </TableCell>
-              <TableCell>
-                <span className="capitalize">{sequence.scheduleType}</span>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <span>{sequence.steps.length} steps</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <span>{sequence._count.contacts} contacts</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center justify-end gap-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleStatusChange(sequence.id, sequence.status)}
-                          />
-                        }
-                      >
-                        {sequence.status === SequenceStatus.ACTIVE ? (
-                          <Pause className="h-4 w-4" />
-                        ) : (
-                          <Play className="h-4 w-4" />
-                        )}
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {sequence.status === SequenceStatus.ACTIVE ? "Pause" : "Resume"} sequence
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <DropdownMenu>
+              </TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Schedule</TableHead>
+              <TableHead>Steps</TableHead>
+              <TableHead>Contacts</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sequences.map((sequence) => (
+              <TableRow key={sequence.id}>
+                <TableCell className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={selectedSequences.has(sequence.id)}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxChange(sequence.id, checked as boolean)
+                    }
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground/70" />
+                    <Link
+                      href={`/sequences/${sequence.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {sequence.name}
+                    </Link>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <SequenceStatusBadge status={sequence.status} />
+                </TableCell>
+                <TableCell>
+                  <span className="capitalize">{sequence.scheduleType}</span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span>{sequence.steps.length} steps</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span>{sequence._count.contacts} contacts</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-2">
+                    <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger
                           render={
-                            <DropdownMenuTrigger render={<Button variant="ghost" size="icon" />}>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </DropdownMenuTrigger>
-                          }
-                        />
-                        <TooltipContent>More actions</TooltipContent>
-                      </Tooltip>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          render={
-                            <Link
-                              href={`/sequences/${sequence.id}/settings`}
-                              className="flex items-center"
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleStatusChange(sequence.id, sequence.status)}
                             />
                           }
                         >
-                          <Settings2 className="mr-2 h-4 w-4" />
-                          Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          render={
-                            <Link
-                              href={`/sequences/${sequence.id}`}
-                              className="flex items-center"
-                            />
-                          }
-                        >
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDuplicate(sequence.id)}
-                          disabled={duplicatingId === sequence.id}
-                        >
-                          {duplicatingId === sequence.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Duplicating...
-                            </>
+                          {sequence.status === SequenceStatus.ACTIVE ? (
+                            <Pause className="h-4 w-4" />
                           ) : (
-                            <>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </>
+                            <Play className="h-4 w-4" />
                           )}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TooltipProvider>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {sequence.status === SequenceStatus.ACTIVE ? "Pause" : "Resume"} sequence
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <DropdownMenu>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <DropdownMenuTrigger render={<Button variant="ghost" size="icon" />}>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </DropdownMenuTrigger>
+                            }
+                          />
+                          <TooltipContent>More actions</TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            render={
+                              <Link
+                                href={`/sequences/${sequence.id}/settings`}
+                                className="flex items-center"
+                              />
+                            }
+                          >
+                            <Settings2 className="mr-2 h-4 w-4" />
+                            Settings
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            render={
+                              <Link
+                                href={`/sequences/${sequence.id}`}
+                                className="flex items-center"
+                              />
+                            }
+                          >
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDuplicate(sequence.id)}
+                            disabled={duplicatingId === sequence.id}
+                          >
+                            {duplicatingId === sequence.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Duplicating...
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Duplicate
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TooltipProvider>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       <PaginationControls
         currentPage={page}

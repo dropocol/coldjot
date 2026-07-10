@@ -1,7 +1,6 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Separator } from "@coldjot/ui/components/separator";
 import { User, Mail, Calendar } from "lucide-react";
 
 import ActionButtons from "../../../components/contacts/action-buttons";
@@ -41,8 +40,6 @@ export default function ContactPageClient({
           onContactUpdate={handleContactUpdate}
         />
       </div>
-
-      <Separator />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Contact Information Card */}

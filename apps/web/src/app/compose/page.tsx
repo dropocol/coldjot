@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { prisma } from "@coldjot/database";
-import { Separator } from "@coldjot/ui/components/separator";
 import EmailComposer from "@/components/compose/email-composer";
 import { redirect } from "next/navigation";
 import { toPlain } from "@/lib/serialize";
@@ -31,7 +30,6 @@ export default async function ComposePage() {
           Create a new email using your templates and contacts.
         </p>
       </div>
-      <Separator />
       <EmailComposer templates={toPlain(templates)} />
     </div>
   );

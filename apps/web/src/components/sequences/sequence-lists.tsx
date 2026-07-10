@@ -142,7 +142,7 @@ export function SequenceLists() {
         </div>
       </div>
 
-      <div className="border rounded-md">
+      <div className="rounded-xl border overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center items-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -239,7 +239,7 @@ export function SequenceLists() {
               </TableBody>
             </Table>
             {totalPages > 1 && (
-              <div className="p-4 border-t">
+              <div className="p-4">
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>

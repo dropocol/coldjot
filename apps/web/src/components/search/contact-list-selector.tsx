@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { Button } from "@coldjot/ui/components/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@coldjot/ui/components/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@coldjot/ui/components/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@coldjot/ui/components/table";
 import { Input } from "@coldjot/ui/components/input";
 import { Checkbox } from "@coldjot/ui/components/checkbox";
 import { Search, Loader2 } from "lucide-react";
@@ -23,9 +30,7 @@ export function ContactListSelector({
   onSelect,
   sequenceId: _sequenceId,
 }: ContactListSelectorProps) {
-  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(
-    new Set()
-  );
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -49,9 +54,7 @@ export function ContactListSelector({
   const handleAddContacts = async () => {
     try {
       setIsAdding(true);
-      const selectedContactsList = contacts.filter((c) =>
-        selectedContacts.has(c.id)
-      );
+      const selectedContactsList = contacts.filter((c) => selectedContacts.has(c.id));
       onSelect(selectedContactsList);
       onClose();
     } finally {
@@ -79,21 +82,18 @@ export function ContactListSelector({
             </div>
           </div>
 
-          <div className="p-0">
+          <div className="rounded-xl border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <Checkbox
                       checked={
-                        contacts.length > 0 &&
-                        contacts.every((c) => selectedContacts.has(c.id))
+                        contacts.length > 0 && contacts.every((c) => selectedContacts.has(c.id))
                       }
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setSelectedContacts(
-                            new Set(contacts.map((c) => c.id))
-                          );
+                          setSelectedContacts(new Set(contacts.map((c) => c.id)));
                         } else {
                           setSelectedContacts(new Set());
                         }
@@ -125,19 +125,14 @@ export function ContactListSelector({
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              onClick={handleAddContacts}
-              disabled={selectedContacts.size === 0 || isAdding}
-            >
+            <Button onClick={handleAddContacts} disabled={selectedContacts.size === 0 || isAdding}>
               {isAdding ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Adding...
                 </>
               ) : (
-                `Add ${selectedContacts.size} Contact${
-                  selectedContacts.size === 1 ? "" : "s"
-                }`
+                `Add ${selectedContacts.size} Contact${selectedContacts.size === 1 ? "" : "s"}`
               )}
             </Button>
           </div>

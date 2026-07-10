@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalSearch } from "@coldjot/ui/components/local-search";
 import { Button } from "@coldjot/ui/components/button";
-import { Separator } from "@coldjot/ui/components/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -121,7 +120,6 @@ export function SequencesPageClient({
             )}
           </div>
         </div>
-        <Separator />
       </div>
       <SequenceTable
         sequences={sequences}
