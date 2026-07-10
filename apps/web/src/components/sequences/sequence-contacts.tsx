@@ -288,6 +288,12 @@ export function SequenceContacts({
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold tracking-tight">
+          {isRemovedView ? "Removed Contacts" : "Contacts"}
+        </h2>
+      </div>
+
       {isRemovedView ? (
         <RemovedContactsView
           contacts={removedContacts}
